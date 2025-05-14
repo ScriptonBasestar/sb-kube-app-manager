@@ -27,6 +27,13 @@ sbkube deploy
 sbkube prepare --apps config.yaml --sources sources.yaml
 sbkube build --apps config.yaml
 
+python -m sbkube.cli
+
+python -m sbkube.cli prepare --apps samples/k3scode/config-browserless.yaml --sources samples/k3scode/sources.yaml
+python -m sbkube.cli prepare --apps samples/k3scode/config-browserless --sources samples/k3scode/sources
+sbkube prepare --apps samples/k3scode/config --sources samples/k3scode/sources
+
+
 
 ## TEST
 

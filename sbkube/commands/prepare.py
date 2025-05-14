@@ -6,6 +6,9 @@ import click
 import yaml
 from rich.console import Console
 
+from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.cli_check import check_helm_installed_or_exit
+
 console = Console()
 
 BASE_DIR = os.getcwd()
@@ -13,19 +16,16 @@ CHARTS_DIR = os.path.join(BASE_DIR, "charts")
 REPOS_DIR = os.path.join(BASE_DIR, "repos")
 
 
-@click.command()
-@click.option("--apps", default="config.yaml", help="설치할 앱 목록 파일")
-@click.option("--sources", default="sources.yaml", help="소스 정의 파일")
+@click.command(name="prepare")  # ⬅️ 명시적으로 커맨드 이름 지정
+@click.option("--apps", default="config.yaml", help="앱 설정 파일")
+@click.option("--sources", default="sources.yaml", help="소스 설정 파일")
 def cmd(apps, sources):
     """Helm, Git, HTTP 소스 다운로드 및 준비"""
+    check_helm_installed_or_exit()
+    console.print(f"[green]prepare 실행됨! apps: {apps}, sources: {sources}[/green]")
 
-    console.print(f"[bold green]📦 prepare 시작: {apps}, {sources}[/bold green]")
-
-    with open(apps, 'r') as f:
-        apps_config = yaml.safe_load(f)
-
-    with open(sources, 'r') as f:
-        sources_config = yaml.safe_load(f)
+    apps_config = load_config_file(apps)
+    sources_config = load_config_file(sources)
 
     helm_repos = sources_config.get("helm_repos", {})
     oci_repos = sources_config.get("oci_repos", {})

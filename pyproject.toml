@@ -11,6 +11,7 @@ dependencies = [
   "jinja2",
   "rich",
   "pytest>=8.3.5",
+  "toml>=0.10.2",
 ]
 readme = "README.md"
 requires-python = ">=3.12"

@@ -1,5 +1,9 @@
 import click
+import logging
+
 from sbkube.commands import prepare, build, template, deploy, upgrade, delete
+
+print("✅ prepare.cmd =", hasattr(prepare, "cmd"))  # ← 이 줄 추가
 
 @click.group()
 def main():

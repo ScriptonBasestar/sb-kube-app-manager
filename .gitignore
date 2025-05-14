@@ -1,0 +1,90 @@
+# ───────────────
+# 📦 Python 관련
+# ───────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+*.log
+*.sqlite3
+*.db
+*.ipynb_checkpoints
+*.coverage
+.coverage.*
+.cache/
+.mypy_cache/
+.pytest_cache/
+*.spec
+*.pot
+*.mo
+*.compiled
+*.manifest
+*.bak
+*.swp
+*.swo
+
+# Hatch / uv / build
+dist/
+build/
+*.dist-info/
+.venv/
+.uv/
+
+# Poetry, Hatch, uv lockfiles
+poetry.lock
+hatch.lock
+uv.lock
+pip-wheel-metadata/
+
+# Virtualenvs
+env/
+ENV/
+venv/
+env.bak/
+venv.bak/
+
+# ───────────────
+# 🧠 IDE 설정
+# ───────────────
+# PyCharm
+.idea/
+# VS Code
+.vscode/
+# JetBrains Rider
+.idea_modules/
+*.iml
+
+# ───────────────
+# 💻 OS 파일
+# ───────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.nfs*
+
+# ───────────────
+# 📁 사용자 샘플/개발 환경
+# ───────────────
+charts/
+repos/
+*.local.yaml
+*.override.yaml

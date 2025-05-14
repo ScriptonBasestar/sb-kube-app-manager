@@ -32,6 +32,7 @@ build/
 *.dist-info/
 .venv/
 .uv/
+rendered/
 
 # Poetry, Hatch, uv lockfiles
 poetry.lock

@@ -40,8 +40,8 @@ python -m sbkube.cli build --apps samples/k3scode/config-memory
 sbkube build --apps samples/k3scode/config-memory
 
 ### template
-python -m sbkube.cli template --apps samples/k3scode/config-memory
-sbkube template --apps samples/k3scode/config-memory
+python -m sbkube.cli template --apps samples/k3scode/config-memory --output-dir rendered/
+sbkube template --apps samples/k3scode/config-memorytput-dir rendered/
 
 ## TEST
 

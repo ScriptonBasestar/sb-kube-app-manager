@@ -84,6 +84,17 @@ def cmd(apps, sources):
             chart_dest = os.path.join(CHARTS_DIR, repo)
             shutil.rmtree(os.path.join(chart_dest, chart), ignore_errors=True)
 
+            # 🔐 헬름 레포가 로컬에 없으면 sources.yaml에서 찾아 추가
+            if repo not in local_helm_repos:
+                if repo in helm_repos:
+                    repo_url = helm_repos[repo]
+                    console.print(f"[yellow]➕ helm repo (late) add: {repo}[/yellow]")
+                    subprocess.run(["helm", "repo", "add", repo, repo_url], check=True)
+                    subprocess.run(["helm", "repo", "update", repo], check=True)
+                else:
+                    console.print(f"[red]❌ helm repo '{repo}'를 sources.yaml에서 찾을 수 없습니다.[/red]")
+                    continue  # ⚠️ skip this app
+
             cmd = ["helm", "pull", f"{repo}/{chart}", "-d", chart_dest, "--untar"]
             if chart_ver:
                 cmd += ["--version", chart_ver]

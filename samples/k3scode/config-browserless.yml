@@ -1,0 +1,16 @@
+namespace: devops
+deps: []
+
+apps:
+  - name: browserless-pull
+    type: pull-helm
+    specs:
+      repo: browserless
+      chart: browserless
+      dest: browserless
+
+  - name: browserless
+    type: install-helm
+    specs:
+      values:
+        - browserless.yaml

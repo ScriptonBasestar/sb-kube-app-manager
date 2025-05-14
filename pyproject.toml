@@ -1,0 +1,20 @@
+[project]
+name = "sbkube"
+version = "0.1.0"
+description = "k3s용 헬름+yaml+git 배포 자동화 CLI 도구"
+authors = [{ name="대이브", email="your@email.com" }]
+dependencies = [
+  "click>=8.1",
+  "pyyaml",
+  "gitpython",
+  "jinja2",
+  "rich"
+]
+readme = "README.md"
+requires-python = ">=3.9"
+
+[project.scripts]
+sbkube = "sbkube.cli:main"
+
+[tool.hatch.build.targets.sdist]
+include = ["sbkube"]

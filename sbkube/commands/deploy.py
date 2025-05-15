@@ -85,7 +85,10 @@ def cmd(apps, base_dir, namespace, dry_run):
             result = subprocess.run(helm_cmd, capture_output=True, text=True)
 
             if result.returncode != 0:
-                console.print(f"[red]❌ helm 작업 실패: {result.stderr}[/red]")
+                console.print("[red]❌ helm 작업 실패:[/red]")
+                console.print(result.stderr)
+                console.print("[blue]STDOUT:[/blue]")
+                console.print(result.stdout)
             else:
                 console.print(f"[bold green]✅ {release} 배포 완료 (namespace: {ns})[/bold green]")
 

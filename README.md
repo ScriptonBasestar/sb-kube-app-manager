@@ -1,128 +1,177 @@
-# sbkube
+# 🧩 kube-app-manaer
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)]()
 [![Repo](https://img.shields.io/badge/GitHub-kube--app--manaer-blue?logo=github)](https://github.com/ScriptonBasestar/kube-app-manaer)
 
-`sbkube`는 로컬 YAML, Helm, Git 리소스를 기반으로 k3s 클러스터에 손쉽게 배포 가능한 CLI 도구입니다.
+**kube-app-manaer**는 `yaml`, `Helm`, `git` 리소스를 로커로에서 정의하고 `k3s` 등 Kubernetes 환경에 일관되게 배포할 수 있는 CLI 도구입니다.
 
+> 개발자, DevOps 엔지니어, SaaS 환경 구축을 위한 **u53c8가화된 Helm 배포 관리자**
 
-K3s 환경에서 Helm/YAML 앱을 통합적으로 배포 관리합니다.
+---
 
+## ✨ 주요 기능
 
+- 로커 YAML 설정 기반 앱 정의 및 분류
+- Helm chart / OCI chart / Git chart / 파일 복사 기반 배포
+- `prepare → build → template → deploy` 구조
+- `exec`, `yaml`, `helm` 기반 설치 명령 지원
+- `--dry-run`, `--base-dir`, `--apps` 기반 명령 범위 지원
+- `upgrade`, `delete` 명령 분리
+
+---
+
+## 📦 설치
+
+### 🔧 추천 방법 (로컬 개발자용)
+
+```bash
+uv pip install sbkube
 ```
-uv venv
-source .venv/bin/activate
+
+또는 소스 설치:
+
+```bash
+git clone https://github.com/ScriptonBasestar/kube-app-manaer.git
+cd kube-app-manaer
 uv pip install -e .
-
-sbkube prepare
-sbkube build
-sbkube template
-sbkube deploy
 ```
 
-## Prepare kind kube
+### 🚀 향후 계획
+- [ ] PyPI 공개 패키지 (`pip install sbkube`)
+- [ ] Homebrew 탭 배포 (`brew install scriptonbasestar/sbkube`)
 
-```
-curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
-chmod +x ./kind
-sudo mv ./kind /usr/local/bin/kind
-
-
-kind create cluster --name sbkube-test
-kubectl config get-contexts
-
-kind create cluster --name sbkube-test --kubeconfig ~/.kube/test-kubeconfig
+```bash
+git clone https://github.com/ScriptonBasestar/kube-app-manaer.git
+cd kube-app-manaer
+uv pip install -e .
 ```
 
-## CMD
+> `Python 3.12+` 환경 권장  
+> [uv](https://github.com/astral-sh/uv) 기반 패키지 관리 지원
 
-sbkube prepare --apps config.yaml --sources sources.yaml
-sbkube build --apps config.yaml
+---
 
-python -m sbkube.cli
+## 📂 디렉토리 구조
 
-### prepare
-python -m sbkube.cli prepare --apps samples/k3scode/config-browserless.yaml --sources samples/k3scode/sources.yaml
-python -m sbkube.cli prepare --apps samples/k3scode/config-browserless --sources samples/k3scode/sources
-python -m sbkube.cli prepare --apps samples/k3scode/config-memory --sources samples/k3scode/sources
-sbkube prepare --apps samples/k3scode/config --sources samples/k3scode/sources
+```
+kube-app-manaer/
+├── sbkube/                # CLI 구현
+│   ├── cli.py             # main entry
+│   ├── commands/          # prepare/build/deploy 등 명령어 정의
+│   └── utils/             # 공통 유틸리티
+├── samples/k3scode/       # 테스트 config/sources 예제
+│   ├── config-memory.yaml
+│   ├── sources.yaml
+│   └── values/
+├── build/                 # build 결과물 저장
+├── charts/                # helm pull 다운로드 디렉토리
+├── repos/                 # git clone 저장 디렉토리
+├── tests/                 # pytest 테스트 코드
+└── README.md
+```
 
-python -m sbkube.cli prepare \
-  --base-dir ./samples/k3scode \
-  --apps config-memory.yml
+---
 
-### build
-python -m sbkube.cli build --apps samples/k3scode/config-memory
-sbkube build --apps samples/k3scode/config-memory
+## 🚀 CLI 사용법
 
-python -m sbkube.cli build \
-  --base-dir ./samples/k3scode \
-  --apps config-memory.yml
+### 준비 (Helm repo 추가, Git clone, OCI pull 등)
 
-### template
-python -m sbkube.cli template --apps samples/k3scode/config-memory --output-dir rendered/
+```bash
+sbkube prepare --apps config-memory --base-dir ./samples/k3scode
+```
 
-base-dir지정안해서 오류나는거확인
-python -m sbkube.cli template --apps samples/k3scode/config-memory --output-dir rendered/
+### 빌드 (chart 복사, override, remove 등)
 
-sbkube template \
-  --apps samples/k3scode/config-memory \
-  --base-dir ./samples/k3scode \
-  --output-dir rendered
+```bash
+sbkube build --apps config-memory --base-dir ./samples/k3scode
+```
 
-python -m sbkube.cli template \
-  --apps config-memory \
-  --base-dir ./samples/k3scode
+### Helm 템플리트 출력
 
-### deploy
-python -m sbkube.cli deploy --apps samples/k3scode/config-memory --namespace devops
-sbkube deploy --apps samples/k3scode/config-memory --namespace devops
+```bash
+sbkube template --apps config-memory --base-dir ./samples/k3scode --output-dir ./rendered
+```
 
-python -m sbkube.cli deploy \
-  --apps config-memory \
-  --base-dir ./samples/k3scode
+### 실제 배포
 
-### delete
+```bash
+sbkube deploy --apps config-memory --base-dir ./samples/k3scode
+```
 
-python -m sbkube.cli template \
-  --apps config-memory \
-  --base-dir ./samples/k3scode
+### 리리스 삭제
 
-## TEST
+```bash
+sbkube delete --apps config-memory --base-dir ./samples/k3scode
+```
 
+### 업그레이드
 
-### prepare
-pytest tests/test_prepare.py -v
+```bash
+sbkube upgrade --apps config-memory --base-dir ./samples/k3scode
+```
 
-### build
-pytest tests/test_build.py -v
+---
 
-overrides/가 적용된 파일이 정상 복사되었는지 검사
-removes:로 지정한 파일이 실제 삭제되었는지 확인
-pull-git, copy-app 항목에 대한 테스트 분리o
+## 🥪 테스트
 
-### template
-pytest tests/test_template.py -v
+```bash
+pytest tests/
+```
 
-### deploy
+또는 예제 config 보기:
 
-pytest tests/test_deploy.py -v
+```bash
+python -m sbkube.cli deploy --apps config-memory --base-dir ./samples/k3scode
+```
 
+---
 
-----------
---namespace, --include-crds, --kube-version 등 Helm 추가 인자 지원
+## 📄 설정 파일 예제
 
---stdout 옵션으로 제어
+### `config-memory.yaml`
 
---dry-run, --debug 연동
+```yaml
+namespace: default
+apps:
+  - name: redis
+    type: install-helm
+    specs:
+      repo: bitnami
+      chart: redis
+      values:
+        - redis-values.yaml
+  - name: memcached
+    type: install-helm
+    specs:
+      repo: bitnami
+      chart: memcached
+```
 
+### `sources.yaml`
 
---dry-run, --wait, --timeout 지원
+```yaml
+helm_repos:
+  bitnami: https://charts.bitnami.com/bitnami
+```
 
-Helm 로그와 stdout을 파일로 저장 옵션
+---
 
-kubectl apply -f 방식도 선택 가능하게 (--method=kubectl|helm)
+## 🧙 개발 중 기능
 
+- [ ] hook 실행: `before`, `after`
+- [ ] Helm chart test
+- [ ] Git repo를 통한 chart 경로 자동 지정 및 지원
+- [ ] ArgoCD-like UI
 
-test_deploy.py 혹은 sbkube init
+---
+
+## 📄 라이센스
+
+MIT License © [ScriptonBasestar](https://github.com/ScriptonBasestar)
+
+---
+
+## 🤝 기억하기
+
+PR, 이슈, 피드래프 허용합니다!

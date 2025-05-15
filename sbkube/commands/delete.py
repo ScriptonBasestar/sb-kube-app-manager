@@ -1,11 +1,18 @@
 import subprocess
+import json
 import click
 from pathlib import Path
 from rich.console import Console
 
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.cli_check import check_helm_installed_or_exit
 
 console = Console()
+
+def get_installed_charts(namespace: str) -> dict:
+    cmd = ["helm", "list", "-o", "json", "-n", namespace]
+    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    return {item["name"]: item for item in json.loads(result.stdout)}
 
 @click.command(name="delete")
 @click.option("--apps", default="config", help="앱 구성 설정 파일 (확장자 생략 가능)")
@@ -32,18 +39,21 @@ def cmd(apps, base_dir, namespace):
     apps_config = load_config_file(str(apps_path))
 
     for app in apps_config.get("apps", []):
-        if app["type"] not in ("pull-helm", "pull-helm-oci", "install-helm"):
+        if app.get("type") != "install-helm":
             continue
 
         name = app["name"]
         release = app.get("release", name)
-        ns = namespace or app.get("namespace") or "default"
+        ns = namespace or app.get("namespace") or apps_config.get("namespace") or "default"
 
         helm_cmd = ["helm", "uninstall", release, "--namespace", ns]
         console.print(f"[cyan]🗑️ helm uninstall: {' '.join(helm_cmd)}[/cyan]")
         result = subprocess.run(helm_cmd, capture_output=True, text=True)
 
         if result.returncode != 0:
-            console.print(f"[red]❌ 삭제 실패: {result.stderr}[/red]")
+            console.print("[red]❌ 삭제 실패:[/red]")
+            console.print(result.stderr)
+            console.print("[blue]STDOUT:[/blue]")
+            console.print(result.stdout)
         else:
             console.print(f"[bold green]✅ {release} 삭제 완료 (namespace: {ns})[/bold green]")

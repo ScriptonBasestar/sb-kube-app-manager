@@ -24,3 +24,12 @@ packages = ["sbkube"]
 
 [tool.hatch.build.targets.sdist]
 include = ["sbkube"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "twine>=6.1.0",
+]

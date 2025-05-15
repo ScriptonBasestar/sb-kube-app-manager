@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "sources.yml schema",
+  "type": "object",
+  "required": ["cluster", "kubeconfig", "helm_repos", "oci_repos", "git_repos"],
+  "properties": {
+    "cluster": {
+      "type": "string",
+      "description": "클러스터 이름"
+    },
+    "kubeconfig": {
+      "type": "string",
+      "description": "Kubeconfig 경로"
+    },
+    "helm_repos": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "format": "uri"
+      },
+      "description": "Helm repo 목록"
+    },
+    "oci_repos": {
+      "type": "object",
+      "description": "OCI 저장소 정의",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string",
+          "pattern": "^oci://"
+        }
+      }
+    },
+    "git_repos": {
+      "type": "object",
+      "description": "Git 저장소 목록",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["url", "branch"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "branch": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

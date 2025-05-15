@@ -7,8 +7,15 @@ uv build
 uv run -m twine upload dist/*
 ```
 
-## Local Deploy
+## Venv Deploy
 ```
 uv build
 uv pip install -e .
+```
+
+## Local System Deploy
+```
+uv build
+which 
+pip install -e .
 ```

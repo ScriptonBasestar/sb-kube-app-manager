@@ -1,19 +1,28 @@
 import json
 import yaml
 import click
+import subprocess
 from pathlib import Path
 from jsonschema import validate as jsonschema_validate, ValidationError
+from shutil import which
+from rich.console import Console
 
+console = Console()
 
-def load_yaml(file_path: Path):
-    with open(file_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+def check_command_available(command):
+    if which(command) is None:
+        console.print(f"[yellow]⚠️ '{command}' 명령을 찾을 수 없습니다. PATH에 등록되어 있는지 확인하세요.[/yellow]")
+        return
+    try:
+        result = subprocess.run([command, "version"], capture_output=True, text=True)
+        if result.returncode != 0:
+            console.print(f"[yellow]⚠️ '{command}' 실행 실패: {result.stderr.strip()}[/yellow]")
+    except Exception as e:
+        console.print(f"[yellow]⚠️ '{command}' 실행 오류: {e}[/yellow]")
 
-
-def load_schema(schema_path: Path):
-    with open(schema_path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
+# CLI 진입 시 사전 확인
+check_command_available("helm")
+check_command_available("kubectl")
 
 @click.command(name="validate")
 @click.argument("target", type=str)

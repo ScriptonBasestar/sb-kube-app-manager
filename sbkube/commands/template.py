@@ -9,51 +9,48 @@ from sbkube.utils.cli_check import check_helm_installed_or_exit
 console = Console()
 
 @click.command(name="template")
-@click.option("--apps", default="config", help="앱 구성 설정 파일 (확장자 생략 가능)")
+@click.option("--app-dir", default="config", help="앱 구성 디렉토리 (내부 config.yaml|yml|toml) 자동 탐색")
 @click.option("--output-dir", default="rendered", help="YAML 출력 디렉토리 (기본: rendered/)")
 @click.option("--base-dir", default=".", help="프로젝트 루트 디렉토리 (기본: 현재 경로)")
-def cmd(apps, output_dir, base_dir):
+def cmd(app_dir, output_dir, base_dir):
     """Helm chart를 YAML로 렌더링 (helm template)"""
     check_helm_installed_or_exit()
 
-    # 🔹 BASE 경로 확인
     BASE_DIR = Path(base_dir).resolve()
     if not BASE_DIR.exists():
         console.print(f"[red]❌ base-dir 디렉토리가 존재하지 않습니다: {BASE_DIR}[/red]")
         raise click.Abort()
 
-    # 🔹 앱 설정 파일 확장자 확인 및 경로 구성
-    apps_base = BASE_DIR / apps
-    if apps_base.suffix:  # .yaml 등 확장자 포함된 경우
-        apps_path = apps_base
-        if not apps_path.exists():
-            console.print(f"[red]❌ 지정된 앱 구성 파일이 존재하지 않습니다: {apps_path}[/red]")
-            raise click.Abort()
-    else:
-        for ext in [".yaml", ".yml", ".toml"]:
-            candidate = apps_base.with_suffix(ext)
-            if candidate.exists():
-                apps_path = candidate
-                break
-        else:
-            console.print(f"[red]❌ config 파일이 존재하지 않습니다: {apps_base}.[yaml|yml|toml][/red]")
-            raise click.Abort()
+    app_path = Path(app_dir)
+    config_path = None
+    for ext in [".yaml", ".yml", ".toml"]:
+        candidate = (BASE_DIR / app_path / f"config{ext}").resolve()
+        if candidate.exists():
+            config_path = candidate
+            break
 
-    # 🔹 경로 설정
+    if not config_path or not config_path.exists():
+        console.print(f"[red]❌ config 설정 파일이 존재하지 않습니다: {BASE_DIR / app_path}/config.[yaml|yml|toml][/red]")
+        raise click.Abort()
+
     BUILD_DIR = BASE_DIR / "build"
-    VALUES_DIR = BASE_DIR / "values"
+    VALUES_DIR = BASE_DIR / app_path / "values"
     OUTPUT_DIR = Path(output_dir).resolve() if Path(output_dir).is_absolute() else BASE_DIR / output_dir
 
-    # 🔹 앱 구성 로드
-    apps_config = load_config_file(str(apps_path))
+    apps_config = load_config_file(str(config_path))
+
+    total = 0
+    success = 0
 
     for app in apps_config.get("apps", []):
-        if app["type"] not in ("install-helm"):
+        if app["type"] != "install-helm":
             continue
 
+        total += 1
         name = app["name"]
         release = app.get("release", name)
-        chart_dir = BUILD_DIR / name
+        chart_rel = app.get("path", name)
+        chart_dir = BUILD_DIR / chart_rel
 
         if not chart_dir.exists():
             console.print(f"[red]❌ chart 디렉토리 없음: {chart_dir}[/red]")
@@ -64,7 +61,6 @@ def cmd(apps, output_dir, base_dir):
         values_files = app["specs"].get("values", [])
         for vf in values_files:
             vf_path = Path(vf) if Path(vf).is_absolute() else VALUES_DIR / vf
-
             if vf_path.exists():
                 console.print(f"[green]✅ values 파일 사용: {vf_path}[/green]")
                 helm_cmd += ["--values", str(vf_path)]
@@ -82,5 +78,6 @@ def cmd(apps, output_dir, base_dir):
         out_path = OUTPUT_DIR / f"{name}.yaml"
         out_path.write_text(result.stdout)
         console.print(f"[green]📄 저장됨: {out_path}[/green]")
+        success += 1
 
-    console.print("[bold green]✅ template 완료[/bold green]")
+    console.print(f"[bold green]✅ template 완료: {success}/{total} 개 완료[/bold green]")

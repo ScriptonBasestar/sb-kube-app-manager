@@ -32,6 +32,8 @@ python -m sbkube.cli prepare \
   --base-dir ./samples/k3scode \
   --apps config-memory.yml
 
+sbkube prepare --base-dir . --app-dir a000_infra_network
+
 ### build
 python -m sbkube.cli build --apps samples/k3scode/config-memory
 sbkube build --apps samples/k3scode/config-memory
@@ -39,6 +41,8 @@ sbkube build --apps samples/k3scode/config-memory
 python -m sbkube.cli build \
   --base-dir ./samples/k3scode \
   --apps config-memory.yml
+
+sbkube build --base-dir . --app-dir a000_infra_network
 
 ### template
 python -m sbkube.cli template --apps samples/k3scode/config-memory --output-dir rendered/
@@ -55,6 +59,9 @@ python -m sbkube.cli template \
   --apps config-memory \
   --base-dir ./samples/k3scode
 
+sbkube template --base-dir . --app-dir a000_infra_network
+
+
 ### deploy
 python -m sbkube.cli deploy --apps samples/k3scode/config-memory --namespace devops
 sbkube deploy --apps samples/k3scode/config-memory --namespace devops
@@ -63,17 +70,24 @@ python -m sbkube.cli deploy \
   --apps config-memory \
   --base-dir ./samples/k3scode
 
+sbkube deploy --base-dir . --app-dir a000_infra_network
+
 ### upgrade
 
 python -m sbkube.cli upgrade \
   --apps config-memory \
   --base-dir ./samples/k3scode
 
+sbkube upgrade --base-dir . --app-dir a000_infra_network
+
+
 ### delete
 
 python -m sbkube.cli delete \
   --apps config-memory \
   --base-dir ./samples/k3scode
+
+sbkube delete --base-dir . --app-dir a000_infra_network
 
 ### validate
 

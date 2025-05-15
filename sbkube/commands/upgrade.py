@@ -6,42 +6,34 @@ from rich.console import Console
 
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.cli_check import check_helm_installed_or_exit
+from sbkube.utils.helm_util import get_installed_charts
 
 console = Console()
 
-def get_installed_charts(namespace: str) -> dict:
-    cmd = ["helm", "list", "-o", "json", "-n", namespace]
-    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-    return {item["name"]: item for item in json.loads(result.stdout)}
-
 @click.command(name="upgrade")
-@click.option("--apps", default="config", help="앱 구성 설정 파일 (확장자 생략 가능)")
+@click.option("--app-dir", default="config", help="앱 구성 디렉토리 (내부 config.yaml|yml|toml) 자동 탐색")
 @click.option("--base-dir", default=".", help="프로젝트 루트 디렉토리 (기본: 현재 경로)")
 @click.option("--namespace", default=None, help="기본 네임스페이스 (없으면 앱별로 따름)")
 @click.option("--dry-run", is_flag=True, default=False, help="dry-run 모드로 실행")
-def cmd(apps, base_dir, namespace, dry_run):
+def cmd(app_dir, base_dir, namespace, dry_run):
     """설치된 Helm 릴리스를 업그레이드"""
     check_helm_installed_or_exit()
 
     BASE_DIR = Path(base_dir).resolve()
     BUILD_DIR = BASE_DIR / "build"
-    VALUES_DIR = BASE_DIR / "values"
+    app_path = Path(app_dir)
+    VALUES_DIR = BASE_DIR / app_path / "values"
 
-    apps_base = BASE_DIR / apps
-    if apps_base.suffix:
-        apps_path = apps_base
-    else:
-        for ext in [".yaml", ".yml", ".toml"]:
-            candidate = apps_base.with_suffix(ext)
-            if candidate.exists():
-                apps_path = candidate
-                break
-        else:
-            console.print(f"[red]❌ 앱 설정 파일이 존재하지 않습니다: {apps_base}.[yaml|yml|toml][/red]")
-            raise click.Abort()
-    apps_path = apps_path.resolve()
+    config_dir = BASE_DIR / app_path
+    if not config_dir.is_dir():
+        console.print(f"[red]❌ 앱 디렉토리가 존재하지 않습니다: {config_dir}[/red]")
+        raise click.Abort()
 
-    apps_config = load_config_file(str(apps_path))
+    try:
+        apps_config = load_config_file(str(config_dir / "config"))
+    except FileNotFoundError:
+        console.print(f"[red]❌ 앱 설정 파일이 존재하지 않습니다: {config_dir}/config.[yaml|yml|toml][/red]")
+        raise click.Abort()
 
     for app in apps_config.get("apps", []):
         if app.get("type") != "install-helm":
@@ -51,7 +43,8 @@ def cmd(apps, base_dir, namespace, dry_run):
         release = app.get("release", name)
         ns = namespace or app.get("namespace") or apps_config.get("namespace") or "default"
 
-        chart_dir = BUILD_DIR / name
+        chart_rel = app.get("path", name)
+        chart_dir = BUILD_DIR / chart_rel
         if not chart_dir.exists():
             console.print(f"[red]❌ chart 디렉토리 없음: {chart_dir}[/red]")
             raise click.Abort()

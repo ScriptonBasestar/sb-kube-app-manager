@@ -22,10 +22,7 @@ def cmd(app_dir, base_dir):
     console.print(f"[bold green]\U0001f3d7️ build 시작: {app_dir}[/bold green]")
 
     app_path = Path(app_dir)
-    config_path = (BASE_DIR / app_path / "config.yaml").resolve()
-    if not config_path.exists():
-        console.print(f"[red]❌ config.yaml 파일이 존재하지 않습니다: {config_path}[/red]")
-        raise click.Abort()
+    config_path = (BASE_DIR / app_path / "config").resolve()
 
     apps_config = load_config_file(str(config_path))
 

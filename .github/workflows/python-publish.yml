@@ -6,7 +6,7 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Upload Python Package
+name: Upload Python Package to PyPI
 
 on:
   release:
@@ -26,11 +26,17 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Build release distributions
-        run: |
-          # NOTE: put your own distribution build steps here.
-          python -m pip install build
-          python -m build
+      # - name: Build release distributions
+      #   run: |
+      #     # NOTE: put your own distribution build steps here.
+      #     python -m pip install build
+      #     python -m build
+
+      - name: Install uv
+        uses: yezz123/setup-uv@v4
+
+      - name: Build package
+        run: uv build
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4

@@ -1,9 +1,9 @@
-import os
 import subprocess
 import shutil
 import json
 import click
 import yaml
+from pathlib import Path
 from rich.console import Console
 
 from sbkube.utils.file_loader import load_config_file
@@ -11,21 +11,56 @@ from sbkube.utils.cli_check import check_helm_installed_or_exit
 
 console = Console()
 
-BASE_DIR = os.getcwd()
-CHARTS_DIR = os.path.join(BASE_DIR, "charts")
-REPOS_DIR = os.path.join(BASE_DIR, "repos")
-
-
-@click.command(name="prepare")  # ⬅️ 명시적으로 커맨드 이름 지정
+@click.command(name="prepare")
 @click.option("--apps", default="config.yaml", help="앱 설정 파일")
 @click.option("--sources", default="sources.yaml", help="소스 설정 파일")
-def cmd(apps, sources):
+@click.option("--base-dir", default=".", help="프로젝트 루트 디렉토리")
+def cmd(apps, sources, base_dir):
     """Helm, Git, HTTP 소스 다운로드 및 준비"""
     check_helm_installed_or_exit()
+
+    BASE_DIR = Path(base_dir).resolve()
+    CHARTS_DIR = BASE_DIR / "charts"
+    REPOS_DIR = BASE_DIR / "repos"
+
     console.print(f"[green]prepare 실행됨! apps: {apps}, sources: {sources}[/green]")
 
-    apps_config = load_config_file(apps)
-    sources_config = load_config_file(sources)
+    apps_base = BASE_DIR / apps
+    if apps_base.suffix:
+        apps_path = apps_base
+    else:
+        for ext in [".yaml", ".yml", ".toml"]:
+            candidate = apps_base.with_suffix(ext)
+            if candidate.exists():
+                apps_path = candidate
+                break
+        else:
+            console.print(f"[red]❌ 앱 설정 파일이 존재하지 않습니다: {apps_base}.[yaml|yml|toml][/red]")
+            raise click.Abort()
+    apps_path = apps_path.resolve()
+    sources_base = BASE_DIR / sources
+    if sources_base.suffix:
+        sources_path = sources_base
+    else:
+        for ext in [".yaml", ".yml", ".toml"]:
+            candidate = sources_base.with_suffix(ext)
+            if candidate.exists():
+                sources_path = candidate
+                break
+        else:
+            console.print(f"[red]❌ 소스 설정 파일이 존재하지 않습니다: {sources_base}.[yaml|yml|toml][/red]")
+            raise click.Abort()
+    sources_path = sources_path.resolve()
+
+    if not apps_path.exists():
+        console.print(f"[red]❌ 앱 설정 파일이 존재하지 않습니다: {apps_path}[/red]")
+        raise click.Abort()
+    if not sources_path.exists():
+        console.print(f"[red]❌ 소스 설정 파일이 존재하지 않습니다: {sources_path}[/red]")
+        raise click.Abort()
+
+    apps_config = load_config_file(str(apps_path))
+    sources_config = load_config_file(str(sources_path))
 
     helm_repos = sources_config.get("helm_repos", {})
     oci_repos = sources_config.get("oci_repos", {})
@@ -42,11 +77,9 @@ def cmd(apps, sources):
         elif app["type"] == "pull-git":
             pull_git_repo_names.add(app["specs"]["repo"])
 
-    # 현재 helm repo 목록 가져오기
     result = subprocess.run(["helm", "repo", "list", "-o", "json"], capture_output=True, check=True, text=True)
     local_helm_repos = {entry["name"]: entry["url"] for entry in json.loads(result.stdout)}
 
-    # 필요한 helm repo 추가
     for repo_name in pull_helm_repo_names:
         if repo_name in helm_repos:
             repo_url = helm_repos[repo_name]
@@ -57,34 +90,31 @@ def cmd(apps, sources):
         else:
             console.print(f"[red]❌ {repo_name} is not found in sources.yaml[/red]")
 
-    # git repos 처리
-    os.makedirs(REPOS_DIR, exist_ok=True)
+    REPOS_DIR.mkdir(parents=True, exist_ok=True)
     for repo_name in pull_git_repo_names:
         if repo_name in git_repos:
             repo = git_repos[repo_name]
-            repo_path = os.path.join(REPOS_DIR, repo_name)
-            if os.path.exists(repo_path):
-                subprocess.run(["git", "-C", repo_path, "reset", "--hard", "HEAD"], check=True)
-                subprocess.run(["git", "-C", repo_path, "clean", "-dfx"], check=True)
+            repo_path = REPOS_DIR / repo_name
+            if repo_path.exists():
+                subprocess.run(["git", "-C", str(repo_path), "reset", "--hard", "HEAD"], check=True)
+                subprocess.run(["git", "-C", str(repo_path), "clean", "-dfx"], check=True)
                 if repo.get("branch"):
-                    subprocess.run(["git", "-C", repo_path, "checkout", repo["branch"]], check=True)
-                subprocess.run(["git", "-C", repo_path, "pull"], check=True)
+                    subprocess.run(["git", "-C", str(repo_path), "checkout", repo["branch"]], check=True)
+                subprocess.run(["git", "-C", str(repo_path), "pull"], check=True)
             else:
-                subprocess.run(["git", "clone", repo["url"], repo_path], check=True)
+                subprocess.run(["git", "clone", repo["url"], str(repo_path)], check=True)
         else:
             console.print(f"[red]❌ {repo_name} not in git_repos[/red]")
 
-    # helm chart pull
-    os.makedirs(CHARTS_DIR, exist_ok=True)
+    CHARTS_DIR.mkdir(parents=True, exist_ok=True)
     for app in app_list:
         if app["type"] == "pull-helm":
             repo = app["specs"]["repo"]
             chart = app["specs"]["chart"]
             chart_ver = app["specs"].get("chart_version")
-            chart_dest = os.path.join(CHARTS_DIR, repo)
-            shutil.rmtree(os.path.join(chart_dest, chart), ignore_errors=True)
+            chart_dest = CHARTS_DIR / repo
+            shutil.rmtree(chart_dest / chart, ignore_errors=True)
 
-            # 🔐 헬름 레포가 로컬에 없으면 sources.yaml에서 찾아 추가
             if repo not in local_helm_repos:
                 if repo in helm_repos:
                     repo_url = helm_repos[repo]
@@ -93,9 +123,9 @@ def cmd(apps, sources):
                     subprocess.run(["helm", "repo", "update", repo], check=True)
                 else:
                     console.print(f"[red]❌ helm repo '{repo}'를 sources.yaml에서 찾을 수 없습니다.[/red]")
-                    continue  # ⚠️ skip this app
+                    continue
 
-            cmd = ["helm", "pull", f"{repo}/{chart}", "-d", chart_dest, "--untar"]
+            cmd = ["helm", "pull", f"{repo}/{chart}", "-d", str(chart_dest), "--untar"]
             if chart_ver:
                 cmd += ["--version", chart_ver]
             console.print(f"[cyan]📥 helm pull: {cmd}[/cyan]")
@@ -110,9 +140,9 @@ def cmd(apps, sources):
                 console.print(f"[red]❌ OCI chart not found: {repo}/{chart}[/red]")
                 continue
 
-            chart_dest = os.path.join(CHARTS_DIR, repo)
+            chart_dest = CHARTS_DIR / repo
             shutil.rmtree(chart_dest, ignore_errors=True)
-            cmd = ["helm", "pull", repo_url, "-d", chart_dest, "--untar"]
+            cmd = ["helm", "pull", repo_url, "-d", str(chart_dest), "--untar"]
             if chart_ver:
                 cmd += ["--version", chart_ver]
             console.print(f"[cyan]📥 helm OCI pull: {cmd}[/cyan]")

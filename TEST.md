@@ -75,8 +75,22 @@ python -m sbkube.cli delete \
   --apps config-memory \
   --base-dir ./samples/k3scode
 
-## TEST
+### validate
 
+python -m sbkube.cli validate \
+  samples/k3scode/sources.yml
+
+#### sources.yaml 검증
+sbkube validate sources.yaml
+
+#### config.yaml 검증
+sbkube validate a000_infra/config.yaml
+
+#### 스키마 명시
+sbkube validate somefile.yaml --schema schemas/custom.schema.json
+
+
+## Unit TEST
 
 ### prepare
 pytest tests/test_prepare.py -v

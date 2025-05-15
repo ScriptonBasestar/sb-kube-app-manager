@@ -12,7 +12,7 @@ def validate_sources_yaml():
     schema = yaml.safe_load(open(schema_path))
 
     jsonschema.validate(instance=data, schema=schema)
-    print("✅ sources.yaml 유효성 검사 통과")
+    print("✅ sources.yaml is valid.")
 
 if __name__ == '__main__':
     validate_sources_yaml()

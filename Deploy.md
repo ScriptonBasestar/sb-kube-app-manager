@@ -2,6 +2,7 @@
 
 ## Pypi Deploy
 ```bash
+rm -rf dist
 uv build
 # uv publish
 uv run -m twine upload dist/*

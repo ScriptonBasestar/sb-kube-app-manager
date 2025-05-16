@@ -29,7 +29,7 @@
 - Helm chart / OCI chart / Git chart / 파일 복사 기반 배포
 - `prepare → build → template → deploy` 구조
 - `exec`, `yaml`, `helm` 기반 설치 명령 지원
-- `--dry-run`, `--base-dir`, `--apps` 기반 명령 범위 지원
+- `--dry-run`, `--base-dir`, `--app-dir` 기반 명령 범위 지원
 - `upgrade`, `delete` 명령 분리
 
 ---
@@ -147,37 +147,37 @@ kube-app-manaer/
 ### 준비 (Helm repo 추가, Git clone, OCI pull 등)
 
 ```bash
-sbkube prepare --apps config-memory --base-dir ./samples/k3scode
+sbkube prepare --app-dir config-memory.yaml --base-dir ./samples/k3scode --sources sources.yaml
 ```
 
 ### 빌드 (chart 복사, override, remove 등)
 
 ```bash
-sbkube build --apps config-memory --base-dir ./samples/k3scode
+sbkube build --app-dir config-memory.yaml --base-dir ./samples/k3scode
 ```
 
 ### Helm 템플리트 출력
 
 ```bash
-sbkube template --apps config-memory --base-dir ./samples/k3scode --output-dir ./rendered
+sbkube template --app-dir config-memory.yaml --base-dir ./samples/k3scode --output-dir ./rendered
 ```
 
 ### 실제 배포
 
 ```bash
-sbkube deploy --apps config-memory --base-dir ./samples/k3scode
+sbkube deploy --app-dir config-memory.yaml --base-dir ./samples/k3scode
 ```
 
 ### 리리스 삭제
 
 ```bash
-sbkube delete --apps config-memory --base-dir ./samples/k3scode
+sbkube delete --app-dir config-memory.yaml --base-dir ./samples/k3scode
 ```
 
 ### 업그레이드
 
 ```bash
-sbkube upgrade --apps config-memory --base-dir ./samples/k3scode
+sbkube upgrade --app-dir config-memory.yaml --base-dir ./samples/k3scode
 ```
 
 ---
@@ -191,7 +191,7 @@ pytest tests/
 또는 예제 config 보기:
 
 ```bash
-python -m sbkube.cli deploy --apps config-memory --base-dir ./samples/k3scode
+python -m sbkube.cli deploy --app-dir config-memory.yaml --base-dir ./samples/k3scode
 ```
 
 ---

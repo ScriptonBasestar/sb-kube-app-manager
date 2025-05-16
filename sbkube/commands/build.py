@@ -13,17 +13,15 @@ console = Console()
 def cmd(app_dir, base_dir):
     """prepare 결과를 기반으로 Helm/Git 리소스를 전처리하고 build 디렉토리 생성"""
     BASE_DIR = Path(base_dir).resolve()
+    APP_DIR = BASE_DIR / app_dir
     CHARTS_DIR = BASE_DIR / "charts"
     REPOS_DIR = BASE_DIR / "repos"
-    BUILD_DIR = BASE_DIR / "build"
-    OVERRIDES_DIR = BASE_DIR / "overrides"
-    VALUES_DIR = BASE_DIR / "values"
+    BUILD_DIR = APP_DIR / "build"
+    OVERRIDES_DIR = APP_DIR / "overrides"
 
     console.print(f"[bold green]\U0001f3d7️ build 시작: {app_dir}[/bold green]")
 
-    app_path = Path(app_dir)
-    config_path = (BASE_DIR / app_path / "config").resolve()
-
+    config_path = (APP_DIR / "config").resolve()
     apps_config = load_config_file(str(config_path))
 
     shutil.rmtree(BUILD_DIR, ignore_errors=True)

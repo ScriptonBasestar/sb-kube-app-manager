@@ -17,25 +17,25 @@ def cmd(app_dir, output_dir, base_dir):
     check_helm_installed_or_exit()
 
     BASE_DIR = Path(base_dir).resolve()
+    APP_DIR = BASE_DIR / app_dir
+    BUILD_DIR = APP_DIR / "build"
+    VALUES_DIR = APP_DIR / "values"
+    OUTPUT_DIR = Path(output_dir).resolve() if Path(output_dir).is_absolute() else APP_DIR / output_dir
+
     if not BASE_DIR.exists():
         console.print(f"[red]❌ base-dir 디렉토리가 존재하지 않습니다: {BASE_DIR}[/red]")
         raise click.Abort()
 
-    app_path = Path(app_dir)
     config_path = None
     for ext in [".yaml", ".yml", ".toml"]:
-        candidate = (BASE_DIR / app_path / f"config{ext}").resolve()
+        candidate = (APP_DIR / f"config{ext}").resolve()
         if candidate.exists():
             config_path = candidate
             break
 
     if not config_path or not config_path.exists():
-        console.print(f"[red]❌ config 설정 파일이 존재하지 않습니다: {BASE_DIR / app_path}/config.[yaml|yml|toml][/red]")
+        console.print(f"[red]❌ config 설정 파일이 존재하지 않습니다: {APP_DIR}/config.[yaml|yml|toml][/red]")
         raise click.Abort()
-
-    BUILD_DIR = BASE_DIR / "build"
-    VALUES_DIR = BASE_DIR / app_path / "values"
-    OUTPUT_DIR = Path(output_dir).resolve() if Path(output_dir).is_absolute() else BASE_DIR / output_dir
 
     apps_config = load_config_file(str(config_path))
 

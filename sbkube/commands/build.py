@@ -30,6 +30,7 @@ def cmd(app_dir, base_dir):
     total = 0
     success = 0
 
+    ## rmtree??이상한데.. 나중에 테스트 유닛테스트 필요
     for app in apps_config.get("apps", []):
         if app["type"] not in ("pull-helm", "pull-helm-oci", "pull-git", "copy-app"):
             continue
@@ -38,15 +39,20 @@ def cmd(app_dir, base_dir):
         app_type = app.get("type")
         app_name = app.get("name")
         specs = app.get("specs", {})
+        dest = specs.get("dest")
+        if not dest or dest in ("", "."):
+            dest = app_name
 
         try:
+            dst_path = BUILD_DIR / dest
+            if dst_path.exists():
+                shutil.rmtree(dst_path)
+
             if app_type in ("pull-helm", "pull-helm-oci"):
                 repo = specs["repo"]
                 chart = specs["chart"]
-                dest = specs.get("dest", app_name)
 
                 src_chart_path = CHARTS_DIR / repo / chart
-                dst_path = BUILD_DIR / dest
 
                 if not src_chart_path.exists():
                     console.print(f"[red]❌ Helm 차트 없음: {src_chart_path}[/red]")
@@ -70,27 +76,28 @@ def cmd(app_dir, base_dir):
                         console.print(f"[red]🗑️ remove: {target}[/red]")
 
             elif app_type == "pull-git":
-                repo = specs["repo"]
                 paths = specs.get("paths", [])
-                dst_path = BUILD_DIR / app_name
                 dst_path.mkdir(parents=True, exist_ok=True)
 
                 for c in paths:
-                    src = REPOS_DIR / repo / c["src"]
-                    dst = dst_path / c["dest"]
-                    shutil.copytree(src, dst)
-                    console.print(f"[magenta]📂 Git 복사: {src} → {dst}[/magenta]")
+                    src = REPOS_DIR / specs["repo"] / c["src"]
+                    dest_path = dst_path / c.get("dest", "")
+                    if dest_path.exists():
+                        shutil.rmtree(dest_path)
+                    shutil.copytree(src, dest_path)
+                    console.print(f"[magenta]📂 Git 복사: {src} → {dest_path}[/magenta]")
 
             elif app_type == "copy-app":
                 paths = specs.get("paths", [])
-                dst_path = BUILD_DIR / app_name
                 dst_path.mkdir(parents=True, exist_ok=True)
 
                 for c in paths:
                     src = Path(c["src"]).resolve()
-                    dst = dst_path / c["dest"]
-                    shutil.copytree(src, dst)
-                    console.print(f"[blue]📂 copy-app: {src} → {dst}[/blue]")
+                    dest_path = dst_path / c["dest"]
+                    if dest_path.exists():
+                        shutil.rmtree(dest_path)
+                    shutil.copytree(src, dest_path)
+                    console.print(f"[blue]📂 copy-app: {src} → {dest_path}[/blue]")
 
             success += 1
 

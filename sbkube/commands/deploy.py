@@ -20,8 +20,8 @@ def cmd(app_dir, base_dir, namespace, dry_run):
     check_helm_installed_or_exit()
 
     BASE_DIR = Path(base_dir).resolve()
-    BUILD_DIR = BASE_DIR / "build"
     app_path = Path(app_dir)
+    BUILD_DIR = BASE_DIR / app_path / "build"
     VALUES_DIR = BASE_DIR / app_path / "values"
 
     config_path = None
@@ -40,11 +40,14 @@ def cmd(app_dir, base_dir, namespace, dry_run):
     for app in apps_config.get("apps", []):
         app_type = app.get("type")
         name = app.get("name")
-        ns = namespace or app.get("namespace") or apps_config.get("namespace")
-
-        if not ns:
-            console.print(f"[red]❌ namespace가 지정되지 않았습니다. 앱: {name}[/red]")
-            raise click.Abort()
+        # apps의 namespace 필드가 있으면 우선 사용, 없으면 config의 namespace 사용
+        if "namespace" in app:
+            ns = namespace if namespace is not None else app.get("namespace")
+        else:
+            ns = apps_config.get("namespace")
+        ns_ignore = (ns == "!ignore" or ns == "!none" or ns == "!false" or ns == "")
+        if ns_ignore:
+            ns = None
 
         if app_type == "install-helm":
             release = app.get("release", name)
@@ -57,13 +60,15 @@ def cmd(app_dir, base_dir, namespace, dry_run):
                 console.print(f"[bold yellow]⚠️ build 명령을 먼저 실행해야 합니다.[/bold yellow]")
                 raise click.Abort()
 
-            installed = release in get_installed_charts(ns)
+            installed = release in get_installed_charts(ns) if ns else False
 
             if installed:
                 console.print(f"[yellow]⚠️ 이미 설치됨: {release} (namespace: {ns}) → 건너뜀[/yellow]")
                 continue
 
-            helm_cmd = ["helm", "install", release, str(chart_dir), "--create-namespace", "--namespace", ns]
+            helm_cmd = ["helm", "install", release, str(chart_dir), "--create-namespace"]
+            if ns:
+                helm_cmd += ["--namespace", ns]
 
             for vf in values_files:
                 vf_path = Path(vf) if Path(vf).is_absolute() else VALUES_DIR / vf
@@ -85,14 +90,17 @@ def cmd(app_dir, base_dir, namespace, dry_run):
                 console.print("[blue]STDOUT:[/blue]")
                 console.print(result.stdout)
             else:
-                console.print(f"[bold green]✅ {release} 배포 완료 (namespace: {ns})[/bold green]")
+                ns_msg = f" (namespace: {ns})" if ns else ""
+                console.print(f"[bold green]✅ {release} 배포 완료{ns_msg}[/bold green]")
 
         elif app_type == "install-yaml":
             yaml_files = app["specs"].get("files", [])
             for yfile in yaml_files:
                 yfile_path = Path(yfile)
                 yaml_path = yfile_path if yfile_path.is_absolute() else BASE_DIR / app_path / yfile_path
-                cmd = ["kubectl", "apply", "-f", str(yaml_path), "-n", ns]
+                cmd = ["kubectl", "apply", "-f", str(yaml_path)]
+                if ns:
+                    cmd += ["-n", ns]
                 if dry_run:
                     cmd.append("--dry-run=client")
                 console.print(f"[cyan]📄 kubectl apply: {' '.join(cmd)}[/cyan]")

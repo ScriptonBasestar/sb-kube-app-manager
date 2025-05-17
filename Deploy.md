@@ -17,6 +17,7 @@ uv pip install -e .
 ## Local System Deploy
 ```
 uv build
-which 
 pip install -e .
+uv pip install --force-reinstall --no-deps --upgrade .
+
 ```

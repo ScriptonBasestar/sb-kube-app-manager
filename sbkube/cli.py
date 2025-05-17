@@ -1,7 +1,7 @@
 import click
 import logging
 
-from sbkube.commands import prepare, build, template, deploy, upgrade, delete, validate
+from sbkube.commands import prepare, build, template, deploy, upgrade, delete, validate, version
 
 print("✅ prepare.cmd =", hasattr(prepare, "cmd"))  # ← 이 줄 추가
 
@@ -17,6 +17,7 @@ main.add_command(deploy.cmd)
 main.add_command(upgrade.cmd)
 main.add_command(delete.cmd)
 main.add_command(validate.cmd)
+main.add_command(version.cmd)
 
 if __name__ == "__main__":
     main()

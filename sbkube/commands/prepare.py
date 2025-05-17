@@ -82,13 +82,23 @@ def cmd(app_dir, sources, base_dir):
     local_helm_repos = {entry["name"]: entry["url"] for entry in json.loads(result.stdout)}
 
     for repo_name in pull_helm_repo_names:
+        found = False
         if repo_name in helm_repos:
+            found = True
             repo_url = helm_repos[repo_name]
             if repo_name not in local_helm_repos:
                 console.print(f"[yellow]➕ helm repo add: {repo_name}[/yellow]")
                 subprocess.run(["helm", "repo", "add", repo_name, repo_url], check=True)
             subprocess.run(["helm", "repo", "update", repo_name], check=True)
         else:
+            # oci_repos에도 chart가 있는지 확인
+            for app in app_list:
+                if app["type"] in ("pull-helm", "pull-helm-oci") and app["specs"]["repo"] == repo_name:
+                    chart = app["specs"]["chart"]
+                    if repo_name in oci_repos and chart in oci_repos[repo_name]:
+                        found = True
+                        break
+        if not found:
             console.print(f"[red]❌ {repo_name} is not found in sources.yaml[/red]")
 
     REPOS_DIR.mkdir(parents=True, exist_ok=True)

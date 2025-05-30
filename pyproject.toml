@@ -13,6 +13,8 @@ dependencies = [
   "pytest>=8.3.5",
   "toml>=0.10.2",
   "jsonschema>=4.23.0",
+  "dataclasses>=0.8",
+  "dataclass-wizard>=0.35.0",
 ]
 readme = "README.md"
 requires-python = ">=3.12"

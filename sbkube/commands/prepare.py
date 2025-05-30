@@ -31,7 +31,6 @@ def cmd(app_dir, sources, base_dir):
 
     # 명령 실행 시에만 체크
     check_command_available("helm")
-    check_command_available("kubectl")
     check_helm_installed_or_exit()
 
     BASE_DIR = Path(base_dir).resolve()

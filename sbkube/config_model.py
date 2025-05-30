@@ -11,6 +11,14 @@ class CopyPair:
     src: str
     dest: str
 
+@dataclass(unsafe_hash=True)
+class FileActionSpec:
+    # apply, create, delete
+    type: str
+    # path or url
+    path: str
+    # # namespace
+    # n: Optional[str] = None
 
 @dataclass(unsafe_hash=True)
 class AppSpecBase:
@@ -21,6 +29,14 @@ class AppSpecBase:
 class AppExecSpec(AppSpecBase):
     commands: list[str] = field(default_factory=list)
 
+    def __post_init__(self):
+        # commands가 리스트인지 확인
+        if not isinstance(self.commands, list):
+            raise ValueError(f"commands는 list여야 합니다: {self.commands!r}")
+        # 리스트 내부가 전부 str인지 확인
+        if not all(isinstance(cmd, str) for cmd in self.commands):
+            raise ValueError(f"commands 내부는 모두 str이어야 합니다: {self.commands!r}")
+        # (원한다면) commands가 비어있는지 등의 추가 검증도 가능
 
 @dataclass(unsafe_hash=True)
 class AppInstallHelmSpec(AppSpecBase):
@@ -28,8 +44,20 @@ class AppInstallHelmSpec(AppSpecBase):
 
 
 @dataclass(unsafe_hash=True)
-class AppInstallYamlSpec(AppSpecBase):
-    files: list[str] = field(default_factory=list)
+class AppInstallActionSpec(AppSpecBase):
+    """
+    spec:
+      files:
+        - type: apply
+          path: file1.yaml
+        - type: create
+          path: file2.yml
+        - type: create
+          path: http://example.com/file.yaml
+    """
+    app_type: Literal['install-yaml'] = 'install-yaml'
+    
+    actions: list[FileActionSpec] = field(default_factory=list)
 
 
 @dataclass(unsafe_hash=True)

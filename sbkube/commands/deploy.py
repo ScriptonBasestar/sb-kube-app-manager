@@ -94,11 +94,29 @@ def cmd(app_dir, base_dir, namespace, dry_run):
                 console.print(f"[bold green]✅ {release} 배포 완료{ns_msg}[/bold green]")
 
         elif app_type == "install-yaml":
-            yaml_files = app["specs"].get("files", [])
-            for yfile in yaml_files:
-                yfile_path = Path(yfile)
-                yaml_path = yfile_path if yfile_path.is_absolute() else BASE_DIR / app_path / yfile_path
-                cmd = ["kubectl", "apply", "-f", str(yaml_path)]
+            # yaml_files = app["specs"].get("files", [])
+            # AppInstallActionSpec
+            from sbkube.config_model import AppInstallActionSpec
+            try:
+                exec_spec = AppInstallActionSpec(**app["specs"])
+                install_actions = exec_spec.actions
+            except Exception as e:
+                console.print(f"[red]❌ AppExecSpec 검증 실패: {e}[/red]")
+                install_actions = []
+            for install_action in install_actions:
+                if install_action.t == "apply" or install_action.t == "create":
+                    if install_action.path.startswith("http"):
+                        yaml_path = install_action.path
+                    else:
+                        yfile_path = Path(install_action.path)
+                        yaml_path = yfile_path if yfile_path.is_absolute() else BASE_DIR / app_path / yfile_path
+                    cmd = ["kubectl", install_action.type, "-f", str(yaml_path)]
+                elif install_action.type == "delete":
+                    cmd = ["kubectl", install_action.type, "-f", str(install_action.path)]
+                else:
+                    console.print(f"[red]❌ 지원하지 않는 액션 타입: {install_action.type}[/red]")
+                    console.print(f"[bold yellow]⚠️ 지원타입: create, apply, delete[/bold yellow]")
+                    continue
                 if ns:
                     cmd += ["-n", ns]
                 if dry_run:
@@ -115,7 +133,14 @@ def cmd(app_dir, base_dir, namespace, dry_run):
                     console.print(f"[green]✅ YAML 적용 완료: {yaml_path}[/green]")
 
         elif app_type == "exec":
-            exec_cmds = app["specs"].get("commands", [])
+            # AppExecSpec
+            from sbkube.config_model import AppExecSpec
+            try:
+                exec_spec = AppExecSpec(**app["specs"])
+                exec_cmds = exec_spec.commands
+            except Exception as e:
+                console.print(f"[red]❌ AppExecSpec 검증 실패: {e}[/red]")
+                exec_cmds = []
             for raw in exec_cmds:
                 cmd = raw.split(" ")
                 console.print(f"[cyan]💻 exec: {' '.join(cmd)}[/cyan]")

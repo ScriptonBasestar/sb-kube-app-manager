@@ -21,10 +21,6 @@ def check_command_available(command):
     except Exception as e:
         console.print(f"[yellow]⚠️ '{command}' 실행 오류: {e}[/yellow]")
 
-# CLI 진입 시 사전 확인
-check_command_available("helm")
-check_command_available("kubectl")
-
 @click.command(name="prepare")
 @click.option("--app-dir", default=".", help="앱 설정 디렉토리 (config.yaml을 내부에서 탐색)")
 @click.option("--sources", default="sources.yaml", help="소스 설정 파일")
@@ -33,6 +29,9 @@ def cmd(app_dir, sources, base_dir):
     from sbkube.utils.file_loader import load_config_file
     from sbkube.utils.cli_check import check_helm_installed_or_exit
 
+    # 명령 실행 시에만 체크
+    check_command_available("helm")
+    check_command_available("kubectl")
     check_helm_installed_or_exit()
 
     BASE_DIR = Path(base_dir).resolve()

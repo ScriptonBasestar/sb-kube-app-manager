@@ -5,7 +5,7 @@ from pathlib import Path
 from rich.console import Console
 
 from sbkube.utils.file_loader import load_config_file
-from sbkube.utils.cli_check import check_helm_installed_or_exit
+from sbkube.utils.cli_check import check_helm_installed_or_exit, print_kube_connection_help
 from sbkube.utils.helm_util import get_installed_charts
 
 console = Console()
@@ -106,7 +106,11 @@ def cmd(app_dir, base_dir, namespace, dry_run):
                 console.print(f"[cyan]📄 kubectl apply: {' '.join(cmd)}[/cyan]")
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 if result.returncode != 0:
-                    console.print(f"[red]❌ YAML 적용 실패: {result.stderr}[/red]")
+                    # kubectl 연결 실패 메시지 감지
+                    if "Unable to connect to the server" in result.stderr or "no such host" in result.stderr:
+                        print_kube_connection_help()
+                    else:
+                        console.print(f"[red]❌ YAML 적용 실패: {result.stderr}[/red]")
                 else:
                     console.print(f"[green]✅ YAML 적용 완료: {yaml_path}[/green]")
 

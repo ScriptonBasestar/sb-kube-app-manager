@@ -20,10 +20,6 @@ def check_command_available(command):
     except Exception as e:
         console.print(f"[yellow]⚠️ '{command}' 실행 오류: {e}[/yellow]")
 
-# CLI 진입 시 사전 확인
-check_command_available("helm")
-check_command_available("kubectl")
-
 @click.command(name="validate")
 @click.argument("target", type=str)
 @click.option("--type", "type_", type=click.Choice(["schema", "sources"], case_sensitive=False), help="Force schema type (schema or sources)")
@@ -33,6 +29,10 @@ def cmd(target, type_, base_dir, schema):
     """
     Validate a sources.yaml or config.yaml against JSON Schema.
     """
+    # 명령 실행 시에만 체크
+    check_command_available("helm")
+    check_command_available("kubectl")
+
     base_path = Path(base_dir).expanduser().resolve()
     yaml_path = (base_path / target).expanduser().resolve()
 

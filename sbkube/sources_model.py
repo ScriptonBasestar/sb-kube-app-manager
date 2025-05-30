@@ -1,27 +1,30 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, field_validator, ValidationError
 from pathlib import Path
 from textwrap import dedent
+from typing import Dict
 import os
+import yaml
 
-from dataclass_wizard import YAMLWizard
-
-
-@dataclass(unsafe_hash=True)
-class GitRepoScheme(YAMLWizard):
+class GitRepoScheme(BaseModel):
     url: str
     branch: str
 
     def __repr__(self):
         return f"{self.url}#{self.branch}"
 
+    @field_validator("url")
+    @classmethod
+    def url_must_be_http(cls, v):
+        if not v.startswith("http") and not v.startswith("oci") and not v.startswith("git"):
+            raise ValueError("Git url must start with http")
+        return v
 
-@dataclass(unsafe_hash=True)
-class SourceScheme(YAMLWizard):
+class SourceScheme(BaseModel):
     cluster: str
     kubeconfig: str
-    helm_repos: dict[str, str]
-    oci_repos: dict[str, dict[str, str]]
-    git_repos: dict[str, GitRepoScheme]
+    helm_repos: Dict[str, str]
+    oci_repos: Dict[str, Dict[str, str]]
+    git_repos: Dict[str, GitRepoScheme]
 
     def __repr__(self):
         return dedent(f"""
@@ -32,32 +35,35 @@ class SourceScheme(YAMLWizard):
             git_repos: {self.git_repos}
         """)
 
+    @field_validator("helm_repos")
+    @classmethod
+    def validate_helm_urls(cls, v):
+        for name, url in v.items():
+            if not url.startswith("http"):
+                raise ValueError(f"Invalid Helm repo URL: {url}")
+        return v
+
+    @field_validator("oci_repos")
+    @classmethod
+    def validate_oci_urls(cls, v):
+        for repo_group, charts in v.items():
+            for chart_name, oci_url in charts.items():
+                if not oci_url.startswith("oci://"):
+                    raise ValueError(f"Invalid OCI URL: {oci_url}")
+        return v
 
 def load_sources() -> SourceScheme:
     """Load sources.yaml into a SourceScheme object."""
     config_path = Path(__file__).parent / "sources.yaml"
     config_path = Path(os.path.expanduser(str(config_path)))
-    return SourceScheme.from_yaml_file(config_path)
-
-
-def validate_loaded_sources(sources: SourceScheme):
-    """(Optional) Basic validation of loaded source structure."""
-    assert isinstance(sources.helm_repos, dict)
-    for name, url in sources.helm_repos.items():
-        assert isinstance(name, str) and isinstance(url, str)
-        assert url.startswith("http"), f"Invalid Helm repo URL: {url}"
-    for repo_group, charts in sources.oci_repos.items():
-        assert isinstance(charts, dict)
-        for chart_name, oci_url in charts.items():
-            assert oci_url.startswith("oci://"), f"Invalid OCI URL: {oci_url}"
-    for name, repo in sources.git_repos.items():
-        assert isinstance(repo, GitRepoScheme)
-        assert repo.url.startswith("http"), f"Invalid Git URL: {repo.url}"
-
+    with open(config_path, "r") as f:
+        yaml_obj = yaml.safe_load(f)
+    return SourceScheme.model_validate(yaml_obj)
 
 if __name__ == "__main__":
-    sources = load_sources()
-    print(sources)
+    try:
+        sources = load_sources()
+        print(sources)
+    except ValidationError as e:
+        print(f"❌ Validation failed: {e}")
 
-    # Optional: validate correctness
-    validate_loaded_sources(sources)

@@ -1,120 +1,75 @@
-from dataclasses import dataclass, field
+from pydantic import BaseModel, Field, model_validator
 from pathlib import Path
-from typing import Optional, Literal
+from typing import Optional, Literal, List, Dict, Any
 import os
+import yaml
 
-from dataclass_wizard import YAMLWizard
+# --- 각 spec 정의 ---
 
-
-@dataclass(unsafe_hash=True)
-class CopyPair:
+class CopyPair(BaseModel):
     src: str
     dest: str
 
-@dataclass(unsafe_hash=True)
-class FileActionSpec:
-    # apply, create, delete
-    type: str
-    # path or url
+class FileActionSpec(BaseModel):
+    type: Literal['apply', 'create', 'delete']
     path: str
-    # # namespace
     # n: Optional[str] = None
 
-@dataclass(unsafe_hash=True)
-class AppSpecBase:
+class AppSpecBase(BaseModel):
     pass
 
-
-@dataclass(unsafe_hash=True)
 class AppExecSpec(AppSpecBase):
-    commands: list[str] = field(default_factory=list)
+    commands: List[str] = Field(default_factory=list)
 
-    def __post_init__(self):
-        # commands가 리스트인지 확인
-        if not isinstance(self.commands, list):
-            raise ValueError(f"commands는 list여야 합니다: {self.commands!r}")
-        # 리스트 내부가 전부 str인지 확인
-        if not all(isinstance(cmd, str) for cmd in self.commands):
-            raise ValueError(f"commands 내부는 모두 str이어야 합니다: {self.commands!r}")
-        # (원한다면) commands가 비어있는지 등의 추가 검증도 가능
+    @model_validator(mode="after")
+    def validate_commands(self) -> "AppExecSpec":
+        if not isinstance(self.commands, list) or not all(isinstance(cmd, str) for cmd in self.commands):
+            raise ValueError("commands must be a list of str")
+        return self
 
-@dataclass(unsafe_hash=True)
 class AppInstallHelmSpec(AppSpecBase):
-    values: list[str] = field(default_factory=list)
+    values: List[str] = Field(default_factory=list)
 
-
-@dataclass(unsafe_hash=True)
 class AppInstallActionSpec(AppSpecBase):
-    """
-    spec:
-      files:
-        - type: apply
-          path: file1.yaml
-        - type: create
-          path: file2.yml
-        - type: create
-          path: http://example.com/file.yaml
-    """
-    app_type: Literal['install-yaml'] = 'install-yaml'
-    
-    actions: list[FileActionSpec] = field(default_factory=list)
+    app_type: Literal['install-yaml'] = Field('install-yaml', const=True)
+    actions: List[FileActionSpec] = Field(default_factory=list)
 
-
-@dataclass(unsafe_hash=True)
 class AppInstallKustomizeSpec(AppSpecBase):
     kustomize_path: str
 
-
-@dataclass(unsafe_hash=True)
 class AppCopySpec(AppSpecBase):
-    paths: list[CopyPair] = field(default_factory=list)
+    paths: List[CopyPair] = Field(default_factory=list)
 
-
-@dataclass(unsafe_hash=True)
 class AppPullHelmSpec(AppSpecBase):
     repo: str
     chart: str
     dest: str
     chart_version: Optional[str] = None
     app_version: Optional[str] = None
-    removes: list[str] = field(default_factory=list)
-    overrides: list[str] = field(default_factory=list)
+    removes: List[str] = Field(default_factory=list)
+    overrides: List[str] = Field(default_factory=list)
 
-
-@dataclass(unsafe_hash=True)
 class AppPullHelmOciSpec(AppSpecBase):
     repo: str
     chart: str
     dest: str
     chart_version: Optional[str] = None
     app_version: Optional[str] = None
-    removes: list[str] = field(default_factory=list)
-    overrides: list[str] = field(default_factory=list)
+    removes: List[str] = Field(default_factory=list)
+    overrides: List[str] = Field(default_factory=list)
 
-
-@dataclass(unsafe_hash=True)
 class AppPullGitSpec(AppSpecBase):
     repo: str
-    paths: list[CopyPair] = field(default_factory=list)
+    paths: List[CopyPair] = Field(default_factory=list)
 
-    def __init__(self, **kwargs):
-        self.repo = kwargs['repo']
-        self.paths = [CopyPair(**path) for path in kwargs['paths']]
-
-
-@dataclass(unsafe_hash=True, kw_only=True)
 class AppPullHttpSpec(AppSpecBase):
-    name: str = 'pull-http'
+    name: str = Field('pull-http', const=True)
     url: str
-    paths: list[CopyPair] = field(default_factory=list)
+    paths: List[CopyPair] = Field(default_factory=list)
 
-    def __init__(self, **kwargs):
-        self.url = kwargs['url']
-        self.paths = [CopyPair(**path) for path in kwargs['paths']]
+# --- 상위 스키마 ---
 
-
-@dataclass(unsafe_hash=True, kw_only=True)
-class AppInfoScheme(YAMLWizard):
+class AppInfoScheme(BaseModel):
     name: str
     type: Literal[
         'exec',
@@ -123,23 +78,25 @@ class AppInfoScheme(YAMLWizard):
         'pull-helm', 'pull-helm-oci', 'pull-git', 'pull-http'
     ]
     path: Optional[str] = None
-    enabled: bool = field(init=False, default=False)
+    enabled: bool = False
     namespace: Optional[str] = None
-    specs: dict = field(default_factory=dict)
+    specs: Dict[str, Any] = Field(default_factory=dict)
 
-
-@dataclass(unsafe_hash=True)
-class AppGroupScheme(YAMLWizard):
+class AppGroupScheme(BaseModel):
     namespace: str
-    deps: list[str] = field(default_factory=list)
-    apps: list[AppInfoScheme] = field(default_factory=list)
+    deps: List[str] = Field(default_factory=list)
+    apps: List[AppInfoScheme] = Field(default_factory=list)
 
+# --- YAML 로더 (pydantic 활용) ---
 
 def load_apps(group_name: str) -> AppGroupScheme:
     curr_file_path = Path(__file__).parent.resolve()
     yaml_path = Path(os.path.expanduser(str(curr_file_path / group_name / "config.yaml")))
-    return AppGroupScheme.from_yaml_file(yaml_path)
+    with open(yaml_path, 'r') as f:
+        data = yaml.safe_load(f)
+    return AppGroupScheme.model_validate(data)
 
+# --- 사용 예시 ---
 
 if __name__ == '__main__':
     group_scheme = load_apps("a000_infra")
@@ -151,3 +108,5 @@ if __name__ == '__main__':
         elif app.type == 'pull-git':
             git_spec = AppPullGitSpec(**app.specs)
             print(git_spec)
+        # 필요하면 추가 분기
+

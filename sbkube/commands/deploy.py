@@ -104,7 +104,7 @@ def cmd(app_dir, base_dir, namespace, dry_run):
                 console.print(f"[red]❌ AppExecSpec 검증 실패: {e}[/red]")
                 install_actions = []
             for install_action in install_actions:
-                if install_action.t == "apply" or install_action.t == "create":
+                if install_action.type == "apply" or install_action.type == "create":
                     if install_action.path.startswith("http"):
                         yaml_path = install_action.path
                     else:

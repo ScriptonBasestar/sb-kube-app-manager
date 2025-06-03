@@ -36,8 +36,27 @@ def check_command_available(command):
 @click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 디렉토리 (config.yaml 등 내부 탐색, base-dir 기준)")
 @click.option("--sources", "sources_file_name", default="sources.yaml", help="소스 설정 파일 (base-dir 기준)")
 @click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
+# TODO: --app <app_name> 옵션 추가하여 특정 앱의 소스만 준비하는 기능
 def cmd(app_config_dir_name, sources_file_name, base_dir):
-    """앱 설정(config)과 소스 설정(sources)을 기반으로 외부 Helm 차트 및 Git 저장소를 로컬에 준비합니다."""
+    """
+    애플리케이션 배포에 필요한 외부 소스를 로컬 환경에 준비합니다.
+
+    이 명령어는 `config.[yaml|toml]` 파일에 정의된 'pull-helm', 'pull-helm-oci', 
+    'pull-git' 타입의 애플리케이션들을 대상으로 작동합니다.
+
+    주요 작업:
+    - Helm 저장소 처리: `sources.[yaml|toml]` 파일에 정의된 Helm 저장소 정보를 바탕으로,
+      필요한 경우 `helm repo add` 및 `helm repo update`를 실행합니다.
+    - Git 저장소 클론/업데이트: `sources.[yaml|toml]`에 정의된 Git 저장소 정보를 사용하여
+      `git clone` 또는 `git pull` (fetch & reset)을 수행하여 로컬에 코드를 준비합니다.
+      결과물은 `<base_dir>/repos/<repo_name>` 경로에 저장됩니다.
+    - Helm 차트 다운로드: `pull-helm` 타입 앱의 경우, 지정된 Helm 차트를
+      `<base_dir>/charts/<chart_name_or_dest>` 경로로 다운로드합니다.
+      (OCI 차트 지원은 향후 예정입니다.)
+
+    성공적으로 완료되면, `build` 단계에서 사용할 수 있도록 관련 소스들이
+    로컬에 준비됩니다.
+    """
     
     console.print("[bold blue]✨ `prepare` 작업 시작 ✨[/bold blue]")
 

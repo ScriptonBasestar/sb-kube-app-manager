@@ -19,7 +19,31 @@ console = Console()
 @click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 파일이 위치한 디렉토리 이름 (base-dir 기준)")
 @click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
 def cmd(app_config_dir_name: str, base_dir: str):
-    """`prepare` 단계에서 준비된 로컬 소스(Helm 차트, Git 저장소 내용)를 기반으로, 각 앱의 빌드 결과물을 생성합니다."""
+    """
+    `prepare` 단계의 결과물과 로컬 소스를 사용하여 배포 가능한 애플리케이션 빌드 결과물을 생성합니다.
+
+    이 명령어는 `config.[yaml|toml]` 파일에 정의된 'pull-helm', 'pull-helm-oci', 
+    'pull-git', 'copy-app' 타입의 애플리케이션들을 주로 대상으로 하며,
+    이들의 소스를 `<base_dir>/<app_dir>/build/<app_name>/` 경로에 최종 빌드합니다.
+
+    주요 작업:
+    - 대상 앱 타입: 'pull-helm', 'pull-helm-oci', 'pull-git', 'copy-app'.
+      (다른 타입의 앱은 이 단계에서 특별한 빌드 로직이 없을 수 있습니다.)
+    - Helm 차트 준비:
+        - `prepare` 단계에서 다운로드된 Helm 차트 (`<base_dir>/charts/...`)를 
+          빌드 디렉토리 (`<app_dir>/build/<app_name>`)로 복사합니다.
+        - `specs.overrides`: 지정된 파일들을 빌드된 차트 내에 덮어씁니다.
+          (원본은 `<app_dir>/overrides/<app_name>/...` 경로에서 가져옴)
+        - `specs.removes`: 빌드된 차트 내에서 지정된 파일 또는 디렉토리를 삭제합니다.
+    - Git 소스 준비:
+        - `prepare` 단계에서 클론된 Git 저장소 (`<base_dir>/repos/...`)의 내용을
+          `specs.paths` 정의에 따라 빌드 디렉토리로 복사합니다.
+    - 로컬 파일 복사 (`copy-app` 타입):
+        - `specs.paths`에 정의된 로컬 파일/디렉토리를 빌드 디렉토리로 복사합니다.
+
+    빌드 결과물은 주로 `template` 또는 `deploy` 명령어에서 사용됩니다.
+    빌드 작업 전, 기존 빌드 디렉토리 (`<app_dir>/build/`)는 삭제됩니다.
+    """
     
     console.print(f"[bold blue]✨ `build` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]")
 

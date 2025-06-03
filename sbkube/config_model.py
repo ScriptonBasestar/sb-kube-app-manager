@@ -31,6 +31,16 @@ class AppInstallHelmSpec(AppSpecBase):
     values: List[str] = Field(default_factory=list)
 
 class AppInstallActionSpec(AppSpecBase):
+    """
+    spec:
+      files:
+        - type: apply
+          path: file1.yaml
+        - type: create
+          path: file2.yml
+        - type: create
+          path: http://example.com/file.yaml
+    """
     app_type: Literal['install-yaml'] = Field('install-yaml', const=True)
     actions: List[FileActionSpec] = Field(default_factory=list)
 

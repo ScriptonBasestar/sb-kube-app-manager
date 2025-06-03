@@ -53,7 +53,7 @@ venv.bak/
 # PyCharm
 .idea/
 # VS Code
-.vscode/
+# .vscode/
 # JetBrains Rider
 .idea_modules/
 *.iml

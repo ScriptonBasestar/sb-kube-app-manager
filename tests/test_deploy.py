@@ -3,7 +3,7 @@ import subprocess
 import shutil
 from pathlib import Path
 
-SAMPLES_DIR = Path("samples/k3scode")
+EXAMPLES_DIR = Path("examples/k3scode")
 BUILD_DIR = Path("build")
 KUBECONFIG_TEST = Path.home() / ".kube/test-kubeconfig"
 RELEASE_NAME = "browserless"
@@ -31,20 +31,20 @@ def test_deploy_on_test_cluster():
     # 1. prepare
     assert run_cmd([
         "sbkube", "prepare",
-        "--apps", str(SAMPLES_DIR / "config-browserless"),
-        "--sources", str(SAMPLES_DIR / "sources")
+        "--apps", str(EXAMPLES_DIR / "config-browserless"),
+        "--sources", str(EXAMPLES_DIR / "sources")
     ], env=env).returncode == 0
 
     # 2. build
     assert run_cmd([
         "sbkube", "build",
-        "--apps", str(SAMPLES_DIR / "config-browserless")
+        "--apps", str(EXAMPLES_DIR / "config-browserless")
     ], env=env).returncode == 0
 
     # 3. deploy
     assert run_cmd([
         "sbkube", "deploy",
-        "--apps", str(SAMPLES_DIR / "config-browserless"),
+        "--apps", str(EXAMPLES_DIR / "config-browserless"),
         "--namespace", "devops"
     ], env=env).returncode == 0
 

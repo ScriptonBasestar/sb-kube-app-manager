@@ -2,7 +2,7 @@ import subprocess
 import shutil
 from pathlib import Path
 
-SAMPLES_DIR = Path("samples/k3scode")
+EXAMPLES_DIR = Path("examples/k3scode")
 BUILD_DIR = Path("build")
 TARGET_APP_NAME = "browserless"  # config-browserless 기준
 
@@ -16,7 +16,7 @@ def test_build_command_runs_and_creates_output():
     result = subprocess.run(
         [
             "sbkube", "build",
-            "--apps", str(SAMPLES_DIR / "config-browserless")
+            "--apps", str(EXAMPLES_DIR / "config-browserless")
         ],
         capture_output=True,
         text=True

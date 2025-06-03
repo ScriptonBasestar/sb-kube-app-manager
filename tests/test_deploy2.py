@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 import pytest
 
-SAMPLES_DIR = Path("samples/k3scode")
+EXAMPLES_DIR = Path("examples/k3scode")
 BUILD_DIR = Path("build")
 RELEASE_NAME = "browserless"
 NAMESPACE = "devops"
@@ -27,8 +27,8 @@ def test_deploy_on_test_cluster():
         # 1. prepare
         result = subprocess.run([
             "sbkube", "prepare",
-            "--apps", str(SAMPLES_DIR / "config-browserless"),
-            "--sources", str(SAMPLES_DIR / "sources")
+            "--apps", str(EXAMPLES_DIR / "config-browserless"),
+            "--sources", str(EXAMPLES_DIR / "sources")
         ], capture_output=True, text=True, env=env)
         print(result.stdout)
         assert result.returncode == 0
@@ -36,7 +36,7 @@ def test_deploy_on_test_cluster():
         # 2. build
         result = subprocess.run([
             "sbkube", "build",
-            "--apps", str(SAMPLES_DIR / "config-browserless")
+            "--apps", str(EXAMPLES_DIR / "config-browserless")
         ], capture_output=True, text=True, env=env)
         print(result.stdout)
         assert result.returncode == 0
@@ -44,7 +44,7 @@ def test_deploy_on_test_cluster():
         # 3. deploy
         result = subprocess.run([
             "sbkube", "deploy",
-            "--apps", str(SAMPLES_DIR / "config-browserless"),
+            "--apps", str(EXAMPLES_DIR / "config-browserless"),
             "--namespace", NAMESPACE
         ], capture_output=True, text=True, env=env)
         print(result.stdout)

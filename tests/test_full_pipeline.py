@@ -2,7 +2,7 @@ import subprocess
 import shutil
 from pathlib import Path
 
-SAMPLES_DIR = Path("samples/k3scode")
+EXAMPLES_DIR = Path("examples/k3scode")
 BUILD_DIR = Path("build")
 RENDERED_DIR = Path("rendered")
 TARGET_APP_NAME = "browserless"
@@ -19,8 +19,8 @@ def test_full_pipeline_prepare_build_template():
     result = subprocess.run(
         [
             "sbkube", "prepare",
-            "--apps", str(SAMPLES_DIR / "config-browserless"),
-            "--sources", str(SAMPLES_DIR / "sources")
+            "--apps", str(EXAMPLES_DIR / "config-browserless"),
+            "--sources", str(EXAMPLES_DIR / "sources")
         ],
         capture_output=True,
         text=True
@@ -31,7 +31,7 @@ def test_full_pipeline_prepare_build_template():
     result = subprocess.run(
         [
             "sbkube", "build",
-            "--apps", str(SAMPLES_DIR / "config-browserless")
+            "--apps", str(EXAMPLES_DIR / "config-browserless")
         ],
         capture_output=True,
         text=True
@@ -42,7 +42,7 @@ def test_full_pipeline_prepare_build_template():
     result = subprocess.run(
         [
             "sbkube", "template",
-            "--apps", str(SAMPLES_DIR / "config-browserless"),
+            "--apps", str(EXAMPLES_DIR / "config-browserless"),
             "--output-dir", str(RENDERED_DIR)
         ],
         capture_output=True,

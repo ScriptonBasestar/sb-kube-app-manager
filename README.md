@@ -129,7 +129,7 @@ kube-app-manaer/
 │   ├── cli.py             # main entry
 │   ├── commands/          # prepare/build/deploy 등 명령어 정의
 │   └── utils/             # 공통 유틸리티
-├── samples/k3scode/       # 테스트 config/sources 예제
+├── examples/k3scode/       # 테스트 config/sources 예제
 │   ├── config-memory.yaml
 │   ├── sources.yaml
 │   └── values/
@@ -258,7 +258,7 @@ pytest tests/
 또는 예제 config 보기:
 
 ```bash
-python -m sbkube.cli deploy --app-dir config-memory.yaml --base-dir ./samples/k3scode
+python -m sbkube.cli deploy --app-dir config-memory.yaml --base-dir ./examples/k3scode
 ```
 
 ---

@@ -2,7 +2,7 @@ import subprocess
 import shutil
 from pathlib import Path
 
-SAMPLES_DIR = Path("samples/k3scode")
+EXAMPLES_DIR = Path("examples/k3scode")
 CHARTS_DIR = Path("charts")
 REPOS_DIR = Path("repos")
 
@@ -20,8 +20,8 @@ def test_prepare_command_runs_successfully():
     result = subprocess.run(
         [
             "sbkube", "prepare",
-            "--apps", str(SAMPLES_DIR / "config.yaml"),
-            "--sources", str(SAMPLES_DIR / "sources.yaml")
+            "--apps", str(EXAMPLES_DIR / "config.yaml"),
+            "--sources", str(EXAMPLES_DIR / "sources.yaml")
         ],
         capture_output=True,
         text=True

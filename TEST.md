@@ -26,11 +26,11 @@ python -m sbkube.cli
 
 ### prepare
 ```bash
-uv run -m sbkube.cli prepare --base-dir samples/k3scode --app-dir memory
-uv run -m sbkube.cli prepare --base-dir samples/k3scode --app-dir rdb
+uv run -m sbkube.cli prepare --base-dir examples/k3scode --app-dir memory
+uv run -m sbkube.cli prepare --base-dir examples/k3scode --app-dir rdb
 
 python -m sbkube.cli prepare \
-  --base-dir ./samples/k3scode \
+  --base-dir ./examples/k3scode \
   --apps config-memory.yml
 
 sbkube prepare --base-dir . --app-dir memory
@@ -39,20 +39,20 @@ sbkube prepare --app-dir memory
 
 ### build
 ```bash
-uv run -m sbkube.cli build --base-dir samples/k3scode --app-dir memory
-uv run -m sbkube.cli build --base-dir samples/k3scode --app-dir rdb
+uv run -m sbkube.cli build --base-dir examples/k3scode --app-dir memory
+uv run -m sbkube.cli build --base-dir examples/k3scode --app-dir rdb
 ```
 
 ### template
 ```bash
-uv run -m sbkube.cli template --base-dir samples/k3scode --app-dir memory --output-dir rendered/
-uv run -m sbkube.cli template --base-dir samples/k3scode --app-dir rdb --output-dir rendered/
+uv run -m sbkube.cli template --base-dir examples/k3scode --app-dir memory --output-dir rendered/
+uv run -m sbkube.cli template --base-dir examples/k3scode --app-dir rdb --output-dir rendered/
 ```
 
 ### deploy
 ```bash
-uv run -m sbkube.cli deploy --base-dir samples/k3scode --app-dir memory --namespace data-memory
-uv run -m sbkube.cli deploy --base-dir samples/k3scode --app-dir rdb --namespace data-rdb
+uv run -m sbkube.cli deploy --base-dir examples/k3scode --app-dir memory --namespace data-memory
+uv run -m sbkube.cli deploy --base-dir examples/k3scode --app-dir rdb --namespace data-rdb
 ```
 
 ### upgrade

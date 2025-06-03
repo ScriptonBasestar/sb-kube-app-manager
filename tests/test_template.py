@@ -2,7 +2,7 @@ import subprocess
 import shutil
 from pathlib import Path
 
-SAMPLES_DIR = Path("samples/k3scode")
+EXAMPLES_DIR = Path("examples/k3scode")
 RENDERED_DIR = Path("rendered")
 BUILD_DIR = Path("build")
 TARGET_APP_NAME = "browserless"
@@ -17,7 +17,7 @@ def test_template_generates_yaml_output():
     result = subprocess.run(
         [
             "sbkube", "template",
-            "--apps", str(SAMPLES_DIR / "config-browserless"),
+            "--apps", str(EXAMPLES_DIR / "config-browserless"),
             "--output-dir", str(RENDERED_DIR)
         ],
         capture_output=True,

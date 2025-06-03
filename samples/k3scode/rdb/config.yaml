@@ -1,0 +1,37 @@
+namespace: data
+
+deps: []
+
+apps:
+
+  - name: postgresql-pull
+    type: pull-helm
+    specs:
+      repo: bitnami
+      chart: postgresql
+      dest: postgresql
+  - name: postgresql
+    type: install-helm
+    specs:
+      values:
+        - postgresql.yaml
+#      removes:
+#        - files/aaa.conf
+#      overrides:
+#        - templates/pg-host-vol.yaml
+#        - templates/primary/statefulset.yaml
+
+  - name: mariadb-pull
+    type: pull-helm
+    specs:
+      repo: bitnami
+      chart: mariadb
+      dest: mariadb
+  - name: mariadb
+    type: install-helm
+    specs:
+      values:
+        - mariadb.yaml
+#      overrides:
+#        - templates/mariadb-vol.yaml
+#        - templates/primary/statefulset.yaml

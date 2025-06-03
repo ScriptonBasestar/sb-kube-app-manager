@@ -2,18 +2,20 @@
 
 ## Prepare kind kube
 
-```
+```bash
 curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
 chmod +x ./kind
 sudo mv ./kind /usr/local/bin/kind
 
 
 kind create cluster --name sbkube-test
+# kind-sbkube-test 이게 생성됨
 kubectl config get-contexts
+kubectl config current-context
+kubectl config use-context kind-sbkube-test
 
-kind create cluster --name sbkube-test --kubeconfig ~/.kube/test-kubeconfig
+# kind create cluster --name sbkube-test --kubeconfig ~/.kube/test-kubeconfig
 ```
-
 
 ## CMD
 
@@ -23,76 +25,43 @@ sbkube build --apps config.yaml
 python -m sbkube.cli
 
 ### prepare
-python -m sbkube.cli prepare --apps samples/k3scode/config-browserless.yaml --sources samples/k3scode/sources.yaml
-python -m sbkube.cli prepare --apps samples/k3scode/config-browserless --sources samples/k3scode/sources
-python -m sbkube.cli prepare --apps samples/k3scode/config-memory --sources samples/k3scode/sources
-sbkube prepare --apps samples/k3scode/config --sources samples/k3scode/sources
+```bash
+uv run -m sbkube.cli prepare --base-dir samples/k3scode --app-dir memory
+uv run -m sbkube.cli prepare --base-dir samples/k3scode --app-dir rdb
 
 python -m sbkube.cli prepare \
   --base-dir ./samples/k3scode \
   --apps config-memory.yml
 
-sbkube prepare --base-dir . --app-dir a000_infra_network
+sbkube prepare --base-dir . --app-dir memory
+sbkube prepare --app-dir memory
+```
 
 ### build
-python -m sbkube.cli build --apps samples/k3scode/config-memory
-sbkube build --apps samples/k3scode/config-memory
-
-python -m sbkube.cli build \
-  --base-dir ./samples/k3scode \
-  --apps config-memory.yml
-
-sbkube build --base-dir . --app-dir a000_infra_network
+```bash
+uv run -m sbkube.cli build --base-dir samples/k3scode --app-dir memory
+uv run -m sbkube.cli build --base-dir samples/k3scode --app-dir rdb
+```
 
 ### template
-python -m sbkube.cli template --apps samples/k3scode/config-memory --output-dir rendered/
-
-base-dir지정안해서 오류나는거확인
-python -m sbkube.cli template --apps samples/k3scode/config-memory --output-dir rendered/
-
-sbkube template \
-  --apps samples/k3scode/config-memory \
-  --base-dir ./samples/k3scode \
-  --output-dir rendered
-
-python -m sbkube.cli template \
-  --apps config-memory \
-  --base-dir ./samples/k3scode
-
-sbkube template --base-dir . --app-dir a000_infra_network
-
+```bash
+uv run -m sbkube.cli template --base-dir samples/k3scode --app-dir memory --output-dir rendered/
+uv run -m sbkube.cli template --base-dir samples/k3scode --app-dir rdb --output-dir rendered/
+```
 
 ### deploy
-python -m sbkube.cli deploy --apps samples/k3scode/config-memory --namespace devops
-sbkube deploy --apps samples/k3scode/config-memory --namespace devops
-
-python -m sbkube.cli deploy \
-  --apps config-memory \
-  --base-dir ./samples/k3scode
-
-sbkube deploy --base-dir . --app-dir a000_infra_network
+```bash
+uv run -m sbkube.cli deploy --base-dir samples/k3scode --app-dir memory --namespace data-memory
+uv run -m sbkube.cli deploy --base-dir samples/k3scode --app-dir rdb --namespace data-rdb
+```
 
 ### upgrade
-
-python -m sbkube.cli upgrade \
-  --apps config-memory \
-  --base-dir ./samples/k3scode
-
-sbkube upgrade --base-dir . --app-dir a000_infra_network
-
+TODO
 
 ### delete
-
-python -m sbkube.cli delete \
-  --apps config-memory \
-  --base-dir ./samples/k3scode
-
-sbkube delete --base-dir . --app-dir a000_infra_network
+TODO
 
 ### validate
-
-python -m sbkube.cli validate \
-  samples/k3scode/sources.yml
 
 #### sources.yaml 검증
 sbkube validate sources.yaml
@@ -102,7 +71,6 @@ sbkube validate a000_infra/config.yaml
 
 #### 스키마 명시
 sbkube validate somefile.yaml --schema schemas/custom.schema.json
-
 
 ## Unit TEST
 
@@ -122,7 +90,6 @@ pytest tests/test_template.py -v
 ### deploy
 
 pytest tests/test_deploy.py -v
-
 
 ----------
 --namespace, --include-crds, --kube-version 등 Helm 추가 인자 지원

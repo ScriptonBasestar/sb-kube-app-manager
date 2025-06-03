@@ -1,5 +1,4 @@
 namespace: data
-cluster: polypia-cluster
 
 deps: []
 
@@ -33,17 +32,3 @@ apps:
       values:
         - memcached.yaml
 
-#    etcd:
-#      repo: bitnami
-##      chart_version: 9.2.0
-##      app_version: 3.5.9
-#      values:
-#        - etcd.yaml
-#    # https://github.com/openshift-helm-charts/charts/blob/main/README.md
-#    # https://github.com/infinispan/infinispan-helm-charts
-#    infinispan:
-#      repo: openshift-helm-charts
-##      chart_version: 0.3.2
-##      app_version: 14.0
-#      values:
-#        - infinispan.yaml

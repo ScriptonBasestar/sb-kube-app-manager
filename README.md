@@ -142,43 +142,110 @@ kube-app-manaer/
 
 ---
 
-## 🚀 CLI 사용법
+## 🚀 CLI 일반 사용법
 
-### 준비 (Helm repo 추가, Git clone, OCI pull 등)
-
-```bash
-sbkube prepare --app-dir config-memory.yaml --base-dir ./samples/k3scode --sources sources.yaml
-```
-
-### 빌드 (chart 복사, override, remove 등)
+### 0. Kubernetes 설정 확인 (선택 사항)
+`sbkube`를 인수 없이 실행하여 현재 kubeconfig 설정 및 사용 가능한 컨텍스트를 확인합니다.
+이 정보는 `python-kubernetes` 라이브러리를 통해 `~/.kube/config` (또는 `KUBECONFIG` 환경 변수 경로)에서 읽어옵니다.
 
 ```bash
-sbkube build --app-dir config-memory.yaml --base-dir ./samples/k3scode
+sbkube
 ```
+결과를 보고 필요시 `kubectl config use-context <context_name>`으로 활성 컨텍스트를 변경하거나, `sbkube` 명령어 실행 시 전역 옵션을 사용합니다.
 
-### Helm 템플리트 출력
+### 전역 옵션
+모든 `sbkube` 명령어는 다음과 같은 전역 옵션을 지원하여 실행 환경을 제어할 수 있습니다:
+*   `--kubeconfig FILE_PATH`: 사용할 kubeconfig 파일 경로를 지정합니다. (기본값: `KUBECONFIG` 환경 변수 또는 `~/.kube/config`)
+*   `--context CONTEXT_NAME`: 사용할 Kubernetes 컨텍스트 이름을 지정합니다. (기본값: 현재 활성 컨텍스트)
+*   `-v`, `--verbose`: 상세 로깅을 활성화하여 더 많은 내부 처리 과정을 보여줍니다.
 
+예시:
 ```bash
-sbkube template --app-dir config-memory.yaml --base-dir ./samples/k3scode --output-dir ./rendered
+sbkube --kubeconfig /path/to/my.config --context staging-cluster deploy --app my-app
 ```
 
-### 실제 배포
+### 일반적인 배포 워크플로우
 
-```bash
-sbkube deploy --app-dir config-memory.yaml --base-dir ./samples/k3scode
-```
+다음은 `sbkube`를 사용한 일반적인 애플리케이션 배포 단계입니다.
 
-### 리리스 삭제
+1.  **소스 준비 (`prepare`)**:
+    애플리케이션 배포에 필요한 외부 소스(Helm 저장소, Git 저장소, Helm 차트)를 로컬 환경에 준비합니다.
+    *   **대상**: `config.[yaml|toml]` 파일 내 `pull-helm`, `pull-helm-oci`, `pull-git` 타입 앱.
+    *   **설정**: `<base_dir>/<app_dir>/sources.[yaml|toml]` 파일의 소스 정의 참조.
+    *   **작업**: Helm 저장소 추가/업데이트, Git 저장소 클론/업데이트, Helm 차트 다운로드.
+    *   **결과물**:
+        *   Helm 차트: `<base_dir>/charts/<chart_name_or_dest>/`
+        *   Git 저장소: `<base_dir>/repos/<repo_name>/`
 
-```bash
-sbkube delete --app-dir config-memory.yaml --base-dir ./samples/k3scode
-```
+    ```bash
+    sbkube prepare --base-dir . --app-dir config
+    ```
+    (옵션: `--sources <file_name>`)
 
-### 업그레이드
+2.  **애플리케이션 빌드 (`build`)**:
+    `prepare` 단계의 결과물과 로컬 소스를 사용하여 배포 가능한 애플리케이션 빌드 결과물을 생성합니다.
+    *   **대상**: `config.[yaml|toml]` 파일 내 `pull-helm`, `pull-helm-oci`, `pull-git`, `copy-app` 타입 앱.
+    *   **작업**: 소스 복사, Helm 차트 overrides/removes 적용 등.
+    *   **결과물**: `<base_dir>/<app_dir>/build/<app_name>/` (이 디렉토리는 빌드 시작 시 초기화됨)
 
-```bash
-sbkube upgrade --app-dir config-memory.yaml --base-dir ./samples/k3scode
-```
+    ```bash
+    sbkube build --base-dir . --app-dir config
+    ```
+
+3.  **템플릿 렌더링 (`template`, 선택 사항)**:
+    빌드된 Helm 차트를 Kubernetes YAML 매니페스트로 렌더링하여 확인합니다.
+    *   **대상**: `build` 단계에서 생성된 Helm 차트.
+    *   **결과물**: 지정된 출력 디렉토리 (예: `<app_dir>/<output_dir>/<app_name>.yaml`)
+
+    ```bash
+    sbkube template --base-dir . --app-dir config --output-dir rendered_yamls
+    ```
+    (옵션: `--namespace <ns>`)
+
+4.  **클러스터 배포 (`deploy`)**:
+    빌드된 애플리케이션을 Kubernetes 클러스터에 배포합니다.
+    *   **대상**: `config.[yaml|toml]` 파일 내 `install-helm`, `install-kubectl`, `install-action` 타입 앱.
+    *   **작업**: `helm install/upgrade`, `kubectl apply`, 사용자 정의 스크립트 실행.
+
+    ```bash
+    sbkube deploy --base-dir . --app-dir config
+    ```
+    (옵션: `--namespace <ns>`, `--app <app_name>`, `--dry-run` (Helm 전용))
+
+### 애플리케이션 관리 명령어
+
+*   **업그레이드 (`upgrade`)**:
+    설치된 Helm 애플리케이션을 업그레이드하거나, 존재하지 않으면 새로 설치합니다 (`--install` 플래그 기본 사용).
+    *   **대상**: `install-helm` 타입 앱.
+
+    ```bash
+    sbkube upgrade --base-dir . --app-dir config --app my-helm-app
+    ```
+    (옵션: `--namespace <ns>`, `--dry-run`, `--no-install`)
+
+*   **삭제 (`delete`)**:
+    클러스터에서 애플리케이션을 삭제합니다.
+    *   **대상**: `install-helm`, `install-kubectl`, `install-action` 타입 앱.
+
+    ```bash
+    sbkube delete --base-dir . --app-dir config --app my-app-to-delete
+    ```
+    (옵션: `--namespace <ns>`, `--skip-not-found`)
+
+*   **설정 검증 (`validate`)**:
+    `config.[yaml|toml]` 또는 `sources.[yaml|toml]` 파일의 구조와 내용을 JSON 스키마 및 내부 데이터 모델 기준으로 검증합니다.
+
+    ```bash
+    sbkube validate path/to/your/config.yaml
+    sbkube validate path/to/your/sources.yaml --schema-type sources
+    ```
+    (옵션: `--schema-type <type>`, `--schema-path <file_path>`)
+
+### 공통 옵션
+대부분의 명령어는 다음 옵션들을 지원합니다:
+*   `--base-dir <path>`: 프로젝트의 루트 디렉토리 (기본값: 현재 디렉토리 ".").
+*   `--app-dir <name>`: `config.yaml`, `sources.yaml`, `values/` 등이 위치한 디렉토리 이름. `--base-dir` 기준 상대 경로 (기본값: "config").
+*   `--app <app_name>`: 특정 애플리케이션만 대상으로 작업 (예: `deploy`, `upgrade`, `delete`, `build`, `template`).
 
 ---
 

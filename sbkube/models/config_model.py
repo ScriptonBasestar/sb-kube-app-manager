@@ -41,7 +41,7 @@ class AppInstallActionSpec(AppSpecBase):
         - type: create
           path: http://example.com/file.yaml
     """
-    app_type: Literal['install-yaml'] = Field('install-yaml', const=True)
+    app_type: Literal['install-yaml'] = 'install-yaml'
     actions: List[FileActionSpec] = Field(default_factory=list)
 
 class AppInstallKustomizeSpec(AppSpecBase):
@@ -73,7 +73,7 @@ class AppPullGitSpec(AppSpecBase):
     paths: List[CopyPair] = Field(default_factory=list)
 
 class AppPullHttpSpec(AppSpecBase):
-    name: str = Field('pull-http', const=True)
+    name: Literal['pull-http'] = 'pull-http'
     url: str
     paths: List[CopyPair] = Field(default_factory=list)
 

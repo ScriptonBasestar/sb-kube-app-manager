@@ -96,7 +96,7 @@ def cmd(app_dir, base_dir, namespace, dry_run):
         elif app_type == "install-yaml":
             # yaml_files = app["specs"].get("files", [])
             # AppInstallActionSpec
-            from sbkube.config_model import AppInstallActionSpec
+            from sbkube.models.config_model import AppInstallActionSpec
             try:
                 exec_spec = AppInstallActionSpec(**app["specs"])
                 install_actions = exec_spec.actions
@@ -134,7 +134,7 @@ def cmd(app_dir, base_dir, namespace, dry_run):
 
         elif app_type == "exec":
             # AppExecSpec
-            from sbkube.config_model import AppExecSpec
+            from sbkube.models.config_model import AppExecSpec
             try:
                 exec_spec = AppExecSpec(**app["specs"])
                 exec_cmds = exec_spec.commands

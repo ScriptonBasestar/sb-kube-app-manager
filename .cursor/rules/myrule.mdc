@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 ## 개발환경
 - language: python 3.12
 - PackageManager : uv

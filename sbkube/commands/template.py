@@ -112,10 +112,10 @@ def cmd(app_config_dir_name: str, output_dir_name: str, base_dir: str, cli_names
         helm_template_cmd = ["helm", "template", app_name, str(built_chart_path)]
 
         current_ns_for_template = None
-        if app_info.namespace and app_info.namespace not in ["!ignore", "!none", "!false", ""]:
+        if cli_namespace:
+            current_ns_for_template = cli_namespace  # CLI 옵션 최우선
+        elif app_info.namespace and app_info.namespace not in ["!ignore", "!none", "!false", ""]:
             current_ns_for_template = app_info.namespace
-        elif cli_namespace:
-            current_ns_for_template = cli_namespace
         
         if current_ns_for_template:
             helm_template_cmd.extend(["--namespace", current_ns_for_template])

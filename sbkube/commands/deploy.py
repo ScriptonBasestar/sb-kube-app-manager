@@ -80,10 +80,10 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
         name = app_info.name
         
         current_ns = None
-        if app_info.namespace and app_info.namespace not in ["!ignore", "!none", "!false", ""]:
+        if cli_namespace:
+            current_ns = cli_namespace  # CLI 옵션 최우선
+        elif app_info.namespace and app_info.namespace not in ["!ignore", "!none", "!false", ""]:
             current_ns = app_info.namespace
-        elif cli_namespace:
-            current_ns = cli_namespace
         elif apps_config_dict.get("namespace") and apps_config_dict.get("namespace") not in ["!ignore", "!none", "!false", ""]:
             current_ns = apps_config_dict.get("namespace")
         

@@ -7,8 +7,8 @@ from click.testing import CliRunner
 from sbkube.cli import main as sbkube_cli
 
 EXAMPLES_DIR = Path("examples/k3scode")
-BUILD_DIR = Path("build")
-TARGET_APP_NAME = "browserless"  # config-browserless 기준
+BUILD_DIR = EXAMPLES_DIR / "build"
+TARGET_APP_NAME = "browserless"  # 출력에서 확인된 실제 빌드 디렉토리 이름
 
 def clean_build_dir():
     if BUILD_DIR.exists():
@@ -21,7 +21,8 @@ def test_build_command_runs_and_creates_output():
         [
             "sbkube", "build",
             "--base-dir", str(EXAMPLES_DIR),
-            "--app-dir", "config-browserless"
+            "--app-dir", ".",  # 현재 디렉토리 (examples/k3scode)
+            "--config-file", "config-browserless.yml"  # 설정 파일 명시
         ],
         capture_output=True,
         text=True

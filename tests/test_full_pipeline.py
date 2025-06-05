@@ -19,8 +19,10 @@ def test_full_pipeline_prepare_build_template():
     result = subprocess.run(
         [
             "sbkube", "prepare",
-            "--apps", str(EXAMPLES_DIR / "config-browserless"),
-            "--sources", str(EXAMPLES_DIR / "sources")
+            "--base-dir", str(EXAMPLES_DIR),
+            "--app-dir", ".",
+            "--config-file", "config-browserless.yml",
+            "--sources-file", "sources.yaml"
         ],
         capture_output=True,
         text=True
@@ -31,7 +33,9 @@ def test_full_pipeline_prepare_build_template():
     result = subprocess.run(
         [
             "sbkube", "build",
-            "--apps", str(EXAMPLES_DIR / "config-browserless")
+            "--base-dir", str(EXAMPLES_DIR),
+            "--app-dir", ".",
+            "--config-file", "config-browserless.yml"
         ],
         capture_output=True,
         text=True
@@ -42,7 +46,9 @@ def test_full_pipeline_prepare_build_template():
     result = subprocess.run(
         [
             "sbkube", "template",
-            "--apps", str(EXAMPLES_DIR / "config-browserless"),
+            "--base-dir", str(EXAMPLES_DIR),
+            "--app-dir", ".",
+            "--config-file", "config-browserless.yml",
             "--output-dir", str(RENDERED_DIR)
         ],
         capture_output=True,
@@ -51,11 +57,11 @@ def test_full_pipeline_prepare_build_template():
     assert result.returncode == 0, f"template 실패\n{result.stderr}"
 
     # 4. 검증: 빌드 및 렌더링 결과물
-    chart_file = BUILD_DIR / TARGET_APP_NAME / "Chart.yaml"
-    output_file = RENDERED_DIR / f"{TARGET_APP_NAME}.yaml"
+    chart_file = EXAMPLES_DIR / "build" / TARGET_APP_NAME / "Chart.yaml"
+    output_file = EXAMPLES_DIR / RENDERED_DIR / f"{TARGET_APP_NAME}.yaml"
 
-    assert chart_file.exists(), "Chart.yaml 누락"
-    assert output_file.exists(), "렌더링된 YAML 파일 없음"
+    assert chart_file.exists(), f"Chart.yaml 누락: {chart_file}"
+    assert output_file.exists(), f"렌더링된 YAML 파일 없음: {output_file}"
 
     # 5. 템플릿 내용 확인
     content = output_file.read_text()

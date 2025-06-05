@@ -141,17 +141,18 @@ def test_delete_action_app(mock_kubectl_check, runner: CliRunner, create_sample_
 
     # Case 2: uninstall script가 없는 경우 (기존 my-action-app 사용)
     config_file_2 = create_sample_config_yaml # my-action-app에는 uninstall script 없음
-    app_name_2 = "my-action-app"
+    app_name_2 = "my-action-app"  # exec 타입 (delete 대상이 아님)
 
     result2 = runner.invoke(sbkube_cli, [
         'delete',
         '--base-dir', str(base_dir),
         '--app-dir', str(app_dir.name),
         '--config-file', str(config_file_2.name),
-        '--app', app_name_2 
+        '--app', app_name_2
     ])
-    assert result2.exit_code == 0 # 스킵하므로 성공으로 간주
-    assert "건너뜁니다" in result2.output
+    assert result2.exit_code == 0 # 삭제 대상이 아니므로 성공으로 간주
+    # exec 타입은 delete 대상이 아니므로 "삭제할 대상으로 지정된 앱이 없었습니다" 메시지가 나옴
+    assert "삭제할 대상으로 지정된 앱이 없었습니다" in result2.output
 
 
 def test_delete_app_skip_not_found_option(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):

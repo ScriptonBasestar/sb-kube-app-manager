@@ -120,10 +120,10 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
         console.print(f"    [grey]ℹ️ 대상 차트 경로: {built_chart_path}[/grey]")
 
         current_namespace = None
-        if app_info.namespace and app_info.namespace not in ["!ignore", "!none", "!false", ""]:
+        if cli_namespace:
+            current_namespace = cli_namespace  # CLI 옵션 최우선
+        elif app_info.namespace and app_info.namespace not in ["!ignore", "!none", "!false", ""]:
             current_namespace = app_info.namespace
-        elif cli_namespace:
-            current_namespace = cli_namespace
         elif global_namespace_from_config:
             current_namespace = global_namespace_from_config
         # Helm upgrade 시 네임스페이스가 없으면 default를 사용하도록 명시 (명령어 실행 시)
@@ -137,15 +137,11 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
         if current_namespace:
             helm_upgrade_cmd.extend(["--namespace", current_namespace])
             # 네임스페이스가 없으면 생성하는 옵션 (deploy와 동작 일관성)
-            # AppInfoScheme.create_namespace 또는 Spec 필드에서 가져올 수 있음
-            if app_info.create_namespace:
-                helm_upgrade_cmd.append("--create-namespace")
-                console.print(f"    [grey]ℹ️ 네임스페이스 사용 (필요시 생성): {current_namespace}[/grey]")
-            else:
-                console.print(f"    [grey]ℹ️ 네임스페이스 사용: {current_namespace}[/grey]")
+            # 기본적으로 --create-namespace를 사용하여 네임스페이스가 없으면 생성
+            helm_upgrade_cmd.append("--create-namespace")
+            console.print(f"    [grey]ℹ️ 네임스페이스 사용 (필요시 생성): {current_namespace}[/grey]")
         else: # 네임스페이스가 최종적으로 결정되지 않으면 helm은 default 사용
             console.print(f"    [grey]ℹ️ 네임스페이스 미지정 (Helm이 'default' 네임스페이스 사용 또는 차트 내 정의 따름)[/grey]")
-            # 만약 이 경우에도 --create-namespace를 쓰고 싶다면, 'default'를 명시적으로 지정해야 함
 
         # Values 파일 처리 (AppInstallHelmSpec 사용)
         values_files_to_apply = []

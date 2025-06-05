@@ -54,11 +54,11 @@ def sample_config_yaml_content():
             {
                 "name": "my-helm-app",
                 "type": "install-helm",
+                "namespace": "helm-ns",
                 "specs": {
                     "repo": "bitnami",
                     "chart": "redis",
                     "version": "17.0.0",
-                    "namespace": "helm-ns",
                     "values": ["values/helm-app-values.yaml"],
                     "set": ["master.replicaCount=1"]
                 }
@@ -75,10 +75,9 @@ def sample_config_yaml_content():
             },
             {
                 "name": "my-action-app",
-                "type": "install-action",
+                "type": "exec",
                 "specs": {
-                    "command": "echo 'action executed'",
-                    "namespace": "action-ns"
+                    "commands": ["echo 'action executed'"]
                 }
             },
             {
@@ -95,7 +94,7 @@ def sample_config_yaml_content():
                 "name": "my-pull-git-app",
                 "type": "pull-git",
                 "specs": {
-                    "repo": "pulled-git-repo", # repos/<repo>에서 가져옴
+                    "repo": "pulled-git-repo",
                     "paths": [
                         {"src": ".", "dest": "."}
                     ]

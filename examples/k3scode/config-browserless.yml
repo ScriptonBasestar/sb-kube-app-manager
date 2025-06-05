@@ -5,8 +5,8 @@ apps:
   - name: browserless-pull
     type: pull-helm
     specs:
-      repo: browserless
-      chart: browserless
+      repo: bitnami
+      chart: redis
       dest: browserless
 
   - name: browserless

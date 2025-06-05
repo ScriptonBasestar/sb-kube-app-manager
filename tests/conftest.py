@@ -65,9 +65,11 @@ def sample_config_yaml_content():
             },
             {
                 "name": "my-kubectl-app",
-                "type": "install-kubectl",
+                "type": "install-yaml",
                 "specs": {
-                    "paths": ["manifests/kubectl-app.yaml"],
+                    "actions": [
+                        {"type": "apply", "path": "manifests/kubectl-app.yaml"}
+                    ],
                     "namespace": "kubectl-ns",
                 }
             },
@@ -86,24 +88,26 @@ def sample_config_yaml_content():
                     "repo": "bitnami",
                     "chart": "apache",
                     "version": "9.0.0",
-                    "destination": "pulled-apache" # charts/<destination>
+                    "dest": "pulled-apache" # charts/<dest>
                 }
             },
             {
                 "name": "my-pull-git-app",
                 "type": "pull-git",
                 "specs": {
-                    "url": "https://github.com/user/repo.git",
-                    "branch": "main",
-                    "destination": "pulled-git-repo" # repos/<destination>
+                    "repo": "pulled-git-repo", # repos/<repo>에서 가져옴
+                    "paths": [
+                        {"src": ".", "dest": "."}
+                    ]
                 }
             },
             {
                 "name": "my-copy-app",
                 "type": "copy-app",
                 "specs": {
-                    "source": "local-src/my-app", # base_dir 기준
-                    "destination": "copied-app-dest" # build/<app_name>/<destination> (생략 시 app_name)
+                    "paths": [
+                        {"src": "local-src/my-app", "dest": "copied-app-dest"} # base_dir 기준
+                    ]
                 }
             }
         ]
@@ -173,7 +177,7 @@ def create_sample_local_copy_source_dir(base_dir):
 def setup_test_environment(base_dir, app_dir, charts_dir, repos_dir, monkeypatch):
     """각 테스트 실행 전후로 환경을 설정하고 정리합니다."""
     monkeypatch.setattr(Path, 'cwd', lambda: base_dir)
-    # monkeypatch.setattr('sbkube.utils.common.get_absolute_path', lambda x, base: Path(base) / x if not Path(x).is_absolute() else Path(x))
+    monkeypatch.setattr('sbkube.utils.common.get_absolute_path', lambda x, base: Path(base) / x if not Path(x).is_absolute() else Path(x))
     # monkeypatch.setattr('sbkube.cli.DEFAULT_APP_DIR', app_dir.name) 
     # monkeypatch.setattr('sbkube.cli.DEFAULT_SOURCES_FILE', "sources.yaml") 
     # monkeypatch.setattr('sbkube.cli.DEFAULT_CONFIG_FILE', "config.yaml")

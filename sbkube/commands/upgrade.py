@@ -20,7 +20,8 @@ console = Console()
 @click.option("--app", "target_app_name", default=None, help="특정 앱만 업그레이드 (지정하지 않으면 모든 install-helm 타입 앱 대상)")
 @click.option("--dry-run", is_flag=True, default=False, help="실제 업그레이드를 수행하지 않고, 실행될 명령만 출력 (helm --dry-run)")
 @click.option("--no-install", "skip_install", is_flag=True, default=False, help="릴리스가 존재하지 않을 경우 새로 설치하지 않음 (helm upgrade의 --install 플래그 비활성화)")
-def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, target_app_name: str | None, dry_run: bool, skip_install: bool):
+@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)")
+def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, target_app_name: str | None, dry_run: bool, skip_install: bool, config_file_name: str | None):
     """config.yaml/toml에 정의된 Helm 애플리케이션을 업그레이드하거나 새로 설치합니다 (install-helm 타입 대상)."""
     console.print(f"[bold blue]✨ `upgrade` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]")
     check_helm_installed_or_exit()
@@ -38,15 +39,23 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
         raise click.Abort()
 
     config_file_path = None
-    for ext in [".yaml", ".yml", ".toml"]:
-        candidate = APP_CONFIG_DIR / f"config{ext}"
-        if candidate.exists() and candidate.is_file():
-            config_file_path = candidate
-            break
-    
-    if not config_file_path:
-        console.print(f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]")
-        raise click.Abort()
+    if config_file_name:
+        # --config-file 옵션이 지정된 경우
+        config_file_path = APP_CONFIG_DIR / config_file_name
+        if not config_file_path.exists() or not config_file_path.is_file():
+            console.print(f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]")
+            raise click.Abort()
+    else:
+        # 자동 탐색
+        for ext in [".yaml", ".yml", ".toml"]:
+            candidate = APP_CONFIG_DIR / f"config{ext}"
+            if candidate.exists() and candidate.is_file():
+                config_file_path = candidate
+                break
+        
+        if not config_file_path:
+            console.print(f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]")
+            raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
 
     apps_config_dict = load_config_file(str(config_file_path))

@@ -18,7 +18,9 @@ console = Console()
 @click.command(name="build")
 @click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 파일이 위치한 디렉토리 이름 (base-dir 기준)")
 @click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
-def cmd(app_config_dir_name: str, base_dir: str):
+@click.option("--app", "app_name", default=None, help="빌드할 특정 앱 이름 (지정하지 않으면 모든 앱 빌드)")
+@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)")
+def cmd(app_config_dir_name: str, base_dir: str, app_name: str | None, config_file_name: str | None):
     """
     `prepare` 단계의 결과물과 로컬 소스를 사용하여 배포 가능한 애플리케이션 빌드 결과물을 생성합니다.
 
@@ -57,15 +59,24 @@ def cmd(app_config_dir_name: str, base_dir: str):
     OVERRIDES_DIR = APP_CONFIG_DIR / "overrides"
 
     config_file_path = None
-    for ext in [".yaml", ".yml", ".toml"]:
-        candidate = APP_CONFIG_DIR / f"config{ext}"
-        if candidate.exists() and candidate.is_file():
-            config_file_path = candidate
-            break
+    if config_file_name:
+        # --config-file 옵션이 지정된 경우
+        config_file_path = APP_CONFIG_DIR / config_file_name
+        if not config_file_path.exists() or not config_file_path.is_file():
+            console.print(f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]")
+            raise click.Abort()
+    else:
+        # 자동 탐색
+        for ext in [".yaml", ".yml", ".toml"]:
+            candidate = APP_CONFIG_DIR / f"config{ext}"
+            if candidate.exists() and candidate.is_file():
+                config_file_path = candidate
+                break
+        
+        if not config_file_path:
+            console.print(f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]")
+            raise click.Abort()
     
-    if not config_file_path:
-        console.print(f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]")
-        raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
 
     apps_config_dict = load_config_file(str(config_file_path))
@@ -89,17 +100,26 @@ def cmd(app_config_dir_name: str, base_dir: str):
         try:
             app_info = AppInfoScheme(**app_dict)
             if app_info.type in ["pull-helm", "pull-helm-oci", "pull-git", "copy-app"]:
-                app_info_list_to_build.append(app_info)
+                if app_name is None or app_info.name == app_name:
+                    app_info_list_to_build.append(app_info)
             else:
-                console.print(f"[yellow]ℹ️ 앱 '{app_info.name}' (타입: {app_info.type}): 이 타입은 `build` 단계에서 처리 대상이 아닙니다. 건너뜁니다.[/yellow]")
+                if app_name is None or app_info.name == app_name:
+                    console.print(f"[yellow]ℹ️ 앱 '{app_info.name}' (타입: {app_info.type}): 이 타입은 `build` 단계에서 처리 대상이 아닙니다. 건너뜁니다.[/yellow]")
         except Exception as e:
             app_name_for_error = app_dict.get('name', '알 수 없는 앱')
             console.print(f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]")
             console.print(f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]")
             continue
 
+    if app_name is not None and not app_info_list_to_build:
+        console.print(f"[red]❌ 지정된 앱 '{app_name}'을 찾을 수 없거나 빌드할 수 없는 타입입니다.[/red]")
+        raise click.Abort()
+
     if not app_info_list_to_build:
-        console.print("[yellow]⚠️ 빌드할 앱이 설정 파일에 없거나, 지원하는 타입의 앱이 없습니다.[/yellow]")
+        if app_name is not None:
+            console.print(f"[yellow]⚠️ 앱 '{app_name}'은 빌드 대상이 아닙니다.[/yellow]")
+        else:
+            console.print("[yellow]⚠️ 빌드할 앱이 설정 파일에 없거나, 지원하는 타입의 앱이 없습니다.[/yellow]")
         console.print(f"[bold blue]✨ `build` 작업 완료 (처리할 앱 없음) ✨[/bold blue]")
         return
 

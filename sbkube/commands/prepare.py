@@ -36,8 +36,10 @@ def check_command_available(command):
 @click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 디렉토리 (config.yaml 등 내부 탐색, base-dir 기준)")
 @click.option("--sources", "sources_file_name", default="sources.yaml", help="소스 설정 파일 (base-dir 기준)")
 @click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
-# TODO: --app <app_name> 옵션 추가하여 특정 앱의 소스만 준비하는 기능
-def cmd(app_config_dir_name, sources_file_name, base_dir):
+@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)")
+@click.option("--sources-file", "sources_file_override", default=None, help="소스 설정 파일 경로 (--sources와 동일, 테스트 호환성)")
+@click.option("--app", "app_name", default=None, help="준비할 특정 앱 이름 (지정하지 않으면 모든 앱 준비)")
+def cmd(app_config_dir_name, sources_file_name, base_dir, config_file_name, sources_file_override, app_name):
     """
     애플리케이션 배포에 필요한 외부 소스를 로컬 환경에 준비합니다.
 
@@ -72,18 +74,31 @@ def cmd(app_config_dir_name, sources_file_name, base_dir):
     app_config_path_obj = BASE_DIR / app_config_dir_name
     
     config_file_path = None
-    for ext in [".yaml", ".yml", ".toml"]:
-        candidate = app_config_path_obj / f"config{ext}"
-        if candidate.exists() and candidate.is_file():
-            config_file_path = candidate
-            break
+    if config_file_name:
+        # --config-file 옵션이 지정된 경우
+        config_file_path = app_config_path_obj / config_file_name
+        if not config_file_path.exists() or not config_file_path.is_file():
+            console.print(f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]")
+            raise click.Abort()
+    else:
+        # 자동 탐색
+        for ext in [".yaml", ".yml", ".toml"]:
+            candidate = app_config_path_obj / f"config{ext}"
+            if candidate.exists() and candidate.is_file():
+                config_file_path = candidate
+                break
 
-    if not config_file_path:
-        console.print(f"[red]❌ 앱 설정 파일을 찾을 수 없습니다: {app_config_path_obj}/config.[yaml|yml|toml][/red]")
-        raise click.Abort()
+        if not config_file_path:
+            console.print(f"[red]❌ 앱 설정 파일을 찾을 수 없습니다: {app_config_path_obj}/config.[yaml|yml|toml][/red]")
+            raise click.Abort()
     console.print(f"[green]ℹ️ 앱 설정 파일 사용: {config_file_path}[/green]")
 
-    sources_file_path = BASE_DIR / sources_file_name
+    # sources 파일 처리 (--sources-file 옵션 우선)
+    if sources_file_override:
+        sources_file_path = BASE_DIR / sources_file_override
+    else:
+        sources_file_path = BASE_DIR / sources_file_name
+        
     if not sources_file_path.exists() or not sources_file_path.is_file():
         console.print(f"[red]❌ 소스 설정 파일이 존재하지 않습니다: {sources_file_path}[/red]")
         raise click.Abort()
@@ -101,12 +116,19 @@ def cmd(app_config_dir_name, sources_file_name, base_dir):
         try:
             app_info = AppInfoScheme(**app_dict)
             if app_info.type in ["pull-helm", "pull-helm-oci", "pull-git"]:
-                app_info_list.append(app_info)
+                # --app 옵션이 지정된 경우 해당 앱만 처리
+                if app_name is None or app_info.name == app_name:
+                    app_info_list.append(app_info)
         except Exception as e:
             app_name_for_error = app_dict.get('name', '알 수 없는 앱')
             console.print(f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]")
             console.print(f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]")
             continue
+
+    # --app 옵션이 지정되었는데 해당 앱을 찾지 못한 경우
+    if app_name is not None and not app_info_list:
+        console.print(f"[red]❌ 지정된 앱 '{app_name}'을 찾을 수 없거나 prepare 대상이 아닙니다.[/red]")
+        raise click.Abort()
     
     console.print("[cyan]--- Helm 저장소 준비 시작 ---[/cyan]")
     needed_helm_repo_names = set()

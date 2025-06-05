@@ -21,7 +21,9 @@ console = Console()
 @click.option("--base-dir", default=".", help="프로젝트 루트 디렉토리 (기본: 현재 경로)")
 @click.option("--namespace", "cli_namespace", default=None, help="설치할 기본 네임스페이스 (없으면 앱별로 따름)")
 @click.option("--dry-run", is_flag=True, default=False, help="실제로 적용하지 않고 dry-run")
-def cmd(app_dir, base_dir, cli_namespace, dry_run):
+@click.option("--app", "app_name", default=None, help="배포할 특정 앱 이름 (지정하지 않으면 모든 앱 배포)")
+@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)")
+def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
     """Helm chart 및 YAML, exec 명령을 클러스터에 적용"""
     check_helm_installed_or_exit()
 
@@ -31,27 +33,49 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run):
     VALUES_DIR = BASE_DIR / app_config_path_obj / "values"
 
     config_file_path = None
-    for ext in [".yaml", ".yml", ".toml"]:
-        candidate = (BASE_DIR / app_config_path_obj / f"config{ext}").resolve()
-        if candidate.exists():
-            config_file_path = candidate
-            break
+    if config_file_name:
+        # --config-file 옵션이 지정된 경우
+        config_file_path = (BASE_DIR / app_config_path_obj / config_file_name).resolve()
+        if not config_file_path.exists() or not config_file_path.is_file():
+            console.print(f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]")
+            raise click.Abort()
+    else:
+        # 자동 탐색
+        for ext in [".yaml", ".yml", ".toml"]:
+            candidate = (BASE_DIR / app_config_path_obj / f"config{ext}").resolve()
+            if candidate.exists():
+                config_file_path = candidate
+                break
 
-    if not config_file_path or not config_file_path.exists():
-        console.print(f"[red]❌ 앱 설정 파일이 존재하지 않습니다: {BASE_DIR / app_config_path_obj}/config.[yaml|yml|toml][/red]")
-        raise click.Abort()
+        if not config_file_path or not config_file_path.exists():
+            console.print(f"[red]❌ 앱 설정 파일이 존재하지 않습니다: {BASE_DIR / app_config_path_obj}/config.[yaml|yml|toml][/red]")
+            raise click.Abort()
 
     apps_config_dict = load_config_file(str(config_file_path))
 
+    apps_to_deploy = []
     for app_dict in apps_config_dict.get("apps", []):
         try:
             app_info = AppInfoScheme(**app_dict)
+            # --app 옵션이 지정된 경우 해당 앱만 처리
+            if app_name is None or app_info.name == app_name:
+                apps_to_deploy.append(app_info)
         except Exception as e:
             app_name_for_error = app_dict.get('name', '알 수 없는 앱')
             console.print(f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 발생 (AppInfoScheme 변환 실패): {e}[/red]")
             console.print(f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]")
             continue
 
+    # --app 옵션이 지정되었는데 해당 앱을 찾지 못한 경우
+    if app_name is not None and not apps_to_deploy:
+        console.print(f"[red]❌ 지정된 앱 '{app_name}'을 찾을 수 없습니다.[/red]")
+        raise click.Abort()
+
+    if not apps_to_deploy:
+        console.print("[yellow]⚠️ 배포할 앱이 설정 파일에 없습니다.[/yellow]")
+        return
+
+    for app_info in apps_to_deploy:
         app_type = app_info.type
         name = app_info.name
         

@@ -62,7 +62,7 @@ class AppCopySpec(AppSpecBase):
 class AppPullHelmSpec(AppSpecBase):
     repo: str
     chart: str
-    dest: str
+    dest: Optional[str] = None
     chart_version: Optional[str] = None
     app_version: Optional[str] = None
     removes: List[str] = Field(default_factory=list)
@@ -71,7 +71,7 @@ class AppPullHelmSpec(AppSpecBase):
 class AppPullHelmOciSpec(AppSpecBase):
     repo: str
     chart: str
-    dest: str
+    dest: Optional[str] = None
     chart_version: Optional[str] = None
     app_version: Optional[str] = None
     removes: List[str] = Field(default_factory=list)

@@ -40,7 +40,8 @@ def check_resource_exists(resource_type: str, resource_name: str, namespace: str
 @click.option("--namespace", "cli_namespace", default=None, help="삭제 작업을 수행할 기본 네임스페이스 (없으면 앱별 설정 또는 최상위 설정 따름)")
 @click.option("--app", "target_app_name", default=None, help="특정 앱만 삭제 (지정하지 않으면 모든 앱 대상)")
 @click.option("--skip-not-found", is_flag=True, help="삭제 대상 리소스가 없을 경우 오류 대신 건너뜁니다.")
-def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, target_app_name: str | None, skip_not_found: bool):
+@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)")
+def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, target_app_name: str | None, skip_not_found: bool, config_file_name: str | None):
     """config.yaml/toml에 정의된 애플리케이션을 삭제합니다 (Helm 릴리스, Kubectl 리소스 등)."""
     console.print(f"[bold blue]✨ `delete` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]")
     # 필요한 CLI 도구 가용성 검사는 각 앱 타입 처리 시 수행
@@ -55,15 +56,23 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
         raise click.Abort()
 
     config_file_path = None
-    for ext in [".yaml", ".yml", ".toml"]:
-        candidate = APP_CONFIG_DIR / f"config{ext}"
-        if candidate.exists() and candidate.is_file():
-            config_file_path = candidate
-            break
-    
-    if not config_file_path:
-        console.print(f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]")
-        raise click.Abort()
+    if config_file_name:
+        # --config-file 옵션이 지정된 경우
+        config_file_path = APP_CONFIG_DIR / config_file_name
+        if not config_file_path.exists() or not config_file_path.is_file():
+            console.print(f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]")
+            raise click.Abort()
+    else:
+        # 자동 탐색
+        for ext in [".yaml", ".yml", ".toml"]:
+            candidate = APP_CONFIG_DIR / f"config{ext}"
+            if candidate.exists() and candidate.is_file():
+                config_file_path = candidate
+                break
+        
+        if not config_file_path:
+            console.print(f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]")
+            raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
 
     apps_config_dict = load_config_file(str(config_file_path))
@@ -104,8 +113,8 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
             delete_skipped_apps +=1
             continue
         
-        # 삭제 대상 앱 타입: install-helm, install-kubectl, install-action 등
-        if app_info.type not in ["install-helm", "install-kubectl", "install-action"]:
+        # 삭제 대상 앱 타입: install-helm, install-yaml, install-action 등
+        if app_info.type not in ["install-helm", "install-yaml", "install-action"]:
             # console.print(f"[grey]ℹ️ 앱 '{app_info.name}' (타입: {app_info.type}): 이 타입은 `delete` 대상이 아닙니다. 건너뜁니다.[/grey]")
             # delete_skipped_apps +=1 # 명시적으로 삭제 대상이 아닌 것은 스킵 카운트에서 제외
             continue
@@ -262,6 +271,79 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
                     # console.print(f"    [yellow]⚠️ 앱 '{app_name}': Kubectl 삭제 작업에서 아무런 변경사항이 없습니다.[/yellow]")
             
             console.print(f"    [grey]Kubectl 삭제 요약 (파일 기준): 성공 {kubectl_delete_successful_files}, 실패 {kubectl_delete_failed_files}, 스킵(리소스 없음 등) {kubectl_delete_skipped_files}[/grey]")
+
+        elif app_type == "install-yaml":
+            check_kubectl_installed_or_exit()
+            spec_obj = None
+            if app_info.specs:
+                try:
+                    spec_obj = AppInstallActionSpec(**app_info.specs)
+                except Exception as e:
+                    console.print(f"[red]❌ 앱 '{app_name}': YAML Spec 정보 파싱 실패 (무시하고 진행): {e}[/red]")
+                    spec_obj = AppInstallActionSpec(actions=[]) # 빈 actions로 초기화하여 아래 로직 진행
+            else:
+                console.print(f"[yellow]⚠️ 앱 '{app_name}': YAML Spec 정보('actions')가 없어 삭제할 파일 목록을 알 수 없습니다. 건너뜁니다.[/yellow]")
+                delete_skipped_apps += 1
+                console.print("")
+                continue
+
+            if not spec_obj or not spec_obj.actions:
+                console.print(f"[yellow]⚠️ 앱 '{app_name}': 삭제할 YAML 파일 액션('actions')이 지정되지 않았습니다. 건너뜁니다.[/yellow]")
+                delete_skipped_apps += 1
+                console.print("")
+                continue
+
+            yaml_delete_successful_files = 0
+            yaml_delete_failed_files = 0
+
+            # apply/create 액션들을 역순으로 delete 시도
+            for action in reversed(spec_obj.actions):
+                if action.type not in ["apply", "create"]:
+                    continue # delete 액션은 삭제할 때 건너뜀
+                
+                file_path = Path(action.path)
+                abs_yaml_path = file_path
+                if not abs_yaml_path.is_absolute():
+                    abs_yaml_path = APP_CONFIG_DIR / file_path
+                
+                if not abs_yaml_path.exists() or not abs_yaml_path.is_file():
+                    console.print(f"    [yellow]⚠️ YAML 삭제 대상 파일을 찾을 수 없음 (건너뜀): {abs_yaml_path}[/yellow]")
+                    yaml_delete_failed_files +=1
+                    continue
+
+                kubectl_cmd = ["kubectl", "delete", "-f", str(abs_yaml_path)]
+                if current_namespace:
+                    kubectl_cmd.extend(["--namespace", current_namespace])
+                if skip_not_found:
+                    kubectl_cmd.append("--ignore-not-found=true")
+
+                console.print(f"    [cyan]$ {' '.join(kubectl_cmd)}[/cyan]")
+                try:
+                    result = subprocess.run(kubectl_cmd, capture_output=True, text=True, check=True, timeout=120)
+                    console.print(f"[green]    ✅ YAML '{abs_yaml_path.name}' 삭제 요청 성공.[/green]")
+                    if result.stdout: console.print(f"        [grey]Kubectl STDOUT: {result.stdout.strip()}[/grey]")
+                    yaml_delete_successful_files += 1
+                    delete_command_executed = True
+                except subprocess.CalledProcessError as e:
+                    console.print(f"[red]    ❌ YAML '{abs_yaml_path.name}' 삭제 실패:[/red]")
+                    if e.stdout: console.print(f"        [blue]STDOUT:[/blue] {e.stdout.strip()}")
+                    if e.stderr: console.print(f"        [red]STDERR:[/red] {e.stderr.strip()}")
+                    yaml_delete_failed_files +=1
+                except subprocess.TimeoutExpired:
+                    console.print(f"[red]    ❌ YAML '{abs_yaml_path.name}' 삭제 시간 초과.[/red]")
+                    yaml_delete_failed_files +=1
+                except Exception as e:
+                    console.print(f"[red]    ❌ YAML '{abs_yaml_path.name}' 삭제 중 예상치 못한 오류: {e}[/red]")
+                    yaml_delete_failed_files +=1
+            
+            if yaml_delete_failed_files == 0 and yaml_delete_successful_files > 0:
+                delete_successful_for_app = True
+            elif yaml_delete_failed_files == 0 and yaml_delete_successful_files == 0 and delete_command_executed == False:
+                if skip_not_found:
+                    delete_successful_for_app = True 
+                    console.print(f"    [yellow]ℹ️ 앱 '{app_name}': 모든 YAML 리소스가 이미 삭제되었거나 대상이 없었습니다 (skip-not-found).[/yellow]")
+            
+            console.print(f"    [grey]YAML 삭제 요약 (파일 기준): 성공 {yaml_delete_successful_files}, 실패 {yaml_delete_failed_files}[/grey]")
 
         elif app_type == "install-action":
             spec_obj = None

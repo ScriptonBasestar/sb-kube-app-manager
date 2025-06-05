@@ -22,6 +22,28 @@ def check_helm_installed_or_exit():
         console.print(f"[red]❌ helm 바이너리에 실행 권한이 없습니다: {helm_path}[/red]")
         sys.exit(1)
 
+def check_kubectl_installed_or_exit(kubeconfig: str | None = None, kubecontext: str | None = None):
+    kubectl_path = shutil.which("kubectl")
+    if not kubectl_path:
+        console.print("[red]❌ kubectl 명령이 시스템에 설치되어 있지 않습니다.[/red]")
+        sys.exit(1)
+
+    try:
+        cmd = ["kubectl", "version", "--client"]
+        if kubeconfig:
+            cmd.extend(["--kubeconfig", kubeconfig])
+        if kubecontext:
+            cmd.extend(["--context", kubecontext])
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        console.print(f"[green]✅ kubectl 확인됨:[/green] {result.stdout.strip()}")
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]❌ kubectl 실행 실패:[/red] {e}")
+        sys.exit(1)
+    except PermissionError:
+        console.print(f"[red]❌ kubectl 바이너리에 실행 권한이 없습니다: {kubectl_path}[/red]")
+        sys.exit(1)
+
 def print_helm_connection_help():
     import subprocess
     import os

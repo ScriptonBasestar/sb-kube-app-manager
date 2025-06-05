@@ -176,10 +176,8 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
                 delete_command_executed = True
             except subprocess.CalledProcessError as e:
                 console.print(f"[red]❌ Helm 릴리스 '{app_release_name}' 삭제 실패:[/red]")
-                if e.stdout: console.print(f"    [blue]STDOUT:[/blue]
-{e.stdout.strip()}")
-                if e.stderr: console.print(f"    [red]STDERR:[/red]
-{e.stderr.strip()}")
+                if e.stdout: console.print(f"    [blue]STDOUT:[/blue] {e.stdout.strip()}")
+                if e.stderr: console.print(f"    [red]STDERR:[/red] {e.stderr.strip()}")
             except subprocess.TimeoutExpired:
                 console.print(f"[red]❌ Helm 릴리스 '{app_release_name}' 삭제 시간 초과.[/red]")
             except Exception as e:
@@ -242,10 +240,8 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
                     # ignore-not-found가 true일 때, 리소스가 없어서 아무것도 삭제되지 않아도 returncode가 0일 수 있음.
                     # 따라서 stderr에 "not found" 메시지가 있는지 등으로 추가 판단 필요하나, 여기선 kubectl 결과에 의존.
                     console.print(f"[red]    ❌ Kubectl YAML '{abs_yaml_path.name}' 삭제 실패:[/red]")
-                    if e.stdout: console.print(f"        [blue]STDOUT:[/blue]
-{e.stdout.strip()}")
-                    if e.stderr: console.print(f"        [red]STDERR:[/red]
-{e.stderr.strip()}")
+                    if e.stdout: console.print(f"        [blue]STDOUT:[/blue] {e.stdout.strip()}")
+                    if e.stderr: console.print(f"        [red]STDERR:[/red] {e.stderr.strip()}")
                     kubectl_delete_failed_files +=1
                 except subprocess.TimeoutExpired:
                     console.print(f"[red]    ❌ Kubectl YAML '{abs_yaml_path.name}' 삭제 시간 초과.[/red]")

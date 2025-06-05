@@ -30,6 +30,12 @@ class AppExecSpec(AppSpecBase):
 class AppInstallHelmSpec(AppSpecBase):
     values: List[str] = Field(default_factory=list)
 
+class AppInstallKubectlSpec(AppSpecBase):
+    paths: List[str] = Field(default_factory=list)
+
+class AppInstallShellSpec(AppSpecBase):
+    commands: List[str] = Field(default_factory=list)
+
 class AppInstallActionSpec(AppSpecBase):
     """
     spec:
@@ -46,6 +52,9 @@ class AppInstallActionSpec(AppSpecBase):
 
 class AppInstallKustomizeSpec(AppSpecBase):
     kustomize_path: str
+
+class AppRenderSpec(AppSpecBase):
+    templates: List[str] = Field(default_factory=list)
 
 class AppCopySpec(AppSpecBase):
     paths: List[CopyPair] = Field(default_factory=list)
@@ -90,6 +99,7 @@ class AppInfoScheme(BaseModel):
     path: Optional[str] = None
     enabled: bool = False
     namespace: Optional[str] = None
+    release_name: Optional[str] = None
     specs: Dict[str, Any] = Field(default_factory=dict)
 
 class AppGroupScheme(BaseModel):
@@ -119,4 +129,26 @@ if __name__ == '__main__':
             git_spec = AppPullGitSpec(**app.specs)
             print(git_spec)
         # 필요하면 추가 분기
+
+def get_spec_model(app_type: str):
+    """앱 타입에 따라 적절한 Spec 모델 클래스를 반환합니다."""
+    spec_model_mapping = {
+        'exec': AppExecSpec,
+        'install-helm': AppInstallHelmSpec,
+        'install-kubectl': AppInstallKubectlSpec,
+        'install-shell': AppInstallShellSpec,
+        'install-yaml': AppInstallActionSpec,
+        'install-action': AppInstallActionSpec,
+        'install-kustomize': AppInstallKustomizeSpec,
+        'render': AppRenderSpec,
+        'copy-repo': AppCopySpec,
+        'copy-chart': AppCopySpec,
+        'copy-root': AppCopySpec,
+        'copy-app': AppCopySpec,
+        'pull-helm': AppPullHelmSpec,
+        'pull-helm-oci': AppPullHelmOciSpec,
+        'pull-git': AppPullGitSpec,
+        'pull-http': AppPullHttpSpec,
+    }
+    return spec_model_mapping.get(app_type)
 

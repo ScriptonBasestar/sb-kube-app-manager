@@ -169,8 +169,7 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
             result = subprocess.run(helm_upgrade_cmd, capture_output=True, text=True, check=True, timeout=600) # timeout 늘림
             console.print(f"[green]✅ Helm 앱 '{app_release_name}' 업그레이드/설치 성공.[/green]")
             if result.stdout and dry_run: # dry-run 시에는 stdout이 중요
-                 console.print(f"    [blue]Dry-run 결과 (STDOUT):[/blue]
-{result.stdout.strip()}")
+                 console.print(f"    [blue]Dry-run 결과 (STDOUT):[/blue] {result.stdout.strip()}")
             elif result.stdout: # 실제 실행 시 간단한 성공 메시지 외 stdout은 grey로
                  console.print(f"    [grey]Helm STDOUT: {result.stdout.strip()}[/grey]")
             if result.stderr: # stderr은 항상 주의깊게 표시
@@ -178,10 +177,8 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
             upgrade_success_apps += 1
         except subprocess.CalledProcessError as e:
             console.print(f"[red]❌ Helm 앱 '{app_release_name}' 업그레이드/설치 실패:[/red]")
-            if e.stdout: console.print(f"    [blue]STDOUT:[/blue]
-{e.stdout.strip()}")
-            if e.stderr: console.print(f"    [red]STDERR:[/red]
-{e.stderr.strip()}")
+            if e.stdout: console.print(f"    [blue]STDOUT:[/blue] {e.stdout.strip()}")
+            if e.stderr: console.print(f"    [red]STDERR:[/red] {e.stderr.strip()}")
         except subprocess.TimeoutExpired:
             console.print(f"[red]❌ Helm 앱 '{app_release_name}' 업그레이드/설치 시간 초과 (600초).[/red]")
         except Exception as e:

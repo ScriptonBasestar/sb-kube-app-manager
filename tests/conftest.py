@@ -173,12 +173,11 @@ def create_sample_local_copy_source_dir(base_dir):
 def setup_test_environment(base_dir, app_dir, charts_dir, repos_dir, monkeypatch):
     """각 테스트 실행 전후로 환경을 설정하고 정리합니다."""
     monkeypatch.setattr(Path, 'cwd', lambda: base_dir)
-    monkeypatch.setattr('sbkube.utils.common.get_absolute_path', lambda x, base: Path(base) / x if not Path(x).is_absolute() else Path(x))
-    monkeypatch.setattr('sbkube.cli.DEFAULT_APP_DIR', app_dir.name) 
-    monkeypatch.setattr('sbkube.cli.DEFAULT_SOURCES_FILE', "sources.yaml") 
-    monkeypatch.setattr('sbkube.cli.DEFAULT_CONFIG_FILE', "config.yaml")
+    # monkeypatch.setattr('sbkube.utils.common.get_absolute_path', lambda x, base: Path(base) / x if not Path(x).is_absolute() else Path(x))
+    # monkeypatch.setattr('sbkube.cli.DEFAULT_APP_DIR', app_dir.name) 
+    # monkeypatch.setattr('sbkube.cli.DEFAULT_SOURCES_FILE', "sources.yaml") 
+    # monkeypatch.setattr('sbkube.cli.DEFAULT_CONFIG_FILE', "config.yaml")
 
-
-    monkeypatch.setattr('sbkube.commands.prepare.DEFAULT_CHARTS_DIR', charts_dir.name)
-    monkeypatch.setattr('sbkube.commands.prepare.DEFAULT_REPOS_DIR', repos_dir.name)
+    # monkeypatch.setattr('sbkube.commands.prepare.DEFAULT_CHARTS_DIR', charts_dir.name)
+    # monkeypatch.setattr('sbkube.commands.prepare.DEFAULT_REPOS_DIR', repos_dir.name)
     yield 

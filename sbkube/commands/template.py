@@ -64,7 +64,7 @@ def cmd(app_config_dir_name: str, output_dir_name: str, base_dir: str, cli_names
     for app_dict in apps_config_dict.get("apps", []):
         try:
             app_info = AppInfoScheme(**app_dict)
-            if app_info.type in ["install-helm", "pull-helm", "pull-helm-oci"]:
+            if app_info.type in ["install-helm"]:
                  app_info_list_to_template.append(app_info)
         except Exception as e:
             app_name_for_error = app_dict.get('name', '알 수 없는 앱')

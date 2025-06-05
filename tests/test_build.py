@@ -201,3 +201,113 @@ def test_build_specific_app(runner: CliRunner, create_sample_config_yaml, create
         assert f"Building app: {app_to_build}" in caplog.text
         assert f"App '{app_to_build}' (copy-app) built successfully to {expected_copy_app_build_path}" in caplog.text
         assert f"Building app: {other_app_not_to_build}" not in caplog.text
+
+def test_build_pull_helm_app_uses_dest_as_build_directory_name(runner: CliRunner, base_dir, app_dir, charts_dir, build_dir):
+    """
+    pull-helm 타입 앱에서 dest 값이 지정되었을 때, 빌드 디렉토리 이름이 app_name 대신 dest 값을 사용하는지 테스트합니다.
+    이것은 pull-helm에서 zabbix-pull 앱이 dest: zabbix로 설정했을 때 build/zabbix로 빌드되어야 하는 요구사항을 테스트합니다.
+    """
+    import yaml
+    
+    # 테스트용 config.yaml 내용 생성
+    config_content = {
+        "namespace": "test-ns",
+        "apps": [
+            {
+                "name": "zabbix-pull",
+                "type": "pull-helm",
+                "specs": {
+                    "repo": "zabbix-community",
+                    "chart": "zabbix",
+                    "dest": "zabbix"  # 이 값이 빌드 디렉토리 이름으로 사용되어야 함
+                }
+            }
+        ]
+    }
+    
+    # config.yaml 파일 생성
+    config_file = app_dir / "config.yaml"
+    with open(config_file, 'w') as f:
+        yaml.dump(config_content, f)
+    
+    # prepare 단계에서 생성될 차트 디렉토리 모킹 (dest 값인 "zabbix"로 생성)
+    prepared_chart_source_dir = charts_dir / "zabbix"  # dest 값 사용
+    prepared_chart_source_dir.mkdir(parents=True, exist_ok=True)
+    (prepared_chart_source_dir / "Chart.yaml").write_text("name: zabbix\nversion: 1.0.0")
+    (prepared_chart_source_dir / "values.yaml").write_text("replicaCount: 1")
+    (prepared_chart_source_dir / "templates").mkdir(exist_ok=True)
+    (prepared_chart_source_dir / "templates" / "deployment.yaml").write_text("kind: Deployment")
+    
+    # 예상되는 빌드 경로 (app_name이 아닌 dest 값 사용)
+    expected_build_path = build_dir / "zabbix"  # dest 값 사용
+    
+    result = runner.invoke(sbkube_cli, [
+        'build',
+        '--base-dir', str(base_dir),
+        '--app-dir', str(app_dir.name)
+    ])
+    
+    assert result.exit_code == 0, f"CLI 실행 실패: {result.output}\n{result.exception}"
+    
+    # 빌드 디렉토리가 dest 값("zabbix")으로 생성되었는지 확인
+    assert expected_build_path.exists(), f"빌드 디렉토리가 dest 값으로 생성되지 않았습니다: {expected_build_path}"
+    
+    # app_name("zabbix-pull")으로는 생성되지 않았는지 확인
+    wrong_build_path = build_dir / "zabbix-pull"
+    assert not wrong_build_path.exists(), f"빌드 디렉토리가 잘못된 이름(app_name)으로 생성되었습니다: {wrong_build_path}"
+    
+    # 로그에서 올바른 경로 사용 확인
+    assert "zabbix-pull" in result.output, "앱 이름이 로그에 표시되어야 합니다"
+    assert str(expected_build_path) in result.output, "dest 값으로 생성된 빌드 경로가 로그에 표시되어야 합니다"
+
+
+def test_build_pull_helm_app_fallback_to_chart_name_when_no_dest(runner: CliRunner, base_dir, app_dir, charts_dir, build_dir):
+    """
+    pull-helm 타입 앱에서 dest 값이 지정되지 않았을 때, 빌드 디렉토리 이름이 chart 이름을 사용하는지 테스트합니다.
+    """
+    import yaml
+    
+    # 테스트용 config.yaml 내용 생성 (dest 없음)
+    config_content = {
+        "namespace": "test-ns",
+        "apps": [
+            {
+                "name": "redis-pull",
+                "type": "pull-helm",
+                "specs": {
+                    "repo": "bitnami",
+                    "chart": "redis"
+                    # dest 값이 없음 - chart 이름("redis")을 사용해야 함
+                }
+            }
+        ]
+    }
+    
+    # config.yaml 파일 생성
+    config_file = app_dir / "config.yaml"
+    with open(config_file, 'w') as f:
+        yaml.dump(config_content, f)
+    
+    # prepare 단계에서 생성될 차트 디렉토리 모킹 (chart 이름인 "redis"로 생성)
+    prepared_chart_source_dir = charts_dir / "redis"  # chart 이름 사용
+    prepared_chart_source_dir.mkdir(parents=True, exist_ok=True)
+    (prepared_chart_source_dir / "Chart.yaml").write_text("name: redis\nversion: 1.0.0")
+    (prepared_chart_source_dir / "values.yaml").write_text("replicaCount: 1")
+    
+    # 예상되는 빌드 경로 (chart 이름 사용)
+    expected_build_path = build_dir / "redis"  # chart 이름 사용
+    
+    result = runner.invoke(sbkube_cli, [
+        'build',
+        '--base-dir', str(base_dir),
+        '--app-dir', str(app_dir.name)
+    ])
+    
+    assert result.exit_code == 0, f"CLI 실행 실패: {result.output}\n{result.exception}"
+    
+    # 빌드 디렉토리가 chart 이름("redis")으로 생성되었는지 확인
+    assert expected_build_path.exists(), f"빌드 디렉토리가 chart 이름으로 생성되지 않았습니다: {expected_build_path}"
+    
+    # app_name("redis-pull")으로는 생성되지 않았는지 확인
+    wrong_build_path = build_dir / "redis-pull"
+    assert not wrong_build_path.exists(), f"빌드 디렉토리가 잘못된 이름(app_name)으로 생성되었습니다: {wrong_build_path}"

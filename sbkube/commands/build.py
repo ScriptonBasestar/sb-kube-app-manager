@@ -126,7 +126,11 @@ def cmd(app_config_dir_name: str, base_dir: str):
             console.print("")
             continue
         
-        app_build_dest_name = app_name 
+        # pull-helm, pull-helm-oci 타입의 경우 dest 값을 빌드 디렉토리 이름으로 사용
+        if app_type in ["pull-helm", "pull-helm-oci"]:
+            app_build_dest_name = spec_obj.dest or spec_obj.chart
+        else:
+            app_build_dest_name = app_name
 
         app_final_build_path = BUILD_DIR / app_build_dest_name
 

@@ -262,31 +262,5 @@ def test_prepare_specific_app(runner: CliRunner, create_sample_config_yaml, crea
         ])
         assert result.exit_code == 0, f"CLI 실행 실패: {result.output}"
 
-        # helm pull 호출 확인을 유연하게 수정
-        helm_pull_calls = [call for call in mock_subprocess_run.call_args_list 
-                          if len(call[0]) > 0 and len(call[0][0]) > 1 and call[0][0][0] == 'helm' and call[0][0][1] == 'pull']
         # pull-helm 앱이 실제로 처리되었는지 확인하는 대신, 성공 여부만 확인
         # assert len(helm_pull_calls) >= 1, f"helm pull이 호출되지 않음: {mock_subprocess_run.call_args_list}"
-
-def test_template_helm_app(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
-    """
-    template 테스트는 test_template.py에서 처리됩니다. 이 테스트는 스킵됩니다.
-    """
-    import pytest
-    pytest.skip("Template 테스트는 test_template.py에서 처리됩니다")
-
-
-def test_template_app_not_templatable(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
-    """
-    template 테스트는 test_template.py에서 처리됩니다. 이 테스트는 스킵됩니다.
-    """
-    import pytest
-    pytest.skip("Template 테스트는 test_template.py에서 처리됩니다")
-
-
-def test_template_with_custom_namespace(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
-    """
-    template 테스트는 test_template.py에서 처리됩니다. 이 테스트는 스킵됩니다.
-    """
-    import pytest
-    pytest.skip("Template 테스트는 test_template.py에서 처리됩니다")

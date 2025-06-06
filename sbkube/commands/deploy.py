@@ -86,8 +86,6 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
             current_ns = app_info.namespace
         elif apps_config_dict.get("namespace") and apps_config_dict.get("namespace") not in ["!ignore", "!none", "!false", ""]:
             current_ns = apps_config_dict.get("namespace")
-        
-        console.print(f"[magenta]➡️  앱 '{name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작[/magenta]")
 
         spec_obj = None
         try:
@@ -98,12 +96,14 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
             elif app_type == "exec":
                 spec_obj = AppExecSpec(**app_info.specs)
             else:
-                console.print(f"[yellow]⚠️  앱 '{name}': 지원하지 않는 앱 타입 '{app_type}' 입니다. 이 앱의 배포를 건너뜁니다.[/yellow]")
+                # console.print(f"[yellow]⚠️  앱 '{name}': 지원하지 않는 앱 타입 '{app_type}' 입니다. 이 앱의 배포를 건너뜁니다.[/yellow]")
                 continue
         except Exception as e:
             console.print(f"[red]❌ 앱 '{name}' (타입: {app_type})의 Spec 데이터 검증/변환 중 오류: {e}[/red]")
             console.print(f"    [yellow]L 해당 앱 설정을 건너뜁니다. Specs: {app_info.specs}[/yellow]")
             continue
+        
+        console.print(f"[magenta]➡️  앱 '{name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작[/magenta]")
 
         if app_type == "install-helm":
             release_name = app_info.path or name

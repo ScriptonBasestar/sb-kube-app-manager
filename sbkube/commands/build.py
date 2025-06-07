@@ -145,21 +145,18 @@ def cmd(app_config_dir_name: str, base_dir: str, app_name: str | None, config_fi
             console.print(f"    [yellow]L 이 앱의 빌드를 건너뜁니다. Specs: {app_info.specs}[/yellow]")
             console.print("")
             continue
-        
-        # pull-helm, pull-helm-oci 타입의 경우 dest 값을 빌드 디렉토리 이름으로 사용
-        if app_type in ["pull-helm", "pull-helm-oci"]:
-            app_build_dest_name = spec_obj.dest or spec_obj.chart
-        else:
-            app_build_dest_name = app_name
-
-        app_final_build_path = BUILD_DIR / app_build_dest_name
 
         try:
-            if app_final_build_path.exists():
-                console.print(f"    [yellow]🔄 기존 앱 빌드 디렉토리 삭제: {app_final_build_path}[/yellow]")
-                shutil.rmtree(app_final_build_path)
-
             if app_type in ["pull-helm", "pull-helm-oci"]:
+                app_build_dest_name = spec_obj.dest or spec_obj.chart
+                app_final_build_path = BUILD_DIR / app_build_dest_name
+
+                # pull-helm/pull-helm-oci: specs.dest (또는 chart 이름)로 단일 빌드 디렉토리 생성
+                # 최종 빌드 경로: app-dir/build/{specs.dest}
+                if app_final_build_path.exists():
+                    console.print(f"    [yellow]🔄 기존 앱 빌드 디렉토리 삭제: {app_final_build_path}[/yellow]")
+                    shutil.rmtree(app_final_build_path)
+
                 prepared_chart_dir_name = spec_obj.dest or spec_obj.chart
                 source_chart_path_in_chartsdir = CHARTS_DIR / prepared_chart_dir_name
 
@@ -199,14 +196,17 @@ def cmd(app_config_dir_name: str, base_dir: str, app_name: str | None, config_fi
                             console.print(f"        [yellow]⚠️  삭제할 파일/디렉토리 없음 (건너뜀): {file_to_remove}[/yellow]")
 
             elif app_type == "pull-git":
+                # pull-git: prepare된 Git 저장소에서 specs.paths의 각 항목별로 처리
+                # 각 path의 dest 값이 개별 빌드 디렉토리 이름이 됨
                 prepared_git_repo_path = REPOS_DIR / spec_obj.repo
                 if not prepared_git_repo_path.exists() or not prepared_git_repo_path.is_dir():
                     console.print(f"[red]❌ 앱 '{app_name}': `prepare` 단계에서 준비된 Git 저장소 소스를 찾을 수 없습니다: {prepared_git_repo_path}[/red]")
                     console.print(f"    [yellow]L 'sbkube prepare' 명령을 먼저 실행했는지 확인하세요.[/yellow]")
                     raise FileNotFoundError(f"Prepared Git repo not found: {prepared_git_repo_path}")
                 
+                # 각 paths 항목별로 개별 빌드 디렉토리 생성: BUILD_DIR / paths[i].dest
                 for copy_pair in spec_obj.paths:
-                    # 각 path의 dest별로 개별 빌드 디렉토리 생성
+                    # 최종 빌드 경로: app-dir/build/{copy_pair.dest}
                     dest_build_path = BUILD_DIR / copy_pair.dest
                     source_path_in_repo = prepared_git_repo_path / copy_pair.src
 
@@ -232,8 +232,12 @@ def cmd(app_config_dir_name: str, base_dir: str, app_name: str | None, config_fi
                         continue
             
             elif app_type == "copy-app":
+                # copy-app: 로컬 소스에서 specs.paths의 각 항목별로 처리  
+                # 각 path의 dest 값이 개별 빌드 디렉토리 이름이 됨
+                
+                # 각 paths 항목별로 개별 빌드 디렉토리 생성: BUILD_DIR / paths[i].dest
                 for copy_pair in spec_obj.paths:
-                    # 각 path의 dest별로 개별 빌드 디렉토리 생성
+                    # 최종 빌드 경로: app-dir/build/{copy_pair.dest}
                     dest_build_path = BUILD_DIR / copy_pair.dest
                     source_local_path_str = copy_pair.src
                     source_local_path = Path(source_local_path_str)

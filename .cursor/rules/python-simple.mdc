@@ -10,3 +10,5 @@ uv add library
 uv run script.py
 
 DO NOT create requirements.txt. Use uv add commands. 
+
+Update test code after source change.

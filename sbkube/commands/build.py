@@ -205,59 +205,67 @@ def cmd(app_config_dir_name: str, base_dir: str, app_name: str | None, config_fi
                     console.print(f"    [yellow]L 'sbkube prepare' 명령을 먼저 실행했는지 확인하세요.[/yellow]")
                     raise FileNotFoundError(f"Prepared Git repo not found: {prepared_git_repo_path}")
                 
-                app_final_build_path.mkdir(parents=True, exist_ok=True)
                 for copy_pair in spec_obj.paths:
+                    # 각 path의 dest별로 개별 빌드 디렉토리 생성
+                    dest_build_path = BUILD_DIR / copy_pair.dest
                     source_path_in_repo = prepared_git_repo_path / copy_pair.src
-                    dest_path_in_build = app_final_build_path / copy_pair.dest 
 
                     if not source_path_in_repo.exists():
                         console.print(f"    [red]❌ Git 소스 경로 없음: {source_path_in_repo} (건너뜀)[/red]")
                         continue
                     
-                    console.print(f"    [cyan]📂 Git 콘텐츠 복사: {source_path_in_repo} → {dest_path_in_build}[/cyan]")
-                    if dest_path_in_build.exists():
-                        if dest_path_in_build.is_dir(): shutil.rmtree(dest_path_in_build)
-                        else: dest_path_in_build.unlink()
+                    # 기존 빌드 디렉토리 정리
+                    if dest_build_path.exists():
+                        console.print(f"    [yellow]🔄 기존 빌드 디렉토리 삭제: {dest_build_path}[/yellow]")
+                        shutil.rmtree(dest_build_path)
                     
-                    dest_path_in_build.parent.mkdir(parents=True, exist_ok=True)
+                    console.print(f"    [cyan]📂 Git 콘텐츠 복사: {source_path_in_repo} → {dest_build_path}[/cyan]")
+                    dest_build_path.parent.mkdir(parents=True, exist_ok=True)
+                    
                     if source_path_in_repo.is_dir():
-                        shutil.copytree(source_path_in_repo, dest_path_in_build, dirs_exist_ok=True)
+                        shutil.copytree(source_path_in_repo, dest_build_path, dirs_exist_ok=True)
                     elif source_path_in_repo.is_file():
-                        shutil.copy2(source_path_in_repo, dest_path_in_build)
+                        dest_build_path.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(source_path_in_repo, dest_build_path / source_path_in_repo.name)
                     else:
                         console.print(f"    [yellow]⚠️  Git 소스 경로가 파일이나 디렉토리가 아님: {source_path_in_repo} (건너뜀)[/yellow]")
                         continue
             
             elif app_type == "copy-app":
-                app_final_build_path.mkdir(parents=True, exist_ok=True)
                 for copy_pair in spec_obj.paths:
+                    # 각 path의 dest별로 개별 빌드 디렉토리 생성
+                    dest_build_path = BUILD_DIR / copy_pair.dest
                     source_local_path_str = copy_pair.src
                     source_local_path = Path(source_local_path_str)
                     if not source_local_path.is_absolute():
                         source_local_path = BASE_DIR / source_local_path_str
-                    
-                    dest_path_in_build = app_final_build_path / copy_pair.dest
 
                     if not source_local_path.exists():
                         console.print(f"    [red]❌ 로컬 소스 경로 없음: {source_local_path} (원본: '{source_local_path_str}') (건너뜀)[/red]")
                         continue
 
-                    console.print(f"    [cyan]📂 로컬 콘텐츠 복사: {source_local_path} → {dest_path_in_build}[/cyan]")
-                    if dest_path_in_build.exists():
-                        if dest_path_in_build.is_dir(): shutil.rmtree(dest_path_in_build)
-                        else: dest_path_in_build.unlink()
+                    # 기존 빌드 디렉토리 정리
+                    if dest_build_path.exists():
+                        console.print(f"    [yellow]🔄 기존 빌드 디렉토리 삭제: {dest_build_path}[/yellow]")
+                        shutil.rmtree(dest_build_path)
 
-                    dest_path_in_build.parent.mkdir(parents=True, exist_ok=True)
+                    console.print(f"    [cyan]📂 로컬 콘텐츠 복사: {source_local_path} → {dest_build_path}[/cyan]")
+                    dest_build_path.parent.mkdir(parents=True, exist_ok=True)
+                    
                     if source_local_path.is_dir():
-                        shutil.copytree(source_local_path, dest_path_in_build, dirs_exist_ok=True)
+                        shutil.copytree(source_local_path, dest_build_path, dirs_exist_ok=True)
                     elif source_local_path.is_file():
-                        shutil.copy2(source_local_path, dest_path_in_build)
+                        dest_build_path.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(source_local_path, dest_build_path / source_local_path.name)
                     else:
                         console.print(f"    [yellow]⚠️  로컬 소스 경로가 파일이나 디렉토리가 아님: {source_local_path} (건너뜀)[/yellow]")
                         continue
             
             build_success_apps += 1
-            console.print(f"[green]✅ 앱 '{app_name}' 빌드 완료: {app_final_build_path}[/green]")
+            if app_type in ["pull-git", "copy-app"]:
+                console.print(f"[green]✅ 앱 '{app_name}' 빌드 완료 (빌드 결과물 위치: {BUILD_DIR})[/green]")
+            else:
+                console.print(f"[green]✅ 앱 '{app_name}' 빌드 완료: {app_final_build_path}[/green]")
 
         except FileNotFoundError as e:
             console.print(f"    [red]L 이 앱 '{app_name}'의 빌드를 중단합니다. (상세: {e})[/red]")

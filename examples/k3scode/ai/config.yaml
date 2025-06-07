@@ -1,0 +1,30 @@
+namespace: toolhive
+
+deps: []
+
+apps:
+
+  - name: toolhive-operator-pull
+    type: pull-git
+    specs:
+      repo: stacklok-toolhive
+      paths:
+        - src: deploy/charts/operator
+          dest: toolhive-operator
+        - src: deploy/charts/operator-crds
+          dest: toolhive-operator-crds
+
+  - name: toolhive-operator
+    type: install-helm
+    specs:
+      path: toolhive-operator
+      values:
+        - toolhive-operator.yaml
+
+  - name: toolhive-operator-crds
+    type: install-helm
+    specs:
+      path: toolhive-operator-crds
+      values:
+        - toolhive-operator-crds.yaml
+

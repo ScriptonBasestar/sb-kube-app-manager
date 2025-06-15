@@ -1,26 +1,269 @@
 import shutil
 import click
 from pathlib import Path
-from rich.console import Console
+from typing import Optional, List
 
-from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.base_command import BaseCommand
+from sbkube.utils.logger import logger, setup_logging_from_context
 from sbkube.models.config_model import (
     AppInfoScheme,
     AppPullHelmSpec,
     AppPullHelmOciSpec,
     AppPullGitSpec,
     AppCopySpec,
-    CopyPair
 )
 
-console = Console()
+
+class BuildCommand(BaseCommand):
+    """Build 명령 구현"""
+    
+    def __init__(self, base_dir: str, app_config_dir: str, 
+                 app_name: Optional[str], config_file_name: Optional[str]):
+        super().__init__(base_dir, app_config_dir, None, config_file_name)
+        self.target_app_name = app_name
+        
+    def execute(self):
+        """build 명령 실행"""
+        logger.heading(f"Build 시작 - app-dir: {self.app_config_dir.name}")
+        
+        # 설정 파일 로드
+        self.load_config()
+        
+        # 빌드 디렉토리 준비
+        self._prepare_build_directory()
+        
+        # 지원하는 앱 타입
+        supported_types = ["pull-helm", "pull-helm-oci", "pull-git", "copy-app"]
+        
+        # 앱 파싱
+        self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
+        
+        if not self.app_info_list:
+            if self.target_app_name:
+                logger.warning(f"앱 '{self.target_app_name}'은 빌드 대상이 아닙니다.")
+            else:
+                logger.warning("빌드할 앱이 설정 파일에 없거나, 지원하는 타입의 앱이 없습니다.")
+            logger.heading("Build 작업 완료 (처리할 앱 없음)")
+            return
+            
+        # 빌드 통계
+        total_apps = len(self.app_info_list)
+        success_apps = 0
+        
+        # 각 앱 빌드
+        for app_info in self.app_info_list:
+            if self._build_app(app_info):
+                success_apps += 1
+                
+        # 결과 출력
+        if total_apps > 0:
+            logger.success(f"Build 작업 요약: 총 {total_apps}개 앱 중 {success_apps}개 성공")
+            
+        logger.heading(f"Build 작업 완료 (결과물 위치: {self.build_dir})")
+        
+    def _prepare_build_directory(self):
+        """빌드 디렉토리 준비"""
+        logger.info(f"기존 빌드 디렉토리 정리 중: {self.build_dir}")
+        self.clean_directory(self.build_dir, "빌드 디렉토리")
+        logger.success(f"빌드 디렉토리 준비 완료: {self.build_dir}")
+        
+    def _build_app(self, app_info: AppInfoScheme) -> bool:
+        """개별 앱 빌드"""
+        app_name = app_info.name
+        app_type = app_info.type
+        
+        logger.progress(f"앱 '{app_name}' (타입: {app_type}) 빌드 시작...")
+        
+        try:
+            # Spec 모델 생성
+            spec_obj = self._create_spec(app_info)
+            if not spec_obj:
+                return False
+                
+            # 타입별 빌드 처리
+            if app_type in ["pull-helm", "pull-helm-oci"]:
+                self._build_helm(app_info, spec_obj)
+            elif app_type == "pull-git":
+                self._build_git(app_info, spec_obj)
+            elif app_type == "copy-app":
+                self._build_copy(app_info, spec_obj)
+                
+            logger.success(f"앱 '{app_name}' 빌드 완료")
+            return True
+            
+        except FileNotFoundError as e:
+            logger.error(f"앱 '{app_name}'의 빌드를 중단합니다. (상세: {e})")
+            return False
+        except Exception as e:
+            logger.error(f"앱 '{app_name}' (타입: {app_type}) 빌드 중 예상치 못한 오류 발생: {e}")
+            if logger._level <= logger.LogLevel.DEBUG:
+                import traceback
+                logger.debug(traceback.format_exc())
+            return False
+            
+    def _create_spec(self, app_info: AppInfoScheme):
+        """앱 타입에 맞는 Spec 객체 생성"""
+        try:
+            if app_info.type == "pull-helm":
+                return AppPullHelmSpec(**app_info.specs)
+            elif app_info.type == "pull-helm-oci":
+                return AppPullHelmOciSpec(**app_info.specs)
+            elif app_info.type == "pull-git":
+                return AppPullGitSpec(**app_info.specs)
+            elif app_info.type == "copy-app":
+                return AppCopySpec(**app_info.specs)
+        except Exception as e:
+            logger.error(f"앱 '{app_info.name}' (타입: {app_info.type})의 Spec 데이터 검증/변환 중 오류: {e}")
+            logger.warning(f"이 앱의 빌드를 건너뜁니다. Specs: {app_info.specs}")
+            return None
+            
+    def _build_helm(self, app_info: AppInfoScheme, spec_obj: AppPullHelmSpec):
+        """Helm 차트 빌드"""
+        # 대상 디렉토리 결정
+        app_build_dest = spec_obj.dest or spec_obj.chart
+        app_final_build_path = self.build_dir / app_build_dest
+        
+        # 기존 빌드 디렉토리 정리
+        if app_final_build_path.exists():
+            logger.verbose(f"기존 앱 빌드 디렉토리 삭제: {app_final_build_path}")
+            shutil.rmtree(app_final_build_path)
+            
+        # 소스 차트 경로
+        prepared_chart_name = spec_obj.dest or spec_obj.chart
+        source_chart_path = self.charts_dir / prepared_chart_name
+        
+        # 소스 확인
+        if not source_chart_path.exists() or not source_chart_path.is_dir():
+            logger.error(f"앱 '{app_info.name}': `prepare` 단계에서 준비된 Helm 차트 소스를 찾을 수 없습니다: {source_chart_path}")
+            logger.warning("'sbkube prepare' 명령을 먼저 실행했는지, 'dest' 필드가 올바른지 확인하세요.")
+            raise FileNotFoundError(f"Prepared chart not found: {source_chart_path}")
+            
+        # 차트 복사
+        logger.info(f"Helm 차트 복사: {source_chart_path} → {app_final_build_path}")
+        shutil.copytree(source_chart_path, app_final_build_path, dirs_exist_ok=True)
+        
+        # Overrides 적용
+        self._apply_overrides(app_info.name, app_build_dest, app_final_build_path, spec_obj.overrides)
+        
+        # Removes 적용
+        self._apply_removes(app_final_build_path, spec_obj.removes)
+        
+    def _build_git(self, app_info: AppInfoScheme, spec_obj: AppPullGitSpec):
+        """Git 소스 빌드"""
+        # 준비된 Git 저장소 경로
+        prepared_repo_path = self.repos_dir / spec_obj.repo
+        
+        if not prepared_repo_path.exists() or not prepared_repo_path.is_dir():
+            logger.error(f"앱 '{app_info.name}': `prepare` 단계에서 준비된 Git 저장소 소스를 찾을 수 없습니다: {prepared_repo_path}")
+            logger.warning("'sbkube prepare' 명령을 먼저 실행했는지 확인하세요.")
+            raise FileNotFoundError(f"Prepared Git repo not found: {prepared_repo_path}")
+            
+        # 각 path 처리
+        for copy_pair in spec_obj.paths:
+            dest_build_path = self.build_dir / copy_pair.dest
+            source_path = prepared_repo_path / copy_pair.src
+            
+            if not source_path.exists():
+                logger.error(f"Git 소스 경로 없음: {source_path} (건너뜀)")
+                continue
+                
+            # 기존 빌드 디렉토리 정리
+            if dest_build_path.exists():
+                logger.verbose(f"기존 빌드 디렉토리 삭제: {dest_build_path}")
+                shutil.rmtree(dest_build_path)
+                
+            # 복사
+            logger.info(f"Git 콘텐츠 복사: {source_path} → {dest_build_path}")
+            dest_build_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            if source_path.is_dir():
+                shutil.copytree(source_path, dest_build_path, dirs_exist_ok=True)
+            elif source_path.is_file():
+                dest_build_path.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source_path, dest_build_path / source_path.name)
+            else:
+                logger.warning(f"Git 소스 경로가 파일이나 디렉토리가 아님: {source_path} (건너뜀)")
+                
+    def _build_copy(self, app_info: AppInfoScheme, spec_obj: AppCopySpec):
+        """로컬 파일 복사"""
+        # 각 path 처리
+        for copy_pair in spec_obj.paths:
+            dest_build_path = self.build_dir / copy_pair.dest
+            
+            # 소스 경로 해석
+            source_path = Path(copy_pair.src)
+            if not source_path.is_absolute():
+                source_path = self.app_config_dir / copy_pair.src
+                
+            if not source_path.exists():
+                logger.error(f"로컬 소스 경로 없음: {source_path} (원본: '{copy_pair.src}') (건너뜀)")
+                continue
+                
+            # 기존 빌드 디렉토리 정리
+            if dest_build_path.exists():
+                logger.verbose(f"기존 빌드 디렉토리 삭제: {dest_build_path}")
+                shutil.rmtree(dest_build_path)
+                
+            # 복사
+            logger.info(f"로컬 콘텐츠 복사: {source_path} → {dest_build_path}")
+            dest_build_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            if source_path.is_dir():
+                shutil.copytree(source_path, dest_build_path, dirs_exist_ok=True)
+            elif source_path.is_file():
+                dest_build_path.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source_path, dest_build_path / source_path.name)
+            else:
+                logger.warning(f"로컬 소스 경로가 파일이나 디렉토리가 아님: {source_path} (건너뜀)")
+                
+    def _apply_overrides(self, app_name: str, dest_name: str, build_path: Path, overrides: List[str]):
+        """Override 파일 적용"""
+        if not overrides:
+            return
+            
+        logger.verbose("Overrides 적용 중...")
+        
+        for override_rel_path in overrides:
+            override_src = self.overrides_dir / dest_name / override_rel_path
+            override_dst = build_path / override_rel_path
+            
+            if override_src.exists() and override_src.is_file():
+                override_dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(override_src, override_dst)
+                logger.verbose(f"Override 적용: {override_src} → {override_dst}")
+            else:
+                logger.warning(f"Override 원본 파일 없음 (건너뜀): {override_src}")
+                
+    def _apply_removes(self, build_path: Path, removes: List[str]):
+        """Remove 파일/디렉토리 처리"""
+        if not removes:
+            return
+            
+        logger.verbose("Removes 적용 중...")
+        
+        for remove_rel_path in removes:
+            target = build_path / remove_rel_path
+            
+            if target.exists():
+                if target.is_file():
+                    target.unlink()
+                    logger.verbose(f"파일 삭제: {target}")
+                elif target.is_dir():
+                    shutil.rmtree(target)
+                    logger.verbose(f"디렉토리 삭제: {target}")
+            else:
+                logger.warning(f"삭제할 파일/디렉토리 없음 (건너뜀): {target}")
+
 
 @click.command(name="build")
-@click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 파일이 위치한 디렉토리 이름 (base-dir 기준)")
+@click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 디렉토리 이름")
 @click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
-@click.option("--app", "app_name", default=None, help="빌드할 특정 앱 이름 (지정하지 않으면 모든 앱 빌드)")
-@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)")
-def cmd(app_config_dir_name: str, base_dir: str, app_name: str | None, config_file_name: str | None):
+@click.option("--app", "app_name", default=None, help="빌드할 특정 앱 이름")
+@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름")
+@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@click.pass_context
+def cmd(ctx, app_config_dir_name: str, base_dir: str, app_name: str | None, config_file_name: str | None, verbose: bool, debug: bool):
     """
     `prepare` 단계의 결과물과 로컬 소스를 사용하여 배포 가능한 애플리케이션 빌드 결과물을 생성합니다.
 
@@ -46,243 +289,16 @@ def cmd(app_config_dir_name: str, base_dir: str, app_name: str | None, config_fi
     빌드 결과물은 주로 `template` 또는 `deploy` 명령어에서 사용됩니다.
     빌드 작업 전, 기존 빌드 디렉토리 (`<app_dir>/build/`)는 삭제됩니다.
     """
+    ctx.ensure_object(dict)
+    ctx.obj['verbose'] = verbose
+    ctx.obj['debug'] = debug
+    setup_logging_from_context(ctx)
     
-    console.print(f"[bold blue]✨ `build` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]")
-
-    BASE_DIR = Path(base_dir).resolve()
-    APP_CONFIG_DIR = BASE_DIR / app_config_dir_name 
-
-    CHARTS_DIR = BASE_DIR / "charts"
-    REPOS_DIR = BASE_DIR / "repos"
-
-    BUILD_DIR = APP_CONFIG_DIR / "build"
-    OVERRIDES_DIR = APP_CONFIG_DIR / "overrides"
-
-    config_file_path = None
-    if config_file_name:
-        # --config-file 옵션이 지정된 경우
-        config_file_path = APP_CONFIG_DIR / config_file_name
-        if not config_file_path.exists() or not config_file_path.is_file():
-            console.print(f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]")
-            raise click.Abort()
-    else:
-        # 자동 탐색
-        for ext in [".yaml", ".yml", ".toml"]:
-            candidate = APP_CONFIG_DIR / f"config{ext}"
-            if candidate.exists() and candidate.is_file():
-                config_file_path = candidate
-                break
-        
-        if not config_file_path:
-            console.print(f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]")
-            raise click.Abort()
+    build_cmd = BuildCommand(
+        base_dir=base_dir,
+        app_config_dir=app_config_dir_name,
+        app_name=app_name,
+        config_file_name=config_file_name
+    )
     
-    console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
-
-    apps_config_dict = load_config_file(str(config_file_path))
-
-    console.print(f"[cyan]🔄 기존 빌드 디렉토리 정리 중: {BUILD_DIR}[/cyan]")
-    try:
-        if BUILD_DIR.exists():
-            shutil.rmtree(BUILD_DIR)
-        BUILD_DIR.mkdir(parents=True, exist_ok=True)
-        console.print(f"[green]✅ 빌드 디렉토리 준비 완료: {BUILD_DIR}[/green]")
-    except OSError as e:
-        console.print(f"[red]❌ 빌드 디렉토리 정리/생성 실패: {e}. 권한 등을 확인하세요.[/red]")
-        raise click.Abort()
-    console.print("")
-
-    build_total_apps = 0
-    build_success_apps = 0
-
-    app_info_list_to_build = []
-    for app_dict in apps_config_dict.get("apps", []):
-        try:
-            app_info = AppInfoScheme(**app_dict)
-            if app_info.type in ["pull-helm", "pull-helm-oci", "pull-git", "copy-app"]:
-                if app_name is None or app_info.name == app_name:
-                    app_info_list_to_build.append(app_info)
-            else:
-                if app_name is None or app_info.name == app_name:
-                    console.print(f"[yellow]ℹ️ 앱 '{app_info.name}' (타입: {app_info.type}): 이 타입은 `build` 단계에서 처리 대상이 아닙니다. 건너뜁니다.[/yellow]")
-        except Exception as e:
-            app_name_for_error = app_dict.get('name', '알 수 없는 앱')
-            console.print(f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]")
-            console.print(f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]")
-            continue
-
-    if app_name is not None and not app_info_list_to_build:
-        console.print(f"[red]❌ 지정된 앱 '{app_name}'을 찾을 수 없거나 빌드할 수 없는 타입입니다.[/red]")
-        raise click.Abort()
-
-    if not app_info_list_to_build:
-        if app_name is not None:
-            console.print(f"[yellow]⚠️ 앱 '{app_name}'은 빌드 대상이 아닙니다.[/yellow]")
-        else:
-            console.print("[yellow]⚠️ 빌드할 앱이 설정 파일에 없거나, 지원하는 타입의 앱이 없습니다.[/yellow]")
-        console.print(f"[bold blue]✨ `build` 작업 완료 (처리할 앱 없음) ✨[/bold blue]")
-        return
-
-    for app_info in app_info_list_to_build:
-        build_total_apps += 1
-        app_name = app_info.name
-        app_type = app_info.type
-
-        console.print(f"[magenta]➡️  앱 '{app_name}' (타입: {app_type}) 빌드 시작...[/magenta]")
-
-        spec_obj = None
-        try:
-            if app_type == "pull-helm":
-                spec_obj = AppPullHelmSpec(**app_info.specs)
-            elif app_type == "pull-helm-oci":
-                spec_obj = AppPullHelmOciSpec(**app_info.specs)
-            elif app_type == "pull-git":
-                spec_obj = AppPullGitSpec(**app_info.specs)
-            elif app_type == "copy-app":
-                spec_obj = AppCopySpec(**app_info.specs)
-        except Exception as e:
-            console.print(f"[red]❌ 앱 '{app_name}' (타입: {app_type})의 Spec 데이터 검증/변환 중 오류: {e}[/red]")
-            console.print(f"    [yellow]L 이 앱의 빌드를 건너뜁니다. Specs: {app_info.specs}[/yellow]")
-            console.print("")
-            continue
-
-        try:
-            if app_type in ["pull-helm", "pull-helm-oci"]:
-                app_build_dest_name = spec_obj.dest or spec_obj.chart
-                app_final_build_path = BUILD_DIR / app_build_dest_name
-
-                # pull-helm/pull-helm-oci: specs.dest (또는 chart 이름)로 단일 빌드 디렉토리 생성
-                # 최종 빌드 경로: app-dir/build/{specs.dest}
-                if app_final_build_path.exists():
-                    console.print(f"    [yellow]🔄 기존 앱 빌드 디렉토리 삭제: {app_final_build_path}[/yellow]")
-                    shutil.rmtree(app_final_build_path)
-
-                prepared_chart_dir_name = spec_obj.dest or spec_obj.chart
-                source_chart_path_in_chartsdir = CHARTS_DIR / prepared_chart_dir_name
-
-                if not source_chart_path_in_chartsdir.exists() or not source_chart_path_in_chartsdir.is_dir():
-                    console.print(f"[red]❌ 앱 '{app_name}': `prepare` 단계에서 준비된 Helm 차트 소스를 찾을 수 없습니다: {source_chart_path_in_chartsdir}[/red]")
-                    console.print(f"    [yellow]L 'sbkube prepare' 명령을 먼저 실행했는지, '{app_config_dir_name}/config.yaml'의 `dest` 필드가 올바른지 확인하세요.[/yellow]")
-                    raise FileNotFoundError(f"Prepared chart not found: {source_chart_path_in_chartsdir}")
-
-                console.print(f"    [cyan]📁 Helm 차트 복사: {source_chart_path_in_chartsdir} → {app_final_build_path}[/cyan]")
-                shutil.copytree(source_chart_path_in_chartsdir, app_final_build_path, dirs_exist_ok=True)
-
-                if spec_obj.overrides:
-                    console.print(f"    [yellow]🔩 Overrides 적용 중...[/yellow]")
-                    for override_file_rel_path in spec_obj.overrides:
-                        override_src_path = OVERRIDES_DIR / app_build_dest_name / override_file_rel_path
-                        override_dst_path = app_final_build_path / override_file_rel_path
-
-                        if override_src_path.exists() and override_src_path.is_file():
-                            override_dst_path.parent.mkdir(parents=True, exist_ok=True)
-                            shutil.copy2(override_src_path, override_dst_path)
-                            console.print(f"        [green]✓ Override 적용: {override_src_path} → {override_dst_path}[/green]")
-                        else:
-                            console.print(f"        [yellow]⚠️  Override 원본 파일 없음 (건너뜀): {override_src_path}[/yellow]")
-                
-                if spec_obj.removes:
-                    console.print(f"    [yellow]🗑️  Removes 적용 중...[/yellow]")
-                    for remove_file_rel_path in spec_obj.removes:
-                        file_to_remove = app_final_build_path / remove_file_rel_path
-                        if file_to_remove.exists():
-                            if file_to_remove.is_file():
-                                file_to_remove.unlink()
-                                console.print(f"        [green]✓ 파일 삭제: {file_to_remove}[/green]")
-                            elif file_to_remove.is_dir():
-                                shutil.rmtree(file_to_remove)
-                                console.print(f"        [green]✓ 디렉토리 삭제: {file_to_remove}[/green]")
-                        else:
-                            console.print(f"        [yellow]⚠️  삭제할 파일/디렉토리 없음 (건너뜀): {file_to_remove}[/yellow]")
-
-            elif app_type == "pull-git":
-                # pull-git: prepare된 Git 저장소에서 specs.paths의 각 항목별로 처리
-                # 각 path의 dest 값이 개별 빌드 디렉토리 이름이 됨
-                prepared_git_repo_path = REPOS_DIR / spec_obj.repo
-                if not prepared_git_repo_path.exists() or not prepared_git_repo_path.is_dir():
-                    console.print(f"[red]❌ 앱 '{app_name}': `prepare` 단계에서 준비된 Git 저장소 소스를 찾을 수 없습니다: {prepared_git_repo_path}[/red]")
-                    console.print(f"    [yellow]L 'sbkube prepare' 명령을 먼저 실행했는지 확인하세요.[/yellow]")
-                    raise FileNotFoundError(f"Prepared Git repo not found: {prepared_git_repo_path}")
-                
-                # 각 paths 항목별로 개별 빌드 디렉토리 생성: BUILD_DIR / paths[i].dest
-                for copy_pair in spec_obj.paths:
-                    # 최종 빌드 경로: app-dir/build/{copy_pair.dest}
-                    dest_build_path = BUILD_DIR / copy_pair.dest
-                    source_path_in_repo = prepared_git_repo_path / copy_pair.src
-
-                    if not source_path_in_repo.exists():
-                        console.print(f"    [red]❌ Git 소스 경로 없음: {source_path_in_repo} (건너뜀)[/red]")
-                        continue
-                    
-                    # 기존 빌드 디렉토리 정리
-                    if dest_build_path.exists():
-                        console.print(f"    [yellow]🔄 기존 빌드 디렉토리 삭제: {dest_build_path}[/yellow]")
-                        shutil.rmtree(dest_build_path)
-                    
-                    console.print(f"    [cyan]📂 Git 콘텐츠 복사: {source_path_in_repo} → {dest_build_path}[/cyan]")
-                    dest_build_path.parent.mkdir(parents=True, exist_ok=True)
-                    
-                    if source_path_in_repo.is_dir():
-                        shutil.copytree(source_path_in_repo, dest_build_path, dirs_exist_ok=True)
-                    elif source_path_in_repo.is_file():
-                        dest_build_path.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(source_path_in_repo, dest_build_path / source_path_in_repo.name)
-                    else:
-                        console.print(f"    [yellow]⚠️  Git 소스 경로가 파일이나 디렉토리가 아님: {source_path_in_repo} (건너뜀)[/yellow]")
-                        continue
-            
-            elif app_type == "copy-app":
-                # copy-app: 로컬 소스에서 specs.paths의 각 항목별로 처리  
-                # 각 path의 dest 값이 개별 빌드 디렉토리 이름이 됨
-                
-                # 각 paths 항목별로 개별 빌드 디렉토리 생성: BUILD_DIR / paths[i].dest
-                for copy_pair in spec_obj.paths:
-                    # 최종 빌드 경로: app-dir/build/{copy_pair.dest}
-                    dest_build_path = BUILD_DIR / copy_pair.dest
-                    source_local_path_str = copy_pair.src
-                    source_local_path = Path(source_local_path_str)
-                    if not source_local_path.is_absolute():
-                        source_local_path = APP_CONFIG_DIR / source_local_path_str
-
-                    if not source_local_path.exists():
-                        console.print(f"    [red]❌ 로컬 소스 경로 없음: {source_local_path} (원본: '{source_local_path_str}') (건너뜀)[/red]")
-                        continue
-
-                    # 기존 빌드 디렉토리 정리
-                    if dest_build_path.exists():
-                        console.print(f"    [yellow]🔄 기존 빌드 디렉토리 삭제: {dest_build_path}[/yellow]")
-                        shutil.rmtree(dest_build_path)
-
-                    console.print(f"    [cyan]📂 로컬 콘텐츠 복사: {source_local_path} → {dest_build_path}[/cyan]")
-                    dest_build_path.parent.mkdir(parents=True, exist_ok=True)
-                    
-                    if source_local_path.is_dir():
-                        shutil.copytree(source_local_path, dest_build_path, dirs_exist_ok=True)
-                    elif source_local_path.is_file():
-                        dest_build_path.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(source_local_path, dest_build_path / source_local_path.name)
-                    else:
-                        console.print(f"    [yellow]⚠️  로컬 소스 경로가 파일이나 디렉토리가 아님: {source_local_path} (건너뜀)[/yellow]")
-                        continue
-            
-            build_success_apps += 1
-            if app_type in ["pull-git", "copy-app"]:
-                console.print(f"[green]✅ 앱 '{app_name}' 빌드 완료 (빌드 결과물 위치: {BUILD_DIR})[/green]")
-            else:
-                console.print(f"[green]✅ 앱 '{app_name}' 빌드 완료: {app_final_build_path}[/green]")
-
-        except FileNotFoundError as e:
-            console.print(f"    [red]L 이 앱 '{app_name}'의 빌드를 중단합니다. (상세: {e})[/red]")
-        except Exception as e:
-            console.print(f"[red]❌ 앱 '{app_name}' (타입: {app_type}) 빌드 중 예상치 못한 오류 발생: {e}[/red]")
-            import traceback
-            console.print(f"[grey]{traceback.format_exc()}[/grey]")
-        finally:
-            console.print("")
-
-    if build_total_apps > 0:
-        console.print(f"[bold green]✅ `build` 작업 요약: 총 {build_total_apps}개 앱 중 {build_success_apps}개 성공.[/bold green]")
-    else:
-        pass 
-        
-    console.print(f"[bold blue]✨ `build` 작업 완료 (결과물 위치: {BUILD_DIR}) ✨[/bold blue]")
+    build_cmd.execute()

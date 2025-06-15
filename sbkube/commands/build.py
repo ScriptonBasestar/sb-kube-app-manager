@@ -242,7 +242,7 @@ def cmd(app_config_dir_name: str, base_dir: str, app_name: str | None, config_fi
                     source_local_path_str = copy_pair.src
                     source_local_path = Path(source_local_path_str)
                     if not source_local_path.is_absolute():
-                        source_local_path = BASE_DIR / source_local_path_str
+                        source_local_path = APP_CONFIG_DIR / source_local_path_str
 
                     if not source_local_path.exists():
                         console.print(f"    [red]❌ 로컬 소스 경로 없음: {source_local_path} (원본: '{source_local_path_str}') (건너뜀)[/red]")

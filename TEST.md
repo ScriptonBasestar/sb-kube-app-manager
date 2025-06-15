@@ -28,6 +28,7 @@ python -m sbkube.cli
 ```bash
 uv run -m sbkube.cli prepare --base-dir examples/k3scode --app-dir memory
 uv run -m sbkube.cli prepare --base-dir examples/k3scode --app-dir rdb
+uv run -m sbkube.cli prepare --base-dir examples/k3scode --app-dir devops
 
 python -m sbkube.cli prepare \
   --base-dir ./examples/k3scode \
@@ -41,6 +42,7 @@ sbkube prepare --app-dir memory
 ```bash
 uv run -m sbkube.cli build --base-dir examples/k3scode --app-dir memory
 uv run -m sbkube.cli build --base-dir examples/k3scode --app-dir rdb
+uv run -m sbkube.cli build --base-dir examples/k3scode --app-dir devops
 ```
 
 ### template

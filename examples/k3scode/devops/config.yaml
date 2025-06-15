@@ -1,0 +1,17 @@
+namespace: devops
+
+deps: []
+
+apps:
+  - name: proxynd-copy
+    type: copy-app
+    specs:
+      paths:
+        - src: proxynd-custom
+          dest: proxynd-custom
+  - name: proxynd-custom
+    type: install-helm
+    specs:
+      path: proxynd-custom
+      values:
+        - proxynd-custom.yaml

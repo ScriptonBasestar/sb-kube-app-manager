@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from sbkube.utils.base_command import BaseCommand
+from sbkube.utils.common import common_click_options
 from sbkube.utils.logger import logger, setup_logging_from_context
 from sbkube.models.config_model import (
     AppInfoScheme,
@@ -24,6 +25,7 @@ class BuildCommand(BaseCommand):
         
     def execute(self):
         """build 명령 실행"""
+        self.execute_pre_hook()
         logger.heading(f"Build 시작 - app-dir: {self.app_config_dir.name}")
         
         # 설정 파일 로드
@@ -96,7 +98,7 @@ class BuildCommand(BaseCommand):
             return False
         except Exception as e:
             logger.error(f"앱 '{app_name}' (타입: {app_type}) 빌드 중 예상치 못한 오류 발생: {e}")
-            if logger._level <= logger.LogLevel.DEBUG:
+            if logger._level.value <= logger.LogLevel.DEBUG.value:
                 import traceback
                 logger.debug(traceback.format_exc())
             return False
@@ -256,12 +258,7 @@ class BuildCommand(BaseCommand):
 
 
 @click.command(name="build")
-@click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 디렉토리 이름")
-@click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
-@click.option("--app", "app_name", default=None, help="빌드할 특정 앱 이름")
-@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름")
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@common_click_options
 @click.pass_context
 def cmd(ctx, app_config_dir_name: str, base_dir: str, app_name: str | None, config_file_name: str | None, verbose: bool, debug: bool):
     """

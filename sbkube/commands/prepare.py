@@ -14,9 +14,10 @@ from sbkube.models.config_model import (
     AppPullGitSpec,
     # TODO: 다른 App Spec 모델들도 필요에 따라 임포트
 )
+from sbkube.utils.common import common_click_options
 from sbkube.utils.file_loader import load_config_file
 # sbkube.utils.cli_check 임포트는 check_helm_installed_or_exit 만 사용
-from sbkube.utils.cli_check import check_helm_installed_or_exit
+from sbkube.utils.cli_check import check_helm_installed, CliToolNotFoundError, CliToolExecutionError
 from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.logger import logger, setup_logging_from_context
 
@@ -43,10 +44,10 @@ class PrepareCommand(BaseCommand):
         self.target_app_name = app_name
     
     def execute(self):
+        """prepare 명령 실행"""
+        self.execute_pre_hook()
+    
         logger.heading("Prepare 시작")
-        
-        # 헬름 설치 확인
-        check_helm_installed_or_exit()
         
         # 설정 파일 로드
         self.load_config()
@@ -68,6 +69,9 @@ class PrepareCommand(BaseCommand):
             logger.warning("준비할 앱이 없습니다.")
             return
         
+        # 필요한 CLI 도구들 체크
+        self._check_required_tools()
+        
         # Helm 저장소 준비
         # ... existing logic 이식, console.print → logger 사용 ...
         # Git 저장소 준비
@@ -76,16 +80,27 @@ class PrepareCommand(BaseCommand):
         # ...
         
         logger.heading("Prepare 완료")
+        
+    def _check_required_tools(self):
+        """준비할 앱들에 필요한 CLI 도구들 체크"""
+        needs_helm = any(app.type in ["pull-helm", "pull-helm-oci"] for app in self.app_info_list)
+        needs_git = any(app.type == "pull-git" for app in self.app_info_list)
+        
+        if needs_helm:
+            try:
+                check_helm_installed()
+            except (CliToolNotFoundError, CliToolExecutionError):
+                raise click.Abort()
+                
+        if needs_git:
+            if not check_command_available("git"):
+                logger.error("git 명령이 필요하지만 사용할 수 없습니다.")
+                raise click.Abort()
 
 @click.command(name="prepare")
-@click.option("--app-dir", "app_dir", default="config", help="앱 설정 디렉토리")
+@common_click_options
 @click.option("--sources", "sources_file", default="sources.yaml", help="소스 설정 파일")
-@click.option("--base-dir", default=".", help="프로젝트 루트 디렉토리")
-@click.option("--config-file", "config_file_name", default=None, help="설정 파일 이름")
 @click.option("--sources-file", "sources_override", default=None, help="소스 설정 파일 경로(테스트 호환)")
-@click.option("--app", "app_name", default=None, help="준비할 특정 앱 이름")
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def cmd(ctx, app_dir, sources_file, base_dir, config_file_name, sources_override, app_name, verbose, debug):
     ctx.ensure_object(dict)

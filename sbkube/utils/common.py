@@ -3,6 +3,45 @@ import shlex
 from typing import List, Union, Tuple, Optional, Dict, Any
 from pathlib import Path
 
+import click
+
+from sbkube.utils import logger
+
+def common_click_options(func):
+    options = [
+        click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 디렉토리 이름 (base-dir 기준)"),
+        click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리"),
+        click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부)"),
+        click.option("--app", "app_name", default=None, help="대상 앱 이름 (지정하지 않으면 전체 처리)"),
+        click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력"),
+        click.option("--debug", is_flag=True, help="디버그 로그 출력"),
+    ]
+    for opt in reversed(options):
+        func = opt(func)
+    return func
+
+from sbkube.models.config_model import *
+
+def create_spec(app_info: AppInfoScheme):
+    type_ = app_info.type
+    try:
+        if type_ == "pull-helm":
+            return AppPullHelmSpec(**app_info.specs)
+        elif type_ == "pull-helm-oci":
+            return AppPullHelmOciSpec(**app_info.specs)
+        elif type_ == "pull-git":
+            return AppPullGitSpec(**app_info.specs)
+        elif type_ == "copy-app":
+            return AppCopySpec(**app_info.specs)
+        elif type_ == "install-helm":
+            return AppInstallHelmSpec(**app_info.specs)
+        elif type_ == "install-yaml":
+            return AppInstallActionSpec(**app_info.specs)
+        elif type_ == "exec":
+            return AppExecSpec(**app_info.specs)
+    except Exception as e:
+        logger.warning(f"앱 '{app_info.name}' Spec 변환 실패: {e}")
+        return None
 
 def run_command(
     cmd: Union[List[str], str],

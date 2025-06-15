@@ -4,6 +4,13 @@ import toml
 from pathlib import Path
 from sbkube.utils.logger import logger
 
+from pathlib import Path
+
+def resolve_path(base: Path, relative: str) -> Path:
+    p = Path(relative)
+    return p if p.is_absolute() else base / p
+
+
 def load_config_file(basename: str | Path):
     """
     basename: 확장자 없는 파일명 (예: 'config' 또는 Path('config'))

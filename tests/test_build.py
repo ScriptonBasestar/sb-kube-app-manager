@@ -21,8 +21,8 @@ def test_build_command_runs_and_creates_output():
         [
             "sbkube", "build",
             "--base-dir", str(EXAMPLES_DIR),
-            "--app-dir", ".",  # 현재 디렉토리 (examples/k3scode)
-            "--config-file", "config-browserless.yml"  # 설정 파일 명시
+            "--app-dir", "devops",  # devops 디렉토리 사용
+            "--config-file", "config.yaml"  # 실제 존재하는 설정 파일
         ],
         capture_output=True,
         text=True
@@ -35,10 +35,11 @@ def test_build_command_runs_and_creates_output():
     assert result.returncode == 0, "sbkube build 명령이 실패했습니다."
 
     # 2. build 디렉토리 존재 확인
-    assert BUILD_DIR.exists(), "build 디렉토리가 생성되지 않았습니다."
+    build_dir = EXAMPLES_DIR / "devops" / "build"
+    assert build_dir.exists(), "build 디렉토리가 생성되지 않았습니다."
 
-    # 3. browserless 디렉토리 확인
-    target_chart_path = BUILD_DIR / TARGET_APP_NAME / "Chart.yaml"
+    # 3. proxynd-custom 디렉토리 확인 (devops/config.yaml의 copy-app)
+    target_chart_path = build_dir / "proxynd-custom" / "Chart.yaml"
     assert target_chart_path.exists(), f"{target_chart_path} 파일이 존재하지 않습니다."
 
 def test_build_pull_helm_app(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, charts_dir, build_dir, caplog):
@@ -157,8 +158,8 @@ def test_build_app_not_buildable(runner: CliRunner, create_sample_config_yaml, b
         # install-helm 타입은 빌드할 수 없으므로 에러로 처리됨
         assert result.exit_code == 1
         mock_copytree.assert_not_called()
-        # 빌드할 수 없는 타입이라는 메시지 확인
-        assert "빌드할 수 없는 타입" in result.output or "찾을 수 없거나" in result.output
+        # 지원하지 않는 타입이라는 메시지 확인
+        assert "지원하지 않는 타입" in result.output or "찾을 수 없습니다" in result.output
 
 def test_build_specific_app(runner: CliRunner, create_sample_config_yaml, create_sample_local_copy_source_dir, charts_dir, base_dir, app_dir, build_dir, caplog):
     """

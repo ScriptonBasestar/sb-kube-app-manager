@@ -5,8 +5,8 @@ import yaml
 from click.testing import CliRunner
 from sbkube.cli import main as sbkube_cli
 
-# 명령어 내부의 체크 함수 모킹 경로
-HELM_CHECK_PATH = 'sbkube.commands.upgrade.check_helm_installed_or_exit'
+# CLI 체크 모킹 경로
+HELM_CHECK_PATH = 'sbkube.commands.upgrade.check_helm_installed'
 
 
 @patch(HELM_CHECK_PATH, return_value=None) 
@@ -133,7 +133,8 @@ def test_upgrade_helm_app_with_no_install(mock_helm_check, runner: CliRunner, cr
         assert "성공" in result.output
 
 
-def test_upgrade_non_helm_app(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
+@patch(HELM_CHECK_PATH, return_value=None)
+def test_upgrade_non_helm_app(mock_helm_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
     """
     upgrade 명령어가 install-helm 타입이 아닌 앱에 대해 올바른 메시지를 출력하는지 테스트합니다.
     """
@@ -149,7 +150,7 @@ def test_upgrade_non_helm_app(runner: CliRunner, create_sample_config_yaml, base
     ])
     # 현재 구현에서는 타입이 맞지 않으면 성공으로 종료하고 메시지 출력
     assert result.exit_code == 0
-    assert "'install-helm' 타입이 아니므로" in result.output or "대상이 아닙니다" in result.output
+    assert "지원하지 않는" in result.output or "대상이 아닙니다" in result.output
 
 
 def test_upgrade_app_not_found(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):

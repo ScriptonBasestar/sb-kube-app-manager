@@ -5,13 +5,12 @@ import yaml
 from click.testing import CliRunner
 from sbkube.cli import main as sbkube_cli 
 
-# SbkubeGroup의 CLI 실행 전 체크 로직 모킹 경로
-SBKUBE_CLI_PATH = 'sbkube.cli'
-KUBECTL_CHECK_PATH = f'{SBKUBE_CLI_PATH}.check_kubectl_installed_or_exit'
-HELM_CHECK_PATH = f'{SBKUBE_CLI_PATH}.check_helm_installed_or_exit'
+# CLI 체크 모킹 경로
+HELM_CHECK_PATH = 'sbkube.commands.template.check_helm_installed'
 
 
-def test_template_helm_app(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
+@patch(HELM_CHECK_PATH, return_value=None)
+def test_template_helm_app(mock_helm_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
     """
     template 명령어 실행 시 빌드된 Helm 차트에 대해 helm template 명령어가 올바르게 호출되는지 테스트합니다.
     """
@@ -72,7 +71,8 @@ def test_template_helm_app(runner: CliRunner, create_sample_config_yaml, base_di
         assert "템플릿 생성 완료" in result.output or "완료" in result.output
 
 
-def test_template_app_not_templatable(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
+@patch(HELM_CHECK_PATH, return_value=None)
+def test_template_app_not_templatable(mock_helm_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
     """
     템플릿 대상이 아닌 타입의 앱 (예: install-kubectl)에 대해 template 명령어가 에러로 처리되는지 테스트합니다.
     """
@@ -109,11 +109,12 @@ def test_template_app_not_templatable(runner: CliRunner, create_sample_config_ya
                          if call[0][0][0] == 'helm' and call[0][0][1] == 'template']
         assert len(template_calls) == 0, f"helm template이 호출되면 안됨: {template_calls}"
         
-        assert "찾을 수 없거나" in result.output or "template 대상이 아닙니다" in result.output
+        assert "지원하지 않는" in result.output or "찾을 수 없습니다" in result.output
         assert not output_dir.exists()
 
 
-def test_template_with_custom_namespace(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
+@patch(HELM_CHECK_PATH, return_value=None)
+def test_template_with_custom_namespace(mock_helm_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
     """
     template 명령어 실행 시 --namespace 옵션으로 네임스페이스를 오버라이드하는지 테스트합니다.
     """

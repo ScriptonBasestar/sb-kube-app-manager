@@ -39,7 +39,12 @@ class BaseCommand:
         self.config_file_path: Optional[Path] = None
         self.apps_config_dict: Dict[str, Any] = {}
         self.app_info_list: List[AppInfoScheme] = []
-        
+
+    def execute_pre_hook(self):
+        """각 명령 실행 전에 공통 처리"""
+        self.load_config()
+        logger.verbose("공통 전처리 완료")
+
     def find_config_file(self) -> Path:
         """설정 파일 찾기 (config.yaml, config.yml, config.toml)"""
         if self.config_file_name:

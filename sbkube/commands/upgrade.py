@@ -3,12 +3,13 @@ import click
 from pathlib import Path
 from typing import Optional
 
-from sbkube.utils.cli_check import check_helm_installed_or_exit
+from sbkube.utils.cli_check import check_helm_installed, CliToolNotFoundError, CliToolExecutionError
 from sbkube.models.config_model import (
     AppInfoScheme,
     AppInstallHelmSpec,
 )
 from sbkube.utils.base_command import BaseCommand
+from sbkube.utils.common import common_click_options
 from sbkube.utils.logger import logger, setup_logging_from_context
 
 
@@ -24,13 +25,15 @@ class UpgradeCommand(BaseCommand):
 
     def execute(self):
         """upgrade 명령 실행"""
+        self.execute_pre_hook()
+        
         logger.heading(f"Upgrade 시작 - app-dir: {self.app_config_dir.name}")
-        check_helm_installed_or_exit()
 
         # 설정 파일 로드 및 앱 필터링
         self.load_config()
         supported_types = ["install-helm"]
         self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
+        
         if not self.app_info_list:
             if self.target_app_name:
                 logger.warning(f"앱 '{self.target_app_name}'은 upgrade 대상이 아닙니다.")
@@ -38,6 +41,12 @@ class UpgradeCommand(BaseCommand):
                 logger.warning("업그레이드할 'install-helm' 타입의 앱이 설정 파일에 없습니다.")
             logger.heading("Upgrade 작업 완료 (처리할 앱 없음)")
             return
+            
+        # Helm 설치 확인 (업그레이드할 앱이 있는 경우에만)
+        try:
+            check_helm_installed()
+        except (CliToolNotFoundError, CliToolExecutionError):
+            raise click.Abort()
 
         total = len(self.app_info_list)
         success = 0
@@ -108,7 +117,7 @@ class UpgradeCommand(BaseCommand):
                 logger.error(f"앱 '{release_name}' 업그레이드/설치 시간 초과 (600초)")
             except Exception as e:
                 logger.error(f"앱 '{release_name}' 처리 중 예기치 못한 오류: {e}")
-                if logger._level <= logger.LogLevel.DEBUG:
+                if logger._level.value <= logger.LogLevel.DEBUG.value:
                     import traceback
                     logger.debug(traceback.format_exc())
 
@@ -132,15 +141,10 @@ class UpgradeCommand(BaseCommand):
 
 
 @click.command(name="upgrade")
-@click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 파일이 위치한 디렉토리 이름 (base-dir 기준)")
-@click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
+@common_click_options
 @click.option("--namespace", "cli_namespace", default=None, help="업그레이드 기본 네임스페이스 (없으면 앱별/전역 설정 따름)")
-@click.option("--app", "app_name", default=None, help="특정 앱만 업그레이드 (install-helm 타입)")
 @click.option("--dry-run", is_flag=True, default=False, help="실제 적용 없이 helm --dry-run만 실행")
 @click.option("--no-install", "skip_install", is_flag=True, default=False, help="릴리스가 없을 경우 새로 설치하지 않음")
-@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부)")
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def cmd(ctx, app_config_dir_name: str, base_dir: str, cli_namespace: Optional[str], app_name: Optional[str], dry_run: bool, skip_install: bool, config_file_name: Optional[str], verbose: bool, debug: bool):
     """

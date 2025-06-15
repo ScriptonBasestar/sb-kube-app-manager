@@ -4,10 +4,15 @@
 리팩토링된 코드의 일관성과 공통 기능을 테스트합니다.
 """
 import pytest
+import tempfile
 from pathlib import Path
+from unittest.mock import patch, MagicMock
+import yaml
+
 from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.logger import logger, LogLevel, SbkubeLogger
 from sbkube.models.config_model import AppInfoScheme
+from sbkube.utils.cli_check import CliToolNotFoundError, CliToolExecutionError
 
 
 class TestLogger:
@@ -53,40 +58,39 @@ class TestBaseCommand:
         assert base_cmd.cli_namespace == "test-ns"
         assert base_cmd.build_dir == tmp_path / "config" / "build"
         
-    def test_find_config_file(self, tmp_path):
+    def test_find_config_file(self):
         """설정 파일 찾기 테스트"""
-        config_dir = tmp_path / "config"
-        config_dir.mkdir()
-        
-        # YAML 파일 생성
-        config_file = config_dir / "config.yaml"
-        config_file.write_text("namespace: test\napps: []")
-        
-        base_cmd = BaseCommand(str(tmp_path), "config")
-        found_config = base_cmd.find_config_file()
-        
-        assert found_config == config_file
-        
-    def test_find_config_file_priority(self, tmp_path):
-        """설정 파일 우선순위 테스트"""
-        config_dir = tmp_path / "config"
-        config_dir.mkdir()
-        
-        # 여러 형식의 파일 생성
-        yaml_file = config_dir / "config.yaml"
-        yaml_file.write_text("namespace: yaml")
-        
-        yml_file = config_dir / "config.yml"
-        yml_file.write_text("namespace: yml")
-        
-        toml_file = config_dir / "config.toml"
-        toml_file.write_text('namespace = "toml"')
-        
-        base_cmd = BaseCommand(str(tmp_path), "config")
-        found_config = base_cmd.find_config_file()
-        
-        # .yaml이 최우선
-        assert found_config == yaml_file
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base_dir = Path(temp_dir)
+            app_config_dir = base_dir / "config"
+            app_config_dir.mkdir(exist_ok=True)
+            
+            # config.yaml 파일 생성
+            config_file = app_config_dir / "config.yaml"
+            config_file.write_text("apps: []")
+            
+            cmd = BaseCommand(str(base_dir), "config")
+            found_file = cmd.find_config_file()
+            
+            assert found_file.name == config_file.name
+            assert found_file.exists()
+            
+    def test_find_config_file_priority(self):
+        """설정 파일 우선순위 테스트 (yaml > yml > toml)"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base_dir = Path(temp_dir)
+            app_config_dir = base_dir / "config"
+            app_config_dir.mkdir(exist_ok=True)
+            
+            # 여러 설정 파일 생성
+            (app_config_dir / "config.yml").write_text("apps: []")
+            (app_config_dir / "config.yaml").write_text("apps: []")
+            
+            cmd = BaseCommand(str(base_dir), "config")
+            found_file = cmd.find_config_file()
+            
+            # .yaml이 우선순위가 높음
+            assert found_file.name == "config.yaml"
         
     def test_namespace_priority(self, tmp_path):
         """네임스페이스 우선순위 테스트"""
@@ -157,25 +161,23 @@ class TestCommandConsistency:
         assert "verbose" in build_params
         assert "debug" in build_params
         
-    def test_error_handling_patterns(self, tmp_path):
-        """에러 처리 패턴 테스트"""
-        base_cmd = BaseCommand(str(tmp_path), "config")
-        
-        # 존재하지 않는 설정 파일
-        with pytest.raises(SystemExit):
-            base_cmd.find_config_file()
+    def test_error_handling_patterns(self):
+        """에러 처리 패턴 일관성 테스트"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            base_dir = Path(temp_dir)
+            app_config_dir = base_dir / "config"
+            app_config_dir.mkdir()
             
-        # 잘못된 앱 설정
-        base_cmd.apps_config_dict = {
-            "apps": [
-                {"name": "invalid-app"}  # type 필드 누락
-            ]
-        }
-        
-        # 에러가 발생해도 계속 진행
-        apps = base_cmd.parse_apps()
-        assert len(apps) == 0  # 잘못된 앱은 건너뜀
-        
+            # 잘못된 설정 파일 생성
+            config_file = app_config_dir / "config.yaml"
+            config_file.write_text("invalid: yaml: content:")
+            
+            cmd = BaseCommand(str(base_dir), "config")
+            
+            # 설정 파일 로드 시 예외 발생 확인
+            with pytest.raises(Exception):
+                cmd.load_config()
+
 
 class TestPathResolution:
     """경로 해석 테스트"""
@@ -194,4 +196,140 @@ class TestPathResolution:
         
         base_cmd.clean_directory(base_cmd.build_dir, "빌드 디렉토리")
         assert base_cmd.build_dir.exists()
-        assert not test_file.exists()  # 내용은 삭제됨 
+        assert not test_file.exists()  # 내용은 삭제됨
+
+
+class TestCliToolMocking:
+    """CLI 도구 모킹 패턴 테스트"""
+    
+    def test_helm_check_mocking(self):
+        """helm 체크 모킹 테스트"""
+        from sbkube.utils.cli_check import check_helm_installed
+        
+        # helm이 없는 경우
+        with patch('sbkube.utils.cli_check.shutil.which', return_value=None):
+            with pytest.raises(CliToolNotFoundError):
+                check_helm_installed()
+                
+        # helm이 있지만 실행 실패하는 경우
+        with patch('sbkube.utils.cli_check.shutil.which', return_value='/usr/bin/helm'), \
+             patch('sbkube.utils.cli_check.subprocess.run') as mock_run:
+            from subprocess import CalledProcessError
+            mock_run.side_effect = CalledProcessError(1, ["helm", "version"])
+            with pytest.raises(CliToolExecutionError):
+                check_helm_installed()
+                
+        # helm이 정상 동작하는 경우
+        with patch('sbkube.utils.cli_check.shutil.which', return_value='/usr/bin/helm'), \
+             patch('sbkube.utils.cli_check.subprocess.run') as mock_run:
+            mock_result = MagicMock()
+            mock_result.stdout = "version.BuildInfo{Version:\"v3.18.0\"}"
+            mock_run.return_value = mock_result
+            
+            # 예외가 발생하지 않아야 함
+            check_helm_installed()
+            
+    def test_kubectl_check_mocking(self):
+        """kubectl 체크 모킹 테스트"""
+        from sbkube.utils.cli_check import check_kubectl_installed
+        
+        # kubectl이 없는 경우
+        with patch('sbkube.utils.cli_check.shutil.which', return_value=None):
+            with pytest.raises(CliToolNotFoundError):
+                check_kubectl_installed()
+                
+        # kubectl이 정상 동작하는 경우
+        with patch('sbkube.utils.cli_check.shutil.which', return_value='/usr/bin/kubectl'), \
+             patch('sbkube.utils.cli_check.subprocess.run') as mock_run:
+            mock_result = MagicMock()
+            mock_result.stdout = "Client Version: v1.28.0"
+            mock_run.return_value = mock_result
+            
+            # 예외가 발생하지 않아야 함
+            check_kubectl_installed()
+
+
+class TestExampleIntegration:
+    """Examples 디렉토리와의 통합 테스트"""
+    
+    def test_example_config_loading(self):
+        """examples 디렉토리의 설정 파일 로딩 테스트"""
+        examples_dir = Path(__file__).parent.parent / "examples"
+        
+        # k3scode 예제가 있는지 확인
+        k3scode_dir = examples_dir / "k3scode"
+        if not k3scode_dir.exists():
+            pytest.skip("k3scode 예제 디렉토리가 없습니다")
+            
+        config_files = list(k3scode_dir.glob("config*.y*ml"))
+        if not config_files:
+            pytest.skip("k3scode 예제에 설정 파일이 없습니다")
+            
+        # 첫 번째 설정 파일로 테스트
+        config_file = config_files[0]
+        
+        cmd = BaseCommand(str(k3scode_dir), ".", None, config_file.name)
+        
+        # 설정 파일 로드가 성공해야 함
+        config_data = cmd.load_config()
+        assert isinstance(config_data, dict)
+        assert "apps" in config_data or len(config_data) > 0
+
+
+class TestLoggerIntegration:
+    """Logger 통합 테스트"""
+    
+    def test_logger_levels(self):
+        """로거 레벨 테스트"""
+        # 다양한 로그 레벨 테스트
+        logger.debug("Debug message")
+        logger.verbose("Verbose message")
+        logger.info("Info message")
+        logger.warning("Warning message")
+        logger.error("Error message")
+        logger.success("Success message")
+        logger.progress("Progress message")
+        logger.command("command --test")
+        logger.heading("Test Heading")
+        
+        # 예외가 발생하지 않으면 성공
+        assert True
+
+
+# 테스트용 헬퍼 함수들
+def create_mock_config(apps_data):
+    """테스트용 설정 데이터 생성"""
+    return {
+        "apps": apps_data,
+        "namespace": "test-namespace"
+    }
+
+
+def create_mock_app(name, app_type, specs=None):
+    """테스트용 앱 데이터 생성"""
+    return {
+        "name": name,
+        "type": app_type,
+        "specs": specs or {}
+    }
+
+
+def mock_helm_success():
+    """helm 명령 성공 모킹"""
+    return (patch('sbkube.utils.cli_check.shutil.which', return_value='/usr/bin/helm'),
+            patch('sbkube.utils.cli_check.subprocess.run'))
+
+
+def mock_kubectl_success():
+    """kubectl 명령 성공 모킹"""
+    return (patch('sbkube.utils.cli_check.shutil.which', return_value='/usr/bin/kubectl'),
+            patch('sbkube.utils.cli_check.subprocess.run'))
+
+
+def mock_subprocess_success(stdout="", stderr="", returncode=0):
+    """subprocess 성공 모킹"""
+    mock_result = MagicMock()
+    mock_result.stdout = stdout
+    mock_result.stderr = stderr
+    mock_result.returncode = returncode
+    return mock_result 

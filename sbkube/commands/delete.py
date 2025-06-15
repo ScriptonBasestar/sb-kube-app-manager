@@ -3,7 +3,8 @@ import click
 from pathlib import Path
 import yaml # kubectl delete 시 YAML 파싱용
 
-from sbkube.utils.cli_check import check_helm_installed_or_exit, check_kubectl_installed_or_exit
+from sbkube.utils.cli_check import check_helm_installed, check_kubectl_installed, CliToolNotFoundError, CliToolExecutionError
+from sbkube.utils.common import common_click_options
 from sbkube.utils.helm_util import get_installed_charts
 from sbkube.models.config_model import (
     AppInfoScheme,
@@ -27,6 +28,7 @@ class DeleteCommand(BaseCommand):
 
     def execute(self):
         """delete 명령 실행"""
+        self.execute_pre_hook()
         logger.heading(f"Delete 시작 - app-dir: {self.app_config_dir.name}")
         # 설정 파일 로드
         self.load_config()
@@ -46,6 +48,10 @@ class DeleteCommand(BaseCommand):
             logger.warning('삭제할 앱이 설정 파일에 없습니다.')
             logger.heading('Delete 작업 완료 (처리할 앱 없음)')
             return
+            
+        # 필요한 CLI 도구들 체크
+        self._check_required_tools(apps)
+            
         total = success = skipped = 0
         for app_dict in apps:
             try:
@@ -72,7 +78,6 @@ class DeleteCommand(BaseCommand):
             deleted = False
             # 타입별 삭제 처리
             if type_ == 'install-helm':
-                check_helm_installed_or_exit()
                 installed = get_installed_charts(ns)
                 if release not in installed:
                     logger.warning(f"Helm 릴리스 '{release}'이 설치되어 있지 않습니다.")
@@ -94,7 +99,6 @@ class DeleteCommand(BaseCommand):
                 except Exception as e:
                     logger.error(f"Helm 삭제 중 오류: {e}")
             elif type_ == 'install-yaml':
-                check_kubectl_installed_or_exit()
                 spec = None
                 if app_info.specs:
                     try:
@@ -137,16 +141,28 @@ class DeleteCommand(BaseCommand):
             if skipped:
                 logger.warning(f"{skipped}개 앱 건너뜀")
         logger.heading('`delete` 작업 완료')
+        
+    def _check_required_tools(self, apps):
+        """삭제할 앱들에 필요한 CLI 도구들 체크"""
+        needs_helm = any(app.get('type') == 'install-helm' for app in apps)
+        needs_kubectl = any(app.get('type') == 'install-yaml' for app in apps)
+        
+        if needs_helm:
+            try:
+                check_helm_installed()
+            except (CliToolNotFoundError, CliToolExecutionError):
+                raise click.Abort()
+                
+        if needs_kubectl:
+            try:
+                check_kubectl_installed()
+            except (CliToolNotFoundError, CliToolExecutionError):
+                raise click.Abort()
 
 @click.command(name="delete")
-@click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 파일이 위치한 디렉토리 이름 (base-dir 기준)")
-@click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
-@click.option("--namespace", "cli_namespace", default=None, help="삭제 작업을 수행할 기본 네임스페이스 (없으면 앱별 설정 또는 최상위 설정 따름)")
-@click.option("--app", "target_app_name", default=None, help="특정 앱만 삭제 (지정하지 않으면 모든 앱 대상)")
+@common_click_options
 @click.option("--skip-not-found", is_flag=True, help="삭제 대상 리소스가 없을 경우 오류 대신 건너뜁니다.")
-@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)")
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@click.option("--namespace", "cli_namespace", default=None, help="삭제 작업을 수행할 기본 네임스페이스 (없으면 앱별 설정 또는 최상위 설정 따름)")
 @click.pass_context
 def cmd(ctx, app_config_dir_name: str, base_dir: str, cli_namespace: Optional[str], target_app_name: Optional[str], skip_not_found: bool, config_file_name: Optional[str], verbose: bool, debug: bool):
     ctx.ensure_object(dict)

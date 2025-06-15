@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Optional
 
 from sbkube.utils.base_command import BaseCommand
+from sbkube.utils.common import common_click_options
 from sbkube.utils.logger import logger, setup_logging_from_context
-from sbkube.utils.cli_check import check_helm_installed_or_exit
+from sbkube.utils.cli_check import check_helm_installed, CliToolNotFoundError, CliToolExecutionError
 from sbkube.models.config_model import (
     AppInfoScheme,
     AppInstallHelmSpec,
@@ -29,17 +30,21 @@ class TemplateCommand(BaseCommand):
 
     def execute(self):
         """template 명령 실행"""
+        self.execute_pre_hook()
+
         logger.heading(f"Template 시작 - app-dir: {self.app_config_dir.name}")
-        # Helm 설치 확인
-        check_helm_installed_or_exit()
+        
         # 출력 디렉토리 준비
         logger.info(f"출력 디렉토리 준비: {self.output_dir}")
         self.ensure_directory(self.output_dir, "출력 디렉토리")
+        
         # 설정 파일 로드
         self.load_config()
+        
         # Helm 관련 앱 필터링
         supported_types = ["install-helm"]
         self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
+        
         if not self.app_info_list:
             if self.target_app_name:
                 logger.warning(f"앱 '{self.target_app_name}'은 template 대상이 아닙니다.")
@@ -47,6 +52,13 @@ class TemplateCommand(BaseCommand):
                 logger.warning("템플릿 생성할 Helm 관련 앱이 설정 파일에 없습니다.")
             logger.heading("Template 작업 완료 (처리할 앱 없음)")
             return
+            
+        # Helm 설치 확인 (템플릿 생성할 앱이 있는 경우에만)
+        try:
+            check_helm_installed()
+        except (CliToolNotFoundError, CliToolExecutionError):
+            raise click.Abort()
+        
         total = len(self.app_info_list)
         success = 0
         for app_info in self.app_info_list:
@@ -103,7 +115,7 @@ class TemplateCommand(BaseCommand):
                 logger.error(f"앱 '{name}': helm template 실행 시간 초과 (60초)")
             except Exception as e:
                 logger.error(f"앱 '{name}': 템플릿 생성 중 예기치 못한 오류: {e}")
-                if logger._level <= logger.LogLevel.DEBUG:
+                if logger._level.value <= logger.LogLevel.DEBUG.value:
                     import traceback
                     logger.debug(traceback.format_exc())
             finally:
@@ -124,14 +136,9 @@ class TemplateCommand(BaseCommand):
         return None
 
 @click.command(name="template")
-@click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 파일이 위치한 디렉토리 이름 (base-dir 기준)")
+@common_click_options
 @click.option("--output-dir", "output_dir_name", default="rendered", help="렌더링된 YAML을 저장할 디렉토리 (app-dir 기준 또는 절대경로)")
-@click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
 @click.option("--namespace", "cli_namespace", default=None, help="템플릿 생성 시 적용할 기본 네임스페이스 (없으면 앱별 설정 따름)")
-@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)")
-@click.option("--app", "app_name", default=None, help="템플릿을 생성할 특정 앱 이름 (지정하지 않으면 모든 앱 처리)")
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def cmd(ctx, app_config_dir_name: str, output_dir_name: str, base_dir: str, cli_namespace: str, config_file_name: str, app_name: str, verbose: bool, debug: bool):
     """

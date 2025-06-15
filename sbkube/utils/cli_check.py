@@ -4,27 +4,57 @@ import sys
 import os
 from sbkube.utils.logger import logger
 
+
+class CliToolNotFoundError(Exception):
+    """CLI 도구를 찾을 수 없을 때 발생하는 예외"""
+    pass
+
+
+class CliToolExecutionError(Exception):
+    """CLI 도구 실행 실패 시 발생하는 예외"""
+    pass
+
+
 def check_helm_installed_or_exit():
+    """helm 설치 확인 (테스트 가능한 버전)"""
+    try:
+        check_helm_installed()
+    except (CliToolNotFoundError, CliToolExecutionError):
+        sys.exit(1)
+
+
+def check_helm_installed():
+    """helm 설치 확인 (예외 발생 버전)"""
     helm_path = shutil.which("helm")
     if not helm_path:
         logger.error("helm 명령이 시스템에 설치되어 있지 않습니다.")
-        sys.exit(1)
+        raise CliToolNotFoundError("helm not found")
 
     try:
         result = subprocess.run(["helm", "version"], capture_output=True, text=True, check=True)
         logger.success(f"helm 확인됨: {result.stdout.strip()}")
     except subprocess.CalledProcessError as e:
         logger.error(f"helm 실행 실패: {e}")
-        sys.exit(1)
+        raise CliToolExecutionError(f"helm execution failed: {e}")
     except PermissionError:
         logger.error(f"helm 바이너리에 실행 권한이 없습니다: {helm_path}")
-        sys.exit(1)
+        raise CliToolExecutionError(f"helm permission denied: {helm_path}")
+
 
 def check_kubectl_installed_or_exit(kubeconfig: str | None = None, kubecontext: str | None = None):
+    """kubectl 설치 확인 (테스트 가능한 버전)"""
+    try:
+        check_kubectl_installed(kubeconfig, kubecontext)
+    except (CliToolNotFoundError, CliToolExecutionError):
+        sys.exit(1)
+
+
+def check_kubectl_installed(kubeconfig: str | None = None, kubecontext: str | None = None):
+    """kubectl 설치 확인 (예외 발생 버전)"""
     kubectl_path = shutil.which("kubectl")
     if not kubectl_path:
         logger.error("kubectl 명령이 시스템에 설치되어 있지 않습니다.")
-        sys.exit(1)
+        raise CliToolNotFoundError("kubectl not found")
 
     try:
         cmd = ["kubectl", "version", "--client"]
@@ -37,10 +67,11 @@ def check_kubectl_installed_or_exit(kubeconfig: str | None = None, kubecontext: 
         logger.success(f"kubectl 확인됨: {result.stdout.strip()}")
     except subprocess.CalledProcessError as e:
         logger.error(f"kubectl 실행 실패: {e}")
-        sys.exit(1)
+        raise CliToolExecutionError(f"kubectl execution failed: {e}")
     except PermissionError:
         logger.error(f"kubectl 바이너리에 실행 권한이 없습니다: {kubectl_path}")
-        sys.exit(1)
+        raise CliToolExecutionError(f"kubectl permission denied: {kubectl_path}")
+
 
 def print_helm_connection_help():
     import subprocess

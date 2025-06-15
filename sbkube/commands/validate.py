@@ -49,6 +49,8 @@ class ValidateCommand(BaseCommand):
 
     def execute(self):
         """validate 명령 실행"""
+        self.execute_pre_hook()
+        
         logger.heading(f"Validate 시작 - 파일: {self.target_file}")
         target_path = Path(self.target_file)
         filename = target_path.name

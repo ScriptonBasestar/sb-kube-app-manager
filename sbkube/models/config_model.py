@@ -94,7 +94,7 @@ class AppInfoScheme(BaseModel):
     type: Literal[
         'exec',
         'copy-repo', 'copy-chart', 'copy-root', 'copy-app',
-        'install-helm', 'install-yaml', 'install-kustomize',
+        'install-helm', 'install-yaml', 'install-kustomize', 'install-action',
         'pull-helm', 'pull-helm-oci', 'pull-git', 'pull-http'
     ]
     # path: Optional[str] = None

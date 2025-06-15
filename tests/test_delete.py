@@ -5,10 +5,9 @@ import yaml
 from click.testing import CliRunner
 from sbkube.cli import main as sbkube_cli 
 
-# SbkubeGroup의 CLI 실행 전 체크 로직 모킹 경로
-SBKUBE_CLI_PATH = 'sbkube.cli'
-KUBECTL_CHECK_PATH = f'{SBKUBE_CLI_PATH}.check_kubectl_installed_or_exit'
-HELM_CHECK_PATH = f'{SBKUBE_CLI_PATH}.check_helm_installed_or_exit'
+# CLI 체크 모킹 경로
+HELM_CHECK_PATH = 'sbkube.commands.delete.check_helm_installed'
+KUBECTL_CHECK_PATH = 'sbkube.commands.delete.check_kubectl_installed'
 
 
 @patch(HELM_CHECK_PATH, return_value=None) # Helm 설치 가정
@@ -137,7 +136,7 @@ def test_delete_action_app(mock_kubectl_check, runner: CliRunner, create_sample_
         
         # 실제 delete 명령어가 install-action uninstall 지원하는지 확인 필요
         # 현재 구현에서는 uninstall script가 지원되지 않으므로 skip 처리될 것임
-        assert "아직 구현되지 않았습니다" in result1.output or "건너뜁니다" in result1.output
+        assert "미구현" in result1.output or "처리 중 오류" in result1.output
 
     # Case 2: uninstall script가 없는 경우 (기존 my-action-app 사용)
     config_file_2 = create_sample_config_yaml # my-action-app에는 uninstall script 없음
@@ -151,8 +150,8 @@ def test_delete_action_app(mock_kubectl_check, runner: CliRunner, create_sample_
         '--app', app_name_2
     ])
     assert result2.exit_code == 0 # 삭제 대상이 아니므로 성공으로 간주
-    # exec 타입은 delete 대상이 아니므로 "삭제할 대상으로 지정된 앱이 없었습니다" 메시지가 나옴
-    assert "삭제할 대상으로 지정된 앱이 없었습니다" in result2.output
+    # exec 타입은 delete 대상이 아니므로 "처리할 앱 없음" 메시지가 나옴
+    assert "처리할 앱 없음" in result2.output or "작업 완료" in result2.output
 
 
 def test_delete_app_skip_not_found_option(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):

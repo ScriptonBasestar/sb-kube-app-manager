@@ -1,0 +1,17 @@
+namespace: example-action
+
+apps:
+  - name: custom-operator-install
+    type: install-action
+    specs:
+      actions:
+        - type: apply
+          path: manifests/custom-crd.yaml
+        - type: apply
+          path: manifests/custom-operator.yaml
+      uninstall:
+        actions:
+          - type: delete
+            path: manifests/custom-operator.yaml
+          - type: delete
+            path: manifests/custom-crd.yaml 

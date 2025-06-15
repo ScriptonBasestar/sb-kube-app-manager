@@ -90,15 +90,160 @@ class PrepareCommand(BaseCommand):
             return False
 
     def _prepare_helm(self, app_info: AppInfoScheme, spec_obj):
-        """Helm 차트 준비 (placeholder)"""
+        """Helm 차트 준비"""
         logger.info(f"Helm 차트 준비: {app_info.name}")
-        # TODO: 실제 helm 차트 준비 로직 구현
+        
+        if isinstance(spec_obj, AppPullHelmSpec):
+            # 일반 Helm 저장소에서 차트 pull
+            repo_name = spec_obj.repo
+            chart_name = spec_obj.chart
+            version = spec_obj.version
+            dest_dir = spec_obj.dest or chart_name
+            
+            # charts 디렉토리 생성
+            charts_dir = self.base_dir / "charts"
+            charts_dir.mkdir(exist_ok=True)
+            
+            dest_path = charts_dir / dest_dir
+            
+            # sources.yaml에서 repo URL 찾기
+            sources_path = self.base_dir / self.sources_file
+            if sources_path.exists():
+                sources_data = load_config_file(sources_path)
+                helm_repos = sources_data.get('helm_repos', {})
+                
+                if repo_name in helm_repos:
+                    repo_url = helm_repos[repo_name]
+                    
+                    # helm repo add
+                    try:
+                        subprocess.run(['helm', 'repo', 'add', repo_name, repo_url], 
+                                     check=True, capture_output=True, text=True)
+                        logger.info(f"Helm 저장소 '{repo_name}' 추가됨")
+                    except subprocess.CalledProcessError as e:
+                        if "already exists" not in e.stderr:
+                            logger.warning(f"Helm 저장소 추가 실패: {e.stderr}")
+                    
+                    # helm repo update
+                    try:
+                        subprocess.run(['helm', 'repo', 'update'], 
+                                     check=True, capture_output=True, text=True)
+                        logger.info("Helm 저장소 업데이트 완료")
+                    except subprocess.CalledProcessError as e:
+                        logger.warning(f"Helm 저장소 업데이트 실패: {e.stderr}")
+                    
+                    # helm pull
+                    pull_cmd = ['helm', 'pull', f"{repo_name}/{chart_name}"]
+                    if version:
+                        pull_cmd.extend(['--version', version])
+                    pull_cmd.extend(['--untar', '--untardir', str(charts_dir)])
+                    if dest_dir != chart_name:
+                        pull_cmd.extend(['--destination', str(dest_path)])
+                    
+                    try:
+                        subprocess.run(pull_cmd, check=True, capture_output=True, text=True)
+                        logger.success(f"Helm 차트 '{chart_name}' 다운로드 완료: {dest_path}")
+                    except subprocess.CalledProcessError as e:
+                        logger.error(f"Helm 차트 다운로드 실패: {e.stderr}")
+                        return False
+                else:
+                    logger.error(f"sources.yaml에서 저장소 '{repo_name}'을 찾을 수 없습니다.")
+                    return False
+            else:
+                logger.error(f"sources 파일을 찾을 수 없습니다: {sources_path}")
+                return False
+                
+        elif isinstance(spec_obj, AppPullHelmOciSpec):
+            # OCI 저장소에서 차트 pull
+            oci_url = spec_obj.oci_url
+            version = spec_obj.version
+            dest_dir = spec_obj.dest
+            
+            charts_dir = self.base_dir / "charts"
+            charts_dir.mkdir(exist_ok=True)
+            
+            pull_cmd = ['helm', 'pull', oci_url]
+            if version:
+                pull_cmd.extend(['--version', version])
+            pull_cmd.extend(['--untar', '--untardir', str(charts_dir)])
+            
+            try:
+                subprocess.run(pull_cmd, check=True, capture_output=True, text=True)
+                logger.success(f"OCI Helm 차트 다운로드 완료: {oci_url}")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"OCI Helm 차트 다운로드 실패: {e.stderr}")
+                return False
+        
         return True
     
     def _prepare_git(self, app_info: AppInfoScheme, spec_obj):
-        """Git 저장소 준비 (placeholder)"""
+        """Git 저장소 준비"""
         logger.info(f"Git 저장소 준비: {app_info.name}")
-        # TODO: 실제 git 저장소 준비 로직 구현
+        
+        if isinstance(spec_obj, AppPullGitSpec):
+            repo_name = spec_obj.repo
+            paths = spec_obj.paths or []
+            
+            # sources.yaml에서 git repo 정보 찾기
+            sources_path = self.base_dir / self.sources_file
+            if sources_path.exists():
+                sources_data = load_config_file(sources_path)
+                git_repos = sources_data.get('git_repos', {})
+                
+                if repo_name in git_repos:
+                    repo_info = git_repos[repo_name]
+                    repo_url = repo_info.get('url')
+                    branch = repo_info.get('branch', 'main')
+                    
+                    # repos 디렉토리 생성
+                    repos_dir = self.base_dir / "repos"
+                    repos_dir.mkdir(exist_ok=True)
+                    
+                    repo_dir = repos_dir / repo_name
+                    
+                    # git clone 또는 pull
+                    if repo_dir.exists():
+                        # 기존 저장소 업데이트
+                        try:
+                            subprocess.run(['git', 'pull'], cwd=repo_dir, 
+                                         check=True, capture_output=True, text=True)
+                            logger.info(f"Git 저장소 '{repo_name}' 업데이트 완료")
+                        except subprocess.CalledProcessError as e:
+                            logger.warning(f"Git 저장소 업데이트 실패: {e.stderr}")
+                    else:
+                        # 새로 clone
+                        clone_cmd = ['git', 'clone', repo_url, str(repo_dir)]
+                        if branch != 'main':
+                            clone_cmd.extend(['-b', branch])
+                        
+                        try:
+                            subprocess.run(clone_cmd, check=True, capture_output=True, text=True)
+                            logger.success(f"Git 저장소 '{repo_name}' 클론 완료: {repo_dir}")
+                        except subprocess.CalledProcessError as e:
+                            logger.error(f"Git 저장소 클론 실패: {e.stderr}")
+                            return False
+                    
+                    # 지정된 경로들 복사
+                    for path_spec in paths:
+                        src_path = repo_dir / path_spec.get('src', '.')
+                        dest_path = self.app_config_dir / path_spec.get('dest', '.')
+                        
+                        if src_path.exists():
+                            dest_path.parent.mkdir(parents=True, exist_ok=True)
+                            if src_path.is_dir():
+                                shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
+                            else:
+                                shutil.copy2(src_path, dest_path)
+                            logger.info(f"복사 완료: {src_path} -> {dest_path}")
+                        else:
+                            logger.warning(f"소스 경로를 찾을 수 없습니다: {src_path}")
+                else:
+                    logger.error(f"sources.yaml에서 Git 저장소 '{repo_name}'을 찾을 수 없습니다.")
+                    return False
+            else:
+                logger.error(f"sources 파일을 찾을 수 없습니다: {sources_path}")
+                return False
+        
         return True
 
     def _check_required_tools(self):

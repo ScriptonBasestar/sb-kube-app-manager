@@ -1,0 +1,59 @@
+namespace: complete-example
+
+deps: []
+
+apps:
+  # 1. 외부 리소스 준비 (prepare 단계)
+  - name: redis-chart-pull
+    type: pull-helm
+    specs:
+      repo: bitnami
+      chart: redis
+      version: "18.0.0"
+      dest: redis
+  
+  - name: custom-app-source
+    type: pull-git
+    specs:
+      repo: example-app
+      paths:
+        - src: charts/myapp
+          dest: myapp-chart
+  
+  # 2. 로컬 리소스 복사 (build 단계)
+  - name: config-copy
+    type: copy-app
+    specs:
+      paths:
+        - src: local-configs
+          dest: configs
+  
+  # 3. 애플리케이션 배포 (deploy 단계)
+  - name: redis-deployment
+    type: install-helm
+    specs:
+      path: redis
+      values:
+        - redis-values.yaml
+  
+  - name: custom-app
+    type: install-helm
+    specs:
+      path: myapp-chart
+      values:
+        - myapp-values.yaml
+  
+  - name: monitoring-setup
+    type: install-yaml
+    specs:
+      actions:
+        - type: apply
+          path: manifests/monitoring.yaml
+  
+  - name: post-install-check
+    type: exec
+    specs:
+      commands:
+        - echo "Checking deployment status..."
+        - kubectl get pods -n complete-example
+        - echo "Deployment check completed!" 

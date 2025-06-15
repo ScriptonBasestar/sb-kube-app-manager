@@ -1,0 +1,11 @@
+namespace: example-yaml
+
+apps:
+  - name: nginx-deployment
+    type: install-yaml
+    specs:
+      actions:
+        - type: apply
+          path: manifests/nginx-deployment.yaml
+        - type: apply
+          path: manifests/nginx-service.yaml 

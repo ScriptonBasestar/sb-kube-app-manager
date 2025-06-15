@@ -114,4 +114,7 @@ git_repos:
   supabase:
     url: "https://github.com/supabase-community/supabase-kubernetes"
     branch: "main"
+  stacklok-toolhive:
+    url: "https://github.com/stacklok/toolhive.git"
+    branch: "main"
 

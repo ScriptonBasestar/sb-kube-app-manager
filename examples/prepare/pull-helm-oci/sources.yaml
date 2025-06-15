@@ -1,0 +1,5 @@
+oci_repos:
+  8gears:
+    n8n: oci://8gears.container-registry.com/library/n8n
+  gabe565:
+    rsshub: oci://ghcr.io/gabe565/charts/rsshub 

@@ -110,14 +110,16 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
         console.print(f"[magenta]➡️  Helm 앱 '{app_name}' (릴리스명: '{app_release_name}') 업그레이드/설치 시도...[/magenta]")
 
         # 빌드된 차트 경로 확인 (build.py에서 app_name으로 생성됨)
-        built_chart_path = BUILD_DIR / app_name
-        if not built_chart_path.exists() or not built_chart_path.is_dir():
-            console.print(f"[red]❌ 앱 '{app_name}': 빌드된 Helm 차트 디렉토리를 찾을 수 없습니다: {built_chart_path}[/red]")
+        chart_path_in_build = app_info.specs.get("path") if isinstance(app_info.specs, dict) else getattr(app_info.specs, "path", None)
+        chart_path_in_build = chart_path_in_build or app_name
+        chart_dir_to_install = BUILD_DIR / chart_path_in_build
+        if not chart_dir_to_install.exists() or not chart_dir_to_install.is_dir():
+            console.print(f"[red]❌ 앱 '{app_name}': 빌드된 Helm 차트 디렉토리를 찾을 수 없습니다: {chart_dir_to_install}[/red]")
             console.print(f"    [yellow]L 'sbkube build' 명령을 먼저 실행하여 '{app_name}' 앱을 빌드했는지 확인하세요.[/yellow]")
             upgrade_skipped_apps +=1 # 실패로 간주하고 스킵
             console.print("")
             continue
-        console.print(f"    [grey]ℹ️ 대상 차트 경로: {built_chart_path}[/grey]")
+        console.print(f"    [grey]ℹ️ 대상 차트 경로: {chart_dir_to_install}[/grey]")
 
         current_namespace = None
         if cli_namespace:
@@ -129,7 +131,7 @@ def cmd(app_config_dir_name: str, base_dir: str, cli_namespace: str | None, targ
         # Helm upgrade 시 네임스페이스가 없으면 default를 사용하도록 명시 (명령어 실행 시)
         # 또는 --create-namespace 와 함께 사용하면 네임스페이스가 없으면 생성함.
         
-        helm_upgrade_cmd = ["helm", "upgrade", app_release_name, str(built_chart_path)]
+        helm_upgrade_cmd = ["helm", "upgrade", app_release_name, str(chart_dir_to_install)]
         
         if not skip_install: # 기본적으로 --install 사용
             helm_upgrade_cmd.append("--install")

@@ -77,7 +77,7 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
 
     for app_info in apps_to_deploy:
         app_type = app_info.type
-        name = app_info.name
+        app_name = app_info.name
         
         current_ns = None
         if cli_namespace:
@@ -99,25 +99,26 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
                 # console.print(f"[yellow]⚠️  앱 '{name}': 지원하지 않는 앱 타입 '{app_type}' 입니다. 이 앱의 배포를 건너뜁니다.[/yellow]")
                 continue
         except Exception as e:
-            console.print(f"[red]❌ 앱 '{name}' (타입: {app_type})의 Spec 데이터 검증/변환 중 오류: {e}[/red]")
+            console.print(f"[red]❌ 앱 '{app_name}' (타입: {app_type})의 Spec 데이터 검증/변환 중 오류: {e}[/red]")
             console.print(f"    [yellow]L 해당 앱 설정을 건너뜁니다. Specs: {app_info.specs}[/yellow]")
             continue
         
-        console.print(f"[magenta]➡️  앱 '{name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작[/magenta]")
+        console.print(f"[magenta]➡️  앱 '{app_name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작[/magenta]")
 
         if app_type == "install-helm":
-            release_name = app_info.path or name
-            chart_path_in_build = app_info.path or name
+            release_name = app_info.path or app_name
+            chart_path_in_build = app_info.specs.get("path") if isinstance(app_info.specs, dict) else getattr(app_info.specs, "path", None)
+            chart_path_in_build = chart_path_in_build or app_name
             chart_dir_to_install = BUILD_DIR / chart_path_in_build
 
             if not chart_dir_to_install.exists():
-                console.print(f"[red]❌ 앱 '{name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: {chart_dir_to_install}[/red]")
+                console.print(f"[red]❌ 앱 '{app_name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: {chart_dir_to_install}[/red]")
                 console.print(f"    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]")
                 continue
 
             is_installed = release_name in get_installed_charts(current_ns) if current_ns else False
             if is_installed:
-                console.print(f"[yellow]⚠️  앱 '{name}': Helm 릴리스 '{release_name}'(ns: {current_ns or 'default'})가 이미 설치되어 있습니다. 건너뜁니다.[/yellow]")
+                console.print(f"[yellow]⚠️  앱 '{app_name}': Helm 릴리스 '{release_name}'(ns: {current_ns or 'default'})가 이미 설치되어 있습니다. 건너뜁니다.[/yellow]")
                 continue
 
             helm_cmd_list = ["helm", "install", release_name, str(chart_dir_to_install)]
@@ -141,12 +142,12 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
             result = subprocess.run(helm_cmd_list, capture_output=True, text=True, check=False)
 
             if result.returncode != 0:
-                console.print(f"[red]❌ 앱 '{name}': Helm 작업 실패 (릴리스: {release_name}):[/red]")
+                console.print(f"[red]❌ 앱 '{app_name}': Helm 작업 실패 (릴리스: {release_name}):[/red]")
                 if result.stdout: console.print(f"    [blue]STDOUT:[/blue] {result.stdout.strip()}")
                 if result.stderr: console.print(f"    [red]STDERR:[/red] {result.stderr.strip()}")
             else:
                 ns_msg = f" (네임스페이스: {current_ns})" if current_ns else ""
-                console.print(f"[bold green]✅ 앱 '{name}': Helm 릴리스 '{release_name}' 배포 완료{ns_msg}[/bold green]")
+                console.print(f"[bold green]✅ 앱 '{app_name}': Helm 릴리스 '{release_name}' 배포 완료{ns_msg}[/bold green]")
 
         elif app_type == "install-yaml":
             for action_spec in spec_obj.actions:
@@ -168,7 +169,7 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
                          if base_dir_candidate.exists():
                               target_yaml_path_str = str(base_dir_candidate.resolve())
                          else:
-                              console.print(f"[red]❌ 앱 '{name}': YAML 파일 경로를 확인할 수 없습니다: '{action_path_str}'. 관련 경로들을 확인하세요.[/red]")
+                              console.print(f"[red]❌ 앱 '{app_name}': YAML 파일 경로를 확인할 수 없습니다: '{action_path_str}'. 관련 경로들을 확인하세요.[/red]")
                               console.print(f"    [yellow]L 확인한 경로: 절대경로, {path_candidate}, {base_dir_candidate}[/yellow]")
                               continue
 
@@ -180,7 +181,7 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
                     kubectl_cmd_list.append(action_type)
                     kubectl_cmd_list.extend(["-f", target_yaml_path_str])
                 else:
-                    console.print(f"[red]❌ 앱 '{name}': 지원하지 않는 YAML 액션 타입 '{action_type}' 입니다. (지원: apply, create, delete)[/red]")
+                    console.print(f"[red]❌ 앱 '{app_name}': 지원하지 않는 YAML 액션 타입 '{action_type}' 입니다. (지원: apply, create, delete)[/red]")
                     continue
                 
                 if current_ns:
@@ -195,11 +196,11 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
                 if result.returncode != 0:
                     if "Unable to connect to the server" in result.stderr or "no such host" in result.stderr:
                         print_kube_connection_help()
-                    console.print(f"[red]❌ 앱 '{name}': YAML 작업 ('{action_type}' on '{target_yaml_path_str}') 실패:[/red]")
+                    console.print(f"[red]❌ 앱 '{app_name}': YAML 작업 ('{action_type}' on '{target_yaml_path_str}') 실패:[/red]")
                     if result.stdout: console.print(f"    [blue]STDOUT:[/blue] {result.stdout.strip()}")
                     if result.stderr: console.print(f"    [red]STDERR:[/red] {result.stderr.strip()}")
                 else:
-                    console.print(f"[green]✅ 앱 '{name}': YAML 작업 ('{action_type}' on '{target_yaml_path_str}') 완료[/green]")
+                    console.print(f"[green]✅ 앱 '{app_name}': YAML 작업 ('{action_type}' on '{target_yaml_path_str}') 완료[/green]")
 
         elif app_type == "exec":
             for raw_cmd_str in spec_obj.commands:
@@ -207,12 +208,12 @@ def cmd(app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name):
                 console.print(f"    [cyan]$ {raw_cmd_str}[/cyan]")
                 result = subprocess.run(cmd_parts, capture_output=True, text=True, check=False, cwd=BASE_DIR) 
                 if result.returncode != 0:
-                    console.print(f"[red]❌ 앱 '{name}': 명령어 실행 실패 ('{raw_cmd_str}'):[/red]")
+                    console.print(f"[red]❌ 앱 '{app_name}': 명령어 실행 실패 ('{raw_cmd_str}'):[/red]")
                     if result.stdout: console.print(f"    [blue]STDOUT:[/blue] {result.stdout.strip()}")
                     if result.stderr: console.print(f"    [red]STDERR:[/red] {result.stderr.strip()}")
                 else:
                     if result.stdout: console.print(f"    [grey]STDOUT:[/grey] {result.stdout.strip()}")
-                    console.print(f"[green]✅ 앱 '{name}': 명령어 실행 완료 ('{raw_cmd_str}')[/green]")
+                    console.print(f"[green]✅ 앱 '{app_name}': 명령어 실행 완료 ('{raw_cmd_str}')[/green]")
         
         console.print("")
 

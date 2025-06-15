@@ -28,6 +28,7 @@ class AppExecSpec(AppSpecBase):
         return self
 
 class AppInstallHelmSpec(AppSpecBase):
+    path: Optional[str] = None
     values: List[str] = Field(default_factory=list)
 
 class AppInstallKubectlSpec(AppSpecBase):
@@ -96,7 +97,7 @@ class AppInfoScheme(BaseModel):
         'install-helm', 'install-yaml', 'install-kustomize',
         'pull-helm', 'pull-helm-oci', 'pull-git', 'pull-http'
     ]
-    path: Optional[str] = None
+    # path: Optional[str] = None
     enabled: bool = False
     namespace: Optional[str] = None
     release_name: Optional[str] = None

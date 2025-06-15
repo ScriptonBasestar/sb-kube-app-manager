@@ -97,11 +97,13 @@ def cmd(app_config_dir_name: str, output_dir_name: str, base_dir: str, cli_names
     for app_info in app_info_list_to_template:
         template_total_apps += 1
         app_name = app_info.name
+        chart_path_in_build = app_info.specs.get("path") if isinstance(app_info.specs, dict) else getattr(app_info.specs, "path", None)
+        chart_path_in_build = chart_path_in_build or app_name
         app_type = app_info.type
 
         console.print(f"[magenta]➡️  앱 '{app_name}' (타입: {app_type}) 템플릿 생성 시작...[/magenta]")
 
-        built_chart_path = BUILD_DIR / app_name
+        built_chart_path = BUILD_DIR / chart_path_in_build
 
         if not built_chart_path.exists() or not built_chart_path.is_dir():
             console.print(f"[red]❌ 앱 '{app_name}': 빌드된 Helm 차트 디렉토리를 찾을 수 없습니다: {built_chart_path}[/red]")

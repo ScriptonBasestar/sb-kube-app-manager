@@ -1,8 +1,8 @@
 import click
 import logging
 from pathlib import Path
-from rich.console import Console
 from rich.table import Table
+from sbkube.utils.logger import logger
 
 # kubernetes 패키지를 사용하기 위한 임포트
 try:
@@ -16,17 +16,14 @@ from sbkube.commands import prepare, build, template, deploy, upgrade, delete, v
 from sbkube.utils.cli_check import check_helm_installed_or_exit, check_kubectl_installed_or_exit
 # 기존 print_kube_connection_help, print_helm_connection_help는 display_kubeconfig_info 및 SbkubeGroup.invoke에서 직접 처리 또는 대체
 
-
-console = Console()
-
 def display_kubeconfig_info(kubeconfig_path: str | None = None, context_name: str | None = None):
     """Kubeconfig 파일 정보를 파싱하여 현재 컨텍스트, 사용 가능한 컨텍스트 목록 및 연결 방법을 안내합니다."""
     if not KUBERNETES_AVAILABLE:
-        console.print("[red]❌ `kubernetes` 파이썬 패키지를 찾을 수 없습니다.[/red]")
-        console.print("   [yellow]L `pip install kubernetes` 또는 `poetry add kubernetes`로 설치해주세요.[/yellow]")
+        logger.error("`kubernetes` 파이썬 패키지를 찾을 수 없습니다.")
+        logger.error("`pip install kubernetes` 또는 `poetry add kubernetes`로 설치해주세요.")
         return
 
-    console.print("[bold blue]✨ Kubernetes 설정 정보 ✨[/bold blue]")
+    logger.heading("Kubernetes 설정 정보")
     resolved_kubeconfig_path = str(Path(kubeconfig_path).expanduser()) if kubeconfig_path else None
     default_kubeconfig_path_text = "~/.kube/config"
     if resolved_kubeconfig_path and Path(resolved_kubeconfig_path).is_absolute():
@@ -37,21 +34,21 @@ def display_kubeconfig_info(kubeconfig_path: str | None = None, context_name: st
     try:
         contexts, active_context = kube_config.list_kube_config_contexts(config_file=resolved_kubeconfig_path)
     except ConfigException as e:
-        console.print(f"[yellow]⚠️ Kubeconfig 파일을 로드할 수 없습니다 (경로: {default_kubeconfig_path_text}).[/yellow]")
-        console.print(f"   [dim]오류: {e}[/dim]")
-        console.print("\n[bold yellow]💡 연결 방법 안내:[/bold yellow]")
-        console.print("   1. KUBECONFIG 환경 변수를 설정하세요:")
-        console.print("      [cyan]export KUBECONFIG=/path/to/your/kubeconfig[/cyan]")
-        console.print("   2. 또는 `sbkube` 명령어에 옵션을 사용하세요:")
-        console.print("      [cyan]sbkube --kubeconfig /path/to/your/kubeconfig <command>[/cyan]")
-        console.print("      [cyan]sbkube --context <your_context_name> <command>[/cyan]")
+        logger.warning(f"Kubeconfig 파일을 로드할 수 없습니다 (경로: {default_kubeconfig_path_text}).")
+        logger.verbose(f"오류: {e}")
+        logger.info("\n💡 연결 방법 안내:")
+        logger.info("   1. KUBECONFIG 환경 변수를 설정하세요:")
+        logger.info("      [cyan]export KUBECONFIG=/path/to/your/kubeconfig[/cyan]")
+        logger.info("   2. 또는 `sbkube` 명령어에 옵션을 사용하세요:")
+        logger.info("      [cyan]sbkube --kubeconfig /path/to/your/kubeconfig <command>[/cyan]")
+        logger.info("      [cyan]sbkube --context <your_context_name> <command>[/cyan]")
         return
     except Exception as e:
-        console.print(f"[red]❌ Kubeconfig 정보 로드 중 예상치 못한 오류 발생: {e}[/red]")
+        logger.error(f"❌ Kubeconfig 정보 로드 중 예상치 못한 오류 발생: {e}")
         return
 
     if not contexts:
-        console.print(f"[yellow]⚠️ 사용 가능한 Kubernetes 컨텍스트가 Kubeconfig 파일({default_kubeconfig_path_text})에 없습니다.[/yellow]")
+        logger.warning(f"사용 가능한 Kubernetes 컨텍스트가 Kubeconfig 파일({default_kubeconfig_path_text})에 없습니다.")
         return
 
     current_active_display_name = "N/A"
@@ -63,14 +60,14 @@ def display_kubeconfig_info(kubeconfig_path: str | None = None, context_name: st
     if context_name and any(c.get('name') == context_name for c in contexts):
         current_active_display_name = context_name
         specified_context_active = True
-        console.print(f"   [green]지정된 컨텍스트:[/green] [bold cyan]{current_active_display_name}[/bold cyan]")
+        logger.info(f"지정된 컨텍스트: {current_active_display_name}")
     elif active_context:
-        console.print(f"   [green]현재 활성 컨텍스트:[/green] [bold cyan]{current_active_display_name}[/bold cyan]")
+        logger.info(f"현재 활성 컨텍스트: {current_active_display_name}")
         cluster_name = active_context.get('context', {}).get('cluster')
         if cluster_name:
-             console.print(f"     [dim]└ Cluster: {cluster_name}[/dim]")
+             logger.verbose(f"Cluster: {cluster_name}")
     else:
-        console.print("   [yellow]⚠️ 활성 컨텍스트를 확인할 수 없습니다.[/yellow]")
+        logger.warning("활성 컨텍스트를 확인할 수 없습니다.")
 
     table = Table(title=f"사용 가능한 컨텍스트 (from: {default_kubeconfig_path_text})", show_lines=True)
     table.add_column("활성", style="magenta", justify="center")
@@ -92,15 +89,15 @@ def display_kubeconfig_info(kubeconfig_path: str | None = None, context_name: st
         namespace = c_info.get('context', {}).get('namespace', 'default')
         table.add_row(is_active_symbol, ctx_name, cluster, user, namespace)
     
-    console.print(table)
-    console.print("\n[bold yellow]💡 다른 컨텍스트 사용 방법:[/bold yellow]")
-    console.print("   1. `kubectl`로 컨텍스트 변경:")
-    console.print("      [cyan]kubectl config use-context <context_name>[/cyan]")
-    console.print("   2. `sbkube` 명령어에 옵션 사용:")
-    console.print("      [cyan]sbkube --context <context_name> <command>[/cyan]")
-    console.print("   3. KUBECONFIG 환경 변수 (여러 파일 관리 시):")
-    console.print("      [cyan]export KUBECONFIG=~/.kube/config:/path/to/other/config[/cyan]")
-    console.print("      (이 경우 현재 활성 컨텍스트는 첫 번째 유효한 파일의 현재 컨텍스트를 따릅니다)")
+    logger.console.print(table)
+    logger.info("다른 컨텍스트 사용 방법:")
+    logger.info("1. `kubectl`로 컨텍스트 변경:")
+    logger.info("kubectl config use-context <context_name>")
+    logger.info("2. `sbkube` 명령어에 옵션 사용:")
+    logger.info("sbkube --context <context_name> <command>")
+    logger.info("3. KUBECONFIG 환경 변수 (여러 파일 관리 시):")
+    logger.info("export KUBECONFIG=~/.kube/config:/path/to/other/config")
+    logger.info("(이 경우 현재 활성 컨텍스트는 첫 번째 유효한 파일의 현재 컨텍스트를 따릅니다)")
 
 
 class SbkubeGroup(click.Group):
@@ -144,9 +141,8 @@ def main(ctx: click.Context, kubeconfig: str | None, context: str | None, verbos
     ctx.obj['verbose'] = verbose
 
     if verbose:
-        # TODO: 로깅 레벨 및 포맷 설정 개선 (e.g., logging.getLogger("sbkube").setLevel)
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-        console.print("[dim]상세 로깅 활성화됨.[/dim]")
+        logger.verbose("상세 로깅 활성화됨.")
 
     if ctx.invoked_subcommand is None:
         # `sbkube`가 서브커맨드 없이 실행된 경우

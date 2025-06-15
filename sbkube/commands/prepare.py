@@ -4,7 +4,6 @@ import shutil
 from pathlib import Path
 import click
 from shutil import which
-from rich.console import Console
 from typing import Optional
 
 # config_model 임포트
@@ -21,11 +20,9 @@ from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.logger import logger, setup_logging_from_context
 
-console = Console()
-
 def check_command_available(command):
     if which(command) is None:
-        console.print(f"[yellow]⚠️ '{command}' 명령을 찾을 수 없습니다. PATH에 등록되어 있는지 확인하세요.[/yellow]")
+        logger.warning(f"'{command}' 명령을 찾을 수 없습니다. PATH에 등록되어 있는지 확인하세요.")
         return False
     try:
         result = subprocess.run([command, "--help"], capture_output=True, text=True, timeout=5)

@@ -2,9 +2,7 @@ import os
 import yaml
 import toml
 from pathlib import Path
-from rich.console import Console
-
-console = Console()
+from sbkube.utils.logger import logger
 
 def load_config_file(basename: str | Path):
     """
@@ -34,5 +32,5 @@ def load_config_file(basename: str | Path):
                 elif ext == ".toml":
                     return toml.load(f)
 
-    console.print(f"[red]❌ 설정 파일을 찾을 수 없습니다: {basename_str}.yaml|.yml|.toml[/red]")
+    logger.error(f"설정 파일을 찾을 수 없습니다: {basename_str}.yaml|.yml|.toml")
     raise FileNotFoundError(f"Missing config file for base name: {basename_str}")

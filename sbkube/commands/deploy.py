@@ -1,13 +1,10 @@
 import subprocess
-import json
 import click
 from pathlib import Path
-from rich.console import Console
 from typing import Optional
 
 from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.logger import logger, setup_logging_from_context
-from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.cli_check import check_helm_installed_or_exit, print_kube_connection_help
 from sbkube.utils.helm_util import get_installed_charts
 from sbkube.models.config_model import (
@@ -16,8 +13,6 @@ from sbkube.models.config_model import (
     AppInstallActionSpec,
     AppExecSpec,
 )
-
-console = Console()
 
 class DeployCommand(BaseCommand):
     """Deploy 명령 구현"""

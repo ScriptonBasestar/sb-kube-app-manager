@@ -6,12 +6,11 @@ from click.testing import CliRunner
 from sbkube.cli import main as sbkube_cli 
 
 # CLI 체크 모킹 경로
-HELM_CHECK_PATH = 'sbkube.commands.delete.check_helm_installed'
-KUBECTL_CHECK_PATH = 'sbkube.commands.delete.check_kubectl_installed'
+CLI_TOOLS_CHECK_PATH = 'sbkube.utils.base_command.BaseCommand.check_required_cli_tools'
 
 
-@patch(HELM_CHECK_PATH, return_value=None) # Helm 설치 가정
-def test_delete_helm_app(mock_helm_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_delete_helm_app(mock_cli_tools_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
     """
     delete 명령어 실행 시 install-helm 타입 앱에 대해 helm uninstall이 호출되는지 테스트합니다.
     """
@@ -55,8 +54,8 @@ def test_delete_helm_app(mock_helm_check, runner: CliRunner, create_sample_confi
         assert "삭제 완료" in result.output or "uninstalled" in result.output
 
 
-@patch(KUBECTL_CHECK_PATH, return_value=None) # Kubectl 설치 가정
-def test_delete_kubectl_app(mock_kubectl_check, runner: CliRunner, create_sample_config_yaml, create_sample_kubectl_manifest_file, base_dir, app_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None) # Kubectl 설치 가정
+def test_delete_yaml_app(mock_kubectl_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
     """
     delete 명령어 실행 시 install-kubectl 타입 앱에 대해 kubectl delete가 호출되는지 테스트합니다.
     """
@@ -94,7 +93,7 @@ def test_delete_kubectl_app(mock_kubectl_check, runner: CliRunner, create_sample
         assert "삭제 완료" in result.output or "deleted" in result.output
 
 
-@patch(KUBECTL_CHECK_PATH, return_value=None) # Action은 kubectl을 사용할 수 있음
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None) # Action은 kubectl을 사용할 수 있음
 def test_delete_action_app(mock_kubectl_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
     """
     delete 명령어 실행 시 install-action 타입 앱에 대해 정의된 uninstall script가 실행되는지 테스트합니다.
@@ -162,7 +161,7 @@ def test_delete_app_skip_not_found_option(runner: CliRunner, create_sample_confi
     config_file = create_sample_config_yaml
     app_name = "my-helm-app"
 
-    with patch(HELM_CHECK_PATH, return_value=None), \
+    with patch(CLI_TOOLS_CHECK_PATH, return_value=None), \
          patch('sbkube.utils.helm_util.get_installed_charts', return_value=set()) as mock_get_charts, \
          patch('subprocess.run') as mock_subprocess:
         # helm list 실행 mock
@@ -201,7 +200,7 @@ def test_delete_app_not_found_error(runner: CliRunner, create_sample_config_yaml
     config_file = create_sample_config_yaml
     app_name = "my-helm-app"
 
-    with patch(HELM_CHECK_PATH, return_value=None), \
+    with patch(CLI_TOOLS_CHECK_PATH, return_value=None), \
          patch('sbkube.utils.helm_util.get_installed_charts', return_value=set()) as mock_get_charts, \
          patch('subprocess.run') as mock_subprocess:
         # helm list 실행 mock  

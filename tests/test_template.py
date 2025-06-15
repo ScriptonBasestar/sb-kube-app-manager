@@ -6,11 +6,11 @@ from click.testing import CliRunner
 from sbkube.cli import main as sbkube_cli 
 
 # CLI 체크 모킹 경로
-HELM_CHECK_PATH = 'sbkube.commands.template.check_helm_installed'
+CLI_TOOLS_CHECK_PATH = 'sbkube.utils.base_command.BaseCommand.check_required_cli_tools'
 
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_template_helm_app(mock_helm_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_template_helm_app(mock_cli_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
     """
     template 명령어 실행 시 빌드된 Helm 차트에 대해 helm template 명령어가 올바르게 호출되는지 테스트합니다.
     """
@@ -71,8 +71,8 @@ def test_template_helm_app(mock_helm_check, runner: CliRunner, create_sample_con
         assert "템플릿 생성 완료" in result.output or "완료" in result.output
 
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_template_app_not_templatable(mock_helm_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_template_app_not_templatable(mock_cli_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
     """
     템플릿 대상이 아닌 타입의 앱 (예: install-kubectl)에 대해 template 명령어가 에러로 처리되는지 테스트합니다.
     """
@@ -113,8 +113,8 @@ def test_template_app_not_templatable(mock_helm_check, runner: CliRunner, create
         assert not output_dir.exists()
 
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_template_with_custom_namespace(mock_helm_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_template_with_custom_namespace(mock_cli_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, build_dir, caplog):
     """
     template 명령어 실행 시 --namespace 옵션으로 네임스페이스를 오버라이드하는지 테스트합니다.
     """

@@ -6,11 +6,11 @@ from click.testing import CliRunner
 from sbkube.cli import main as sbkube_cli
 
 # CLI 체크 모킹 경로
-HELM_CHECK_PATH = 'sbkube.commands.upgrade.check_helm_installed'
+CLI_TOOLS_CHECK_PATH = 'sbkube.utils.base_command.BaseCommand.check_required_cli_tools'
 
 
-@patch(HELM_CHECK_PATH, return_value=None) 
-def test_upgrade_helm_app(mock_helm_check, runner: CliRunner, create_sample_config_yaml, create_sample_values_file, base_dir, app_dir, build_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None) 
+def test_upgrade_helm_app(mock_cli_check, runner: CliRunner, create_sample_config_yaml, create_sample_values_file, base_dir, app_dir, build_dir, caplog):
     """
     upgrade 명령어 실행 시 install-helm 타입 앱에 대해 helm upgrade --install 이 호출되는지 테스트합니다.
     """
@@ -76,8 +76,8 @@ def test_upgrade_helm_app(mock_helm_check, runner: CliRunner, create_sample_conf
         assert "업그레이드/설치 성공" in result.output or "성공" in result.output
 
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_upgrade_helm_app_with_no_install(mock_helm_check, runner: CliRunner, create_sample_config_yaml, create_sample_values_file, base_dir, app_dir, build_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_upgrade_helm_app_with_no_install(mock_cli_check, runner: CliRunner, create_sample_config_yaml, create_sample_values_file, base_dir, app_dir, build_dir, caplog):
     """
     upgrade 명령어 실행 시 --no-install 옵션이 적용되는지 테스트합니다.
     """
@@ -133,8 +133,8 @@ def test_upgrade_helm_app_with_no_install(mock_helm_check, runner: CliRunner, cr
         assert "성공" in result.output
 
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_upgrade_non_helm_app(mock_helm_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_upgrade_non_helm_app(mock_cli_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
     """
     upgrade 명령어가 install-helm 타입이 아닌 앱에 대해 올바른 메시지를 출력하는지 테스트합니다.
     """
@@ -171,8 +171,8 @@ def test_upgrade_app_not_found(runner: CliRunner, create_sample_config_yaml, bas
     assert "찾을 수 없습니다" in result.output
 
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_upgrade_helm_app_namespace_override(mock_helm_check, runner: CliRunner, create_sample_config_yaml, create_sample_values_file, base_dir, app_dir, build_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_upgrade_helm_app_namespace_override(mock_cli_check, runner: CliRunner, create_sample_config_yaml, create_sample_values_file, base_dir, app_dir, build_dir, caplog):
     """
     upgrade 명령어 실행 시 --namespace 옵션으로 네임스페이스를 오버라이드 하는지 테스트합니다.
     """

@@ -7,7 +7,7 @@ import click
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from sbkube.utils.file_loader import load_config_file
-from sbkube.utils.logger import logger, setup_logging_from_context
+from sbkube.utils.logger import logger, setup_logging_from_context, LogLevel
 from sbkube.models.config_model import AppInfoScheme, AppGroupScheme
 
 
@@ -151,4 +151,52 @@ class BaseCommand:
             logger.verbose(f"{description} 준비 완료: {path}")
         except OSError as e:
             logger.error(f"{description} 정리/생성 실패: {e}")
-            raise click.Abort() 
+            raise click.Abort()
+    
+    def create_app_spec(self, app_info: AppInfoScheme):
+        """앱 타입에 맞는 Spec 객체 생성 (공통 함수 사용)"""
+        from sbkube.utils.common import create_app_spec
+        return create_app_spec(app_info)
+    
+    def execute_command_with_logging(self, cmd: list, error_msg: str, success_msg: str = None, 
+                                   timeout: int = 300):
+        """명령어 실행 및 로깅 처리 (공통 함수 사용)"""
+        from sbkube.utils.common import execute_command_with_logging
+        return execute_command_with_logging(cmd, error_msg, success_msg, self.base_dir, timeout)
+    
+    def check_required_cli_tools(self):
+        """앱 목록에 필요한 CLI 도구들 체크 (공통 함수 사용)"""
+        from sbkube.utils.common import check_required_cli_tools
+        return check_required_cli_tools(self.app_info_list)
+    
+    def process_apps_with_stats(self, process_func, operation_name: str = "처리"):
+        """
+        앱 목록을 처리하고 통계를 출력하는 공통 로직
+        
+        Args:
+            process_func: 각 앱을 처리하는 함수 (app_info를 받아 bool 반환)
+            operation_name: 작업 이름 (로그 출력용)
+        """
+        if not self.app_info_list:
+            logger.warning(f"{operation_name}할 앱이 설정 파일에 없습니다.")
+            logger.heading(f"{operation_name} 작업 완료 (처리할 앱 없음)")
+            return
+            
+        total_apps = len(self.app_info_list)
+        success_apps = 0
+        
+        for app_info in self.app_info_list:
+            try:
+                if process_func(app_info):
+                    success_apps += 1
+            except Exception as e:
+                logger.error(f"앱 '{app_info.name}' {operation_name} 중 예상치 못한 오류: {e}")
+                if logger._level.value <= LogLevel.DEBUG.value:
+                    import traceback
+                    logger.debug(traceback.format_exc())
+                    
+        # 결과 출력
+        if total_apps > 0:
+            logger.success(f"{operation_name} 작업 요약: 총 {total_apps}개 앱 중 {success_apps}개 성공")
+            
+        logger.heading(f"{operation_name} 작업 완료") 

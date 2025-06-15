@@ -8,7 +8,7 @@ import yaml
 from sbkube.cli import main as sbkube_cli
 
 # CLI 체크 모킹 경로
-HELM_CHECK_PATH = 'sbkube.commands.prepare.check_helm_installed'
+CLI_TOOLS_CHECK_PATH = 'sbkube.utils.base_command.BaseCommand.check_required_cli_tools'
 
 EXAMPLES_DIR = Path("examples/k3scode")
 CHARTS_DIR = Path("charts")
@@ -54,8 +54,8 @@ def test_prepare_command_runs_successfully():
         if toolhive_repo.exists():
             assert (toolhive_repo / "deploy").exists(), "toolhive repo가 제대로 준비되지 않았습니다"
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_prepare_helm_repo_add_and_update(mock_helm_check, runner: CliRunner, create_sample_sources_yaml, base_dir, app_dir, charts_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_prepare_helm_repo_add_and_update(mock_cli_tools_check, runner: CliRunner, create_sample_sources_yaml, base_dir, app_dir, charts_dir, caplog):
     """
     prepare 명령어 실행 시 helm repo add 및 update가 올바르게 호출되는지 테스트합니다.
     또한, pull-helm 타입 앱에 대해 helm pull 명령이 실행되는지 확인합니다.
@@ -184,8 +184,8 @@ def test_prepare_pull_git(runner: CliRunner, create_sample_config_yaml, create_s
         # assert result_pull.exit_code == 0, f"CLI 실행 실패 (pull): {result_pull.output}"
 
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_prepare_no_pull_apps(mock_helm_check, runner: CliRunner, base_dir, app_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_prepare_no_pull_apps(mock_cli_tools_check, runner: CliRunner, base_dir, app_dir, caplog):
     """
     prepare 명령어 실행 시 pull 타입 앱이 없으면 아무 작업도 수행하지 않는지 테스트합니다.
     """
@@ -232,8 +232,8 @@ def test_prepare_no_pull_apps(mock_helm_check, runner: CliRunner, base_dir, app_
         assert "준비할 앱이 없습니다" in result.output or "완료" in result.output
 
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_prepare_specific_app(mock_helm_check, runner: CliRunner, create_sample_config_yaml, create_sample_sources_yaml, base_dir, app_dir, charts_dir, repos_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_prepare_specific_app(mock_cli_tools_check, runner: CliRunner, create_sample_config_yaml, create_sample_sources_yaml, base_dir, app_dir, charts_dir, repos_dir, caplog):
     """
     prepare 명령어 실행 시 --app 옵션으로 특정 앱만 처리하는지 테스트합니다.
     """

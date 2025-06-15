@@ -15,7 +15,7 @@ from sbkube.models import get_spec_model
 
 from typing import Optional
 from sbkube.utils.base_command import BaseCommand
-from sbkube.utils.logger import logger, setup_logging_from_context
+from sbkube.utils.logger import logger, setup_logging_from_context, LogLevel
 
 class DeleteCommand(BaseCommand):
     """Delete 명령 구현"""
@@ -30,152 +30,127 @@ class DeleteCommand(BaseCommand):
         """delete 명령 실행"""
         self.execute_pre_hook()
         logger.heading(f"Delete 시작 - app-dir: {self.app_config_dir.name}")
-        # 설정 파일 로드
-        self.load_config()
-        # YAMLS_DIR 설정
-        YAMLS_DIR = self.app_config_dir / 'yamls'
-        # 글로벌 네임스페이스
-        global_ns = self.apps_config_dict.get('config', {}).get('namespace')
-        # 앱 목록 로드
-        apps = self.apps_config_dict.get('apps', [])
-        # 특정 앱 필터링
-        if self.target_app_name:
-            apps = [a for a in apps if a.get('name') == self.target_app_name]
-            if not apps:
-                logger.error(f"삭제 대상 앱 '{self.target_app_name}'을(를) 설정 파일에서 찾을 수 없습니다.")
-                raise click.Abort()
-        if not apps:
-            logger.warning('삭제할 앱이 설정 파일에 없습니다.')
-            logger.heading('Delete 작업 완료 (처리할 앱 없음)')
-            return
-            
-        # 필요한 CLI 도구들 체크
-        self._check_required_tools(apps)
-            
-        total = success = skipped = 0
-        for app_dict in apps:
-            try:
-                app_info = AppInfoScheme(**app_dict)
-            except Exception as e:
-                name = app_dict.get('name', '알 수 없는 앱')
-                logger.error(f"앱 정보 '{name}' 처리 중 오류: {e}")
-                skipped += 1
-                continue
-            # 지원 타입 필터링
-            if app_info.type not in ['install-helm', 'install-yaml', 'install-action']:
-                continue
-            total += 1
-            name = app_info.name
-            type_ = app_info.type
-            release = app_info.release_name or name
-            logger.progress(f"앱 '{name}' (타입: {type_}) 삭제 시도...")
-            # 네임스페이스 결정
-            ns = self.get_namespace(app_info) or global_ns
-            if ns:
-                logger.verbose(f"네임스페이스 사용: {ns}")
-            else:
-                logger.verbose('네임스페이스 미지정 (default)')
-            deleted = False
-            # 타입별 삭제 처리
-            if type_ == 'install-helm':
-                installed = get_installed_charts(ns)
-                if release not in installed:
-                    logger.warning(f"Helm 릴리스 '{release}'이 설치되어 있지 않습니다.")
-                    skipped += 1
-                    continue
-                cmd = ['helm', 'uninstall', release]
-                if ns:
-                    cmd.extend(['--namespace', ns])
-                logger.command(' '.join(cmd))
-                try:
-                    subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=300)
-                    logger.success(f"Helm 릴리스 '{release}' 삭제 완료")
-                    success += 1
-                    deleted = True
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"Helm 릴리스 '{release}' 삭제 실패")
-                    if e.stderr:
-                        logger.error(f"STDERR: {e.stderr.strip()}")
-                except Exception as e:
-                    logger.error(f"Helm 삭제 중 오류: {e}")
-            elif type_ == 'install-yaml':
-                spec = None
-                if app_info.specs:
-                    try:
-                        spec = AppInstallActionSpec(**app_info.specs)
-                    except Exception as e:
-                        logger.error(f"앱 '{name}': YAML Spec 파싱 실패: {e}")
-                if not spec or not spec.actions:
-                    logger.warning(f"앱 '{name}': 삭제할 YAML이 없습니다.")
-                    skipped += 1
-                    continue
-                for action in reversed(spec.actions):
-                    if action.type not in ['apply', 'create']:
-                        continue
-                    path = Path(action.path)
-                    if not path.is_absolute():
-                        path = YAMLS_DIR / path
-                    cmd = ['kubectl', 'delete', '-f', str(path)]
-                    if ns:
-                        cmd.extend(['--namespace', ns])
-                    if self.skip_not_found:
-                        cmd.append('--ignore-not-found=true')
-                    logger.command(' '.join(cmd))
-                    try:
-                        subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=120)
-                        logger.success(f"YAML '{path.name}' 삭제 완료")
-                        success += 1
-                        deleted = True
-                    except subprocess.CalledProcessError as e:
-                        logger.error(f"YAML '{path.name}' 삭제 실패: {e.stderr.strip() if e.stderr else ''}")
-                    except Exception as e:
-                        logger.error(f"YAML 삭제 중 오류 '{path.name}': {e}")
-            elif type_ == 'install-action':
-                logger.warning(f"앱 '{name}': install-action 타입 삭제 미구현")
-                skipped += 1
-            if deleted:
-                logger.verbose('')  # 구분용 빈 줄
-        logger.heading('`delete` 작업 요약')
-        if total > 0:
-            logger.success(f"총 {total}개 앱 중 {success}개 삭제 성공")
-            if skipped:
-                logger.warning(f"{skipped}개 앱 건너뜀")
-        logger.heading('`delete` 작업 완료')
         
-    def _check_required_tools(self, apps):
-        """삭제할 앱들에 필요한 CLI 도구들 체크"""
-        needs_helm = any(app.get('type') == 'install-helm' for app in apps)
-        needs_kubectl = any(app.get('type') == 'install-yaml' for app in apps)
+        # 지원하는 앱 타입
+        supported_types = ["install-helm", "install-yaml", "install-action"]
         
-        if needs_helm:
-            try:
-                check_helm_installed()
-            except (CliToolNotFoundError, CliToolExecutionError):
-                raise click.Abort()
+        # 앱 파싱
+        self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
+        
+        # 필요한 CLI 도구들 체크 (공통 함수 사용)
+        if self.app_info_list:
+            self.check_required_cli_tools()
+        
+        # 앱 처리 (공통 로직 사용)
+        self.process_apps_with_stats(self._delete_app, "삭제")
+        
+    def _delete_app(self, app_info: AppInfoScheme) -> bool:
+        """개별 앱 삭제"""
+        app_name = app_info.name
+        app_type = app_info.type
+        current_ns = self.get_namespace(app_info)
+        
+        logger.progress(f"앱 '{app_name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 삭제 시작")
+        
+        try:
+            # Spec 모델 생성 (공통 함수 사용)
+            spec_obj = self.create_app_spec(app_info)
+            if not spec_obj:
+                return False
                 
-        if needs_kubectl:
+            # 타입별 삭제 처리
+            if app_type == "install-helm":
+                return self._delete_helm(app_info, current_ns)
+            elif app_type in ["install-yaml", "install-action"]:
+                return self._delete_yaml(app_info, spec_obj, current_ns)
+                
+            return True
+                
+        except Exception as e:
+            logger.error(f"앱 '{app_name}' 삭제 중 예상치 못한 오류: {e}")
+            if logger._level.value <= LogLevel.DEBUG.value:
+                import traceback
+                logger.debug(traceback.format_exc())
+            return False
+
+    def _delete_helm(self, app_info: AppInfoScheme, ns: Optional[str]) -> bool:
+        """Helm 릴리스 삭제"""
+        release = app_info.release_name or app_info.name
+        installed = get_installed_charts(ns)
+        if release not in installed:
+            logger.warning(f"Helm 릴리스 '{release}'이 설치되어 있지 않습니다.")
+            return False
+        cmd = ['helm', 'uninstall', release]
+        if ns:
+            cmd.extend(['--namespace', ns])
+        logger.command(' '.join(cmd))
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=300)
+            logger.success(f"Helm 릴리스 '{release}' 삭제 완료")
+            return True
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Helm 릴리스 '{release}' 삭제 실패")
+            if e.stderr:
+                logger.error(f"STDERR: {e.stderr.strip()}")
+            return False
+        except Exception as e:
+            logger.error(f"Helm 삭제 중 오류: {e}")
+            return False
+
+    def _delete_yaml(self, app_info: AppInfoScheme, spec_obj: AppInstallActionSpec, ns: Optional[str]) -> bool:
+        """YAML 삭제"""
+        if not spec_obj or not spec_obj.actions:
+            logger.warning(f"앱 '{app_info.name}': 삭제할 YAML이 없습니다.")
+            return False
+        for action in reversed(spec_obj.actions):
+            if action.type not in ['apply', 'create']:
+                continue
+            path = Path(action.path)
+            if not path.is_absolute():
+                path = self.app_config_dir / path
+            cmd = ['kubectl', 'delete', '-f', str(path)]
+            if ns:
+                cmd.extend(['--namespace', ns])
+            if self.skip_not_found:
+                cmd.append('--ignore-not-found=true')
+            logger.command(' '.join(cmd))
             try:
-                check_kubectl_installed()
-            except (CliToolNotFoundError, CliToolExecutionError):
-                raise click.Abort()
+                subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=120)
+                logger.success(f"YAML '{path.name}' 삭제 완료")
+                return True
+            except subprocess.CalledProcessError as e:
+                logger.error(f"YAML '{path.name}' 삭제 실패: {e.stderr.strip() if e.stderr else ''}")
+            except Exception as e:
+                logger.error(f"YAML 삭제 중 오류 '{path.name}': {e}")
+        return False
+
+
 
 @click.command(name="delete")
 @common_click_options
 @click.option("--skip-not-found", is_flag=True, help="삭제 대상 리소스가 없을 경우 오류 대신 건너뜁니다.")
 @click.option("--namespace", "cli_namespace", default=None, help="삭제 작업을 수행할 기본 네임스페이스 (없으면 앱별 설정 또는 최상위 설정 따름)")
 @click.pass_context
-def cmd(ctx, app_config_dir_name: str, base_dir: str, cli_namespace: Optional[str], target_app_name: Optional[str], skip_not_found: bool, config_file_name: Optional[str], verbose: bool, debug: bool):
+def cmd(ctx, app_config_dir_name: str, base_dir: str, config_file_name: str, app_name: str, verbose: bool, debug: bool, skip_not_found: bool, cli_namespace: Optional[str]):
+    """
+    설정 파일에 정의된 앱들을 클러스터에서 삭제합니다.
+    
+    지원하는 앱 타입:
+    - install-helm: Helm 릴리스 삭제 (helm uninstall)
+    - install-yaml: YAML 매니페스트 삭제 (kubectl delete)
+    """
     ctx.ensure_object(dict)
     ctx.obj['verbose'] = verbose
     ctx.obj['debug'] = debug
     setup_logging_from_context(ctx)
-
+    
     delete_cmd = DeleteCommand(
         base_dir=base_dir,
         app_config_dir=app_config_dir_name,
         cli_namespace=cli_namespace,
-        target_app_name=target_app_name,
+        target_app_name=app_name,
         skip_not_found=skip_not_found,
         config_file_name=config_file_name
     )
+    
     delete_cmd.execute()

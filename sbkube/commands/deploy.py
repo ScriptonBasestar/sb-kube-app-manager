@@ -5,7 +5,7 @@ from typing import Optional
 
 from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.common import common_click_options
-from sbkube.utils.logger import logger, setup_logging_from_context
+from sbkube.utils.logger import logger, setup_logging_from_context, LogLevel
 from sbkube.utils.cli_check import check_helm_installed, check_kubectl_installed, CliToolNotFoundError, CliToolExecutionError, print_kube_connection_help
 from sbkube.utils.helm_util import get_installed_charts
 from sbkube.models.config_model import (
@@ -19,17 +19,15 @@ class DeployCommand(BaseCommand):
     """Deploy 명령 구현"""
     
     def __init__(self, base_dir: str, app_config_dir: str, cli_namespace: Optional[str],
-                 dry_run: bool, app_name: Optional[str], config_file_name: Optional[str]):
+                 dry_run: bool, target_app_name: Optional[str], config_file_name: Optional[str]):
         super().__init__(base_dir, app_config_dir, cli_namespace, config_file_name)
         self.dry_run = dry_run
-        self.target_app_name = app_name
+        self.target_app_name = target_app_name
         
     def execute(self):
         """deploy 명령 실행"""
         self.execute_pre_hook()
-    
-        # 설정 파일 로드
-        self.load_config()
+        logger.heading(f"Deploy 시작 - app-dir: {self.app_config_dir.name}")
         
         # 지원하는 앱 타입
         supported_types = ["install-helm", "install-yaml", "exec"]
@@ -37,37 +35,13 @@ class DeployCommand(BaseCommand):
         # 앱 파싱
         self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
         
-        if not self.app_info_list:
-            logger.warning("배포할 앱이 설정 파일에 없습니다.")
-            return
+        # 필요한 CLI 도구들 체크 (공통 함수 사용)
+        self.check_required_cli_tools()
             
-        # 필요한 CLI 도구들 체크
-        self._check_required_tools()
-            
-        # 각 앱 배포
-        for app_info in self.app_info_list:
-            self._deploy_app(app_info)
-            
-        logger.heading("모든 앱 배포 작업 완료")
+        # 앱 처리 (공통 로직 사용)
+        self.process_apps_with_stats(self._deploy_app, "배포")
         
-    def _check_required_tools(self):
-        """배포할 앱들에 필요한 CLI 도구들 체크"""
-        needs_helm = any(app.type == "install-helm" for app in self.app_info_list)
-        needs_kubectl = any(app.type == "install-yaml" for app in self.app_info_list)
-        
-        if needs_helm:
-            try:
-                check_helm_installed()
-            except (CliToolNotFoundError, CliToolExecutionError):
-                raise click.Abort()
-                
-        if needs_kubectl:
-            try:
-                check_kubectl_installed()
-            except (CliToolNotFoundError, CliToolExecutionError):
-                raise click.Abort()
-        
-    def _deploy_app(self, app_info: AppInfoScheme):
+    def _deploy_app(self, app_info: AppInfoScheme) -> bool:
         """개별 앱 배포"""
         app_type = app_info.type
         app_name = app_info.name
@@ -76,10 +50,10 @@ class DeployCommand(BaseCommand):
         logger.progress(f"앱 '{app_name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작")
         
         try:
-            # Spec 모델 생성
-            spec_obj = self._create_spec(app_info)
+            # Spec 모델 생성 (공통 함수 사용)
+            spec_obj = self.create_app_spec(app_info)
             if not spec_obj:
-                return
+                return False
                 
             # 타입별 배포 처리
             if app_type == "install-helm":
@@ -89,26 +63,17 @@ class DeployCommand(BaseCommand):
             elif app_type == "exec":
                 self._deploy_exec(app_info, spec_obj)
                 
+            return True
+                
         except Exception as e:
             logger.error(f"앱 '{app_name}' 배포 중 예상치 못한 오류: {e}")
-            if logger._level.value <= logger.LogLevel.DEBUG.value:
+            if logger._level.value <= LogLevel.DEBUG.value:
                 import traceback
                 logger.debug(traceback.format_exc())
-                
-    def _create_spec(self, app_info: AppInfoScheme):
-        """앱 타입에 맞는 Spec 객체 생성"""
-        try:
-            if app_info.type == "install-helm":
-                return AppInstallHelmSpec(**app_info.specs)
-            elif app_info.type == "install-yaml":
-                return AppInstallActionSpec(**app_info.specs)
-            elif app_info.type == "exec":
-                return AppExecSpec(**app_info.specs)
-        except Exception as e:
-            logger.error(f"앱 '{app_info.name}' (타입: {app_info.type})의 Spec 데이터 검증/변환 중 오류: {e}")
-            logger.warning(f"해당 앱 설정을 건너뜁니다. Specs: {app_info.specs}")
-            return None
+            return False
             
+
+        
     def _deploy_helm(self, app_info: AppInfoScheme, spec_obj: AppInstallHelmSpec, namespace: Optional[str]):
         """Helm 차트 배포"""
         release_name = app_info.release_name or app_info.name
@@ -133,7 +98,7 @@ class DeployCommand(BaseCommand):
         helm_cmd = self._build_helm_command(release_name, chart_dir, namespace, spec_obj)
         
         # 실행
-        self._execute_command(helm_cmd, f"앱 '{app_info.name}': Helm 작업 실패 (릴리스: {release_name})")
+        self.execute_command_with_logging(helm_cmd, f"앱 '{app_info.name}': Helm 작업 실패 (릴리스: {release_name})")
         
         ns_msg = f" (네임스페이스: {namespace})" if namespace else ""
         logger.success(f"앱 '{app_info.name}': Helm 릴리스 '{release_name}' 배포 완료{ns_msg}")
@@ -157,7 +122,7 @@ class DeployCommand(BaseCommand):
                 continue
                 
             # 실행
-            self._execute_command(kubectl_cmd, f"앱 '{app_info.name}': YAML 작업 ('{action_type}' on '{target_path}') 실패")
+            self.execute_command_with_logging(kubectl_cmd, f"앱 '{app_info.name}': YAML 작업 ('{action_type}' on '{target_path}') 실패")
             logger.success(f"앱 '{app_info.name}': YAML 작업 ('{action_type}' on '{target_path}') 완료")
             
     def _deploy_exec(self, app_info: AppInfoScheme, spec_obj: AppExecSpec):
@@ -254,20 +219,7 @@ class DeployCommand(BaseCommand):
                 
         return None
         
-    def _execute_command(self, cmd: list, error_msg: str):
-        """명령 실행 및 결과 처리"""
-        logger.command(" ".join(cmd))
-        
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        
-        if result.returncode != 0:
-            if "Unable to connect to the server" in result.stderr or "no such host" in result.stderr:
-                print_kube_connection_help()
-            logger.error(error_msg)
-            if result.stdout:
-                logger.verbose(f"STDOUT: {result.stdout.strip()}")
-            if result.stderr:
-                logger.error(f"STDERR: {result.stderr.strip()}")
+
 
 
 @click.command(name="deploy")
@@ -275,21 +227,21 @@ class DeployCommand(BaseCommand):
 @click.option("--namespace", "cli_namespace", default=None, help="설치할 기본 네임스페이스")
 @click.option("--dry-run", is_flag=True, default=False, help="실제로 적용하지 않고 dry-run")
 @click.pass_context
-def cmd(ctx, app_dir, base_dir, cli_namespace, dry_run, app_name, config_file_name, verbose, debug):
+def cmd(ctx, app_config_dir_name, base_dir, config_file_name, app_name, verbose, debug, cli_namespace, dry_run):
     """Helm chart 및 YAML, exec 명령을 클러스터에 적용"""
     ctx.ensure_object(dict)
     ctx.obj['verbose'] = verbose
     ctx.obj['debug'] = debug
     setup_logging_from_context(ctx)
     
-    logger.heading(f"Deploy 시작 - app-dir: {app_dir}")
+    logger.heading(f"Deploy 시작 - app-dir: {app_config_dir_name}")
     
     deploy_cmd = DeployCommand(
         base_dir=base_dir,
-        app_config_dir=app_dir,
+        app_config_dir=app_config_dir_name,
         cli_namespace=cli_namespace,
         dry_run=dry_run,
-        app_name=app_name,
+        target_app_name=app_name,
         config_file_name=config_file_name
     )
     

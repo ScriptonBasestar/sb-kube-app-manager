@@ -19,7 +19,7 @@ from sbkube.utils.file_loader import load_config_file
 # sbkube.utils.cli_check 임포트는 check_helm_installed_or_exit 만 사용
 from sbkube.utils.cli_check import check_helm_installed, CliToolNotFoundError, CliToolExecutionError
 from sbkube.utils.base_command import BaseCommand
-from sbkube.utils.logger import logger, setup_logging_from_context
+from sbkube.utils.logger import logger, setup_logging_from_context, LogLevel
 
 def check_command_available(command):
     if which(command) is None:
@@ -35,52 +35,72 @@ def check_command_available(command):
 
 class PrepareCommand(BaseCommand):
     """Prepare 명령 구현"""
-    def __init__(self, base_dir: str, app_config_dir: str, 
-                 sources_file: str, sources_override: Optional[str],
-                 app_name: Optional[str], config_file_name: Optional[str]):
+    
+    def __init__(self, base_dir: str, app_config_dir: str, sources_file: str, 
+                 target_app_name: Optional[str], config_file_name: Optional[str]):
         super().__init__(base_dir, app_config_dir, None, config_file_name)
         self.sources_file = sources_file
-        self.sources_override = sources_override
-        self.target_app_name = app_name
-    
+        self.target_app_name = target_app_name
+        
     def execute(self):
         """prepare 명령 실행"""
         self.execute_pre_hook()
-    
         logger.heading("Prepare 시작")
         
-        # 설정 파일 로드
-        self.load_config()
+        # 지원하는 앱 타입
+        supported_types = ["pull-helm", "pull-helm-oci", "pull-git"]
         
-        # 소스 파일 결정
-        sources_path = Path(self.base_dir) / (self.sources_override or self.sources_file)
-        if not sources_path.exists():
-            logger.error(f"소스 설정 파일이 존재하지 않습니다: {sources_path}")
-            raise click.Abort()
-        logger.info(f"소스 설정 파일 사용: {sources_path}")
-        sources_config = load_config_file(str(sources_path))
-        helm_repos = sources_config.get("helm_repos", {})
-        oci_repos = sources_config.get("oci_repos", {})
-        git_repos = sources_config.get("git_repos", {})
+        # 앱 파싱
+        self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
         
-        # 앱 파싱 (pull-helm, pull-helm-oci, pull-git)
-        self.parse_apps(app_types=["pull-helm", "pull-helm-oci", "pull-git"], app_name=self.target_app_name)
-        if not self.app_info_list:
-            logger.warning("준비할 앱이 없습니다.")
-            return
+        # 필요한 CLI 도구들 체크 (공통 함수 사용)
+        if self.app_info_list:
+            self.check_required_cli_tools()
         
-        # 필요한 CLI 도구들 체크
-        self._check_required_tools()
+        # 앱 처리 (공통 로직 사용)
+        self.process_apps_with_stats(self._prepare_app, "준비")
         
-        # Helm 저장소 준비
-        # ... existing logic 이식, console.print → logger 사용 ...
-        # Git 저장소 준비
-        # ...
-        # Helm 차트 풀링
-        # ...
+    def _prepare_app(self, app_info: AppInfoScheme) -> bool:
+        """개별 앱 준비"""
+        app_name = app_info.name
+        app_type = app_info.type
         
-        logger.heading("Prepare 완료")
+        logger.progress(f"앱 '{app_name}' (타입: {app_type}) 준비 시작...")
         
+        try:
+            # Spec 모델 생성 (공통 함수 사용)
+            spec_obj = self.create_app_spec(app_info)
+            if not spec_obj:
+                return False
+                
+            # 타입별 준비 처리
+            if app_type in ["pull-helm", "pull-helm-oci"]:
+                self._prepare_helm(app_info, spec_obj)
+            elif app_type == "pull-git":
+                self._prepare_git(app_info, spec_obj)
+                
+            logger.success(f"앱 '{app_name}' 준비 완료")
+            return True
+            
+        except Exception as e:
+            logger.error(f"앱 '{app_name}' 준비 중 예상치 못한 오류: {e}")
+            if logger._level.value <= LogLevel.DEBUG.value:
+                import traceback
+                logger.debug(traceback.format_exc())
+            return False
+
+    def _prepare_helm(self, app_info: AppInfoScheme, spec_obj):
+        """Helm 차트 준비 (placeholder)"""
+        logger.info(f"Helm 차트 준비: {app_info.name}")
+        # TODO: 실제 helm 차트 준비 로직 구현
+        return True
+    
+    def _prepare_git(self, app_info: AppInfoScheme, spec_obj):
+        """Git 저장소 준비 (placeholder)"""
+        logger.info(f"Git 저장소 준비: {app_info.name}")
+        # TODO: 실제 git 저장소 준비 로직 구현
+        return True
+
     def _check_required_tools(self):
         """준비할 앱들에 필요한 CLI 도구들 체크"""
         needs_helm = any(app.type in ["pull-helm", "pull-helm-oci"] for app in self.app_info_list)
@@ -102,7 +122,7 @@ class PrepareCommand(BaseCommand):
 @click.option("--sources", "sources_file", default="sources.yaml", help="소스 설정 파일")
 @click.option("--sources-file", "sources_override", default=None, help="소스 설정 파일 경로(테스트 호환)")
 @click.pass_context
-def cmd(ctx, app_dir, sources_file, base_dir, config_file_name, sources_override, app_name, verbose, debug):
+def cmd(ctx, app_config_dir_name, base_dir, config_file_name, app_name, verbose, debug, sources_file, sources_override):
     ctx.ensure_object(dict)
     ctx.obj['verbose'] = verbose
     ctx.obj['debug'] = debug
@@ -110,10 +130,9 @@ def cmd(ctx, app_dir, sources_file, base_dir, config_file_name, sources_override
     
     cmd = PrepareCommand(
         base_dir=base_dir,
-        app_config_dir=app_dir,
+        app_config_dir=app_config_dir_name,
         sources_file=sources_file,
-        sources_override=sources_override,
-        app_name=app_name,
+        target_app_name=app_name,
         config_file_name=config_file_name
     )
     cmd.execute()

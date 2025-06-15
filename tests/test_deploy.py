@@ -17,8 +17,9 @@ KUBECONFIG_TEST = Path.home() / ".kube/test-kubeconfig"
 RELEASE_NAME = "browserless"
 
 SBKUBE_CLI_PATH = 'sbkube.cli'
-KUBECTL_CHECK_PATH = 'sbkube.commands.deploy.check_kubectl_installed'
-HELM_CHECK_PATH = 'sbkube.commands.deploy.check_helm_installed'
+CLI_TOOLS_CHECK_PATH = 'sbkube.utils.base_command.BaseCommand.check_required_cli_tools'
+KUBECTL_CHECK_PATH = 'sbkube.utils.common.check_kubectl_installed'
+HELM_CHECK_PATH = 'sbkube.utils.common.check_helm_installed'
 
 def clean():
     if BUILD_DIR.exists():
@@ -68,8 +69,8 @@ def test_deploy_on_test_cluster():
     kget = run_cmd(["kubectl", "get", "all", "-n", "devops"], env=env)
     assert "pod" in kget.stdout or "deployment" in kget.stdout, "❌ 리소스 생성 안됨"
 
-@patch(HELM_CHECK_PATH, return_value=None)
-def test_deploy_helm_app_install(mock_helm_check, runner: CliRunner, create_sample_config_yaml, create_sample_values_file, base_dir, app_dir, build_dir, caplog):
+@patch(CLI_TOOLS_CHECK_PATH, return_value=None)
+def test_deploy_helm_app_install(mock_cli_tools_check, runner: CliRunner, create_sample_config_yaml, create_sample_values_file, base_dir, app_dir, build_dir, caplog):
     """
     deploy 명령어 실행 시 install-helm 타입 앱 (신규 설치) 과정을 테스트합니다.
     - helm install 명령어가 올바른 인자들로 호출되는지 확인합니다.

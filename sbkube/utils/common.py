@@ -20,28 +20,95 @@ def common_click_options(func):
         func = opt(func)
     return func
 
-from sbkube.models.config_model import *
+from sbkube.models.config_model import (
+    AppInfoScheme,
+    AppInstallHelmSpec,
+    AppInstallActionSpec,
+    AppExecSpec,
+    AppPullHelmSpec,
+    AppPullHelmOciSpec,
+    AppPullGitSpec,
+    AppCopySpec,
+    get_spec_model
+)
 
-def create_spec(app_info: AppInfoScheme):
-    type_ = app_info.type
+def create_app_spec(app_info: AppInfoScheme):
+    """앱 타입에 맞는 Spec 객체 생성"""
     try:
-        if type_ == "pull-helm":
-            return AppPullHelmSpec(**app_info.specs)
-        elif type_ == "pull-helm-oci":
-            return AppPullHelmOciSpec(**app_info.specs)
-        elif type_ == "pull-git":
-            return AppPullGitSpec(**app_info.specs)
-        elif type_ == "copy-app":
-            return AppCopySpec(**app_info.specs)
-        elif type_ == "install-helm":
-            return AppInstallHelmSpec(**app_info.specs)
-        elif type_ == "install-yaml":
-            return AppInstallActionSpec(**app_info.specs)
-        elif type_ == "exec":
-            return AppExecSpec(**app_info.specs)
+        spec_model_class = get_spec_model(app_info.type)
+        if not spec_model_class:
+            logger.error(f"앱 '{app_info.name}': 지원하지 않는 타입 '{app_info.type}'")
+            return None
+            
+        return spec_model_class(**app_info.specs)
     except Exception as e:
-        logger.warning(f"앱 '{app_info.name}' Spec 변환 실패: {e}")
+        logger.error(f"앱 '{app_info.name}' (타입: {app_info.type})의 Spec 데이터 검증/변환 중 오류: {e}")
+        logger.warning(f"해당 앱 설정을 건너뜁니다. Specs: {app_info.specs}")
         return None
+
+def execute_command_with_logging(cmd: list, error_msg: str, success_msg: str = None, 
+                               cwd: Path = None, timeout: int = 300):
+    """명령어 실행 및 로깅 처리"""
+    from sbkube.utils.logger import logger
+    import subprocess
+    
+    logger.command(" ".join(cmd))
+    
+    try:
+        result = subprocess.run(
+            cmd, 
+            capture_output=True, 
+            text=True, 
+            check=True, 
+            timeout=timeout,
+            cwd=cwd
+        )
+        
+        if result.stdout:
+            logger.verbose(f"STDOUT: {result.stdout.strip()}")
+            
+        if success_msg:
+            logger.success(success_msg)
+            
+        return result
+        
+    except subprocess.CalledProcessError as e:
+        logger.error(error_msg)
+        if e.stdout:
+            logger.verbose(f"STDOUT: {e.stdout.strip()}")
+        if e.stderr:
+            logger.error(f"STDERR: {e.stderr.strip()}")
+        raise
+    except subprocess.TimeoutExpired:
+        logger.error(f"명령어 실행 시간 초과 ({timeout}초): {' '.join(cmd)}")
+        raise
+    except Exception as e:
+        logger.error(f"명령어 실행 중 예기치 못한 오류: {e}")
+        raise
+
+def check_required_cli_tools(app_info_list: list):
+    """앱 목록에 필요한 CLI 도구들 체크"""
+    from sbkube.utils.cli_check import check_helm_installed, check_kubectl_installed, CliToolNotFoundError, CliToolExecutionError
+    import click
+    
+    needs_helm = any(app.type in ["install-helm", "pull-helm", "pull-helm-oci"] for app in app_info_list)
+    needs_kubectl = any(app.type in ["install-yaml", "install-kustomize"] for app in app_info_list)
+    needs_git = any(app.type == "pull-git" for app in app_info_list)
+    
+    if needs_helm:
+        try:
+            check_helm_installed()
+        except (CliToolNotFoundError, CliToolExecutionError):
+            raise click.Abort()
+            
+    if needs_kubectl:
+        try:
+            check_kubectl_installed()
+        except (CliToolNotFoundError, CliToolExecutionError):
+            raise click.Abort()
+            
+    # Git은 대부분 시스템에 설치되어 있으므로 별도 체크하지 않음
+    return {"helm": needs_helm, "kubectl": needs_kubectl, "git": needs_git}
 
 def run_command(
     cmd: Union[List[str], str],

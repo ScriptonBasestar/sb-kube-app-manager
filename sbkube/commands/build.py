@@ -5,7 +5,7 @@ from typing import Optional, List
 
 from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.common import common_click_options
-from sbkube.utils.logger import logger, setup_logging_from_context
+from sbkube.utils.logger import logger, setup_logging_from_context, LogLevel
 from sbkube.models.config_model import (
     AppInfoScheme,
     AppPullHelmSpec,
@@ -19,17 +19,14 @@ class BuildCommand(BaseCommand):
     """Build 명령 구현"""
     
     def __init__(self, base_dir: str, app_config_dir: str, 
-                 app_name: Optional[str], config_file_name: Optional[str]):
+                 target_app_name: Optional[str], config_file_name: Optional[str]):
         super().__init__(base_dir, app_config_dir, None, config_file_name)
-        self.target_app_name = app_name
+        self.target_app_name = target_app_name
         
     def execute(self):
         """build 명령 실행"""
         self.execute_pre_hook()
         logger.heading(f"Build 시작 - app-dir: {self.app_config_dir.name}")
-        
-        # 설정 파일 로드
-        self.load_config()
         
         # 빌드 디렉토리 준비
         self._prepare_build_directory()
@@ -40,27 +37,9 @@ class BuildCommand(BaseCommand):
         # 앱 파싱
         self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
         
-        if not self.app_info_list:
-            if self.target_app_name:
-                logger.warning(f"앱 '{self.target_app_name}'은 빌드 대상이 아닙니다.")
-            else:
-                logger.warning("빌드할 앱이 설정 파일에 없거나, 지원하는 타입의 앱이 없습니다.")
-            logger.heading("Build 작업 완료 (처리할 앱 없음)")
-            return
-            
-        # 빌드 통계
-        total_apps = len(self.app_info_list)
-        success_apps = 0
+        # 앱 처리 (공통 로직 사용)
+        self.process_apps_with_stats(self._build_app, "빌드")
         
-        # 각 앱 빌드
-        for app_info in self.app_info_list:
-            if self._build_app(app_info):
-                success_apps += 1
-                
-        # 결과 출력
-        if total_apps > 0:
-            logger.success(f"Build 작업 요약: 총 {total_apps}개 앱 중 {success_apps}개 성공")
-            
         logger.heading(f"Build 작업 완료 (결과물 위치: {self.build_dir})")
         
     def _prepare_build_directory(self):
@@ -77,8 +56,8 @@ class BuildCommand(BaseCommand):
         logger.progress(f"앱 '{app_name}' (타입: {app_type}) 빌드 시작...")
         
         try:
-            # Spec 모델 생성
-            spec_obj = self._create_spec(app_info)
+            # Spec 모델 생성 (공통 함수 사용)
+            spec_obj = self.create_app_spec(app_info)
             if not spec_obj:
                 return False
                 
@@ -98,26 +77,10 @@ class BuildCommand(BaseCommand):
             return False
         except Exception as e:
             logger.error(f"앱 '{app_name}' (타입: {app_type}) 빌드 중 예상치 못한 오류 발생: {e}")
-            if logger._level.value <= logger.LogLevel.DEBUG.value:
+            if logger._level.value <= LogLevel.DEBUG.value:
                 import traceback
                 logger.debug(traceback.format_exc())
             return False
-            
-    def _create_spec(self, app_info: AppInfoScheme):
-        """앱 타입에 맞는 Spec 객체 생성"""
-        try:
-            if app_info.type == "pull-helm":
-                return AppPullHelmSpec(**app_info.specs)
-            elif app_info.type == "pull-helm-oci":
-                return AppPullHelmOciSpec(**app_info.specs)
-            elif app_info.type == "pull-git":
-                return AppPullGitSpec(**app_info.specs)
-            elif app_info.type == "copy-app":
-                return AppCopySpec(**app_info.specs)
-        except Exception as e:
-            logger.error(f"앱 '{app_info.name}' (타입: {app_info.type})의 Spec 데이터 검증/변환 중 오류: {e}")
-            logger.warning(f"이 앱의 빌드를 건너뜁니다. Specs: {app_info.specs}")
-            return None
             
     def _build_helm(self, app_info: AppInfoScheme, spec_obj: AppPullHelmSpec):
         """Helm 차트 빌드"""
@@ -260,32 +223,8 @@ class BuildCommand(BaseCommand):
 @click.command(name="build")
 @common_click_options
 @click.pass_context
-def cmd(ctx, app_config_dir_name: str, base_dir: str, app_name: str | None, config_file_name: str | None, verbose: bool, debug: bool):
-    """
-    `prepare` 단계의 결과물과 로컬 소스를 사용하여 배포 가능한 애플리케이션 빌드 결과물을 생성합니다.
-
-    이 명령어는 `config.[yaml|toml]` 파일에 정의된 'pull-helm', 'pull-helm-oci', 
-    'pull-git', 'copy-app' 타입의 애플리케이션들을 주로 대상으로 하며,
-    이들의 소스를 `<base_dir>/<app_dir>/build/<app_name>/` 경로에 최종 빌드합니다.
-
-    주요 작업:
-    - 대상 앱 타입: 'pull-helm', 'pull-helm-oci', 'pull-git', 'copy-app'.
-      (다른 타입의 앱은 이 단계에서 특별한 빌드 로직이 없을 수 있습니다.)
-    - Helm 차트 준비:
-        - `prepare` 단계에서 다운로드된 Helm 차트 (`<base_dir>/charts/...`)를 
-          빌드 디렉토리 (`<app_dir>/build/<app_name>`)로 복사합니다.
-        - `specs.overrides`: 지정된 파일들을 빌드된 차트 내에 덮어씁니다.
-          (원본은 `<app_dir>/overrides/<app_name>/...` 경로에서 가져옴)
-        - `specs.removes`: 빌드된 차트 내에서 지정된 파일 또는 디렉토리를 삭제합니다.
-    - Git 소스 준비:
-        - `prepare` 단계에서 클론된 Git 저장소 (`<base_dir>/repos/...`)의 내용을
-          `specs.paths` 정의에 따라 빌드 디렉토리로 복사합니다.
-    - 로컬 파일 복사 (`copy-app` 타입):
-        - `specs.paths`에 정의된 로컬 파일/디렉토리를 빌드 디렉토리로 복사합니다.
-
-    빌드 결과물은 주로 `template` 또는 `deploy` 명령어에서 사용됩니다.
-    빌드 작업 전, 기존 빌드 디렉토리 (`<app_dir>/build/`)는 삭제됩니다.
-    """
+def cmd(ctx, app_config_dir_name: str, base_dir: str, config_file_name: str | None, app_name: str | None, verbose: bool, debug: bool):
+    """앱 설정을 기반으로 빌드 디렉토리에 배포 가능한 형태로 준비"""
     ctx.ensure_object(dict)
     ctx.obj['verbose'] = verbose
     ctx.obj['debug'] = debug
@@ -294,7 +233,7 @@ def cmd(ctx, app_config_dir_name: str, base_dir: str, app_name: str | None, conf
     build_cmd = BuildCommand(
         base_dir=base_dir,
         app_config_dir=app_config_dir_name,
-        app_name=app_name,
+        target_app_name=app_name,
         config_file_name=config_file_name
     )
     

@@ -20,6 +20,8 @@ from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.cli_check import check_helm_installed, CliToolNotFoundError, CliToolExecutionError
 from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.logger import logger, setup_logging_from_context, LogLevel
+from sbkube.utils.cmd_executor import run_helm_cmd_with_retry, run_git_cmd_with_retry
+from sbkube.exceptions import HelmError, GitRepositoryError
 
 def check_command_available(command):
     if which(command) is None:
@@ -115,24 +117,31 @@ class PrepareCommand(BaseCommand):
                 if repo_name in helm_repos:
                     repo_url = helm_repos[repo_name]
                     
-                    # helm repo add
+                    # helm repo add (with retry)
                     try:
-                        subprocess.run(['helm', 'repo', 'add', repo_name, repo_url], 
-                                     check=True, capture_output=True, text=True)
-                        logger.info(f"Helm 저장소 '{repo_name}' 추가됨")
-                    except subprocess.CalledProcessError as e:
-                        if "already exists" not in e.stderr:
-                            logger.warning(f"Helm 저장소 추가 실패: {e.stderr}")
+                        if not run_helm_cmd_with_retry(['helm', 'repo', 'add', repo_name, repo_url]):
+                            # Check if repo already exists
+                            result = subprocess.run(['helm', 'repo', 'list'], 
+                                                   capture_output=True, text=True)
+                            if repo_name not in result.stdout:
+                                logger.warning(f"Helm 저장소 '{repo_name}' 추가 실패")
+                            else:
+                                logger.info(f"Helm 저장소 '{repo_name}' 이미 존재함")
+                        else:
+                            logger.info(f"Helm 저장소 '{repo_name}' 추가됨")
+                    except Exception as e:
+                        logger.warning(f"Helm 저장소 추가 중 오류: {e}")
                     
-                    # helm repo update
+                    # helm repo update (with retry)
                     try:
-                        subprocess.run(['helm', 'repo', 'update'], 
-                                     check=True, capture_output=True, text=True)
-                        logger.info("Helm 저장소 업데이트 완료")
-                    except subprocess.CalledProcessError as e:
-                        logger.warning(f"Helm 저장소 업데이트 실패: {e.stderr}")
+                        if run_helm_cmd_with_retry(['helm', 'repo', 'update']):
+                            logger.info("Helm 저장소 업데이트 완료")
+                        else:
+                            logger.warning("Helm 저장소 업데이트 실패")
+                    except Exception as e:
+                        logger.warning(f"Helm 저장소 업데이트 중 오류: {e}")
                     
-                    # helm pull
+                    # helm pull (with retry)
                     pull_cmd = ['helm', 'pull', f"{repo_name}/{chart_name}"]
                     if version:
                         pull_cmd.extend(['--version', version])
@@ -141,10 +150,13 @@ class PrepareCommand(BaseCommand):
                         pull_cmd.extend(['--destination', str(dest_path)])
                     
                     try:
-                        subprocess.run(pull_cmd, check=True, capture_output=True, text=True)
-                        logger.success(f"Helm 차트 '{chart_name}' 다운로드 완료: {dest_path}")
-                    except subprocess.CalledProcessError as e:
-                        logger.error(f"Helm 차트 다운로드 실패: {e.stderr}")
+                        if run_helm_cmd_with_retry(pull_cmd):
+                            logger.success(f"Helm 차트 '{chart_name}' 다운로드 완료: {dest_path}")
+                        else:
+                            logger.error(f"Helm 차트 '{chart_name}' 다운로드 실패")
+                            raise HelmError(f"Failed to download Helm chart '{chart_name}'")
+                    except Exception as e:
+                        logger.error(f"Helm 차트 다운로드 중 오류: {e}")
                         return False
                 else:
                     logger.error(f"sources.yaml에서 저장소 '{repo_name}'을 찾을 수 없습니다.")
@@ -168,10 +180,13 @@ class PrepareCommand(BaseCommand):
             pull_cmd.extend(['--untar', '--untardir', str(charts_dir)])
             
             try:
-                subprocess.run(pull_cmd, check=True, capture_output=True, text=True)
-                logger.success(f"OCI Helm 차트 다운로드 완료: {oci_url}")
-            except subprocess.CalledProcessError as e:
-                logger.error(f"OCI Helm 차트 다운로드 실패: {e.stderr}")
+                if run_helm_cmd_with_retry(pull_cmd):
+                    logger.success(f"OCI Helm 차트 다운로드 완료: {oci_url}")
+                else:
+                    logger.error(f"OCI Helm 차트 다운로드 실패: {oci_url}")
+                    raise HelmError(f"Failed to download OCI Helm chart from '{oci_url}'")
+            except Exception as e:
+                logger.error(f"OCI Helm 차트 다운로드 중 오류: {e}")
                 return False
         
         return True
@@ -201,15 +216,16 @@ class PrepareCommand(BaseCommand):
                     
                     repo_dir = repos_dir / repo_name
                     
-                    # git clone 또는 pull
+                    # git clone 또는 pull (with retry)
                     if repo_dir.exists():
                         # 기존 저장소 업데이트
                         try:
-                            subprocess.run(['git', 'pull'], cwd=repo_dir, 
-                                         check=True, capture_output=True, text=True)
-                            logger.info(f"Git 저장소 '{repo_name}' 업데이트 완료")
-                        except subprocess.CalledProcessError as e:
-                            logger.warning(f"Git 저장소 업데이트 실패: {e.stderr}")
+                            if run_git_cmd_with_retry(['git', 'pull'], cwd=repo_dir):
+                                logger.info(f"Git 저장소 '{repo_name}' 업데이트 완료")
+                            else:
+                                logger.warning(f"Git 저장소 '{repo_name}' 업데이트 실패")
+                        except Exception as e:
+                            logger.warning(f"Git 저장소 업데이트 중 오류: {e}")
                     else:
                         # 새로 clone
                         clone_cmd = ['git', 'clone', repo_url, str(repo_dir)]
@@ -217,10 +233,13 @@ class PrepareCommand(BaseCommand):
                             clone_cmd.extend(['-b', branch])
                         
                         try:
-                            subprocess.run(clone_cmd, check=True, capture_output=True, text=True)
-                            logger.success(f"Git 저장소 '{repo_name}' 클론 완료: {repo_dir}")
-                        except subprocess.CalledProcessError as e:
-                            logger.error(f"Git 저장소 클론 실패: {e.stderr}")
+                            if run_git_cmd_with_retry(clone_cmd):
+                                logger.success(f"Git 저장소 '{repo_name}' 클론 완료: {repo_dir}")
+                            else:
+                                logger.error(f"Git 저장소 '{repo_name}' 클론 실패")
+                                raise GitRepositoryError(repo_url, "clone", f"Failed to clone repository '{repo_name}'")
+                        except Exception as e:
+                            logger.error(f"Git 저장소 클론 중 오류: {e}")
                             return False
                     
                     # 지정된 경로들 복사

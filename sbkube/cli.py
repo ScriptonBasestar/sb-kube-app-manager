@@ -14,7 +14,7 @@ try:
 except ImportError:
     KUBERNETES_AVAILABLE = False
 
-from sbkube.commands import prepare, build, template, deploy, upgrade, delete, validate, version
+from sbkube.commands import prepare, build, template, deploy, upgrade, delete, validate, version, state
 from sbkube.utils.cli_check import check_helm_installed_or_exit, check_kubectl_installed_or_exit
 from sbkube.exceptions import CliToolNotFoundError, CliToolExecutionError
 # 기존 print_kube_connection_help, print_helm_connection_help는 display_kubeconfig_info 및 SbkubeGroup.invoke에서 직접 처리 또는 대체
@@ -166,6 +166,7 @@ main.add_command(upgrade.cmd)
 main.add_command(delete.cmd)
 main.add_command(validate.cmd)
 main.add_command(version.cmd)
+main.add_command(state.state)
 
 def main_with_exception_handling():
     """Main entry point with global exception handling."""

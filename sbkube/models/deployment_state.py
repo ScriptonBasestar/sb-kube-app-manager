@@ -1,0 +1,271 @@
+"""
+Deployment state tracking models for rollback functionality.
+
+This module provides SQLAlchemy models and Pydantic schemas for tracking
+deployment states and enabling rollback operations.
+"""
+
+from datetime import datetime
+from typing import Optional, List, Dict, Any, Literal
+from pathlib import Path
+from enum import Enum
+
+from sqlalchemy import (
+    create_engine, Column, Integer, String, DateTime, Text, 
+    Boolean, JSON, ForeignKey, Index, UniqueConstraint
+)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker, Session
+from pydantic import BaseModel, Field, ConfigDict
+
+Base = declarative_base()
+
+
+class DeploymentStatus(str, Enum):
+    """Deployment status enumeration."""
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    SUCCESS = "success"
+    FAILED = "failed"
+    ROLLED_BACK = "rolled_back"
+    PARTIALLY_FAILED = "partially_failed"
+
+
+class ResourceAction(str, Enum):
+    """Resource action types."""
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+    APPLY = "apply"
+    ROLLBACK = "rollback"
+
+
+# SQLAlchemy Models
+
+class Deployment(Base):
+    """Main deployment record."""
+    __tablename__ = "deployments"
+    
+    id = Column(Integer, primary_key=True)
+    deployment_id = Column(String(64), unique=True, nullable=False, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Deployment context
+    cluster = Column(String(255), nullable=False)
+    namespace = Column(String(255), nullable=False)
+    app_config_dir = Column(String(1024), nullable=False)
+    config_file_path = Column(String(1024), nullable=False)
+    
+    # Command context
+    command = Column(String(50), nullable=False)  # deploy, rollback, etc.
+    command_args = Column(JSON, nullable=True)  # CLI arguments
+    dry_run = Column(Boolean, default=False)
+    
+    # State
+    status = Column(String(20), default=DeploymentStatus.PENDING.value)
+    error_message = Column(Text, nullable=True)
+    
+    # Configuration snapshot
+    config_snapshot = Column(JSON, nullable=False)  # Complete config.yaml content
+    sources_snapshot = Column(JSON, nullable=True)  # sources.yaml if available
+    
+    # Metadata
+    sbkube_version = Column(String(20), nullable=True)
+    operator = Column(String(255), nullable=True)  # User who ran the command
+    
+    # Relationships
+    app_deployments = relationship("AppDeployment", back_populates="deployment", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index("idx_deployment_timestamp", "timestamp"),
+        Index("idx_deployment_cluster_namespace", "cluster", "namespace"),
+    )
+
+
+class AppDeployment(Base):
+    """Individual app deployment within a deployment."""
+    __tablename__ = "app_deployments"
+    
+    id = Column(Integer, primary_key=True)
+    deployment_id = Column(Integer, ForeignKey("deployments.id"), nullable=False)
+    
+    # App info
+    app_name = Column(String(255), nullable=False)
+    app_type = Column(String(50), nullable=False)
+    namespace = Column(String(255), nullable=True)
+    
+    # State
+    status = Column(String(20), default=DeploymentStatus.PENDING.value)
+    error_message = Column(Text, nullable=True)
+    
+    # App configuration
+    app_config = Column(JSON, nullable=False)  # App specs from config
+    
+    # Type-specific metadata
+    metadata = Column(JSON, nullable=True)  # Type-specific deployment info
+    
+    # Rollback information
+    rollback_info = Column(JSON, nullable=True)  # Info needed for rollback
+    
+    # Relationships
+    deployment = relationship("Deployment", back_populates="app_deployments")
+    resources = relationship("DeployedResource", back_populates="app_deployment", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index("idx_app_deployment_name", "app_name"),
+        Index("idx_app_deployment_type", "app_type"),
+    )
+
+
+class DeployedResource(Base):
+    """Individual Kubernetes resource deployed."""
+    __tablename__ = "deployed_resources"
+    
+    id = Column(Integer, primary_key=True)
+    app_deployment_id = Column(Integer, ForeignKey("app_deployments.id"), nullable=False)
+    
+    # Resource identification
+    api_version = Column(String(100), nullable=False)
+    kind = Column(String(100), nullable=False)
+    name = Column(String(255), nullable=False)
+    namespace = Column(String(255), nullable=True)
+    
+    # Action taken
+    action = Column(String(20), nullable=False)  # create, update, delete
+    
+    # State snapshots
+    previous_state = Column(JSON, nullable=True)  # Previous resource state (for rollback)
+    current_state = Column(JSON, nullable=True)  # Current resource state
+    
+    # Metadata
+    checksum = Column(String(64), nullable=True)  # SHA256 of resource
+    source_file = Column(String(1024), nullable=True)  # Source YAML file
+    
+    # Relationships
+    app_deployment = relationship("AppDeployment", back_populates="resources")
+    
+    __table_args__ = (
+        UniqueConstraint("app_deployment_id", "api_version", "kind", "name", "namespace", 
+                        name="uq_resource_identity"),
+        Index("idx_resource_kind_name", "kind", "name"),
+    )
+
+
+class HelmRelease(Base):
+    """Helm release tracking."""
+    __tablename__ = "helm_releases"
+    
+    id = Column(Integer, primary_key=True)
+    app_deployment_id = Column(Integer, ForeignKey("app_deployments.id"), nullable=False)
+    
+    # Helm release info
+    release_name = Column(String(255), nullable=False)
+    namespace = Column(String(255), nullable=False)
+    chart = Column(String(255), nullable=False)
+    chart_version = Column(String(50), nullable=True)
+    app_version = Column(String(50), nullable=True)
+    
+    # Helm state
+    revision = Column(Integer, nullable=False)
+    values = Column(JSON, nullable=True)  # Values used for deployment
+    
+    # Status
+    status = Column(String(50), nullable=False)  # deployed, failed, etc.
+    
+    __table_args__ = (
+        UniqueConstraint("release_name", "namespace", name="uq_helm_release"),
+        Index("idx_helm_release_name", "release_name"),
+    )
+
+
+# Pydantic Schemas for API/CLI interaction
+
+class DeploymentCreate(BaseModel):
+    """Schema for creating a deployment record."""
+    deployment_id: str
+    cluster: str
+    namespace: str
+    app_config_dir: str
+    config_file_path: str
+    command: str
+    command_args: Optional[Dict[str, Any]] = None
+    dry_run: bool = False
+    config_snapshot: Dict[str, Any]
+    sources_snapshot: Optional[Dict[str, Any]] = None
+    sbkube_version: Optional[str] = None
+    operator: Optional[str] = None
+
+
+class AppDeploymentCreate(BaseModel):
+    """Schema for creating an app deployment record."""
+    app_name: str
+    app_type: str
+    namespace: Optional[str] = None
+    app_config: Dict[str, Any]
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ResourceInfo(BaseModel):
+    """Schema for resource information."""
+    api_version: str
+    kind: str
+    name: str
+    namespace: Optional[str] = None
+    action: ResourceAction
+    previous_state: Optional[Dict[str, Any]] = None
+    current_state: Optional[Dict[str, Any]] = None
+    checksum: Optional[str] = None
+    source_file: Optional[str] = None
+
+
+class HelmReleaseInfo(BaseModel):
+    """Schema for Helm release information."""
+    release_name: str
+    namespace: str
+    chart: str
+    chart_version: Optional[str] = None
+    app_version: Optional[str] = None
+    revision: int
+    values: Optional[Dict[str, Any]] = None
+    status: str
+
+
+class DeploymentSummary(BaseModel):
+    """Schema for deployment summary."""
+    model_config = ConfigDict(from_attributes=True)
+    
+    deployment_id: str
+    timestamp: datetime
+    cluster: str
+    namespace: str
+    status: DeploymentStatus
+    app_count: int
+    success_count: int
+    failed_count: int
+    error_message: Optional[str] = None
+
+
+class DeploymentDetail(BaseModel):
+    """Schema for detailed deployment information."""
+    model_config = ConfigDict(from_attributes=True)
+    
+    deployment_id: str
+    timestamp: datetime
+    cluster: str
+    namespace: str
+    app_config_dir: str
+    status: DeploymentStatus
+    error_message: Optional[str] = None
+    config_snapshot: Dict[str, Any]
+    apps: List[Dict[str, Any]] = []
+    resources: List[ResourceInfo] = []
+    helm_releases: List[HelmReleaseInfo] = []
+
+
+class RollbackRequest(BaseModel):
+    """Schema for rollback request."""
+    deployment_id: str
+    target_deployment_id: Optional[str] = None  # Roll back to specific deployment
+    app_names: Optional[List[str]] = None  # Selective rollback
+    dry_run: bool = False
+    force: bool = False  # Force rollback even with warnings

@@ -17,6 +17,7 @@ dependencies = [
   "toml>=0.10.2",
   "jsonschema>=4.23.0",
   "pydantic>=2.7.1",
+  "sqlalchemy>=2.0.0",
 ]
 
 [project.scripts]

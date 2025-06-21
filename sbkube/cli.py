@@ -1,8 +1,10 @@
 import click
 import logging
+import sys
 from pathlib import Path
 from rich.table import Table
 from sbkube.utils.logger import logger
+from sbkube.exceptions import SbkubeError, handle_exception, format_error_with_suggestions
 
 # kubernetes 패키지를 사용하기 위한 임포트
 try:
@@ -14,6 +16,7 @@ except ImportError:
 
 from sbkube.commands import prepare, build, template, deploy, upgrade, delete, validate, version
 from sbkube.utils.cli_check import check_helm_installed_or_exit, check_kubectl_installed_or_exit
+from sbkube.exceptions import CliToolNotFoundError, CliToolExecutionError
 # 기존 print_kube_connection_help, print_helm_connection_help는 display_kubeconfig_info 및 SbkubeGroup.invoke에서 직접 처리 또는 대체
 
 def display_kubeconfig_info(kubeconfig_path: str | None = None, context_name: str | None = None):
@@ -107,21 +110,26 @@ class SbkubeGroup(click.Group):
         # 'sbkube' 단독 실행 시에는 main 콜백에서 display_kubeconfig_info() 실행 후 ctx.exit() 됩니다.
 
         if ctx.invoked_subcommand:
-            # console.print(f"[SbkubeGroup.invoke] Prerequisite checks for: {ctx.invoked_subcommand}", style="dim")
-            
             # Kubernetes/Helm 연결이 필요한 명령어들에 대해 검사 수행
-            # 'version', 'validate', 'init' (향후), 'template' 등은 제외 가능
-            # 'template'은 helm template을 사용하므로 helm은 필요하나 kubectl 연결은 필요 없을 수 있음.
-            commands_requiring_kubectl_connection = ['deploy', 'upgrade', 'delete', 'prepare'] # prepare도 helm repo add/update 시 kubectl 설정에 민감할 수 있음
-            commands_requiring_helm = ['template', 'deploy', 'upgrade', 'delete', 'prepare', 'build'] # build도 helm pull등을 위해
+            commands_requiring_kubectl_connection = ['deploy', 'upgrade', 'delete', 'prepare']
+            commands_requiring_helm = ['template', 'deploy', 'upgrade', 'delete', 'prepare', 'build']
 
-            if ctx.invoked_subcommand in commands_requiring_kubectl_connection:
-                # console.print(f"[SbkubeGroup.invoke] Running kubectl checks for {ctx.invoked_subcommand}", style="dim")
-                check_kubectl_installed_or_exit(kubeconfig=ctx.obj.get('kubeconfig'), kubecontext=ctx.obj.get('context'))
-            
-            if ctx.invoked_subcommand in commands_requiring_helm:
-                # console.print(f"[SbkubeGroup.invoke] Running helm checks for {ctx.invoked_subcommand}", style="dim")
-                check_helm_installed_or_exit()
+            try:
+                if ctx.invoked_subcommand in commands_requiring_kubectl_connection:
+                    check_kubectl_installed_or_exit(
+                        kubeconfig=ctx.obj.get('kubeconfig'), 
+                        kubecontext=ctx.obj.get('context')
+                    )
+                
+                if ctx.invoked_subcommand in commands_requiring_helm:
+                    check_helm_installed_or_exit()
+                    
+            except (CliToolNotFoundError, CliToolExecutionError) as e:
+                if isinstance(e, SbkubeError):
+                    logger.error(format_error_with_suggestions(e))
+                else:
+                    logger.error(str(e))
+                sys.exit(1)
         
         return super().invoke(ctx)
 
@@ -159,5 +167,21 @@ main.add_command(delete.cmd)
 main.add_command(validate.cmd)
 main.add_command(version.cmd)
 
+def main_with_exception_handling():
+    """Main entry point with global exception handling."""
+    try:
+        main()
+    except SbkubeError as e:
+        logger.error(format_error_with_suggestions(e))
+        sys.exit(e.exit_code)
+    except KeyboardInterrupt:
+        logger.info("Operation cancelled by user")
+        sys.exit(130)  # Standard exit code for SIGINT
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        logger.verbose(f"Exception details: {type(e).__name__}: {e}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
-    main()
+    main_with_exception_handling()

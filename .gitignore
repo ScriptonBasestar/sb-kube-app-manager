@@ -89,3 +89,6 @@ charts/
 repos/
 *.local.yaml
 *.override.yaml
+
+# sb-yesman-cli settings
+.claude/

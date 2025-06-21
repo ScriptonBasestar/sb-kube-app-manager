@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-sbkube = "sbkube.cli:main"
+sbkube = "sbkube.cli:main_with_exception_handling"
 
 [tool.setuptools]
 packages = ["sbkube"]

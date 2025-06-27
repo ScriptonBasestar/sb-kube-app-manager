@@ -145,45 +145,37 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
                 console.print(f"[bold green]✅ 앱 '{name}': Helm 릴리스 '{release_name}' 배포 완료{ns_msg}[/bold green]")
 
         elif app_type == "install-yaml":
-            for action_spec in spec_obj.actions:
-                action_type = action_spec.type
-                action_path_str = action_spec.path
+            # install-yaml 타입은 빌드된 YAML 파일을 사용
+            app_build_dir = BUILD_DIR / name
+            
+            if not app_build_dir.exists():
+                console.print(f"[red]❌ 앱 '{name}': install-yaml 빌드 디렉토리가 존재하지 않습니다: {app_build_dir}[/red]")
+                console.print(f"    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]")
+                continue
+            
+            # 빌드 디렉토리의 모든 YAML 파일 찾기
+            yaml_files = []
+            for yaml_file in app_build_dir.glob("*.yaml"):
+                yaml_files.append(yaml_file)
+            for yaml_file in app_build_dir.glob("*.yml"):
+                yaml_files.append(yaml_file)
+            
+            if not yaml_files:
+                console.print(f"[yellow]⚠️  앱 '{name}': 빌드 디렉토리에 YAML 파일이 없습니다: {app_build_dir}[/yellow]")
+                continue
                 
-                target_yaml_path_str = ""
-                if action_path_str.startswith("http://") or action_path_str.startswith("https://"):
-                    target_yaml_path_str = action_path_str
-                    console.print(f"    [grey]URL에서 YAML 처리 시도: {target_yaml_path_str}[/grey]")
-                else:
-                    path_candidate = BASE_DIR / app_config_path_obj / action_path_str
-                    if Path(action_path_str).is_absolute():
-                         target_yaml_path_str = action_path_str
-                    elif path_candidate.exists():
-                         target_yaml_path_str = str(path_candidate.resolve())
-                    else:
-                         base_dir_candidate = BASE_DIR / action_path_str
-                         if base_dir_candidate.exists():
-                              target_yaml_path_str = str(base_dir_candidate.resolve())
-                         else:
-                              console.print(f"[red]❌ 앱 '{name}': YAML 파일 경로를 확인할 수 없습니다: '{action_path_str}'. 관련 경로들을 확인하세요.[/red]")
-                              console.print(f"    [yellow]L 확인한 경로: 절대경로, {path_candidate}, {base_dir_candidate}[/yellow]")
-                              continue
+            # 각 YAML 파일에 kubectl apply 실행
+            for yaml_file in yaml_files:
+                target_yaml_path_str = str(yaml_file.resolve())
+                action_type = "apply"  # install-yaml은 항상 apply 사용
 
-                if not target_yaml_path_str:
-                    continue
-
-                kubectl_cmd_list = ["kubectl"]
-                if action_type in ["apply", "create", "delete"]:
-                    kubectl_cmd_list.append(action_type)
-                    kubectl_cmd_list.extend(["-f", target_yaml_path_str])
-                else:
-                    console.print(f"[red]❌ 앱 '{name}': 지원하지 않는 YAML 액션 타입 '{action_type}' 입니다. (지원: apply, create, delete)[/red]")
-                    continue
+                kubectl_cmd_list = ["kubectl", action_type, "-f", target_yaml_path_str]
                 
                 if current_ns:
                     kubectl_cmd_list.extend(["-n", current_ns])
                 
                 if dry_run:
-                    kubectl_cmd_list.append("--dry-run=client")
+                    kubectl_cmd_list.extend(["--dry-run=client", "--validate=false"])
 
                 console.print(f"    [cyan]$ {' '.join(kubectl_cmd_list)}[/cyan]")
                 return_code, stdout, stderr = run_command(kubectl_cmd_list, check=False)
@@ -191,11 +183,11 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
                 if return_code != 0:
                     if "Unable to connect to the server" in stderr or "no such host" in stderr:
                         print_kube_connection_help()
-                    console.print(f"[red]❌ 앱 '{name}': YAML 작업 ('{action_type}' on '{target_yaml_path_str}') 실패:[/red]")
+                    console.print(f"[red]❌ 앱 '{name}': YAML 파일 배포 실패 ('{yaml_file.name}'):[/red]")
                     if stdout: console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
                     if stderr: console.print(f"    [red]STDERR:[/red] {stderr.strip()}")
                 else:
-                    console.print(f"[green]✅ 앱 '{name}': YAML 작업 ('{action_type}' on '{target_yaml_path_str}') 완료[/green]")
+                    console.print(f"[green]✅ 앱 '{name}': YAML 파일 배포 완료 ('{yaml_file.name}')[/green]")
 
         elif app_type == "exec":
             for raw_cmd_str in spec_obj.commands:

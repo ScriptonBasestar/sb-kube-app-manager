@@ -8,7 +8,7 @@ with comprehensive validation and error handling.
 from pydantic import field_validator, model_validator
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 import os
 
 from .base_model import ConfigBaseModel, InheritableConfigModel

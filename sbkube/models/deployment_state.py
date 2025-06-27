@@ -14,7 +14,7 @@ from sqlalchemy import (
     create_engine, Column, Integer, String, DateTime, Text, 
     Boolean, JSON, ForeignKey, Index, UniqueConstraint
 )
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, Session
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -102,7 +102,7 @@ class AppDeployment(Base):
     app_config = Column(JSON, nullable=False)  # App specs from config
     
     # Type-specific metadata
-    metadata = Column(JSON, nullable=True)  # Type-specific deployment info
+    deployment_metadata = Column(JSON, nullable=True)  # Type-specific deployment info
     
     # Rollback information
     rollback_info = Column(JSON, nullable=True)  # Info needed for rollback
@@ -202,7 +202,7 @@ class AppDeploymentCreate(BaseModel):
     app_type: str
     namespace: Optional[str] = None
     app_config: Dict[str, Any]
-    metadata: Optional[Dict[str, Any]] = None
+    deployment_metadata: Optional[Dict[str, Any]] = None
 
 
 class ResourceInfo(BaseModel):

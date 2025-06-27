@@ -157,7 +157,7 @@ class DeploymentDatabase:
                 app_type=app_data.app_type,
                 namespace=app_data.namespace,
                 app_config=app_data.app_config,
-                metadata=app_data.metadata
+                deployment_metadata=app_data.deployment_metadata
             )
             session.add(app_deployment)
             session.flush()
@@ -322,7 +322,7 @@ class DeploymentDatabase:
                     "status": app_dep.status,
                     "error_message": app_dep.error_message,
                     "config": app_dep.app_config,
-                    "metadata": app_dep.metadata,
+                    "deployment_metadata": app_dep.deployment_metadata,
                     "rollback_info": app_dep.rollback_info
                 }
                 detail.apps.append(app_info)

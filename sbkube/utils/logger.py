@@ -77,6 +77,11 @@ class SbkubeLogger:
 logger = SbkubeLogger()
 
 
+def get_logger() -> SbkubeLogger:
+    """전역 로거 인스턴스 반환"""
+    return logger
+
+
 def setup_logging_from_context(ctx: click.Context):
     """Click 컨텍스트에서 verbose 옵션을 읽어 로깅 레벨 설정"""
     verbose = ctx.obj.get('verbose', False) if ctx.obj else False

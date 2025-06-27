@@ -367,6 +367,16 @@ class StateCorruptionError(StateError):
         super().__init__(message, {"state_file": state_file, "reason": reason})
 
 
+class DeploymentError(SbkubeError):
+    """Base class for deployment-related errors."""
+    pass
+
+
+class RollbackError(SbkubeError):
+    """Base class for rollback-related errors."""
+    pass
+
+
 def handle_exception(exc: Exception, logger=None) -> int:
     """
     Centralized exception handler for sbkube.

@@ -12,6 +12,7 @@ from sbkube.models.config_model import (
     AppPullHelmOciSpec,
     AppPullGitSpec,
     AppCopySpec,
+    AppInstallActionSpec,
 )
 
 
@@ -32,7 +33,7 @@ class BuildCommand(BaseCommand):
         self._prepare_build_directory()
         
         # 지원하는 앱 타입
-        supported_types = ["pull-helm", "pull-helm-oci", "pull-git", "copy-app"]
+        supported_types = ["pull-helm", "pull-helm-oci", "pull-git", "copy-app", "install-yaml"]
         
         # 앱 파싱
         self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
@@ -68,6 +69,8 @@ class BuildCommand(BaseCommand):
                 self._build_git(app_info, spec_obj)
             elif app_type == "copy-app":
                 self._build_copy(app_info, spec_obj)
+            elif app_type == "install-yaml":
+                self._build_install_yaml(app_info, spec_obj)
                 
             logger.success(f"앱 '{app_name}' 빌드 완료")
             return True
@@ -180,6 +183,47 @@ class BuildCommand(BaseCommand):
                 shutil.copy2(source_path, dest_build_path / source_path.name)
             else:
                 logger.warning(f"로컬 소스 경로가 파일이나 디렉토리가 아님: {source_path} (건너뜀)")
+                
+    def _build_install_yaml(self, app_info: AppInfoScheme, spec_obj: AppInstallActionSpec):
+        """install-yaml 타입 빌드 - YAML 파일들을 빌드 디렉토리에 준비"""
+        app_name = app_info.name
+        app_build_dest = app_name  # install-yaml은 앱 이름으로 디렉토리 생성
+        app_final_build_path = self.build_dir / app_build_dest
+        
+        # 기존 빌드 디렉토리 정리
+        if app_final_build_path.exists():
+            logger.verbose(f"기존 앱 빌드 디렉토리 삭제: {app_final_build_path}")
+            shutil.rmtree(app_final_build_path)
+            
+        # 빌드 디렉토리 생성
+        app_final_build_path.mkdir(parents=True, exist_ok=True)
+        
+        # 각 action 처리
+        for action in spec_obj.actions:
+            action_path = action.path
+            
+            # 절대 경로가 아닌 경우 app_config_dir 기준으로 해석
+            if not Path(action_path).is_absolute():
+                source_path = self.app_config_dir / action_path
+            else:
+                source_path = Path(action_path)
+                
+            # 파일이 존재하는지 확인
+            if not source_path.exists():
+                logger.warning(f"install-yaml 액션 파일 없음: {source_path} (원본: '{action_path}') (건너뜀)")
+                continue
+                
+            # 파일인지 확인
+            if not source_path.is_file():
+                logger.warning(f"install-yaml 액션 경로가 파일이 아님: {source_path} (건너뜀)")
+                continue
+                
+            # 대상 파일명 결정 (원본 파일명 유지)
+            dest_file_path = app_final_build_path / source_path.name
+            
+            # 파일 복사
+            logger.info(f"install-yaml 파일 복사: {source_path} → {dest_file_path}")
+            shutil.copy2(source_path, dest_file_path)
                 
     def _apply_overrides(self, app_name: str, dest_name: str, build_path: Path, overrides: List[str]):
         """Override 파일 적용"""

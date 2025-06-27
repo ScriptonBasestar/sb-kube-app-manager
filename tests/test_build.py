@@ -306,3 +306,80 @@ def test_build_pull_helm_app_fallback_to_chart_name_when_no_dest(runner: CliRunn
     # Chart.yaml이 올바른 위치에 복사되었는지 확인
     chart_yaml_path = expected_build_dir / "Chart.yaml"
     assert chart_yaml_path.exists(), f"Chart.yaml 파일이 복사되지 않았습니다: {chart_yaml_path}"
+
+def test_build_install_yaml_app(runner: CliRunner, base_dir, app_dir, build_dir):
+    """
+    build 명령어 실행 시 install-yaml 타입 앱의 빌드 과정을 테스트합니다.
+    - spec에 정의된 YAML 파일들이 build_dir/<app_name>/으로 복사되는지 확인합니다.
+    """
+    import yaml
+    
+    # install-yaml 앱이 포함된 테스트용 config.yaml 생성
+    config_content = {
+        "namespace": "test-ns",
+        "apps": [
+            {
+                "name": "my-install-yaml-app",
+                "type": "install-yaml",
+                "specs": {
+                    "actions": [
+                        {"type": "apply", "path": "deployment.yaml"},
+                        {"type": "create", "path": "service.yaml"}
+                    ]
+                }
+            }
+        ]
+    }
+    
+    # config.yaml 파일 생성
+    config_file = app_dir / "config.yaml"
+    with open(config_file, 'w') as f:
+        yaml.dump(config_content, f)
+    
+    # 테스트용 YAML 파일들 생성
+    deployment_yaml = app_dir / "deployment.yaml"
+    deployment_yaml.write_text("""
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-app
+spec:
+  replicas: 1
+""")
+    
+    service_yaml = app_dir / "service.yaml"
+    service_yaml.write_text("""
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-service
+spec:
+  ports:
+  - port: 80
+""")
+    
+    # build 명령 실행
+    result = runner.invoke(sbkube_cli, [
+        'build',
+        '--base-dir', str(base_dir),
+        '--app-dir', str(app_dir.name),
+        '--app', 'my-install-yaml-app'
+    ])
+    
+    # 결과 검증
+    assert result.exit_code == 0, f"CLI 실행 실패: {result.output}\n{result.exception}"
+    
+    # 앱 이름으로 빌드 디렉토리가 생성되었는지 확인
+    expected_build_dir = build_dir / "my-install-yaml-app"
+    assert expected_build_dir.exists(), f"빌드 디렉토리가 생성되지 않았습니다: {expected_build_dir}"
+    
+    # YAML 파일들이 올바른 위치에 복사되었는지 확인
+    copied_deployment = expected_build_dir / "deployment.yaml"
+    copied_service = expected_build_dir / "service.yaml"
+    
+    assert copied_deployment.exists(), f"deployment.yaml 파일이 복사되지 않았습니다: {copied_deployment}"
+    assert copied_service.exists(), f"service.yaml 파일이 복사되지 않았습니다: {copied_service}"
+    
+    # 파일 내용이 올바르게 복사되었는지 확인
+    assert "test-app" in copied_deployment.read_text()
+    assert "test-service" in copied_service.read_text()

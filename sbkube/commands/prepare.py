@@ -1,302 +1,322 @@
 import json
-import subprocess
 import shutil
 from pathlib import Path
 import click
 from shutil import which
-from typing import Optional
+from rich.console import Console
 
-# config_model 임포트
 from sbkube.models.config_model import (
     AppInfoScheme,
     AppPullHelmSpec,
     AppPullHelmOciSpec,
     AppPullGitSpec,
-    # TODO: 다른 App Spec 모델들도 필요에 따라 임포트
 )
-from sbkube.utils.common import common_click_options
+from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
-# sbkube.utils.cli_check 임포트는 check_helm_installed_or_exit 만 사용
-from sbkube.utils.cli_check import check_helm_installed, CliToolNotFoundError, CliToolExecutionError
-from sbkube.utils.base_command import BaseCommand
-from sbkube.utils.logger import logger, setup_logging_from_context, LogLevel
-from sbkube.utils.cmd_executor import run_helm_cmd_with_retry, run_git_cmd_with_retry
-from sbkube.exceptions import HelmError, GitRepositoryError
+from sbkube.utils.cli_check import check_helm_installed_or_exit
+
+console = Console()
 
 def check_command_available(command):
     if which(command) is None:
-        logger.warning(f"'{command}' 명령을 찾을 수 없습니다. PATH에 등록되어 있는지 확인하세요.")
+        console.print(f"[yellow]⚠️ '{command}' 명령을 찾을 수 없습니다. PATH에 등록되어 있는지 확인하세요.[/yellow]")
         return False
-    try:
-        result = subprocess.run([command, "--help"], capture_output=True, text=True, timeout=5)
-        if result.returncode != 0:
-            return False
-        return True
-    except Exception:
-        return False
-
-class PrepareCommand(BaseCommand):
-    """Prepare 명령 구현"""
-    
-    def __init__(self, base_dir: str, app_config_dir: str, sources_file: str, 
-                 target_app_name: Optional[str], config_file_name: Optional[str]):
-        super().__init__(base_dir, app_config_dir, None, config_file_name)
-        self.sources_file = sources_file
-        self.target_app_name = target_app_name
-        
-    def execute(self):
-        """prepare 명령 실행"""
-        self.execute_pre_hook()
-        logger.heading("Prepare 시작")
-        
-        # 지원하는 앱 타입
-        supported_types = ["pull-helm", "pull-helm-oci", "pull-git"]
-        
-        # 앱 파싱
-        self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
-        
-        # 필요한 CLI 도구들 체크 (공통 함수 사용)
-        if self.app_info_list:
-            self.check_required_cli_tools()
-        
-        # 앱 처리 (공통 로직 사용)
-        self.process_apps_with_stats(self._prepare_app, "준비")
-        
-    def _prepare_app(self, app_info: AppInfoScheme) -> bool:
-        """개별 앱 준비"""
-        app_name = app_info.name
-        app_type = app_info.type
-        
-        logger.progress(f"앱 '{app_name}' (타입: {app_type}) 준비 시작...")
-        
-        try:
-            # Spec 모델 생성 (공통 함수 사용)
-            spec_obj = self.create_app_spec(app_info)
-            if not spec_obj:
-                return False
-                
-            # 타입별 준비 처리
-            if app_type in ["pull-helm", "pull-helm-oci"]:
-                self._prepare_helm(app_info, spec_obj)
-            elif app_type == "pull-git":
-                self._prepare_git(app_info, spec_obj)
-                
-            logger.success(f"앱 '{app_name}' 준비 완료")
-            return True
-            
-        except Exception as e:
-            logger.error(f"앱 '{app_name}' 준비 중 예상치 못한 오류: {e}")
-            if logger._level.value <= LogLevel.DEBUG.value:
-                import traceback
-                logger.debug(traceback.format_exc())
-            return False
-
-    def _prepare_helm(self, app_info: AppInfoScheme, spec_obj):
-        """Helm 차트 준비"""
-        logger.info(f"Helm 차트 준비: {app_info.name}")
-        
-        if isinstance(spec_obj, AppPullHelmSpec):
-            # 일반 Helm 저장소에서 차트 pull
-            repo_name = spec_obj.repo
-            chart_name = spec_obj.chart
-            version = spec_obj.version
-            dest_dir = spec_obj.dest or chart_name
-            
-            # charts 디렉토리 생성
-            charts_dir = self.base_dir / "charts"
-            charts_dir.mkdir(exist_ok=True)
-            
-            dest_path = charts_dir / dest_dir
-            
-            # sources.yaml에서 repo URL 찾기
-            sources_path = self.base_dir / self.sources_file
-            if sources_path.exists():
-                sources_data = load_config_file(sources_path)
-                helm_repos = sources_data.get('helm_repos', {})
-                
-                if repo_name in helm_repos:
-                    repo_url = helm_repos[repo_name]
-                    
-                    # helm repo add (with retry)
-                    try:
-                        if not run_helm_cmd_with_retry(['helm', 'repo', 'add', repo_name, repo_url]):
-                            # Check if repo already exists
-                            result = subprocess.run(['helm', 'repo', 'list'], 
-                                                   capture_output=True, text=True)
-                            if repo_name not in result.stdout:
-                                logger.warning(f"Helm 저장소 '{repo_name}' 추가 실패")
-                            else:
-                                logger.info(f"Helm 저장소 '{repo_name}' 이미 존재함")
-                        else:
-                            logger.info(f"Helm 저장소 '{repo_name}' 추가됨")
-                    except Exception as e:
-                        logger.warning(f"Helm 저장소 추가 중 오류: {e}")
-                    
-                    # helm repo update (with retry)
-                    try:
-                        if run_helm_cmd_with_retry(['helm', 'repo', 'update']):
-                            logger.info("Helm 저장소 업데이트 완료")
-                        else:
-                            logger.warning("Helm 저장소 업데이트 실패")
-                    except Exception as e:
-                        logger.warning(f"Helm 저장소 업데이트 중 오류: {e}")
-                    
-                    # helm pull (with retry)
-                    pull_cmd = ['helm', 'pull', f"{repo_name}/{chart_name}"]
-                    if version:
-                        pull_cmd.extend(['--version', version])
-                    pull_cmd.extend(['--untar', '--untardir', str(charts_dir)])
-                    if dest_dir != chart_name:
-                        pull_cmd.extend(['--destination', str(dest_path)])
-                    
-                    try:
-                        if run_helm_cmd_with_retry(pull_cmd):
-                            logger.success(f"Helm 차트 '{chart_name}' 다운로드 완료: {dest_path}")
-                        else:
-                            logger.error(f"Helm 차트 '{chart_name}' 다운로드 실패")
-                            raise HelmError(f"Failed to download Helm chart '{chart_name}'")
-                    except Exception as e:
-                        logger.error(f"Helm 차트 다운로드 중 오류: {e}")
-                        return False
-                else:
-                    logger.error(f"sources.yaml에서 저장소 '{repo_name}'을 찾을 수 없습니다.")
-                    return False
-            else:
-                logger.error(f"sources 파일을 찾을 수 없습니다: {sources_path}")
-                return False
-                
-        elif isinstance(spec_obj, AppPullHelmOciSpec):
-            # OCI 저장소에서 차트 pull
-            oci_url = spec_obj.oci_url
-            version = spec_obj.version
-            dest_dir = spec_obj.dest
-            
-            charts_dir = self.base_dir / "charts"
-            charts_dir.mkdir(exist_ok=True)
-            
-            pull_cmd = ['helm', 'pull', oci_url]
-            if version:
-                pull_cmd.extend(['--version', version])
-            pull_cmd.extend(['--untar', '--untardir', str(charts_dir)])
-            
-            try:
-                if run_helm_cmd_with_retry(pull_cmd):
-                    logger.success(f"OCI Helm 차트 다운로드 완료: {oci_url}")
-                else:
-                    logger.error(f"OCI Helm 차트 다운로드 실패: {oci_url}")
-                    raise HelmError(f"Failed to download OCI Helm chart from '{oci_url}'")
-            except Exception as e:
-                logger.error(f"OCI Helm 차트 다운로드 중 오류: {e}")
-                return False
-        
-        return True
-    
-    def _prepare_git(self, app_info: AppInfoScheme, spec_obj):
-        """Git 저장소 준비"""
-        logger.info(f"Git 저장소 준비: {app_info.name}")
-        
-        if isinstance(spec_obj, AppPullGitSpec):
-            repo_name = spec_obj.repo
-            paths = spec_obj.paths or []
-            
-            # sources.yaml에서 git repo 정보 찾기
-            sources_path = self.base_dir / self.sources_file
-            if sources_path.exists():
-                sources_data = load_config_file(sources_path)
-                git_repos = sources_data.get('git_repos', {})
-                
-                if repo_name in git_repos:
-                    repo_info = git_repos[repo_name]
-                    repo_url = repo_info.get('url')
-                    branch = repo_info.get('branch', 'main')
-                    
-                    # repos 디렉토리 생성
-                    repos_dir = self.base_dir / "repos"
-                    repos_dir.mkdir(exist_ok=True)
-                    
-                    repo_dir = repos_dir / repo_name
-                    
-                    # git clone 또는 pull (with retry)
-                    if repo_dir.exists():
-                        # 기존 저장소 업데이트
-                        try:
-                            if run_git_cmd_with_retry(['git', 'pull'], cwd=repo_dir):
-                                logger.info(f"Git 저장소 '{repo_name}' 업데이트 완료")
-                            else:
-                                logger.warning(f"Git 저장소 '{repo_name}' 업데이트 실패")
-                        except Exception as e:
-                            logger.warning(f"Git 저장소 업데이트 중 오류: {e}")
-                    else:
-                        # 새로 clone
-                        clone_cmd = ['git', 'clone', repo_url, str(repo_dir)]
-                        if branch != 'main':
-                            clone_cmd.extend(['-b', branch])
-                        
-                        try:
-                            if run_git_cmd_with_retry(clone_cmd):
-                                logger.success(f"Git 저장소 '{repo_name}' 클론 완료: {repo_dir}")
-                            else:
-                                logger.error(f"Git 저장소 '{repo_name}' 클론 실패")
-                                raise GitRepositoryError(repo_url, "clone", f"Failed to clone repository '{repo_name}'")
-                        except Exception as e:
-                            logger.error(f"Git 저장소 클론 중 오류: {e}")
-                            return False
-                    
-                    # 지정된 경로들 복사
-                    for path_spec in paths:
-                        src_path = repo_dir / path_spec.get('src', '.')
-                        dest_path = self.app_config_dir / path_spec.get('dest', '.')
-                        
-                        if src_path.exists():
-                            dest_path.parent.mkdir(parents=True, exist_ok=True)
-                            if src_path.is_dir():
-                                shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
-                            else:
-                                shutil.copy2(src_path, dest_path)
-                            logger.info(f"복사 완료: {src_path} -> {dest_path}")
-                        else:
-                            logger.warning(f"소스 경로를 찾을 수 없습니다: {src_path}")
-                else:
-                    logger.error(f"sources.yaml에서 Git 저장소 '{repo_name}'을 찾을 수 없습니다.")
-                    return False
-            else:
-                logger.error(f"sources 파일을 찾을 수 없습니다: {sources_path}")
-                return False
-        
-        return True
-
-    def _check_required_tools(self):
-        """준비할 앱들에 필요한 CLI 도구들 체크"""
-        needs_helm = any(app.type in ["pull-helm", "pull-helm-oci"] for app in self.app_info_list)
-        needs_git = any(app.type == "pull-git" for app in self.app_info_list)
-        
-        if needs_helm:
-            try:
-                check_helm_installed()
-            except (CliToolNotFoundError, CliToolExecutionError):
-                raise click.Abort()
-                
-        if needs_git:
-            if not check_command_available("git"):
-                logger.error("git 명령이 필요하지만 사용할 수 없습니다.")
-                raise click.Abort()
+    return_code, _, _ = run_command([command, "--help"], timeout=5)
+    return return_code == 0
 
 @click.command(name="prepare")
-@common_click_options
-@click.option("--sources", "sources_file", default="sources.yaml", help="소스 설정 파일")
-@click.option("--sources-file", "sources_override", default=None, help="소스 설정 파일 경로(테스트 호환)")
-@click.pass_context
-def cmd(ctx, app_config_dir_name, base_dir, config_file_name, app_name, verbose, debug, sources_file, sources_override):
-    ctx.ensure_object(dict)
-    ctx.obj['verbose'] = verbose
-    ctx.obj['debug'] = debug
-    setup_logging_from_context(ctx)
+@click.option("--app-dir", "app_config_dir_name", default="config", help="앱 설정 디렉토리 (config.yaml 등 내부 탐색, base-dir 기준)")
+@click.option("--sources", "sources_file_name", default="sources.yaml", help="소스 설정 파일 (base-dir 기준)")
+@click.option("--base-dir", default=".", type=click.Path(exists=True, file_okay=False, dir_okay=True), help="프로젝트 루트 디렉토리")
+@click.option("--config-file", "config_file_name", default=None, help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)")
+@click.option("--sources-file", "sources_file_override", default=None, help="소스 설정 파일 경로 (--sources와 동일, 테스트 호환성)")
+@click.option("--app", "app_name", default=None, help="준비할 특정 앱 이름 (지정하지 않으면 모든 앱 준비)")
+def cmd(app_config_dir_name, sources_file_name, base_dir, config_file_name, sources_file_override, app_name):
+    """..."""
     
-    cmd = PrepareCommand(
-        base_dir=base_dir,
-        app_config_dir=app_config_dir_name,
-        sources_file=sources_file,
-        target_app_name=app_name,
-        config_file_name=config_file_name
-    )
-    cmd.execute()
+    console.print("[bold blue]✨ `prepare` 작업 시작 ✨[/bold blue]")
+
+    if not check_command_available("helm"):
+        console.print("[red]❌ `helm` 명령을 사용할 수 없습니다. `prepare` 작업을 진행할 수 없습니다.[/red]")
+        raise click.Abort()
+    check_helm_installed_or_exit()
+    
+    BASE_DIR = Path(base_dir).resolve()
+    CHARTS_DIR = BASE_DIR / "charts"
+    REPOS_DIR = BASE_DIR / "repos"
+
+    app_config_path_obj = BASE_DIR / app_config_dir_name
+    
+    config_file_path = None
+    if config_file_name:
+        config_file_path = app_config_path_obj / config_file_name
+        if not config_file_path.exists() or not config_file_path.is_file():
+            console.print(f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]")
+            raise click.Abort()
+    else:
+        for ext in [".yaml", ".yml", ".toml"]:
+            candidate = app_config_path_obj / f"config{ext}"
+            if candidate.exists() and candidate.is_file():
+                config_file_path = candidate
+                break
+
+        if not config_file_path:
+            console.print(f"[red]❌ 앱 설정 파일을 찾을 수 없습니다: {app_config_path_obj}/config.[yaml|yml|toml][/red]")
+            raise click.Abort()
+    console.print(f"[green]ℹ️ 앱 설정 파일 사용: {config_file_path}[/green]")
+
+    if sources_file_override:
+        sources_file_path = BASE_DIR / sources_file_override
+    else:
+        sources_file_path = BASE_DIR / sources_file_name
+        
+    if not sources_file_path.exists() or not sources_file_path.is_file():
+        console.print(f"[red]❌ 소스 설정 파일이 존재하지 않습니다: {sources_file_path}[/red]")
+        raise click.Abort()
+    console.print(f"[green]ℹ️ 소스 설정 파일 사용: {sources_file_path}[/green]")
+
+    apps_config_dict = load_config_file(str(config_file_path))
+    sources_config_dict = load_config_file(str(sources_file_path))
+
+    helm_repos_from_sources = sources_config_dict.get("helm_repos", {})
+    oci_repos_from_sources = sources_config_dict.get("oci_repos", {})
+    git_repos_from_sources = sources_config_dict.get("git_repos", {})
+
+    app_info_list = []
+    for app_dict in apps_config_dict.get("apps", []):
+        try:
+            app_info = AppInfoScheme(**app_dict)
+            if app_info.type in ["pull-helm", "pull-helm-oci", "pull-git"]:
+                if app_name is None or app_info.name == app_name:
+                    app_info_list.append(app_info)
+        except Exception as e:
+            app_name_for_error = app_dict.get('name', '알 수 없는 앱')
+            console.print(f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]")
+            console.print(f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]")
+            continue
+
+    if app_name is not None and not app_info_list:
+        console.print(f"[red]❌ 지정된 앱 '{app_name}'을 찾을 수 없거나 prepare 대상이 아닙니다.[/red]")
+        raise click.Abort()
+    
+    console.print("[cyan]--- Helm 저장소 준비 시작 ---[/cyan]")
+    needed_helm_repo_names = set()
+    for app_info in app_info_list:
+        if app_info.type in ["pull-helm", "pull-helm-oci"]:
+            try:
+                if app_info.type == "pull-helm":
+                    spec_obj = AppPullHelmSpec(**app_info.specs)
+                else:
+                    spec_obj = AppPullHelmOciSpec(**app_info.specs)
+                needed_helm_repo_names.add(spec_obj.repo)
+            except Exception as e:
+                console.print(f"[red]❌ 앱 '{app_info.name}' (타입: {app_info.type})의 Spec에서 repo 정보 추출 실패: {e}[/red]")
+                continue
+    
+    if needed_helm_repo_names:
+        return_code, stdout, stderr = run_command(["helm", "repo", "list", "-o", "json"], timeout=10)
+        if return_code == 0:
+            try:
+                local_helm_repos_list = json.loads(stdout)
+                local_helm_repos_map = {entry["name"]: entry["url"] for entry in local_helm_repos_list}
+                console.print(f"[green]ℹ️ 현재 로컬 Helm 저장소 목록 확인됨: {list(local_helm_repos_map.keys())}[/green]")
+            except json.JSONDecodeError as e:
+                console.print(f"[red]❌ 로컬 Helm 저장소 목록을 파싱하는 데 실패했습니다: {e}[/red]")
+                local_helm_repos_map = {}
+        else:
+            console.print(f"[red]❌ 로컬 Helm 저장소 목록을 가져오는 데 실패했습니다: {stderr}[/red]")
+            local_helm_repos_map = {}
+
+        for repo_name in needed_helm_repo_names:
+            is_oci_repo = any(app_info.type == "pull-helm-oci" and AppPullHelmOciSpec(**app_info.specs).repo == repo_name for app_info in app_info_list if app_info.type == "pull-helm-oci")
+            
+            if is_oci_repo:
+                if repo_name not in oci_repos_from_sources:
+                    console.print(f"[red]❌ 앱에서 OCI 저장소 '{repo_name}'를 사용하지만, '{sources_file_name}'에 해당 OCI 저장소 URL 정의가 없습니다.[/red]")
+                else:
+                    console.print(f"[green]OCI 저장소 '{repo_name}' 확인됨 (URL: {oci_repos_from_sources.get(repo_name, {}).get("<chart_name>", "URL 정보 없음")})[/green]")
+                continue
+
+            if repo_name not in helm_repos_from_sources:
+                console.print(f"[red]❌ 앱에서 Helm 저장소 '{repo_name}'를 사용하지만, '{sources_file_name}'에 해당 저장소 URL 정의가 없습니다.[/red]")
+                continue
+            
+            repo_url = helm_repos_from_sources[repo_name]
+            needs_add = repo_name not in local_helm_repos_map
+            needs_update = repo_name in local_helm_repos_map and local_helm_repos_map[repo_name] != repo_url
+
+            if needs_add:
+                console.print(f"[yellow]➕ Helm 저장소 추가 시도: {repo_name} ({repo_url})[/yellow]")
+                return_code, _, stderr = run_command(["helm", "repo", "add", repo_name, repo_url], check=False, timeout=30)
+                if return_code == 0:
+                    console.print(f"[green]  ✅ Helm 저장소 '{repo_name}' 추가 완료.[/green]")
+                    local_helm_repos_map[repo_name] = repo_url
+                    needs_update = True
+                else:
+                    console.print(f"[red]  ❌ Helm 저장소 '{repo_name}' 추가 실패: {stderr.strip()}[/red]")
+                    continue
+            
+            if needs_update:
+                console.print(f"[yellow]🔄 Helm 저장소 업데이트 시도: {repo_name}[/yellow]")
+                return_code, _, stderr = run_command(["helm", "repo", "update", repo_name], check=False, timeout=60)
+                if return_code == 0:
+                    console.print(f"[green]  ✅ Helm 저장소 '{repo_name}' 업데이트 완료.[/green]")
+                else:
+                    console.print(f"[red]  ❌ Helm 저장소 '{repo_name}' 업데이트 실패: {stderr.strip()}[/red]")
+            elif repo_name in local_helm_repos_map:
+                 console.print(f"[green]  ✅ Helm 저장소 '{repo_name}'는 이미 최신 상태입니다.[/green]")
+    else:
+        console.print("[yellow]ℹ️ 준비할 Helm 저장소가 없습니다.[/yellow]")
+    console.print("[cyan]--- Helm 저장소 준비 완료 ---[/cyan]")
+
+    console.print("[cyan]--- Git 저장소 준비 시작 ---[/cyan]")
+    REPOS_DIR.mkdir(parents=True, exist_ok=True)
+    git_prepare_total = 0
+    git_prepare_success = 0
+
+    needed_git_repo_names = set()
+    for app_info in app_info_list:
+        if app_info.type == "pull-git":
+            try:
+                spec_obj = AppPullGitSpec(**app_info.specs)
+                needed_git_repo_names.add(spec_obj.repo)
+            except Exception as e:
+                console.print(f"[red]❌ 앱 '{app_info.name}' (타입: {app_info.type})의 Spec에서 repo 정보 추출 실패: {e}[/red]")
+                continue
+
+    if needed_git_repo_names:
+        if not check_command_available("git"):
+            console.print("[red]❌ `git` 명령을 사용할 수 없습니다. Git 저장소 준비를 건너뜁니다.[/red]")
+        else:
+            for repo_name in needed_git_repo_names:
+                git_prepare_total += 1
+                if repo_name not in git_repos_from_sources:
+                    console.print(f"[red]❌ 앱에서 Git 저장소 '{repo_name}'를 사용하지만, '{sources_file_name}'에 해당 저장소 정보(URL 등)가 없습니다.[/red]")
+                    continue
+                
+                repo_info = git_repos_from_sources[repo_name]
+                repo_url = repo_info.get("url")
+                repo_branch = repo_info.get("branch")
+
+                if not repo_url:
+                    console.print(f"[red]❌ Git 저장소 '{repo_name}'의 URL이 '{sources_file_name}'에 정의되지 않았습니다.[/red]")
+                    continue
+
+                repo_local_path = REPOS_DIR / repo_name
+                console.print(f"[magenta]➡️  Git 저장소 처리 중: {repo_name} (경로: {repo_local_path})[/magenta]")
+                try:
+                    if repo_local_path.exists() and repo_local_path.is_dir():
+                        console.print(f"    [yellow]🔄 기존 Git 저장소 업데이트 시도: {repo_name}[/yellow]")
+                        run_command(["git", "-C", str(repo_local_path), "fetch", "origin"], check=True, timeout=60)
+                        run_command(["git", "-C", str(repo_local_path), "reset", "--hard", f"origin/{repo_branch or 'HEAD'}"], check=True, timeout=30)
+                        run_command(["git", "-C", str(repo_local_path), "clean", "-dfx"], check=True, timeout=30)
+                        console.print(f"    [green]✅ Git 저장소 '{repo_name}' 업데이트 완료.[/green]")
+                    else:
+                        console.print(f"    [yellow]➕ Git 저장소 클론 시도: {repo_name} ({repo_url})[/yellow]")
+                        clone_cmd = ["git", "clone", repo_url, str(repo_local_path)]
+                        if repo_branch:
+                            clone_cmd.extend(["--branch", repo_branch])
+                        run_command(clone_cmd, check=True, timeout=300)
+                        console.print(f"    [green]✅ Git 저장소 '{repo_name}' 클론 완료.[/green]")
+                    git_prepare_success += 1
+                except Exception as e:
+                    console.print(f"[red]❌ Git 저장소 '{repo_name}' 작업 실패: {e}[/red]")
+    else:
+        console.print("[yellow]ℹ️ 준비할 Git 저장소가 없습니다.[/yellow]")
+    console.print(f"[cyan]--- Git 저장소 준비 완료 ({git_prepare_success}/{git_prepare_total} 성공) ---[/cyan]")
+
+    console.print("[cyan]--- Helm 차트 풀링 시작 ---[/cyan]")
+    CHARTS_DIR.mkdir(parents=True, exist_ok=True)
+    chart_pull_total = 0
+    chart_pull_success = 0
+
+    for app_info in app_info_list:
+        if app_info.type not in ["pull-helm", "pull-helm-oci"]:
+            continue
+        
+        chart_pull_total += 1
+        spec_obj = None
+        try:
+            if app_info.type == "pull-helm":
+                spec_obj = AppPullHelmSpec(**app_info.specs)
+            else:
+                spec_obj = AppPullHelmOciSpec(**app_info.specs)
+        except Exception as e:
+            console.print(f"[red]❌ 앱 '{app_info.name}' (타입: {app_info.type})의 Spec 데이터 검증/변환 중 오류: {e}[/red]")
+            continue
+
+        repo_name = spec_obj.repo
+        chart_name = spec_obj.chart
+        chart_version = spec_obj.chart_version
+        destination_subdir_name = spec_obj.dest or chart_name
+        chart_destination_base_path = CHARTS_DIR / destination_subdir_name
+
+        console.print(f"[magenta]➡️  Helm 차트 풀링 시도: {repo_name}/{chart_name} (버전: {chart_version or 'latest'}) → {chart_destination_base_path}[/magenta]")
+
+        if chart_destination_base_path.exists():
+            console.print(f"    [yellow]🗑️  기존 차트 디렉토리 삭제: {chart_destination_base_path}[/yellow]")
+            try:
+                shutil.rmtree(chart_destination_base_path)
+            except OSError as e:
+                console.print(f"[red]    ❌ 기존 차트 디렉토리 삭제 실패: {e}. 권한 등을 확인하세요.[/red]")
+                continue
+        
+        helm_pull_cmd = ["helm", "pull"]
+        pull_target = ""
+
+        if app_info.type == "pull-helm":
+            if repo_name not in helm_repos_from_sources and repo_name not in local_helm_repos_map:
+                is_oci_repo_check = any(app_oci.type == "pull-helm-oci" and AppPullHelmOciSpec(**app_oci.specs).repo == repo_name for app_oci in app_info_list if app_oci.type == "pull-helm-oci")
+                if not is_oci_repo_check:
+                    console.print(f"[red]❌ Helm 저장소 '{repo_name}'가 로컬에 추가되어 있지 않거나 '{sources_file_name}'에 정의되지 않았습니다. '{repo_name}/{chart_name}' 풀링 불가.[/red]")
+                    continue
+            pull_target = f"{repo_name}/{chart_name}"
+            helm_pull_cmd.append(pull_target)
+        else:
+            oci_repo_charts = oci_repos_from_sources.get(repo_name, {})
+            oci_chart_url = oci_repo_charts.get(chart_name)
+            if not oci_chart_url:
+                console.print(f"[red]❌ OCI 차트 '{repo_name}/{chart_name}'의 URL을 '{sources_file_name}'의 `oci_repos` 섹션에서 찾을 수 없습니다.[/red]")
+                console.print(f"    [yellow]L 확인된 OCI 저장소 정보: {oci_repo_charts}[/yellow]")
+                continue
+            pull_target = oci_chart_url
+            helm_pull_cmd.append(pull_target)
+        
+        helm_pull_cmd.extend(["-d", str(CHARTS_DIR), "--untar"])
+        if chart_version:
+            helm_pull_cmd.extend(["--version", chart_version])
+        
+        console.print(f"    [cyan]$ {' '.join(helm_pull_cmd)}[/cyan]")
+        return_code, stdout, stderr = run_command(helm_pull_cmd, check=False, timeout=300)
+
+        if return_code == 0:
+            pulled_chart_path = CHARTS_DIR / chart_name
+            final_chart_path = CHARTS_DIR / destination_subdir_name
+
+            if pulled_chart_path.exists() and pulled_chart_path.is_dir():
+                if pulled_chart_path != final_chart_path:
+                    if final_chart_path.exists():
+                        shutil.rmtree(final_chart_path)
+                    shutil.move(str(pulled_chart_path), str(final_chart_path))
+                    console.print(f"    [green]  ✅ Helm 차트 '{pull_target}' 풀링 및 이름 변경 완료: {final_chart_path}[/green]")
+                else:
+                    console.print(f"    [green]  ✅ Helm 차트 '{pull_target}' 풀링 완료: {final_chart_path}[/green]")
+                chart_pull_success += 1
+            else:
+                console.print(f"[red]    ❌ Helm 차트 '{pull_target}' 풀링 후 예상된 경로({pulled_chart_path})에서 차트를 찾을 수 없습니다.[/red]")
+                if stdout: console.print(f"        [blue]STDOUT:[/blue] {stdout.strip()}")
+                if stderr: console.print(f"        [red]STDERR:[/red] {stderr.strip()}")
+        else:
+            console.print(f"[red]❌ Helm 차트 '{pull_target}' 풀링 실패: {stderr.strip()}[/red]")
+
+    console.print(f"[cyan]--- Helm 차트 풀링 완료 ({chart_pull_success}/{chart_pull_total} 성공) ---[/cyan]")
+    
+    total_prepare_tasks = git_prepare_total + chart_pull_total
+    total_prepare_success = git_prepare_success + chart_pull_success
+
+    if total_prepare_tasks > 0:
+        console.print(f"[bold green]✅ `prepare` 작업 요약: 총 {total_prepare_tasks}개 중 {total_prepare_success}개 성공.[/bold green]")
+    else:
+        console.print("[bold yellow]✅ `prepare` 작업 대상이 없습니다 (pull-helm, pull-git 등).[/bold yellow]")
+    
+    console.print("[bold blue]✨ `prepare` 작업 완료 ✨[/bold blue]")

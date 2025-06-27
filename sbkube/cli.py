@@ -137,16 +137,22 @@ class SbkubeGroup(click.Group):
 @click.option('--kubeconfig', envvar='KUBECONFIG', type=click.Path(exists=False, dir_okay=False, resolve_path=False),
               help='Kubernetes 설정 파일 경로. KUBECONFIG 환경변수보다 우선 적용됩니다.')
 @click.option('--context', 
-              help='사용할 Kubernetes 컨텍스트 이름. KUBECONTEXT 환경변수 또는 현재 활성 컨텍스트를 따릅니다.') # envvar='KUBECONTEXT' (표준은 아님)
+              help='사용할 Kubernetes 컨텍스트 이름. KUBECONTEXT 환경변수 또는 현재 활성 컨텍스트를 따릅니다.')
+@click.option('--namespace', envvar='KUBE_NAMESPACE', help='작업을 수행할 기본 네임스페이스.')
 @click.option('-v', '--verbose', is_flag=True, help="상세 로깅을 활성화합니다.")
 @click.pass_context
-def main(ctx: click.Context, kubeconfig: str | None, context: str | None, verbose: bool):
-    """sbkube: Kubernetes 애플리케이션 관리를 위한 CLI 도구.\n\n    Helm 차트, YAML 매니페스트, Git 저장소 등을 사용하여 애플리케이션을 준비, 빌드, 배포, 업그레이드, 삭제합니다.\n    인수 없이 실행하면 현재 Kubernetes 설정 정보를 보여줍니다.
+def main(ctx: click.Context, kubeconfig: str | None, context: str | None, namespace: str | None, verbose: bool):
+    """sbkube: Kubernetes 애플리케이션 관리를 위한 CLI 도구.
+
+    Helm 차트, YAML 매니페스트, Git 저장소 등을 사용하여 애플리케이션을 준비, 빌드, 배포, 업그레이드, 삭제합니다.
+    인수 없이 실행하면 현재 Kubernetes 설정 정보를 보여줍니다.
     """
     ctx.ensure_object(dict)
     ctx.obj['kubeconfig'] = kubeconfig
-    ctx.obj['context'] = context # click이 자동으로 KUBECONTEXT envvar를 읽도록 하려면 envvar 지정 필요
+    ctx.obj['context'] = context
+    ctx.obj['namespace'] = namespace
     ctx.obj['verbose'] = verbose
+
 
     if verbose:
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')

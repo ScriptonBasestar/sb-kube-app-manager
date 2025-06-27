@@ -28,7 +28,6 @@ class AppExecSpec(AppSpecBase):
         return self
 
 class AppInstallHelmSpec(AppSpecBase):
-    path: Optional[str] = None
     values: List[str] = Field(default_factory=list)
 
 class AppInstallKubectlSpec(AppSpecBase):
@@ -77,6 +76,7 @@ class AppPullHelmOciSpec(AppSpecBase):
     app_version: Optional[str] = None
     removes: List[str] = Field(default_factory=list)
     overrides: List[str] = Field(default_factory=list)
+    registry_url: Optional[str] = None
 
 class AppPullGitSpec(AppSpecBase):
     repo: str
@@ -93,11 +93,10 @@ class AppInfoScheme(BaseModel):
     name: str
     type: Literal[
         'exec',
-        'copy-repo', 'copy-chart', 'copy-root', 'copy-app',
-        'install-helm', 'install-yaml', 'install-kustomize', 'install-action',
+        'install-helm', 'install-action', 'install-kustomize',
         'pull-helm', 'pull-helm-oci', 'pull-git', 'pull-http'
     ]
-    # path: Optional[str] = None
+    path: Optional[str] = None
     enabled: bool = False
     namespace: Optional[str] = None
     release_name: Optional[str] = None
@@ -138,14 +137,9 @@ def get_spec_model(app_type: str):
         'install-helm': AppInstallHelmSpec,
         'install-kubectl': AppInstallKubectlSpec,
         'install-shell': AppInstallShellSpec,
-        'install-yaml': AppInstallActionSpec,
         'install-action': AppInstallActionSpec,
         'install-kustomize': AppInstallKustomizeSpec,
         'render': AppRenderSpec,
-        'copy-repo': AppCopySpec,
-        'copy-chart': AppCopySpec,
-        'copy-root': AppCopySpec,
-        'copy-app': AppCopySpec,
         'pull-helm': AppPullHelmSpec,
         'pull-helm-oci': AppPullHelmOciSpec,
         'pull-git': AppPullGitSpec,

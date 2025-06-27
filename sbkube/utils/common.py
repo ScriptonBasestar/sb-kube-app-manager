@@ -117,6 +117,7 @@ def run_command(
     check: bool = False,
     env: Optional[Dict[str, str]] = None,
     cwd: Optional[Union[str, Path]] = None,
+    timeout: Optional[int] = None,
     **kwargs
 ) -> Tuple[int, str, str]:
     """
@@ -129,6 +130,7 @@ def run_command(
         check: 실행 실패시 예외를 발생시킬지 여부
         env: 환경 변수
         cwd: 작업 디렉토리
+        timeout: 명령어 타임아웃
         **kwargs: subprocess.run에 전달할 추가 인자
     
     Returns:
@@ -146,6 +148,7 @@ def run_command(
             check=check,
             env=env,
             cwd=cwd,
+            timeout=timeout,
             **kwargs
         )
         
@@ -161,12 +164,19 @@ def run_command(
             e.stdout or "",
             e.stderr or ""
         )
+    except subprocess.TimeoutExpired as e:
+        return (
+            -1,
+            e.stdout or "",
+            f"Timeout expired after {timeout} seconds.\n{e.stderr or ''}"
+        )
     except Exception as e:
         return (
             1,
             "",
             str(e)
         )
+
 
 
 def get_absolute_path(path: Union[str, Path], base: Union[str, Path]) -> Path:

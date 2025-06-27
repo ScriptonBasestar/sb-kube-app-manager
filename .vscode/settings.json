@@ -42,4 +42,9 @@
     "**/node_modules/**": true,
     "**/public/packs/**": true
   },
+  "frontMatter.content.pageFolders": [
+    {
+      "path": "[[workspace]]/.venv/lib/python3.12/site-packages/idna-3.10.dist-info"
+    }
+  ],
 }

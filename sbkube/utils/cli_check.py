@@ -162,39 +162,3 @@ def print_kube_connection_help():
         print("\nexport KUBECONFIG=~/.kube/<파일명> 명령으로 해당 클러스터에 연결할 수 있습니다.")
     print("")
 
-def print_helm_connection_help():
-    import subprocess
-    import os
-    from pathlib import Path
-    import json
-    home = str(Path.home())
-    helm_dir = os.path.join(home, ".config", "helm")
-    # 1. repo 목록
-    try:
-        result = subprocess.run([
-            "helm", "repo", "list", "-o", "json"
-        ], capture_output=True, text=True, check=True)
-        repos = json.loads(result.stdout)
-    except Exception:
-        repos = []
-    # 2. repo 파일 목록
-    try:
-        repo_files = []
-        if os.path.isdir(helm_dir):
-            repo_files = [f for f in os.listdir(helm_dir) if os.path.isfile(os.path.join(helm_dir, f))]
-    except Exception:
-        repo_files = []
-    # 3. 안내 메시지
-    print("\n⚠️ helm이 정상적으로 동작하지 않습니다.")
-    if repos:
-        print("등록된 helm repo 목록:")
-        for repo in repos:
-            print(f"  * {repo.get('name', '')}: {repo.get('url', '')}")
-        print("helm repo add <name> <url> 명령으로 repo를 추가할 수 있습니다.")
-    else:
-        print("등록된 helm repo가 없습니다.")
-    if repo_files:
-        print("\n~/.config/helm 디렉토리 내 파일:")
-        for f in repo_files:
-            print(f"  - {f}")
-    print("helm version, helm repo list 명령이 정상 동작하는지 확인하세요.\n")

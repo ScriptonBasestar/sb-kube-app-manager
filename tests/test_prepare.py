@@ -55,12 +55,13 @@ def test_prepare_command_runs_successfully():
             assert (toolhive_repo / "deploy").exists(), "toolhive repo가 제대로 준비되지 않았습니다"
 
 @patch(CLI_TOOLS_CHECK_PATH, return_value=None)
-def test_prepare_helm_repo_add_and_update(mock_cli_tools_check, runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
+def test_prepare_helm_repo_add_and_update(mock_cli_tools_check, runner: CliRunner, create_sample_config_yaml, create_sample_sources_yaml, base_dir, app_dir, caplog):
     """
     DELETEME: 리팩토링 후 prepare 명령의 helm repo 처리 로직이 변경되어 이 테스트가 맞지 않음
     prepare 명령어가 실행되는지만 확인하는 간단한 테스트로 변경
     """
     config_file = create_sample_config_yaml
+    sources_file = create_sample_sources_yaml
     app_name = "my-pull-helm-app"  # prepare 명령이 지원하는 pull-helm 타입 앱 사용
 
     with patch('subprocess.run') as mock_subprocess_run:
@@ -73,6 +74,7 @@ def test_prepare_helm_repo_add_and_update(mock_cli_tools_check, runner: CliRunne
             '--base-dir', str(base_dir),
             '--app-dir', str(app_dir.name),
             '--config-file', str(config_file.name),
+            '--sources-file', f"{app_dir.name}/{sources_file.name}",  # sources.yaml 파일 경로 추가
             '--app', app_name
         ])
 

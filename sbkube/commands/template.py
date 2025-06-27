@@ -8,6 +8,7 @@ from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.models.config_model import (
     AppInfoScheme,
     AppInstallHelmSpec,
+    AppInstallActionSpec,
     AppPullHelmSpec,
 )
 
@@ -72,7 +73,7 @@ def cmd(app_config_dir_name: str, output_dir_name: str, base_dir: str, cli_names
     for app_dict in apps_config_dict.get("apps", []):
         try:
             app_info = AppInfoScheme(**app_dict)
-            if app_info.type in ["install-helm"]:
+            if app_info.type in ["install-helm", "install-yaml"]:
                 if app_name is None or app_info.name == app_name:
                     app_info_list_to_template.append(app_info)
         except Exception as e:
@@ -96,6 +97,54 @@ def cmd(app_config_dir_name: str, output_dir_name: str, base_dir: str, cli_names
         app_type = app_info.type
 
         console.print(f"[magenta]➡️  앱 '{app_name}' (타입: {app_type}) 템플릿 생성 시작...[/magenta]")
+
+        if app_type == "install-yaml":
+            # install-yaml 타입은 빌드된 YAML 파일을 출력 디렉토리로 복사
+            built_yaml_dir = BUILD_DIR / app_name
+            
+            if not built_yaml_dir.exists() or not built_yaml_dir.is_dir():
+                console.print(f"[red]❌ 앱 '{app_name}': 빌드된 YAML 디렉토리를 찾을 수 없습니다: {built_yaml_dir}[/red]")
+                console.print(f"    [yellow]L 'sbkube build' 명령을 먼저 실행하여 '{app_name}' 앱을 빌드했는지 확인하세요.[/yellow]")
+                console.print("")
+                continue
+            
+            # 빌드 디렉토리의 모든 YAML 파일 찾기
+            yaml_files = []
+            for yaml_file in built_yaml_dir.glob("*.yaml"):
+                yaml_files.append(yaml_file)
+            for yaml_file in built_yaml_dir.glob("*.yml"):
+                yaml_files.append(yaml_file)
+            
+            if not yaml_files:
+                console.print(f"[yellow]⚠️  앱 '{app_name}': 빌드 디렉토리에 YAML 파일이 없습니다: {built_yaml_dir}[/yellow]")
+                console.print("")
+                continue
+            
+            # 모든 YAML 파일을 하나로 결합
+            combined_yaml_content = ""
+            for yaml_file in yaml_files:
+                try:
+                    content = yaml_file.read_text(encoding='utf-8')
+                    if combined_yaml_content:
+                        combined_yaml_content += "\n---\n"
+                    combined_yaml_content += content
+                    console.print(f"    [green]✓ YAML 파일 처리: {yaml_file.name}[/green]")
+                except Exception as e:
+                    console.print(f"    [yellow]⚠️  YAML 파일 읽기 실패 (건너뜀): {yaml_file.name} - {e}[/yellow]")
+                    continue
+            
+            if combined_yaml_content:
+                output_file_path = OUTPUT_DIR / f"{app_name}.yaml"
+                try:
+                    output_file_path.write_text(combined_yaml_content, encoding='utf-8')
+                    console.print(f"[green]✅ 앱 '{app_name}' 템플릿 생성 완료: {output_file_path}[/green]")
+                    template_success_apps += 1
+                except OSError as e:
+                    console.print(f"[red]❌ 앱 '{app_name}': 템플릿 파일 저장 실패: {output_file_path}[/red]")
+                    console.print(f"    [red]L 상세: {e}[/red]")
+            
+            console.print("")
+            continue
 
         built_chart_path = BUILD_DIR / app_name
 

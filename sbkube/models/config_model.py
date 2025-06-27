@@ -93,8 +93,9 @@ class AppInfoScheme(BaseModel):
     name: str
     type: Literal[
         'exec',
-        'install-helm', 'install-action', 'install-kustomize',
-        'pull-helm', 'pull-helm-oci', 'pull-git', 'pull-http'
+        'install-helm', 'install-action', 'install-kustomize', 'install-yaml',
+        'pull-helm', 'pull-helm-oci', 'pull-git', 'pull-http',
+        'copy-app'
     ]
     path: Optional[str] = None
     enabled: bool = False
@@ -138,12 +139,14 @@ def get_spec_model(app_type: str):
         'install-kubectl': AppInstallKubectlSpec,
         'install-shell': AppInstallShellSpec,
         'install-action': AppInstallActionSpec,
+        'install-yaml': AppInstallActionSpec,  # install-yaml과 install-action은 같은 스펙 사용
         'install-kustomize': AppInstallKustomizeSpec,
         'render': AppRenderSpec,
         'pull-helm': AppPullHelmSpec,
         'pull-helm-oci': AppPullHelmOciSpec,
         'pull-git': AppPullGitSpec,
         'pull-http': AppPullHttpSpec,
+        'copy-app': AppCopySpec,
     }
     return spec_model_mapping.get(app_type)
 

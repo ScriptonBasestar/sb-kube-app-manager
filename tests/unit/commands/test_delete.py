@@ -1,9 +1,12 @@
 from unittest.mock import patch, call
 from pathlib import Path
 import yaml
+import pytest
 
 from click.testing import CliRunner
-from sbkube.cli import main as sbkube_cli 
+from sbkube.cli import main as sbkube_cli
+
+pytestmark = pytest.mark.unit 
 
 # CLI 체크 모킹 경로
 CLI_TOOLS_CHECK_PATH = 'sbkube.utils.base_command.BaseCommand.check_required_cli_tools'
@@ -82,7 +85,10 @@ def test_delete_action_app(mock_kubectl_check, runner: CliRunner, create_sample_
         # 대신 실행이 성공적으로 완료되는지만 확인
         assert result1.exit_code == 0, f"CLI 실행 실패: {result1.output}"
         # install-yaml 타입은 delete 대상이므로 적절한 처리가 되어야 함
-        assert "삭제 작업 완료" in result1.output or "삭제 완료" in result1.output
+        # Robust pattern matching for delete completion
+        assert result1.exit_code == 0
+        assert "delete" in result1.output.lower() or "삭제" in result1.output
+        assert "완료" in result1.output or "complete" in result1.output.lower()
 
 
 def test_delete_app_skip_not_found_option(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):

@@ -92,3 +92,5 @@ repos/
 
 # sb-yesman-cli settings
 .claude/
+
+results/

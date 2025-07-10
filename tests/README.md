@@ -6,15 +6,26 @@ This directory contains the comprehensive test suite for sbkube, including unit 
 
 ```
 tests/
-├── unit/                    # Unit tests (default location)
-│   ├── test_*.py           # Individual unit test files
-│   └── conftest.py         # Unit test fixtures
-├── integration/            # Integration tests
-│   ├── test_*.py          # Integration test files
-│   └── conftest.py        # Integration test fixtures
-├── performance/           # Performance tests
-│   ├── test_*.py         # Performance benchmark files
-│   └── conftest.py       # Performance test fixtures
+├── unit/                    # Unit tests - isolated component testing
+│   ├── commands/           # CLI command tests (build, deploy, etc.)
+│   ├── models/            # Data model validation tests
+│   ├── state/             # State management (DB, tracking, rollback)
+│   ├── utils/             # Utility function tests (27 exception scenarios)
+│   └── conftest.py        # Unit test fixtures
+├── integration/            # Integration tests - component interaction
+│   ├── test_full_workflow.py     # Complete pipeline testing
+│   ├── test_helm_integration.py  # Helm CLI integration
+│   ├── test_k8s_integration.py   # Kubernetes API integration
+│   └── conftest.py              # Integration test fixtures
+├── performance/           # Performance tests - benchmarks & resource monitoring
+│   ├── test_performance_benchmarks.py  # Execution time & resource usage
+│   └── conftest.py                     # Performance test fixtures
+├── e2e/                   # End-to-end tests - full user scenarios
+│   └── conftest.py        # E2E test fixtures
+├── legacy/                # Legacy tests - being refactored
+│   ├── test_config_validation.py  # 477 lines - being split
+│   ├── test_deployment_state.py   # 504 lines - already split
+│   └── test_full_pipeline.py      # To be moved to integration/e2e
 └── conftest.py           # Shared fixtures and configuration
 ```
 

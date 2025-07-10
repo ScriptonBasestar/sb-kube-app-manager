@@ -4,8 +4,11 @@ from pathlib import Path
 from unittest.mock import patch, call
 from click.testing import CliRunner
 import yaml
+import pytest
 
 from sbkube.cli import main as sbkube_cli
+
+pytestmark = pytest.mark.unit
 
 # CLI 체크 모킹 경로
 CLI_TOOLS_CHECK_PATH = 'sbkube.utils.base_command.BaseCommand.check_required_cli_tools'

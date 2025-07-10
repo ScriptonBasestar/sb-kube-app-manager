@@ -2,6 +2,7 @@ import subprocess
 import shutil
 from pathlib import Path
 from unittest.mock import patch, call, mock_open
+import pytest
 
 from click.testing import CliRunner
 from sbkube.cli import main as sbkube_cli
@@ -10,10 +11,13 @@ EXAMPLES_DIR = Path("examples/k3scode")
 BUILD_DIR = EXAMPLES_DIR / "build"
 TARGET_APP_NAME = "browserless"  # 출력에서 확인된 실제 빌드 디렉토리 이름
 
+pytestmark = pytest.mark.unit
+
 def clean_build_dir():
     if BUILD_DIR.exists():
         shutil.rmtree(BUILD_DIR)
 
+@pytest.mark.unit
 def test_build_command_runs_and_creates_output():
     clean_build_dir()
 
@@ -42,6 +46,7 @@ def test_build_command_runs_and_creates_output():
     target_chart_path = build_dir / "proxynd-custom" / "Chart.yaml"
     assert target_chart_path.exists(), f"{target_chart_path} 파일이 존재하지 않습니다."
 
+@pytest.mark.unit
 def test_build_pull_helm_app(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, charts_dir, build_dir, caplog):
     """
     build 명령어 실행 시 pull-helm 타입 앱의 빌드 과정을 테스트합니다.
@@ -80,6 +85,7 @@ def test_build_pull_helm_app(runner: CliRunner, create_sample_config_yaml, base_
         # CLI 출력에서 성공 메시지 확인
         assert "빌드 완료" in result.output
 
+@pytest.mark.unit
 def test_build_pull_git_app(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, repos_dir, build_dir, caplog):
     """
     build 명령어 실행 시 pull-git 타입 앱의 빌드 과정을 테스트합니다.
@@ -111,6 +117,7 @@ def test_build_pull_git_app(runner: CliRunner, create_sample_config_yaml, base_d
         # CLI 출력으로 성공 확인
         assert "빌드 완료" in result.output
 
+@pytest.mark.unit
 def test_build_copy_app(runner: CliRunner, create_sample_config_yaml, create_sample_local_copy_source_dir, base_dir, app_dir, build_dir, caplog):
     """
     build 명령어 실행 시 copy-app 타입 앱의 빌드 과정을 테스트합니다.
@@ -140,6 +147,7 @@ def test_build_copy_app(runner: CliRunner, create_sample_config_yaml, create_sam
         # CLI 출력으로 성공 확인
         assert "빌드 완료" in result.output
 
+@pytest.mark.unit
 def test_build_app_not_buildable(runner: CliRunner, create_sample_config_yaml, base_dir, app_dir, caplog):
     """
     빌드 대상이 아닌 타입의 앱 (예: install-helm)에 대해 build 명령어가 스킵하는지 테스트합니다.
@@ -161,6 +169,7 @@ def test_build_app_not_buildable(runner: CliRunner, create_sample_config_yaml, b
         # 지원하지 않는 타입이라는 메시지 확인
         assert "지원하지 않는 타입" in result.output or "찾을 수 없습니다" in result.output
 
+@pytest.mark.unit
 def test_build_specific_app(runner: CliRunner, create_sample_config_yaml, create_sample_local_copy_source_dir, charts_dir, base_dir, app_dir, build_dir, caplog):
     """
     build 명령어 실행 시 --app 옵션으로 특정 앱만 빌드하는지 테스트합니다.
@@ -200,6 +209,7 @@ def test_build_specific_app(runner: CliRunner, create_sample_config_yaml, create
         # 특정 앱만 빌드되었는지 CLI 출력으로 확인
         assert "빌드 완료" in result.output
 
+@pytest.mark.unit
 def test_build_pull_helm_app_uses_dest_as_build_directory_name(runner: CliRunner, base_dir, app_dir, charts_dir, build_dir):
     """
     pull-helm 타입 앱에서 dest 값이 지정되었을 때, 빌드 디렉토리 이름이 app_name 대신 dest 값을 사용하는지 테스트합니다.
@@ -254,6 +264,7 @@ def test_build_pull_helm_app_uses_dest_as_build_directory_name(runner: CliRunner
     assert chart_yaml_path.exists(), f"Chart.yaml 파일이 복사되지 않았습니다: {chart_yaml_path}"
 
 
+@pytest.mark.unit
 def test_build_pull_helm_app_fallback_to_chart_name_when_no_dest(runner: CliRunner, base_dir, app_dir, charts_dir, build_dir):
     """
     pull-helm 타입 앱에서 dest 값이 지정되지 않았을 때, 빌드 디렉토리 이름이 chart 이름을 사용하는지 테스트합니다.
@@ -307,6 +318,7 @@ def test_build_pull_helm_app_fallback_to_chart_name_when_no_dest(runner: CliRunn
     chart_yaml_path = expected_build_dir / "Chart.yaml"
     assert chart_yaml_path.exists(), f"Chart.yaml 파일이 복사되지 않았습니다: {chart_yaml_path}"
 
+@pytest.mark.unit
 def test_build_install_yaml_app(runner: CliRunner, base_dir, app_dir, build_dir):
     """
     build 명령어 실행 시 install-yaml 타입 앱의 빌드 과정을 테스트합니다.

@@ -12,9 +12,11 @@ help:
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test            Run all tests"
-	@echo "  make test-unit       Run unit tests only"
-	@echo "  make test-integration Run integration tests only"
-	@echo "  make test-performance Run performance tests only"
+	@echo "  make test-unit       Run unit tests (tests/unit/)"
+	@echo "  make test-integration Run integration tests (tests/integration/)"
+	@echo "  make test-performance Run performance tests (tests/performance/)"
+	@echo "  make test-e2e        Run end-to-end tests (tests/e2e/)"
+	@echo "  make test-legacy     Run legacy tests (tests/legacy/)"
 	@echo "  make test-coverage   Run tests with coverage report"
 	@echo ""
 	@echo "Code Quality:"
@@ -36,16 +38,19 @@ test:
 	pytest -v
 
 test-unit:
-	pytest -v -m unit
+	pytest -v tests/unit/
 
 test-integration:
-	pytest -v -m integration
+	pytest -v tests/integration/
 
 test-performance:
-	pytest -v -m performance --benchmark-only
+	pytest -v tests/performance/ --benchmark-only
 
 test-e2e:
-	pytest -v -m e2e
+	pytest -v tests/e2e/
+
+test-legacy:
+	pytest -v tests/legacy/
 
 test-coverage:
 	pytest -v --cov=sbkube --cov-report=html --cov-report=term-missing
@@ -53,7 +58,7 @@ test-coverage:
 test-watch:
 	ptw -- -v
 
-# Specific test categories
+# Specific test categories (by markers)
 test-k8s:
 	pytest -v -m requires_k8s
 
@@ -62,6 +67,19 @@ test-helm:
 
 test-fast:
 	pytest -v -m "not slow"
+
+# Specific test directories
+test-commands:
+	pytest -v tests/unit/commands/
+
+test-models:
+	pytest -v tests/unit/models/
+
+test-state:
+	pytest -v tests/unit/state/
+
+test-utils:
+	pytest -v tests/unit/utils/
 
 # Parallel testing
 test-parallel:

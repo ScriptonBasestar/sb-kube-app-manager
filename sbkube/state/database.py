@@ -133,6 +133,10 @@ class DeploymentDatabase:
             session.add(deployment)
             session.flush()
             session.refresh(deployment)
+            
+            # Detach the object from session to prevent DetachedInstanceError
+            session.expunge(deployment)
+            
             return deployment
     
     def add_app_deployment(
@@ -162,6 +166,17 @@ class DeploymentDatabase:
             session.add(app_deployment)
             session.flush()
             session.refresh(app_deployment)
+            
+            # Pre-load all necessary attributes before session closes
+            _ = app_deployment.id
+            _ = app_deployment.app_name
+            _ = app_deployment.app_type
+            _ = app_deployment.namespace
+            _ = app_deployment.status
+            
+            # Detach the object from session to prevent DetachedInstanceError
+            session.expunge(app_deployment)
+            
             return app_deployment
     
     def add_deployed_resource(
@@ -195,6 +210,18 @@ class DeploymentDatabase:
             session.add(resource)
             session.flush()
             session.refresh(resource)
+            
+            # Pre-load all necessary attributes before session closes
+            _ = resource.id
+            _ = resource.api_version
+            _ = resource.kind
+            _ = resource.name
+            _ = resource.namespace
+            _ = resource.action
+            
+            # Detach the object from session to prevent DetachedInstanceError
+            session.expunge(resource)
+            
             return resource
     
     def add_helm_release(
@@ -227,6 +254,17 @@ class DeploymentDatabase:
             session.add(release)
             session.flush()
             session.refresh(release)
+            
+            # Pre-load all necessary attributes before session closes
+            _ = release.id
+            _ = release.release_name
+            _ = release.namespace
+            _ = release.chart
+            _ = release.status
+            
+            # Detach the object from session to prevent DetachedInstanceError
+            session.expunge(release)
+            
             return release
     
     def update_deployment_status(

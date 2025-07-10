@@ -31,7 +31,7 @@ install:
 	uv pip install -e .
 
 install-test:
-	uv pip install -e ".[test]"
+	uv pip install -e . --group test
 
 # Testing
 test:

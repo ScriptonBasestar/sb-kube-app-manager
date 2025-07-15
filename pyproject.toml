@@ -36,6 +36,14 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "twine>=6.1.0",
+    "ruff>=0.7.0",
+    "mypy>=1.13.0",
+    "black>=24.0.0",
+    "isort>=5.13.0",
+    "pre-commit>=4.0.0",
+    "types-PyYAML>=6.0.0",
+    "types-toml>=0.10.0",
+    "mdformat>=0.7.0",
 ]
 test = [
     "pytest>=8.3.5",

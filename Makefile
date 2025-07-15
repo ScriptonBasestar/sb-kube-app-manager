@@ -8,7 +8,9 @@ help:
 	@echo ""
 	@echo "Installation:"
 	@echo "  make install          Install sbkube in development mode"
+	@echo "  make install-dev      Install with dev dependencies (ruff, mypy, black)"
 	@echo "  make install-test     Install with test dependencies"
+	@echo "  make install-all      Install with all dependencies (dev + test)"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test            Run all tests"
@@ -30,8 +32,14 @@ help:
 install:
 	uv pip install -e .
 
+install-dev:
+	uv pip install -e . --group dev
+
 install-test:
 	uv pip install -e . --group test
+
+install-all:
+	uv pip install -e . --group dev --group test
 
 # Testing
 test:
@@ -88,15 +96,17 @@ test-parallel:
 # Code Quality
 lint:
 	@echo "Running ruff..."
-	ruff check sbkube tests
+	uv run ruff check sbkube tests
 	@echo "Running mypy..."
-	mypy sbkube --ignore-missing-imports
+	uv run mypy sbkube --ignore-missing-imports
 
 format:
 	@echo "Running black..."
-	black sbkube tests
+	uv run black sbkube tests
 	@echo "Running isort..."
-	isort sbkube tests
+	uv run isort sbkube tests
+	@echo "Running mdformat..."
+	uv run mdformat *.md docs/**/*.md --wrap 120
 
 # Pre-commit
 pre-commit:

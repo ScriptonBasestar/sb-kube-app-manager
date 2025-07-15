@@ -2,19 +2,21 @@
 
 SBKube 사용 중 발생할 수 있는 일반적인 문제들과 해결 방법을 제공합니다.
 
----
+______________________________________________________________________
 
 ## 🚨 일반적인 문제들
 
 ### 1. 설치 및 환경 문제
 
 #### ❌ Python 버전 호환성 오류
+
 ```bash
 # 오류 메시지
 ERROR: Python 3.11 is required, but you have 3.10
 ```
 
 **해결 방법:**
+
 ```bash
 # Python 버전 확인
 python --version
@@ -32,12 +34,14 @@ pyenv global 3.12.0
 ```
 
 #### ❌ 의존성 설치 실패
+
 ```bash
 # 오류 메시지
 ERROR: Could not find a version that satisfies the requirement sbkube
 ```
 
 **해결 방법:**
+
 ```bash
 # pip 업그레이드
 pip install --upgrade pip setuptools wheel
@@ -50,17 +54,19 @@ pip install sbkube
 pip install --user sbkube
 ```
 
----
+______________________________________________________________________
 
 ### 2. CLI 도구 관련 문제
 
 #### ❌ kubectl 명령어를 찾을 수 없음
+
 ```bash
 # 오류 메시지
 ❌ 'kubectl' 명령을 찾을 수 없습니다
 ```
 
 **해결 방법:**
+
 ```bash
 # kubectl 설치 확인
 which kubectl
@@ -75,12 +81,14 @@ export PATH=$PATH:/usr/local/bin
 ```
 
 #### ❌ Helm 명령어를 찾을 수 없음
+
 ```bash
 # 오류 메시지
 ❌ 'helm' 명령을 사용할 수 없습니다
 ```
 
 **해결 방법:**
+
 ```bash
 # Helm 설치
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -92,17 +100,19 @@ helm version
 export PATH=$PATH:/usr/local/bin
 ```
 
----
+______________________________________________________________________
 
 ### 3. Kubernetes 연결 문제
 
 #### ❌ kubeconfig 파일을 찾을 수 없음
+
 ```bash
 # 오류 메시지
 Kubeconfig 파일을 로드할 수 없습니다 (경로: ~/.kube/config)
 ```
 
 **해결 방법:**
+
 ```bash
 # kubeconfig 파일 존재 확인
 ls -la ~/.kube/config
@@ -118,12 +128,14 @@ kubectl cluster-info
 ```
 
 #### ❌ 클러스터 접근 권한 부족
+
 ```bash
 # 오류 메시지
 Error: Forbidden (403): User cannot access resource
 ```
 
 **해결 방법:**
+
 ```bash
 # 현재 사용자 확인
 kubectl auth whoami
@@ -138,17 +150,19 @@ kubectl create clusterrolebinding sbkube-admin \
   --user=$(kubectl config current-context)
 ```
 
----
+______________________________________________________________________
 
 ### 4. 설정 파일 문제
 
 #### ❌ YAML 구문 오류
+
 ```bash
 # 오류 메시지
 yaml.scanner.ScannerError: found character '\t' that cannot start any token
 ```
 
 **해결 방법:**
+
 ```bash
 # YAML 파일 검증
 python -c "import yaml; yaml.safe_load(open('config.yaml'))"
@@ -161,12 +175,14 @@ cat -A config.yaml  # 탭 문자 확인
 ```
 
 #### ❌ 설정 스키마 검증 실패
+
 ```bash
 # 오류 메시지
 ValidationError: 'invalid-type' is not one of ['exec', 'install-helm', ...]
 ```
 
 **해결 방법:**
+
 ```bash
 # 설정 파일 검증
 sbkube validate
@@ -179,17 +195,19 @@ sbkube --help
 #           install-helm, install-yaml, install-action, install-kustomize, exec
 ```
 
----
+______________________________________________________________________
 
 ### 5. 배포 관련 문제
 
 #### ❌ Helm 차트를 찾을 수 없음
+
 ```bash
 # 오류 메시지
 Error: failed to download chart: chart not found
 ```
 
 **해결 방법:**
+
 ```bash
 # Helm 저장소 업데이트
 helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -203,12 +221,14 @@ cat sources.yaml
 ```
 
 #### ❌ 네임스페이스가 존재하지 않음
+
 ```bash
 # 오류 메시지
 Error: namespaces "my-namespace" not found
 ```
 
 **해결 방법:**
+
 ```bash
 # 네임스페이스 생성
 kubectl create namespace my-namespace
@@ -218,12 +238,14 @@ kubectl create namespace my-namespace
 ```
 
 #### ❌ 리소스 충돌
+
 ```bash
 # 오류 메시지
 Error: Operation cannot be fulfilled: the object has been modified
 ```
 
 **해결 방법:**
+
 ```bash
 # 기존 리소스 확인
 kubectl get all -n your-namespace
@@ -239,11 +261,12 @@ sbkube delete
 sbkube deploy
 ```
 
----
+______________________________________________________________________
 
 ## 🔧 디버깅 방법
 
 ### 1. 상세 로그 활성화
+
 ```bash
 # 상세 로그로 실행
 sbkube --verbose deploy
@@ -254,6 +277,7 @@ sbkube --verbose deploy --app problematic-app
 ```
 
 ### 2. Dry-run으로 테스트
+
 ```bash
 # 실제 배포 없이 테스트
 sbkube deploy --dry-run
@@ -264,6 +288,7 @@ cat debug-output/*/manifests.yaml
 ```
 
 ### 3. 단계별 실행
+
 ```bash
 # 각 단계별로 분리 실행
 sbkube validate       # 설정 검증
@@ -274,6 +299,7 @@ sbkube deploy         # 배포 실행
 ```
 
 ### 4. 설정 파일 검증
+
 ```bash
 # 설정 파일 구문 검사
 sbkube validate
@@ -292,17 +318,19 @@ jsonschema.validate(config, schema)
 "
 ```
 
----
+______________________________________________________________________
 
 ## 📊 상태 관리 문제
 
 ### ❌ 배포 상태 데이터베이스 오류
+
 ```bash
 # 오류 메시지
 sqlite3.OperationalError: database is locked
 ```
 
 **해결 방법:**
+
 ```bash
 # 상태 데이터베이스 위치 확인
 ls -la ~/.sbkube/
@@ -315,6 +343,7 @@ sbkube state reset  # (향후 기능)
 ```
 
 ### 상태 정보 불일치
+
 ```bash
 # 실제 클러스터와 상태 DB 동기화
 sbkube state sync  # (향후 기능)
@@ -325,17 +354,19 @@ helm list -A
 sbkube state list
 ```
 
----
+______________________________________________________________________
 
 ## 🌐 네트워크 관련 문제
 
 ### ❌ Git 저장소 접근 실패
+
 ```bash
 # 오류 메시지
 fatal: unable to access 'https://github.com/...': SSL certificate problem
 ```
 
 **해결 방법:**
+
 ```bash
 # Git SSL 검증 비활성화 (임시)
 git config --global http.sslVerify false
@@ -350,12 +381,14 @@ ssh-keygen -t rsa -b 4096 -C "your.email@example.com"
 ```
 
 ### ❌ Helm 저장소 접근 실패
+
 ```bash
 # 오류 메시지
 Error: failed to fetch https://charts.bitnami.com/bitnami/index.yaml
 ```
 
 **해결 방법:**
+
 ```bash
 # 네트워크 연결 확인
 curl -I https://charts.bitnami.com/bitnami/index.yaml
@@ -370,11 +403,12 @@ helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
 ```
 
----
+______________________________________________________________________
 
 ## 🚀 성능 관련 문제
 
 ### 배포 속도가 느림
+
 ```bash
 # 병렬 처리 최적화
 export SBKUBE_MAX_WORKERS=8
@@ -387,6 +421,7 @@ export HELM_CACHE_HOME=/tmp/helm-cache
 ```
 
 ### 메모리 사용량 과다
+
 ```bash
 # 메모리 사용량 모니터링
 top -p $(pgrep -f sbkube)
@@ -399,11 +434,12 @@ sbkube build --app app1
 sbkube build --app app2
 ```
 
----
+______________________________________________________________________
 
 ## 📱 플랫폼별 문제
 
 ### Windows 환경
+
 ```bash
 # PowerShell에서 실행
 python -m sbkube.cli deploy
@@ -417,6 +453,7 @@ python -m sbkube.cli deploy
 ```
 
 ### macOS 환경
+
 ```bash
 # Homebrew 권한 문제
 sudo chown -R $(whoami) /usr/local/Homebrew
@@ -426,11 +463,12 @@ echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
----
+______________________________________________________________________
 
 ## 📞 추가 지원
 
 ### 로그 수집
+
 문제 신고 시 다음 정보를 포함해 주세요:
 
 ```bash
@@ -449,19 +487,21 @@ cat sources.yaml
 ```
 
 ### 커뮤니티 지원
+
 - **[이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)** - 버그 신고 및 기능 요청
 - **[FAQ](faq.md)** - 자주 묻는 질문들
 - **[GitHub Discussions](https://github.com/ScriptonBasestar/kube-app-manaer/discussions)** - 사용법 질문
 
----
+______________________________________________________________________
 
 ## 📚 관련 문서
 
 - **[일반적인 문제들](common-issues.md)** - 구체적인 해결 사례
-- **[FAQ](faq.md)** - 자주 묻는 질문들  
+- **[FAQ](faq.md)** - 자주 묻는 질문들
 - **[디버깅 가이드](debugging.md)** - 심화 디버깅 방법
 - **[설정 가이드](../03-configuration/)** - 올바른 설정 방법
 
----
+______________________________________________________________________
 
-*문제가 해결되지 않으시면 언제든지 [이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)에 문의해 주세요. 가능한 한 빠르게 도움을 드리겠습니다!*
+*문제가 해결되지 않으시면 언제든지 [이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)에 문의해 주세요. 가능한 한 빠르게 도움을
+드리겠습니다!*

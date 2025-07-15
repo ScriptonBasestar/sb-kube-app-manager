@@ -1,9 +1,11 @@
-from pydantic import BaseModel, field_validator, ValidationError
+import os
 from pathlib import Path
 from textwrap import dedent
 from typing import Dict
-import os
+
 import yaml
+from pydantic import BaseModel, ValidationError, field_validator
+
 
 class GitRepoScheme(BaseModel):
     url: str
@@ -15,9 +17,14 @@ class GitRepoScheme(BaseModel):
     @field_validator("url")
     @classmethod
     def url_must_be_http(cls, v):
-        if not v.startswith("http") and not v.startswith("oci") and not v.startswith("git"):
+        if (
+            not v.startswith("http")
+            and not v.startswith("oci")
+            and not v.startswith("git")
+        ):
             raise ValueError("Git url must start with http")
         return v
+
 
 class SourceScheme(BaseModel):
     cluster: str
@@ -27,13 +34,15 @@ class SourceScheme(BaseModel):
     git_repos: Dict[str, GitRepoScheme]
 
     def __repr__(self):
-        return dedent(f"""
+        return dedent(
+            f"""
             cluster: {self.cluster}
             kubeconfig: {self.kubeconfig}
             helm_repos: {self.helm_repos}
             oci_repos: {self.oci_repos}
             git_repos: {self.git_repos}
-        """)
+        """
+        )
 
     @field_validator("helm_repos")
     @classmethod
@@ -52,6 +61,7 @@ class SourceScheme(BaseModel):
                     raise ValueError(f"Invalid OCI URL: {oci_url}")
         return v
 
+
 def load_sources() -> SourceScheme:
     """Load sources.yaml into a SourceScheme object."""
     config_path = Path(__file__).parent / "sources.yaml"
@@ -60,10 +70,10 @@ def load_sources() -> SourceScheme:
         yaml_obj = yaml.safe_load(f)
     return SourceScheme.model_validate(yaml_obj)
 
+
 if __name__ == "__main__":
     try:
         sources = load_sources()
         print(sources)
     except ValidationError as e:
         print(f"❌ Validation failed: {e}")
-

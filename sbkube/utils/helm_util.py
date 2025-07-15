@@ -1,11 +1,5 @@
-import subprocess
 import json
-import click
-from pathlib import Path
-from rich.console import Console
-
-from sbkube.utils.file_loader import load_config_file
-from sbkube.utils.cli_check import check_helm_installed_or_exit
+import subprocess
 
 
 def get_installed_charts(namespace: str) -> dict:

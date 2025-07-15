@@ -1,9 +1,10 @@
+import os
 import shutil
 import subprocess
 import sys
-import os
+
+from sbkube.exceptions import CliToolExecutionError, CliToolNotFoundError
 from sbkube.utils.logger import logger
-from sbkube.exceptions import CliToolNotFoundError, CliToolExecutionError
 
 
 def check_helm_installed_or_exit():
@@ -22,17 +23,25 @@ def check_helm_installed():
         raise CliToolNotFoundError("helm", "https://helm.sh/docs/intro/install/")
 
     try:
-        result = subprocess.run(["helm", "version"], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["helm", "version"], capture_output=True, text=True, check=True
+        )
         logger.success(f"helm 확인됨: {result.stdout.strip()}")
     except subprocess.CalledProcessError as e:
         logger.error(f"helm 실행 실패: {e}")
-        raise CliToolExecutionError("helm", ["helm", "version"], e.returncode, e.stdout, e.stderr)
+        raise CliToolExecutionError(
+            "helm", ["helm", "version"], e.returncode, e.stdout, e.stderr
+        )
     except PermissionError:
         logger.error(f"helm 바이너리에 실행 권한이 없습니다: {helm_path}")
-        raise CliToolExecutionError("helm", ["helm", "version"], 126, None, f"Permission denied: {helm_path}")
+        raise CliToolExecutionError(
+            "helm", ["helm", "version"], 126, None, f"Permission denied: {helm_path}"
+        )
 
 
-def check_kubectl_installed_or_exit(kubeconfig: str | None = None, kubecontext: str | None = None):
+def check_kubectl_installed_or_exit(
+    kubeconfig: str | None = None, kubecontext: str | None = None
+):
     """kubectl 설치 확인 (테스트 가능한 버전)"""
     try:
         check_kubectl_installed(kubeconfig, kubecontext)
@@ -40,7 +49,9 @@ def check_kubectl_installed_or_exit(kubeconfig: str | None = None, kubecontext: 
         sys.exit(1)
 
 
-def check_kubectl_installed(kubeconfig: str | None = None, kubecontext: str | None = None):
+def check_kubectl_installed(
+    kubeconfig: str | None = None, kubecontext: str | None = None
+):
     """kubectl 설치 확인 (예외 발생 버전)"""
     kubectl_path = shutil.which("kubectl")
     if not kubectl_path:
@@ -53,7 +64,7 @@ def check_kubectl_installed(kubeconfig: str | None = None, kubecontext: str | No
             cmd.extend(["--kubeconfig", kubeconfig])
         if kubecontext:
             cmd.extend(["--context", kubecontext])
-        
+
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         logger.success(f"kubectl 확인됨: {result.stdout.strip()}")
     except subprocess.CalledProcessError as e:
@@ -61,15 +72,18 @@ def check_kubectl_installed(kubeconfig: str | None = None, kubecontext: str | No
         raise CliToolExecutionError("kubectl", cmd, e.returncode, e.stdout, e.stderr)
     except PermissionError:
         logger.error(f"kubectl 바이너리에 실행 권한이 없습니다: {kubectl_path}")
-        raise CliToolExecutionError("kubectl", cmd, 126, None, f"Permission denied: {kubectl_path}")
+        raise CliToolExecutionError(
+            "kubectl", cmd, 126, None, f"Permission denied: {kubectl_path}"
+        )
 
 
 def print_helm_connection_help():
-    import subprocess
-    import os
-    from pathlib import Path
     import json
+    import os
     import shutil
+    import subprocess
+    from pathlib import Path
+
     home = str(Path.home())
     helm_dir = os.path.join(home, ".config", "helm")
     # 0. helm 설치 여부
@@ -80,9 +94,12 @@ def print_helm_connection_help():
         return
     # 1. repo 목록
     try:
-        result = subprocess.run([
-            "helm", "repo", "list", "-o", "json"
-        ], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["helm", "repo", "list", "-o", "json"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         repos = json.loads(result.stdout)
     except Exception as e:
         print("\n⚠️ helm이 정상적으로 동작하지 않습니다.")
@@ -93,7 +110,11 @@ def print_helm_connection_help():
     try:
         repo_files = []
         if os.path.isdir(helm_dir):
-            repo_files = [f for f in os.listdir(helm_dir) if os.path.isfile(os.path.join(helm_dir, f))]
+            repo_files = [
+                f
+                for f in os.listdir(helm_dir)
+                if os.path.isfile(os.path.join(helm_dir, f))
+            ]
     except Exception:
         repo_files = []
     # 3. 안내 메시지
@@ -115,7 +136,9 @@ def print_kube_contexts():
     try:
         result = subprocess.run(
             ["kubectl", "config", "get-contexts", "-o", "name"],
-            capture_output=True, text=True, check=True
+            capture_output=True,
+            text=True,
+            check=True,
         )
         contexts = result.stdout.strip().splitlines()
         print("사용 가능한 context 목록:")
@@ -125,25 +148,31 @@ def print_kube_contexts():
     except Exception as e:
         print("kubectl context 목록을 가져올 수 없습니다:", e)
 
+
 def print_kube_connection_help():
-    import glob
-    import getpass
     from pathlib import Path
-    import platform
+
     home = str(Path.home())
     kube_dir = os.path.join(home, ".kube")
-    config_path = os.path.join(kube_dir, "config")
+    os.path.join(kube_dir, "config")
     # 1. context 목록
     try:
-        result = subprocess.run([
-            "kubectl", "config", "get-contexts", "-o", "name"
-        ], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["kubectl", "config", "get-contexts", "-o", "name"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         contexts = result.stdout.strip().splitlines()
     except Exception:
         contexts = []
     # 2. ~/.kube 디렉토리 내 파일 목록 (config 제외)
     try:
-        files = [f for f in os.listdir(kube_dir) if os.path.isfile(os.path.join(kube_dir, f)) and f != "config"]
+        files = [
+            f
+            for f in os.listdir(kube_dir)
+            if os.path.isfile(os.path.join(kube_dir, f)) and f != "config"
+        ]
     except Exception:
         files = []
     # 3. 안내 메시지
@@ -159,6 +188,7 @@ def print_kube_connection_help():
         print("\n~/.kube 디렉토리 내 추가 kubeconfig 파일:")
         for f in files:
             print(f"  - {f}")
-        print("\nexport KUBECONFIG=~/.kube/<파일명> 명령으로 해당 클러스터에 연결할 수 있습니다.")
+        print(
+            "\nexport KUBECONFIG=~/.kube/<파일명> 명령으로 해당 클러스터에 연결할 수 있습니다."
+        )
     print("")
-

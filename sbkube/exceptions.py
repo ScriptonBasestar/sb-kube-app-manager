@@ -6,48 +6,53 @@ error handling across the entire application.
 """
 
 import sys
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 
 class SbkubeError(Exception):
     """Base exception for all sbkube errors.
-    
+
     All custom exceptions in sbkube should inherit from this class.
     """
-    
-    def __init__(self, message: str, details: Optional[Dict[str, Any]] = None, 
-                 exit_code: int = 1):
+
+    def __init__(
+        self, message: str, details: Optional[Dict[str, Any]] = None, exit_code: int = 1
+    ):
         super().__init__(message)
         self.message = message
         self.details = details or {}
         self.exit_code = exit_code
-    
+
     def __str__(self):
         return self.message
 
 
 class ConfigurationError(SbkubeError):
     """Base class for configuration-related errors."""
+
     pass
 
 
 class ConfigFileNotFoundError(ConfigurationError):
     """Raised when a required configuration file is not found."""
-    
+
     def __init__(self, file_path: str, searched_paths: Optional[list] = None):
         self.file_path = file_path
         self.searched_paths = searched_paths or []
         message = f"Configuration file not found: {file_path}"
         if searched_paths:
             message += f" (searched: {', '.join(searched_paths)})"
-        super().__init__(message, {"file_path": file_path, "searched_paths": searched_paths})
+        super().__init__(
+            message, {"file_path": file_path, "searched_paths": searched_paths}
+        )
 
 
 class ConfigValidationError(ConfigurationError):
     """Raised when configuration validation fails."""
-    
-    def __init__(self, message: str, field: Optional[str] = None, 
-                 value: Optional[Any] = None):
+
+    def __init__(
+        self, message: str, field: Optional[str] = None, value: Optional[Any] = None
+    ):
         self.field = field
         self.value = value
         super().__init__(message, {"field": field, "value": value})
@@ -55,7 +60,7 @@ class ConfigValidationError(ConfigurationError):
 
 class SchemaValidationError(ConfigurationError):
     """Raised when schema validation fails."""
-    
+
     def __init__(self, message: str, schema_errors: Optional[list] = None):
         self.schema_errors = schema_errors or []
         super().__init__(message, {"schema_errors": schema_errors})
@@ -63,51 +68,60 @@ class SchemaValidationError(ConfigurationError):
 
 class ToolError(SbkubeError):
     """Base class for external tool-related errors."""
+
     pass
 
 
 class CliToolNotFoundError(ToolError):
     """Raised when a required CLI tool is not found."""
-    
+
     def __init__(self, tool_name: str, suggested_install: Optional[str] = None):
         self.tool_name = tool_name
         self.suggested_install = suggested_install
         message = f"Required CLI tool '{tool_name}' not found"
         if suggested_install:
             message += f". Install with: {suggested_install}"
-        super().__init__(message, {"tool_name": tool_name, "suggested_install": suggested_install})
+        super().__init__(
+            message, {"tool_name": tool_name, "suggested_install": suggested_install}
+        )
 
 
 class CliToolExecutionError(ToolError):
     """Raised when CLI tool execution fails."""
-    
-    def __init__(self, tool_name: str, command: list, return_code: int, 
-                 stdout: Optional[str] = None, stderr: Optional[str] = None):
+
+    def __init__(
+        self,
+        tool_name: str,
+        command: list,
+        return_code: int,
+        stdout: Optional[str] = None,
+        stderr: Optional[str] = None,
+    ):
         self.tool_name = tool_name
         self.command = command
         self.return_code = return_code
         self.stdout = stdout
         self.stderr = stderr
-        
+
         message = f"CLI tool '{tool_name}' execution failed (exit code: {return_code})"
         if stderr:
             message += f": {stderr}"
-        
+
         super().__init__(
-            message, 
+            message,
             {
                 "tool_name": tool_name,
                 "command": command,
                 "return_code": return_code,
                 "stdout": stdout,
-                "stderr": stderr
-            }
+                "stderr": stderr,
+            },
         )
 
 
 class CliToolVersionError(ToolError):
     """Raised when CLI tool version requirements are not met."""
-    
+
     def __init__(self, tool_name: str, required_version: str, found_version: str):
         self.tool_name = tool_name
         self.required_version = required_version
@@ -118,19 +132,20 @@ class CliToolVersionError(ToolError):
             {
                 "tool_name": tool_name,
                 "required_version": required_version,
-                "found_version": found_version
-            }
+                "found_version": found_version,
+            },
         )
 
 
 class KubernetesError(SbkubeError):
     """Base class for Kubernetes-related errors."""
+
     pass
 
 
 class KubernetesConnectionError(KubernetesError):
     """Raised when connection to Kubernetes cluster fails."""
-    
+
     def __init__(self, context: Optional[str] = None, kubeconfig: Optional[str] = None):
         self.context = context
         self.kubeconfig = kubeconfig
@@ -144,21 +159,27 @@ class KubernetesConnectionError(KubernetesError):
 
 class KubernetesResourceError(KubernetesError):
     """Raised when Kubernetes resource operations fail."""
-    
-    def __init__(self, resource_type: str, resource_name: str, operation: str, 
-                 namespace: Optional[str] = None, reason: Optional[str] = None):
+
+    def __init__(
+        self,
+        resource_type: str,
+        resource_name: str,
+        operation: str,
+        namespace: Optional[str] = None,
+        reason: Optional[str] = None,
+    ):
         self.resource_type = resource_type
         self.resource_name = resource_name
         self.operation = operation
         self.namespace = namespace
         self.reason = reason
-        
+
         message = f"Failed to {operation} {resource_type} '{resource_name}'"
         if namespace:
             message += f" in namespace '{namespace}'"
         if reason:
             message += f": {reason}"
-            
+
         super().__init__(
             message,
             {
@@ -166,53 +187,61 @@ class KubernetesResourceError(KubernetesError):
                 "resource_name": resource_name,
                 "operation": operation,
                 "namespace": namespace,
-                "reason": reason
-            }
+                "reason": reason,
+            },
         )
 
 
 class HelmError(SbkubeError):
     """Base class for Helm-related errors."""
+
     pass
 
 
 class HelmChartNotFoundError(HelmError):
     """Raised when a Helm chart is not found."""
-    
-    def __init__(self, chart_name: str, repo: Optional[str] = None, version: Optional[str] = None):
+
+    def __init__(
+        self, chart_name: str, repo: Optional[str] = None, version: Optional[str] = None
+    ):
         self.chart_name = chart_name
         self.repo = repo
         self.version = version
-        
+
         message = f"Helm chart '{chart_name}' not found"
         if repo:
             message += f" in repository '{repo}'"
         if version:
             message += f" (version: {version})"
-            
+
         super().__init__(
-            message,
-            {"chart_name": chart_name, "repo": repo, "version": version}
+            message, {"chart_name": chart_name, "repo": repo, "version": version}
         )
 
 
 class HelmInstallationError(HelmError):
     """Raised when Helm installation/upgrade fails."""
-    
-    def __init__(self, release_name: str, chart_name: str, operation: str,
-                 namespace: Optional[str] = None, reason: Optional[str] = None):
+
+    def __init__(
+        self,
+        release_name: str,
+        chart_name: str,
+        operation: str,
+        namespace: Optional[str] = None,
+        reason: Optional[str] = None,
+    ):
         self.release_name = release_name
         self.chart_name = chart_name
         self.operation = operation
         self.namespace = namespace
         self.reason = reason
-        
+
         message = f"Helm {operation} failed for release '{release_name}' (chart: {chart_name})"
         if namespace:
             message += f" in namespace '{namespace}'"
         if reason:
             message += f": {reason}"
-            
+
         super().__init__(
             message,
             {
@@ -220,60 +249,67 @@ class HelmInstallationError(HelmError):
                 "chart_name": chart_name,
                 "operation": operation,
                 "namespace": namespace,
-                "reason": reason
-            }
+                "reason": reason,
+            },
         )
 
 
 class GitError(SbkubeError):
     """Base class for Git-related errors."""
+
     pass
 
 
 class GitRepositoryError(GitError):
     """Raised when Git repository operations fail."""
-    
-    def __init__(self, repository_url: str, operation: str, reason: Optional[str] = None):
+
+    def __init__(
+        self, repository_url: str, operation: str, reason: Optional[str] = None
+    ):
         self.repository_url = repository_url
         self.operation = operation
         self.reason = reason
-        
+
         message = f"Git {operation} failed for repository '{repository_url}'"
         if reason:
             message += f": {reason}"
-            
+
         super().__init__(
             message,
-            {"repository_url": repository_url, "operation": operation, "reason": reason}
+            {
+                "repository_url": repository_url,
+                "operation": operation,
+                "reason": reason,
+            },
         )
 
 
 class FileSystemError(SbkubeError):
     """Base class for file system-related errors."""
+
     pass
 
 
 class FileOperationError(FileSystemError):
     """Raised when file operations fail."""
-    
+
     def __init__(self, file_path: str, operation: str, reason: Optional[str] = None):
         self.file_path = file_path
         self.operation = operation
         self.reason = reason
-        
+
         message = f"File {operation} failed for '{file_path}'"
         if reason:
             message += f": {reason}"
-            
+
         super().__init__(
-            message,
-            {"file_path": file_path, "operation": operation, "reason": reason}
+            message, {"file_path": file_path, "operation": operation, "reason": reason}
         )
 
 
 class DirectoryNotFoundError(FileSystemError):
     """Raised when a required directory is not found."""
-    
+
     def __init__(self, directory_path: str):
         self.directory_path = directory_path
         message = f"Required directory not found: {directory_path}"
@@ -282,49 +318,50 @@ class DirectoryNotFoundError(FileSystemError):
 
 class SecurityError(SbkubeError):
     """Base class for security-related errors."""
+
     pass
 
 
 class PathTraversalError(SecurityError):
     """Raised when path traversal attempt is detected."""
-    
+
     def __init__(self, attempted_path: str, base_path: str):
         self.attempted_path = attempted_path
         self.base_path = base_path
         message = f"Path traversal attempt detected: '{attempted_path}' outside of '{base_path}'"
         super().__init__(
-            message, 
-            {"attempted_path": attempted_path, "base_path": base_path}
+            message, {"attempted_path": attempted_path, "base_path": base_path}
         )
 
 
 class ValidationError(SbkubeError):
     """Base class for validation errors."""
+
     pass
 
 
 class InputValidationError(ValidationError):
     """Raised when user input validation fails."""
-    
+
     def __init__(self, field_name: str, value: Any, reason: str):
         self.field_name = field_name
         self.value = value
         self.reason = reason
         message = f"Invalid value for '{field_name}': {reason}"
         super().__init__(
-            message,
-            {"field_name": field_name, "value": value, "reason": reason}
+            message, {"field_name": field_name, "value": value, "reason": reason}
         )
 
 
 class NetworkError(SbkubeError):
     """Base class for network-related errors."""
+
     pass
 
 
 class DownloadError(NetworkError):
     """Raised when file download fails."""
-    
+
     def __init__(self, url: str, reason: Optional[str] = None):
         self.url = url
         self.reason = reason
@@ -336,28 +373,37 @@ class DownloadError(NetworkError):
 
 class RepositoryConnectionError(NetworkError):
     """Raised when repository connection fails."""
-    
-    def __init__(self, repository_url: str, repository_type: str, reason: Optional[str] = None):
+
+    def __init__(
+        self, repository_url: str, repository_type: str, reason: Optional[str] = None
+    ):
         self.repository_url = repository_url
         self.repository_type = repository_type
         self.reason = reason
-        message = f"Failed to connect to {repository_type} repository '{repository_url}'"
+        message = (
+            f"Failed to connect to {repository_type} repository '{repository_url}'"
+        )
         if reason:
             message += f": {reason}"
         super().__init__(
             message,
-            {"repository_url": repository_url, "repository_type": repository_type, "reason": reason}
+            {
+                "repository_url": repository_url,
+                "repository_type": repository_type,
+                "reason": reason,
+            },
         )
 
 
 class StateError(SbkubeError):
     """Base class for state management errors."""
+
     pass
 
 
 class StateCorruptionError(StateError):
     """Raised when state corruption is detected."""
-    
+
     def __init__(self, state_file: str, reason: Optional[str] = None):
         self.state_file = state_file
         self.reason = reason
@@ -369,22 +415,24 @@ class StateCorruptionError(StateError):
 
 class DeploymentError(SbkubeError):
     """Base class for deployment-related errors."""
+
     pass
 
 
 class RollbackError(SbkubeError):
     """Base class for rollback-related errors."""
+
     pass
 
 
 def handle_exception(exc: Exception, logger=None) -> int:
     """
     Centralized exception handler for sbkube.
-    
+
     Args:
         exc: The exception to handle
         logger: Optional logger instance for logging
-        
+
     Returns:
         int: Exit code for the application
     """
@@ -408,45 +456,45 @@ def handle_exception(exc: Exception, logger=None) -> int:
 def format_error_with_suggestions(exc: SbkubeError) -> str:
     """
     Format error with helpful suggestions based on error type.
-    
+
     Args:
         exc: The SbkubeError to format
-        
+
     Returns:
         str: Formatted error message with suggestions
     """
     message = str(exc)
-    
+
     if isinstance(exc, CliToolNotFoundError):
         message += f"\n💡 Install {exc.tool_name}:"
         if exc.suggested_install:
             message += f"\n   {exc.suggested_install}"
         else:
             message += f"\n   Please check the official documentation for {exc.tool_name} installation"
-    
+
     elif isinstance(exc, ConfigFileNotFoundError):
         message += f"\n💡 Expected configuration file at: {exc.file_path}"
         if exc.searched_paths:
             message += f"\n   Searched paths: {', '.join(exc.searched_paths)}"
         message += "\n   Create the configuration file or check the path"
-    
+
     elif isinstance(exc, KubernetesConnectionError):
         message += "\n💡 Check your Kubernetes connection:"
         message += "\n   kubectl config current-context"
         message += "\n   kubectl cluster-info"
         if exc.kubeconfig:
             message += f"\n   Verify kubeconfig file: {exc.kubeconfig}"
-    
+
     elif isinstance(exc, HelmChartNotFoundError):
         message += "\n💡 Check chart availability:"
         message += "\n   helm search repo <chart_name>"
         message += "\n   helm repo update"
         if exc.repo:
             message += f"\n   helm repo list (verify {exc.repo} is added)"
-    
+
     elif isinstance(exc, GitRepositoryError):
         message += "\n💡 Check repository access:"
         message += f"\n   git ls-remote {exc.repository_url}"
         message += "\n   Verify repository URL and credentials"
-    
+
     return message

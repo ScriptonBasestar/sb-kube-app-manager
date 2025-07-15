@@ -2,22 +2,26 @@
 
 ## Overview
 
-This guide describes how to migrate existing sbkube commands to use the new enhanced configuration validation and inheritance system.
+This guide describes how to migrate existing sbkube commands to use the new enhanced configuration validation and
+inheritance system.
 
 ## New Features
 
 1. **Enhanced Validation**
+
    - Automatic validation on configuration load
    - Comprehensive field validation (Kubernetes naming, versions, URLs, etc.)
    - Clear error messages with field paths
    - Cross-field dependency validation
 
-2. **Configuration Inheritance**
+1. **Configuration Inheritance**
+
    - Support for parent configurations using `_parent` field
    - Deep merging of configurations
    - Environment-specific overlays
 
-3. **Improved Error Handling**
+1. **Improved Error Handling**
+
    - Structured validation errors
    - Better error messages for users
    - Validation error accumulation
@@ -27,6 +31,7 @@ This guide describes how to migrate existing sbkube commands to use the new enha
 ### 1. Update Import Statements
 
 Replace old imports:
+
 ```python
 # Old
 from sbkube.utils.base_command import BaseCommand
@@ -147,6 +152,7 @@ helm_spec = app_info.get_validated_specs()
 ### 1. Using Inheritance
 
 Create a base configuration:
+
 ```yaml
 # base.yaml
 namespace: default
@@ -161,6 +167,7 @@ apps:
 ```
 
 Create an environment-specific configuration:
+
 ```yaml
 # production.yaml
 _parent: base.yaml  # Inherit from base
@@ -177,6 +184,7 @@ apps:
 ### 2. Enhanced Validation
 
 The new system validates many more fields:
+
 ```yaml
 apps:
   - name: my-app  # Validated against Kubernetes naming conventions
@@ -238,22 +246,24 @@ def test_app_validation():
 ## Benefits After Migration
 
 1. **Automatic Validation**: No need to manually validate configurations
-2. **Better Error Messages**: Users get clear feedback on configuration errors
-3. **Configuration Reuse**: Use inheritance to reduce duplication
-4. **Type Safety**: Validated specs provide type-safe access to fields
-5. **Future Proof**: Easy to add new validation rules without changing command code
+1. **Better Error Messages**: Users get clear feedback on configuration errors
+1. **Configuration Reuse**: Use inheritance to reduce duplication
+1. **Type Safety**: Validated specs provide type-safe access to fields
+1. **Future Proof**: Easy to add new validation rules without changing command code
 
 ## Gradual Migration
 
 You can migrate gradually by:
+
 1. Using the new models alongside old ones initially
-2. Enabling validation only in development/test environments first
-3. Migrating one command at a time
-4. Running both old and new versions in parallel during transition
+1. Enabling validation only in development/test environments first
+1. Migrating one command at a time
+1. Running both old and new versions in parallel during transition
 
 ## Support
 
 For questions or issues during migration:
+
 1. Check the test files for examples
-2. Review the enhanced model documentation
-3. Use `validate_on_load=False` initially if needed to debug issues
+1. Review the enhanced model documentation
+1. Use `validate_on_load=False` initially if needed to debug issues

@@ -2,13 +2,14 @@
 
 SBKube 자체의 설치, 배포, 관리에 대한 종합 가이드입니다.
 
----
+______________________________________________________________________
 
 ## 📦 설치 방법
 
 ### 1. PyPI를 통한 설치 (권장)
 
 #### 최신 안정 버전
+
 ```bash
 # 기본 설치
 pip install sbkube
@@ -18,6 +19,7 @@ sbkube version
 ```
 
 #### 특정 버전 설치
+
 ```bash
 # 특정 버전 설치
 pip install sbkube==0.1.10
@@ -27,6 +29,7 @@ pip install --upgrade sbkube
 ```
 
 #### 가상 환경에서 설치
+
 ```bash
 # venv 사용
 python -m venv sbkube-env
@@ -40,11 +43,12 @@ conda activate sbkube
 pip install sbkube
 ```
 
----
+______________________________________________________________________
 
 ### 2. 소스코드에서 설치
 
 #### 개발 버전 설치
+
 ```bash
 # 저장소 클론
 git clone https://github.com/ScriptonBasestar/kube-app-manaer.git
@@ -60,6 +64,7 @@ pip install -e .
 ```
 
 #### 의존성 포함 설치
+
 ```bash
 # 개발 의존성 포함
 uv pip install -e ".[dev]"
@@ -68,11 +73,12 @@ uv pip install -e ".[dev]"
 uv pip install -e ".[test]"
 ```
 
----
+______________________________________________________________________
 
 ### 3. Docker를 통한 설치
 
 #### Docker 이미지 빌드
+
 ```bash
 # Dockerfile 생성
 cat > Dockerfile << 'EOF'
@@ -106,20 +112,23 @@ docker build -t sbkube:latest .
 docker run --rm -v ~/.kube:/root/.kube -v $(pwd):/workspace sbkube:latest version
 ```
 
----
+______________________________________________________________________
 
 ## 🔧 시스템 요구사항
 
 ### 필수 요구사항
+
 - **Python**: 3.12 이상
 - **운영체제**: Linux, macOS, Windows
 - **메모리**: 최소 512MB RAM
 - **디스크**: 최소 100MB 여유 공간
 
 ### 의존 도구
+
 SBKube가 제대로 작동하려면 다음 도구들이 필요합니다:
 
 #### kubectl 설치
+
 ```bash
 # Linux
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -133,6 +142,7 @@ choco install kubernetes-cli
 ```
 
 #### Helm 설치
+
 ```bash
 # Linux/macOS
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -144,13 +154,14 @@ brew install helm
 choco install kubernetes-helm
 ```
 
----
+______________________________________________________________________
 
 ## 🌐 환경 설정
 
 ### 1. Kubernetes 클러스터 접근 설정
 
 #### kubeconfig 설정
+
 ```bash
 # 기본 kubeconfig 위치
 ~/.kube/config
@@ -163,6 +174,7 @@ export KUBECONFIG=~/.kube/config:~/.kube/cluster2-config
 ```
 
 #### 클러스터 연결 확인
+
 ```bash
 # SBKube로 클러스터 정보 확인
 sbkube
@@ -175,6 +187,7 @@ kubectl get nodes
 ### 2. 권한 설정
 
 #### 필요한 RBAC 권한
+
 SBKube가 작동하려면 다음 권한이 필요합니다:
 
 ```yaml
@@ -215,17 +228,19 @@ subjects:
 ```
 
 #### 적용
+
 ```bash
 kubectl apply -f sbkube-rbac.yaml
 ```
 
----
+______________________________________________________________________
 
 ## 🏢 프로덕션 배포
 
 ### 1. CI/CD 파이프라인 통합
 
 #### GitHub Actions 예제
+
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy with SBKube
@@ -277,6 +292,7 @@ jobs:
 ```
 
 #### GitLab CI 예제
+
 ```yaml
 # .gitlab-ci.yml
 stages:
@@ -323,6 +339,7 @@ deploy-production:
 ### 2. 모니터링 및 로깅
 
 #### 배포 상태 모니터링
+
 ```bash
 # 배포 상태 확인
 sbkube state list
@@ -335,6 +352,7 @@ sbkube --verbose deploy
 ```
 
 #### 로그 수집 설정
+
 ```yaml
 # logging-config.yaml
 apiVersion: v1
@@ -349,11 +367,12 @@ data:
       output: /var/log/sbkube/deployment.log
 ```
 
----
+______________________________________________________________________
 
 ## 🔄 업그레이드 및 마이그레이션
 
 ### SBKube 버전 업그레이드
+
 ```bash
 # 현재 버전 확인
 sbkube version
@@ -366,6 +385,7 @@ pip install sbkube==0.2.0
 ```
 
 ### 설정 파일 마이그레이션
+
 ```bash
 # 설정 호환성 확인
 sbkube validate
@@ -374,11 +394,12 @@ sbkube validate
 # docs/03-configuration/migration.md 참조
 ```
 
----
+______________________________________________________________________
 
 ## 🐳 컨테이너 환경
 
 ### Kubernetes Job으로 실행
+
 ```yaml
 # sbkube-job.yaml
 apiVersion: batch/v1
@@ -413,6 +434,7 @@ spec:
 ```
 
 ### Helm Chart로 패키징
+
 ```yaml
 # helm-chart/templates/deployment.yaml
 apiVersion: apps/v1
@@ -436,11 +458,12 @@ spec:
         args: ["state", "watch"]  # 상태 모니터링 모드
 ```
 
----
+______________________________________________________________________
 
 ## 🚨 보안 고려사항
 
 ### 1. 권한 최소화
+
 ```yaml
 # 제한된 권한 예제
 apiVersion: rbac.authorization.k8s.io/v1
@@ -455,6 +478,7 @@ rules:
 ```
 
 ### 2. 비밀 정보 관리
+
 ```bash
 # kubeconfig를 Secret으로 관리
 kubectl create secret generic kubeconfig \
@@ -466,11 +490,12 @@ export KUBECONFIG=/dev/stdin
 kubectl get secret kubeconfig -o jsonpath='{.data.config}' | base64 -d | sbkube deploy
 ```
 
----
+______________________________________________________________________
 
 ## 📊 성능 최적화
 
 ### 1. 병렬 처리
+
 ```bash
 # 여러 앱 동시 처리
 sbkube build  # 자동으로 병렬 처리
@@ -480,6 +505,7 @@ export SBKUBE_MAX_WORKERS=4
 ```
 
 ### 2. 캐싱 활용
+
 ```bash
 # Helm 차트 캐시 활용
 export HELM_CACHE_HOME=/path/to/cache
@@ -488,11 +514,12 @@ export HELM_CACHE_HOME=/path/to/cache
 export SBKUBE_CACHE_DIR=/path/to/sbkube-cache
 ```
 
----
+______________________________________________________________________
 
 ## 🔍 문제 해결
 
 ### 일반적인 설치 문제
+
 ```bash
 # 의존성 문제 해결
 pip install --upgrade pip setuptools wheel
@@ -506,6 +533,7 @@ python --version  # 3.12 이상 필요
 ```
 
 ### 런타임 문제 해결
+
 ```bash
 # 상세 로그 확인
 sbkube --verbose deploy
@@ -517,7 +545,7 @@ sbkube validate
 sbkube  # kubeconfig 정보 표시
 ```
 
----
+______________________________________________________________________
 
 ## 📚 관련 문서
 
@@ -526,6 +554,6 @@ sbkube  # kubeconfig 정보 표시
 - **[문제 해결](../07-troubleshooting/)** - 일반적인 문제 해결
 - **[개발자 가이드](../04-development/)** - 개발 환경 구성
 
----
+______________________________________________________________________
 
 *배포 관련 추가 질문이 있으시면 [이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)에 문의해 주세요.*

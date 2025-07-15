@@ -2,7 +2,7 @@
 
 SBKube의 메인 설정 파일인 `config.yaml`의 완전한 스키마 문서입니다.
 
----
+______________________________________________________________________
 
 ## 📂 파일 구조 개요
 
@@ -22,11 +22,12 @@ apps:                         # 애플리케이션 목록 (필수)
     specs: object             # 타입별 상세 설정 (필수)
 ```
 
----
+______________________________________________________________________
 
 ## 🌐 전역 설정
 
 ### namespace (string, 필수)
+
 모든 앱에 적용되는 기본 네임스페이스입니다.
 
 ```yaml
@@ -36,11 +37,13 @@ namespace: production
 ```
 
 **규칙:**
+
 - Kubernetes 네임스페이스 명명 규칙 준수
 - 소문자와 하이픈만 사용
 - 앱별 설정으로 재정의 가능
 
 ### cluster (string, 선택적)
+
 클러스터 식별자입니다. 상태 관리 시 사용됩니다.
 
 ```yaml
@@ -50,6 +53,7 @@ cluster: dev-cluster
 ```
 
 ### deps (array of strings, 선택적)
+
 다른 설정 파일에 대한 종속성을 정의합니다.
 
 ```yaml
@@ -58,13 +62,14 @@ deps:
   - shared-services
 ```
 
----
+______________________________________________________________________
 
 ## 📱 앱 설정 (apps)
 
 ### 필수 필드
 
 #### name (string, 필수)
+
 앱의 고유 식별자입니다.
 
 ```yaml
@@ -76,6 +81,7 @@ apps:
 ```
 
 #### type (enum, 필수)
+
 앱 타입을 지정합니다. 10가지 타입 중 선택해야 합니다.
 
 ```yaml
@@ -84,6 +90,7 @@ type: invalid-type       # ❌ 지원되지 않는 타입
 ```
 
 **지원되는 타입:**
+
 - `pull-helm` - Helm 저장소에서 차트 다운로드
 - `pull-helm-oci` - OCI 레지스트리에서 차트 pull
 - `pull-git` - Git 저장소 클론
@@ -96,6 +103,7 @@ type: invalid-type       # ❌ 지원되지 않는 타입
 - `exec` - 임의 명령어 실행
 
 #### specs (object, 필수)
+
 앱 타입별 상세 설정을 담는 객체입니다.
 
 ```yaml
@@ -106,6 +114,7 @@ specs:
 ### 선택적 필드
 
 #### enabled (boolean, 기본값: true)
+
 앱의 활성화 여부를 제어합니다.
 
 ```yaml
@@ -114,6 +123,7 @@ enabled: false           # 비활성화
 ```
 
 #### path (string, 선택적)
+
 앱과 관련된 경로를 지정합니다.
 
 ```yaml
@@ -122,6 +132,7 @@ path: /absolute/path     # 절대 경로
 ```
 
 #### namespace (string, 선택적)
+
 앱별 네임스페이스입니다. 전역 설정을 재정의합니다.
 
 ```yaml
@@ -129,17 +140,19 @@ namespace: nginx-system  # 이 앱만 다른 네임스페이스
 ```
 
 #### release_name (string, Helm 앱만)
+
 Helm 릴리스명을 지정합니다.
 
 ```yaml
 release_name: my-nginx-release
 ```
 
----
+______________________________________________________________________
 
 ## 🎯 타입별 specs 상세
 
 ### 1. pull-helm
+
 Helm 저장소에서 차트를 다운로드합니다.
 
 ```yaml
@@ -159,10 +172,12 @@ Helm 저장소에서 차트를 다운로드합니다.
 ```
 
 **필수 필드:**
+
 - `repo` (string) - sources.yaml에 정의된 저장소명
 - `chart` (string) - 차트명
 
 **선택적 필드:**
+
 - `dest` (string) - 로컬 저장 디렉토리명 (기본값: 차트명)
 - `chart_version` (string) - 특정 차트 버전
 - `app_version` (string) - 특정 앱 버전
@@ -170,6 +185,7 @@ Helm 저장소에서 차트를 다운로드합니다.
 - `overrides` (array of strings) - 덮어쓸 파일 목록
 
 ### 2. pull-helm-oci
+
 OCI 레지스트리에서 Helm 차트를 pull합니다.
 
 ```yaml
@@ -184,6 +200,7 @@ OCI 레지스트리에서 Helm 차트를 pull합니다.
 ```
 
 ### 3. pull-git
+
 Git 저장소에서 파일을 가져옵니다.
 
 ```yaml
@@ -199,6 +216,7 @@ Git 저장소에서 파일을 가져옵니다.
 ```
 
 ### 4. pull-http
+
 HTTP URL에서 파일을 다운로드합니다.
 
 ```yaml
@@ -212,6 +230,7 @@ HTTP URL에서 파일을 다운로드합니다.
 ```
 
 ### 5. copy-app
+
 로컬 파일/디렉토리를 복사합니다.
 
 ```yaml
@@ -226,6 +245,7 @@ HTTP URL에서 파일을 다운로드합니다.
 ```
 
 ### 6. install-helm
+
 Helm 차트를 설치합니다.
 
 ```yaml
@@ -241,6 +261,7 @@ Helm 차트를 설치합니다.
 ```
 
 ### 7. install-yaml
+
 YAML 매니페스트를 직접 배포합니다.
 
 ```yaml
@@ -257,6 +278,7 @@ YAML 매니페스트를 직접 배포합니다.
 ```
 
 ### 8. install-action
+
 사용자 정의 액션을 실행합니다.
 
 ```yaml
@@ -271,6 +293,7 @@ YAML 매니페스트를 직접 배포합니다.
 ```
 
 ### 9. install-kustomize
+
 Kustomize를 사용하여 배포합니다.
 
 ```yaml
@@ -281,6 +304,7 @@ Kustomize를 사용하여 배포합니다.
 ```
 
 ### 10. exec
+
 임의의 명령어를 실행합니다.
 
 ```yaml
@@ -293,11 +317,12 @@ Kustomize를 사용하여 배포합니다.
       - "echo 'Setup completed'"
 ```
 
----
+______________________________________________________________________
 
 ## 🔍 검증 규칙
 
 ### 이름 규칙
+
 ```yaml
 # ✅ 올바른 앱 이름
 name: nginx-app
@@ -311,6 +336,7 @@ name: "NGINX-APP"       # 대문자 (권장하지 않음)
 ```
 
 ### 타입 검증
+
 ```yaml
 # ✅ 지원되는 타입
 type: pull-helm
@@ -323,6 +349,7 @@ type: install-kubectl   # 올바른 타입: install-yaml
 ```
 
 ### 필수 필드 검증
+
 ```yaml
 # ❌ 필수 필드 누락
 apps:
@@ -335,6 +362,7 @@ apps:
 ```
 
 ### 타입별 specs 검증
+
 ```yaml
 # ❌ pull-helm의 잘못된 specs
 - name: nginx
@@ -351,11 +379,12 @@ apps:
     files: ["app.yaml"]
 ```
 
----
+______________________________________________________________________
 
 ## 📝 완전한 예제
 
 ### 기본 예제
+
 ```yaml
 # config.yaml - 기본 구성
 namespace: default
@@ -387,6 +416,7 @@ apps:
 ```
 
 ### 고급 예제
+
 ```yaml
 # config.yaml - 고급 구성
 namespace: production
@@ -455,7 +485,7 @@ apps:
           path: post-install.sh
 ```
 
----
+______________________________________________________________________
 
 ## 🔗 관련 문서
 
@@ -464,6 +494,7 @@ apps:
 - **[설정 예제](examples.md)** - 다양한 실제 사용 예제
 - **[마이그레이션 가이드](migration.md)** - 버전 간 설정 업그레이드
 
----
+______________________________________________________________________
 
-*설정 스키마에 대한 추가 질문이 있으시면 [문제 해결 가이드](../07-troubleshooting/)를 참조하거나 [이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)에 문의해 주세요.*
+*설정 스키마에 대한 추가 질문이 있으시면 [문제 해결 가이드](../07-troubleshooting/)를 참조하거나
+[이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)에 문의해 주세요.*

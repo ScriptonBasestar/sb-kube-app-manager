@@ -2,13 +2,13 @@
 Shared fixtures for state management tests.
 """
 
-import pytest
 import tempfile
 from pathlib import Path
 
-from sbkube.models.deployment_state import (
-    DeploymentCreate, AppDeploymentCreate
-)
+import pytest
+
+from sbkube.models.deployment_state import (AppDeploymentCreate,
+                                            DeploymentCreate)
 from sbkube.state.database import DeploymentDatabase
 
 
@@ -17,9 +17,9 @@ def temp_db():
     """Create a temporary database for testing."""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = Path(f.name)
-    
+
     yield db_path
-    
+
     # Cleanup
     if db_path.exists():
         db_path.unlink()
@@ -55,12 +55,12 @@ def sample_deployment_data():
                 {
                     "name": "test-app",
                     "type": "install-helm",
-                    "specs": {"path": "charts/test-app"}
+                    "specs": {"path": "charts/test-app"},
                 }
-            ]
+            ],
         },
         sbkube_version="1.0.0",
-        operator="test-user"
+        operator="test-user",
     )
 
 
@@ -71,5 +71,5 @@ def sample_app_data():
         app_name="test-app",
         app_type="install-helm",
         namespace="test-namespace",
-        app_config={"path": "charts/test-app"}
+        app_config={"path": "charts/test-app"},
     )

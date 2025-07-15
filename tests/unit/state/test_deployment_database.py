@@ -4,9 +4,13 @@ Tests for deployment database operations.
 
 import pytest
 
-from sbkube.models.deployment_state import (AppDeployment, DeployedResource,
-                                            Deployment, DeploymentStatus,
-                                            ResourceAction)
+from sbkube.models.deployment_state import (
+    AppDeployment,
+    DeployedResource,
+    Deployment,
+    DeploymentStatus,
+    ResourceAction,
+)
 from sbkube.state.database import DeploymentDatabase
 
 

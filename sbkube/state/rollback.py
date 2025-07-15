@@ -7,13 +7,17 @@ deployment states using tracked deployment information.
 
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 
 from sbkube.exceptions import RollbackError
-from sbkube.models.deployment_state import (DeploymentDetail, DeploymentStatus,
-                                            ResourceAction, RollbackRequest)
+from sbkube.models.deployment_state import (
+    DeploymentDetail,
+    DeploymentStatus,
+    ResourceAction,
+    RollbackRequest,
+)
 from sbkube.state.database import DeploymentDatabase
 from sbkube.utils.logger import get_logger
 
@@ -28,7 +32,7 @@ class RollbackManager:
     using tracked deployment information.
     """
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         """
         Initialize rollback manager.
 
@@ -37,7 +41,7 @@ class RollbackManager:
         """
         self.db = DeploymentDatabase(db_path)
 
-    def rollback_deployment(self, rollback_request: RollbackRequest) -> Dict[str, Any]:
+    def rollback_deployment(self, rollback_request: RollbackRequest) -> dict[str, Any]:
         """
         Rollback a deployment to a previous state.
 
@@ -54,18 +58,18 @@ class RollbackManager:
         current_deployment = self.db.get_deployment(rollback_request.deployment_id)
         if not current_deployment:
             raise RollbackError(
-                f"Deployment not found: {rollback_request.deployment_id}"
+                f"Deployment not found: {rollback_request.deployment_id}",
             )
 
         # Get target deployment if specified
         target_deployment = None
         if rollback_request.target_deployment_id:
             target_deployment = self.db.get_deployment(
-                rollback_request.target_deployment_id
+                rollback_request.target_deployment_id,
             )
             if not target_deployment:
                 raise RollbackError(
-                    f"Target deployment not found: {rollback_request.target_deployment_id}"
+                    f"Target deployment not found: {rollback_request.target_deployment_id}",
                 )
 
         # Validate rollback is possible
@@ -75,17 +79,21 @@ class RollbackManager:
         if rollback_request.dry_run:
             logger.info("DRY RUN: Rollback would be performed")
             return self._simulate_rollback(
-                current_deployment, target_deployment, rollback_request
+                current_deployment,
+                target_deployment,
+                rollback_request,
             )
         else:
             return self._execute_rollback(
-                current_deployment, target_deployment, rollback_request
+                current_deployment,
+                target_deployment,
+                rollback_request,
             )
 
     def _validate_rollback(
         self,
         current_deployment: DeploymentDetail,
-        target_deployment: Optional[DeploymentDetail],
+        target_deployment: DeploymentDetail | None,
         request: RollbackRequest,
     ):
         """
@@ -107,27 +115,27 @@ class RollbackManager:
             if not request.force:
                 raise RollbackError(
                     f"Cannot rollback deployment with status: {current_deployment.status}. "
-                    "Use --force to override."
+                    "Use --force to override.",
                 )
 
         # Check if target deployment exists and is valid
         if target_deployment:
             if target_deployment.cluster != current_deployment.cluster:
                 raise RollbackError(
-                    "Cannot rollback to deployment from different cluster"
+                    "Cannot rollback to deployment from different cluster",
                 )
 
             if target_deployment.timestamp >= current_deployment.timestamp:
                 raise RollbackError(
-                    "Target deployment is newer than current deployment"
+                    "Target deployment is newer than current deployment",
                 )
 
     def _simulate_rollback(
         self,
         current_deployment: DeploymentDetail,
-        target_deployment: Optional[DeploymentDetail],
+        target_deployment: DeploymentDetail | None,
         request: RollbackRequest,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Simulate rollback without making changes.
 
@@ -212,9 +220,9 @@ class RollbackManager:
     def _execute_rollback(
         self,
         current_deployment: DeploymentDetail,
-        target_deployment: Optional[DeploymentDetail],
+        target_deployment: DeploymentDetail | None,
         request: RollbackRequest,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute the rollback operation.
 
@@ -256,8 +264,10 @@ class RollbackManager:
         return results
 
     def _rollback_app(
-        self, app: Dict[str, Any], deployment: DeploymentDetail
-    ) -> Dict[str, Any]:
+        self,
+        app: dict[str, Any],
+        deployment: DeploymentDetail,
+    ) -> dict[str, Any]:
         """
         Rollback a single application.
 
@@ -286,7 +296,7 @@ class RollbackManager:
                     "type": "helm_rollback",
                     "release": rollback_info["release_name"],
                     "revision": rollback_info["revision"] - 1,
-                }
+                },
             )
 
         elif app_type in ["install-yaml", "install-action", "install-kubectl"]:
@@ -312,7 +322,7 @@ class RollbackManager:
                             {
                                 "type": "delete",
                                 "resource": f"{resource.kind}/{resource.name}",
-                            }
+                            },
                         )
 
                     elif (
@@ -326,7 +336,7 @@ class RollbackManager:
                             {
                                 "type": "restore",
                                 "resource": f"{resource.kind}/{resource.name}",
-                            }
+                            },
                         )
 
                     elif (
@@ -340,12 +350,12 @@ class RollbackManager:
                             {
                                 "type": "recreate",
                                 "resource": f"{resource.kind}/{resource.name}",
-                            }
+                            },
                         )
 
                 except Exception as e:
                     logger.error(
-                        f"Failed to rollback resource {resource.kind}/{resource.name}: {e}"
+                        f"Failed to rollback resource {resource.kind}/{resource.name}: {e}",
                     )
                     result["success"] = False
                     result["actions"].append(
@@ -353,7 +363,7 @@ class RollbackManager:
                             "type": "error",
                             "resource": f"{resource.kind}/{resource.name}",
                             "error": str(e),
-                        }
+                        },
                     )
 
         else:
@@ -364,7 +374,10 @@ class RollbackManager:
         return result
 
     def _rollback_helm_release(
-        self, release_name: str, namespace: str, current_revision: int
+        self,
+        release_name: str,
+        namespace: str,
+        current_revision: int,
     ):
         """
         Rollback a Helm release to previous revision.
@@ -379,7 +392,7 @@ class RollbackManager:
         cmd = ["helm", "rollback", release_name, str(target_revision), "-n", namespace]
 
         logger.info(
-            f"Rolling back Helm release: {release_name} to revision {target_revision}"
+            f"Rolling back Helm release: {release_name} to revision {target_revision}",
         )
 
         try:
@@ -389,7 +402,11 @@ class RollbackManager:
             raise RollbackError(f"Helm rollback failed: {e.stderr}")
 
     def _delete_resource(
-        self, api_version: str, kind: str, name: str, namespace: Optional[str] = None
+        self,
+        api_version: str,
+        kind: str,
+        name: str,
+        namespace: str | None = None,
     ):
         """
         Delete a Kubernetes resource.
@@ -416,7 +433,7 @@ class RollbackManager:
             else:
                 raise RollbackError(f"Failed to delete resource: {e.stderr}")
 
-    def _restore_resource(self, resource_state: Dict[str, Any]):
+    def _restore_resource(self, resource_state: dict[str, Any]):
         """
         Restore a resource to its previous state.
 
@@ -450,8 +467,12 @@ class RollbackManager:
             Path(temp_file).unlink(missing_ok=True)
 
     def list_rollback_points(
-        self, cluster: str, namespace: str, app_config_dir: str, limit: int = 10
-    ) -> List[Dict[str, Any]]:
+        self,
+        cluster: str,
+        namespace: str,
+        app_config_dir: str,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
         """
         List available rollback points for a configuration.
 
@@ -465,7 +486,9 @@ class RollbackManager:
             List of rollback points
         """
         deployments = self.db.list_deployments(
-            cluster=cluster, namespace=namespace, limit=limit
+            cluster=cluster,
+            namespace=namespace,
+            limit=limit,
         )
 
         # Filter by app_config_dir
@@ -484,7 +507,7 @@ class RollbackManager:
                             DeploymentStatus.SUCCESS,
                             DeploymentStatus.PARTIALLY_FAILED,
                         ],
-                    }
+                    },
                 )
 
         return rollback_points

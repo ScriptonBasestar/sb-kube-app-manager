@@ -5,7 +5,7 @@ This module provides improved Pydantic models for sbkube configuration
 with comprehensive validation, inheritance, and error handling.
 """
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import Field, field_validator, model_validator
 
@@ -33,7 +33,7 @@ class FileActionSpec(ConfigBaseModel):
 
     type: Literal["apply", "create", "delete"]
     path: str
-    namespace: Optional[str] = None
+    namespace: str | None = None
 
     @field_validator("path")
     @classmethod
@@ -56,11 +56,11 @@ class AppSpecBase(ConfigBaseModel):
 class AppExecSpec(AppSpecBase):
     """Specification for executing commands."""
 
-    commands: List[str] = Field(default_factory=list)
+    commands: list[str] = Field(default_factory=list)
 
     @field_validator("commands")
     @classmethod
-    def validate_commands(cls, v: List[str]) -> List[str]:
+    def validate_commands(cls, v: list[str]) -> list[str]:
         """Validate command list is not empty and contains strings."""
         if not v:
             raise ValueError("commands cannot be empty")
@@ -72,18 +72,18 @@ class AppExecSpec(AppSpecBase):
 class AppInstallHelmSpec(AppSpecBase):
     """Specification for Helm chart installation."""
 
-    path: Optional[str] = None
-    values: List[str] = Field(default_factory=list)
-    release_name: Optional[str] = None
-    namespace: Optional[str] = None
+    path: str | None = None
+    values: list[str] = Field(default_factory=list)
+    release_name: str | None = None
+    namespace: str | None = None
     create_namespace: bool = False
     wait: bool = False
-    timeout: Optional[str] = None
+    timeout: str | None = None
     atomic: bool = False
 
     @field_validator("path")
     @classmethod
-    def validate_helm_path(cls, v: Optional[str]) -> Optional[str]:
+    def validate_helm_path(cls, v: str | None) -> str | None:
         """Validate Helm chart path."""
         if v is not None:
             return cls.validate_path_exists(v, must_exist=False)
@@ -91,7 +91,7 @@ class AppInstallHelmSpec(AppSpecBase):
 
     @field_validator("release_name")
     @classmethod
-    def validate_release_name(cls, v: Optional[str]) -> Optional[str]:
+    def validate_release_name(cls, v: str | None) -> str | None:
         """Validate Helm release name."""
         if v is not None:
             return cls.validate_kubernetes_name(v, "release_name")
@@ -99,13 +99,13 @@ class AppInstallHelmSpec(AppSpecBase):
 
     @field_validator("namespace")
     @classmethod
-    def validate_namespace(cls, v: Optional[str]) -> Optional[str]:
+    def validate_namespace(cls, v: str | None) -> str | None:
         """Validate namespace name."""
         return cls.validate_namespace(v)
 
     @field_validator("timeout")
     @classmethod
-    def validate_timeout(cls, v: Optional[str]) -> Optional[str]:
+    def validate_timeout(cls, v: str | None) -> str | None:
         """Validate timeout format (e.g., 5m30s)."""
         if v is not None:
             import re
@@ -118,12 +118,12 @@ class AppInstallHelmSpec(AppSpecBase):
 class AppInstallKubectlSpec(AppSpecBase):
     """Specification for kubectl-based installation."""
 
-    paths: List[str] = Field(default_factory=list)
-    namespace: Optional[str] = None
+    paths: list[str] = Field(default_factory=list)
+    namespace: str | None = None
 
     @field_validator("paths")
     @classmethod
-    def validate_kubectl_paths(cls, v: List[str]) -> List[str]:
+    def validate_kubectl_paths(cls, v: list[str]) -> list[str]:
         """Validate kubectl manifest paths."""
         return cls.validate_non_empty_list(v, "paths")
 
@@ -131,12 +131,12 @@ class AppInstallKubectlSpec(AppSpecBase):
 class AppInstallActionSpec(AppSpecBase):
     """Specification for action-based installation."""
 
-    actions: List[FileActionSpec] = Field(default_factory=list)
-    uninstall: Optional[Dict[str, List[FileActionSpec]]] = None
+    actions: list[FileActionSpec] = Field(default_factory=list)
+    uninstall: dict[str, list[FileActionSpec]] | None = None
 
     @field_validator("actions")
     @classmethod
-    def validate_actions(cls, v: List[FileActionSpec]) -> List[FileActionSpec]:
+    def validate_actions(cls, v: list[FileActionSpec]) -> list[FileActionSpec]:
         """Validate action list is not empty."""
         return cls.validate_non_empty_list(v, "actions")
 
@@ -145,7 +145,7 @@ class AppInstallKustomizeSpec(AppSpecBase):
     """Specification for Kustomize-based installation."""
 
     kustomize_path: str
-    namespace: Optional[str] = None
+    namespace: str | None = None
 
     @field_validator("kustomize_path")
     @classmethod
@@ -157,12 +157,12 @@ class AppInstallKustomizeSpec(AppSpecBase):
 class AppRenderSpec(AppSpecBase):
     """Specification for template rendering."""
 
-    templates: List[str] = Field(default_factory=list)
-    values: Optional[Dict[str, Any]] = None
+    templates: list[str] = Field(default_factory=list)
+    values: dict[str, Any] | None = None
 
     @field_validator("templates")
     @classmethod
-    def validate_templates(cls, v: List[str]) -> List[str]:
+    def validate_templates(cls, v: list[str]) -> list[str]:
         """Validate template list."""
         return cls.validate_non_empty_list(v, "templates")
 
@@ -170,11 +170,11 @@ class AppRenderSpec(AppSpecBase):
 class AppCopySpec(AppSpecBase):
     """Specification for copy operations."""
 
-    paths: List[CopyPair] = Field(default_factory=list)
+    paths: list[CopyPair] = Field(default_factory=list)
 
     @field_validator("paths")
     @classmethod
-    def validate_copy_paths(cls, v: List[CopyPair]) -> List[CopyPair]:
+    def validate_copy_paths(cls, v: list[CopyPair]) -> list[CopyPair]:
         """Validate copy paths list."""
         return cls.validate_non_empty_list(v, "paths")
 
@@ -184,11 +184,11 @@ class AppPullHelmSpec(AppSpecBase):
 
     repo: str
     chart: str
-    dest: Optional[str] = None
-    chart_version: Optional[str] = None
-    app_version: Optional[str] = None
-    removes: List[str] = Field(default_factory=list)
-    overrides: List[str] = Field(default_factory=list)
+    dest: str | None = None
+    chart_version: str | None = None
+    app_version: str | None = None
+    removes: list[str] = Field(default_factory=list)
+    overrides: list[str] = Field(default_factory=list)
 
     @field_validator("repo", "chart")
     @classmethod
@@ -200,7 +200,7 @@ class AppPullHelmSpec(AppSpecBase):
 
     @field_validator("chart_version")
     @classmethod
-    def validate_chart_version(cls, v: Optional[str]) -> Optional[str]:
+    def validate_chart_version(cls, v: str | None) -> str | None:
         """Validate Helm chart version."""
         return cls.validate_helm_version(v)
 
@@ -215,8 +215,8 @@ class AppPullGitSpec(AppSpecBase):
     """Specification for pulling from Git repositories."""
 
     repo: str
-    paths: List[CopyPair] = Field(default_factory=list)
-    ref: Optional[str] = None  # Git ref (branch, tag, commit)
+    paths: list[CopyPair] = Field(default_factory=list)
+    ref: str | None = None  # Git ref (branch, tag, commit)
 
     @field_validator("repo")
     @classmethod
@@ -232,7 +232,7 @@ class AppPullHttpSpec(AppSpecBase):
 
     url: str
     dest: str
-    headers: Optional[Dict[str, str]] = None
+    headers: dict[str, str] | None = None
 
     @field_validator("url")
     @classmethod
@@ -271,11 +271,11 @@ class AppInfoScheme(InheritableConfigModel):
         "render",
     ]
     enabled: bool = True
-    namespace: Optional[str] = None
-    release_name: Optional[str] = None
-    specs: Dict[str, Any] = Field(default_factory=dict)
-    labels: Dict[str, str] = Field(default_factory=dict)
-    annotations: Dict[str, str] = Field(default_factory=dict)
+    namespace: str | None = None
+    release_name: str | None = None
+    specs: dict[str, Any] = Field(default_factory=dict)
+    labels: dict[str, str] = Field(default_factory=dict)
+    annotations: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("name")
     @classmethod
@@ -285,13 +285,13 @@ class AppInfoScheme(InheritableConfigModel):
 
     @field_validator("namespace")
     @classmethod
-    def validate_namespace(cls, v: Optional[str]) -> Optional[str]:
+    def validate_namespace(cls, v: str | None) -> str | None:
         """Validate namespace if provided."""
         return cls.validate_namespace(v)
 
     @field_validator("release_name")
     @classmethod
-    def validate_release_name(cls, v: Optional[str]) -> Optional[str]:
+    def validate_release_name(cls, v: str | None) -> str | None:
         """Validate release name if provided."""
         if v is not None:
             return cls.validate_kubernetes_name(v, "release_name")
@@ -336,10 +336,10 @@ class AppGroupScheme(InheritableConfigModel):
     """
 
     namespace: str
-    deps: List[str] = Field(default_factory=list)
-    apps: List[AppInfoScheme] = Field(default_factory=list)
-    global_labels: Dict[str, str] = Field(default_factory=dict)
-    global_annotations: Dict[str, str] = Field(default_factory=dict)
+    deps: list[str] = Field(default_factory=list)
+    apps: list[AppInfoScheme] = Field(default_factory=list)
+    global_labels: dict[str, str] = Field(default_factory=dict)
+    global_annotations: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("namespace")
     @classmethod
@@ -349,7 +349,7 @@ class AppGroupScheme(InheritableConfigModel):
 
     @field_validator("deps")
     @classmethod
-    def validate_deps(cls, v: List[str]) -> List[str]:
+    def validate_deps(cls, v: list[str]) -> list[str]:
         """Validate dependency list contains unique values."""
         return cls.validate_unique_list(v, "deps")
 
@@ -382,11 +382,11 @@ class AppGroupScheme(InheritableConfigModel):
             raise ValueError(f"Duplicate app names found: {', '.join(set(duplicates))}")
         return self
 
-    def get_enabled_apps(self) -> List[AppInfoScheme]:
+    def get_enabled_apps(self) -> list[AppInfoScheme]:
         """Get list of enabled applications."""
         return [app for app in self.apps if app.enabled]
 
-    def get_apps_by_type(self, app_type: str) -> List[AppInfoScheme]:
+    def get_apps_by_type(self, app_type: str) -> list[AppInfoScheme]:
         """Get list of applications by type."""
         return [app for app in self.apps if app.type == app_type and app.enabled]
 
@@ -394,7 +394,7 @@ class AppGroupScheme(InheritableConfigModel):
 # --- Enhanced spec model mapping ---
 
 
-def get_spec_model(app_type: str) -> Optional[type[AppSpecBase]]:
+def get_spec_model(app_type: str) -> type[AppSpecBase] | None:
     """Get the appropriate spec model class for an app type."""
     spec_model_mapping = {
         "exec": AppExecSpec,

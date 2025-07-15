@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import Any
 
 import toml
 import yaml
@@ -24,7 +24,7 @@ def resolve_path(base: Path, relative: str) -> Path:
     return p if p.is_absolute() else base / p
 
 
-def load_config_file(basename: Union[str, Path]) -> Dict[str, Any]:
+def load_config_file(basename: str | Path) -> dict[str, Any]:
     """
     Load configuration file with multiple format support.
 
@@ -69,7 +69,7 @@ def load_config_file(basename: Union[str, Path]) -> Dict[str, Any]:
     raise ConfigFileNotFoundError(basename_str, unique_candidates)
 
 
-def _load_file_by_extension(file_path: str) -> Dict[str, Any]:
+def _load_file_by_extension(file_path: str) -> dict[str, Any]:
     """
     Load file content based on extension.
 
@@ -85,7 +85,7 @@ def _load_file_by_extension(file_path: str) -> Dict[str, Any]:
     ext = os.path.splitext(file_path)[1].lower()
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             if ext in [".yaml", ".yml"]:
                 content = yaml.safe_load(f)
                 return content if content is not None else {}
@@ -93,9 +93,11 @@ def _load_file_by_extension(file_path: str) -> Dict[str, Any]:
                 return toml.load(f)
             else:
                 raise FileOperationError(
-                    file_path, "parse", f"Unsupported file extension: {ext}"
+                    file_path,
+                    "parse",
+                    f"Unsupported file extension: {ext}",
                 )
-    except (OSError, IOError) as e:
+    except OSError as e:
         raise FileOperationError(file_path, "read", str(e))
     except yaml.YAMLError as e:
         raise FileOperationError(file_path, "parse", f"YAML parsing error: {e}")
@@ -103,7 +105,7 @@ def _load_file_by_extension(file_path: str) -> Dict[str, Any]:
         raise FileOperationError(file_path, "parse", f"TOML parsing error: {e}")
 
 
-def load_file_safely(file_path: Union[str, Path]) -> Dict[str, Any]:
+def load_file_safely(file_path: str | Path) -> dict[str, Any]:
     """
     Load file safely without raising exceptions.
 
@@ -117,6 +119,6 @@ def load_file_safely(file_path: Union[str, Path]) -> Dict[str, Any]:
         return _load_file_by_extension(str(file_path))
     except (FileOperationError, ConfigFileNotFoundError):
         logger.warning(
-            f"Failed to load file '{file_path}', returning empty configuration"
+            f"Failed to load file '{file_path}', returning empty configuration",
         )
         return {}

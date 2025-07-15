@@ -7,11 +7,21 @@ deployment states and enabling rollback operations.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import (JSON, Boolean, Column, DateTime, ForeignKey, Index,
-                        Integer, String, Text, UniqueConstraint)
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -75,7 +85,9 @@ class Deployment(Base):
 
     # Relationships
     app_deployments = relationship(
-        "AppDeployment", back_populates="deployment", cascade="all, delete-orphan"
+        "AppDeployment",
+        back_populates="deployment",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (
@@ -131,7 +143,9 @@ class DeployedResource(Base):
 
     id = Column(Integer, primary_key=True)
     app_deployment_id = Column(
-        Integer, ForeignKey("app_deployments.id"), nullable=False
+        Integer,
+        ForeignKey("app_deployments.id"),
+        nullable=False,
     )
 
     # Resource identification
@@ -145,7 +159,8 @@ class DeployedResource(Base):
 
     # State snapshots
     previous_state = Column(
-        JSON, nullable=True
+        JSON,
+        nullable=True,
     )  # Previous resource state (for rollback)
     current_state = Column(JSON, nullable=True)  # Current resource state
 
@@ -176,7 +191,9 @@ class HelmRelease(Base):
 
     id = Column(Integer, primary_key=True)
     app_deployment_id = Column(
-        Integer, ForeignKey("app_deployments.id"), nullable=False
+        Integer,
+        ForeignKey("app_deployments.id"),
+        nullable=False,
     )
 
     # Helm release info
@@ -211,12 +228,12 @@ class DeploymentCreate(BaseModel):
     app_config_dir: str
     config_file_path: str
     command: str
-    command_args: Optional[Dict[str, Any]] = None
+    command_args: dict[str, Any] | None = None
     dry_run: bool = False
-    config_snapshot: Dict[str, Any]
-    sources_snapshot: Optional[Dict[str, Any]] = None
-    sbkube_version: Optional[str] = None
-    operator: Optional[str] = None
+    config_snapshot: dict[str, Any]
+    sources_snapshot: dict[str, Any] | None = None
+    sbkube_version: str | None = None
+    operator: str | None = None
 
 
 class AppDeploymentCreate(BaseModel):
@@ -224,9 +241,9 @@ class AppDeploymentCreate(BaseModel):
 
     app_name: str
     app_type: str
-    namespace: Optional[str] = None
-    app_config: Dict[str, Any]
-    deployment_metadata: Optional[Dict[str, Any]] = None
+    namespace: str | None = None
+    app_config: dict[str, Any]
+    deployment_metadata: dict[str, Any] | None = None
 
 
 class ResourceInfo(BaseModel):
@@ -235,12 +252,12 @@ class ResourceInfo(BaseModel):
     api_version: str
     kind: str
     name: str
-    namespace: Optional[str] = None
+    namespace: str | None = None
     action: ResourceAction
-    previous_state: Optional[Dict[str, Any]] = None
-    current_state: Optional[Dict[str, Any]] = None
-    checksum: Optional[str] = None
-    source_file: Optional[str] = None
+    previous_state: dict[str, Any] | None = None
+    current_state: dict[str, Any] | None = None
+    checksum: str | None = None
+    source_file: str | None = None
 
 
 class HelmReleaseInfo(BaseModel):
@@ -249,10 +266,10 @@ class HelmReleaseInfo(BaseModel):
     release_name: str
     namespace: str
     chart: str
-    chart_version: Optional[str] = None
-    app_version: Optional[str] = None
+    chart_version: str | None = None
+    app_version: str | None = None
     revision: int
-    values: Optional[Dict[str, Any]] = None
+    values: dict[str, Any] | None = None
     status: str
 
 
@@ -269,7 +286,7 @@ class DeploymentSummary(BaseModel):
     app_count: int
     success_count: int
     failed_count: int
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class DeploymentDetail(BaseModel):
@@ -283,18 +300,18 @@ class DeploymentDetail(BaseModel):
     namespace: str
     app_config_dir: str
     status: DeploymentStatus
-    error_message: Optional[str] = None
-    config_snapshot: Dict[str, Any]
-    apps: List[Dict[str, Any]] = []
-    resources: List[ResourceInfo] = []
-    helm_releases: List[HelmReleaseInfo] = []
+    error_message: str | None = None
+    config_snapshot: dict[str, Any]
+    apps: list[dict[str, Any]] = []
+    resources: list[ResourceInfo] = []
+    helm_releases: list[HelmReleaseInfo] = []
 
 
 class RollbackRequest(BaseModel):
     """Schema for rollback request."""
 
     deployment_id: str
-    target_deployment_id: Optional[str] = None  # Roll back to specific deployment
-    app_names: Optional[List[str]] = None  # Selective rollback
+    target_deployment_id: str | None = None  # Roll back to specific deployment
+    app_names: list[str] | None = None  # Selective rollback
     dry_run: bool = False
     force: bool = False  # Force rollback even with warnings

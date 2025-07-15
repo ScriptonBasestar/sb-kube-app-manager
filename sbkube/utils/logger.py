@@ -6,7 +6,6 @@ verbose, debug, info, warning, error 레벨 지원
 """
 
 from enum import IntEnum
-from typing import Optional
 
 import click
 from rich.console import Console
@@ -25,7 +24,7 @@ class LogLevel(IntEnum):
 class SbkubeLogger:
     """sbkube 통합 로거 클래스"""
 
-    def __init__(self, console: Optional[Console] = None):
+    def __init__(self, console: Console | None = None):
         self.console = console or Console()
         self._level = LogLevel.INFO
 

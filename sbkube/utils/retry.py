@@ -8,12 +8,17 @@ fail due to transient network issues or temporary unavailability of external ser
 import random
 import subprocess
 import time
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, List, Optional, Type
+from typing import Any
 
-from sbkube.exceptions import (CliToolExecutionError, GitRepositoryError,
-                               HelmError, NetworkError,
-                               RepositoryConnectionError)
+from sbkube.exceptions import (
+    CliToolExecutionError,
+    GitRepositoryError,
+    HelmError,
+    NetworkError,
+    RepositoryConnectionError,
+)
 from sbkube.utils.logger import logger
 
 
@@ -27,7 +32,7 @@ class RetryConfig:
         max_delay: float = 60.0,
         exponential_base: float = 2.0,
         jitter: bool = True,
-        retryable_exceptions: Optional[List[Type[Exception]]] = None,
+        retryable_exceptions: list[type[Exception]] | None = None,
     ):
         """
         Initialize retry configuration.
@@ -118,7 +123,7 @@ def is_retryable_exception(exc: Exception, config: RetryConfig) -> bool:
     return False
 
 
-def retry_operation(config: Optional[RetryConfig] = None):
+def retry_operation(config: RetryConfig | None = None):
     """
     Decorator for retrying operations with configurable behavior.
 
@@ -145,14 +150,14 @@ def retry_operation(config: Optional[RetryConfig] = None):
                     # Check if we should retry this exception
                     if not is_retryable_exception(exc, config):
                         logger.debug(
-                            f"Non-retryable exception encountered: {type(exc).__name__}"
+                            f"Non-retryable exception encountered: {type(exc).__name__}",
                         )
                         raise exc
 
                     # Don't retry on the last attempt
                     if attempt == config.max_attempts - 1:
                         logger.error(
-                            f"Operation failed after {config.max_attempts} attempts"
+                            f"Operation failed after {config.max_attempts} attempts",
                         )
                         break
 
@@ -160,7 +165,7 @@ def retry_operation(config: Optional[RetryConfig] = None):
                     delay = calculate_delay(attempt, config)
                     logger.warning(
                         f"Operation failed (attempt {attempt + 1}/{config.max_attempts}): {exc}. "
-                        f"Retrying in {delay:.1f} seconds..."
+                        f"Retrying in {delay:.1f} seconds...",
                     )
                     time.sleep(delay)
 
@@ -175,7 +180,11 @@ def retry_operation(config: Optional[RetryConfig] = None):
 # Predefined retry configurations for common scenarios
 
 NETWORK_RETRY_CONFIG = RetryConfig(
-    max_attempts=3, base_delay=2.0, max_delay=30.0, exponential_base=2.0, jitter=True
+    max_attempts=3,
+    base_delay=2.0,
+    max_delay=30.0,
+    exponential_base=2.0,
+    jitter=True,
 )
 
 HELM_RETRY_CONFIG = RetryConfig(
@@ -226,7 +235,9 @@ def retry_git_operation(func: Callable) -> Callable:
 
 
 def run_command_with_retry(
-    cmd: List[str], config: Optional[RetryConfig] = None, **subprocess_kwargs
+    cmd: list[str],
+    config: RetryConfig | None = None,
+    **subprocess_kwargs,
 ) -> subprocess.CompletedProcess:
     """
     Run a subprocess command with retry logic.
@@ -269,13 +280,14 @@ def run_command_with_retry(
 
 
 def run_helm_command_with_retry(
-    cmd: List[str], **kwargs
+    cmd: list[str],
+    **kwargs,
 ) -> subprocess.CompletedProcess:
     """Run a Helm command with appropriate retry configuration."""
     return run_command_with_retry(cmd, HELM_RETRY_CONFIG, **kwargs)
 
 
-def run_git_command_with_retry(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
+def run_git_command_with_retry(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
     """Run a Git command with appropriate retry configuration."""
     return run_command_with_retry(cmd, GIT_RETRY_CONFIG, **kwargs)
 
@@ -309,7 +321,7 @@ class RetryContext:
         delay = calculate_delay(self.attempt, self.config)
         logger.warning(
             f"Operation failed (attempt {self.attempt + 1}/{self.config.max_attempts}): {exc_val}. "
-            f"Retrying in {delay:.1f} seconds..."
+            f"Retrying in {delay:.1f} seconds...",
         )
         time.sleep(delay)
         self.attempt += 1

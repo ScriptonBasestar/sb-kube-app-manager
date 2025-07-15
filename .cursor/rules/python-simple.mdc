@@ -1,14 +1,14 @@
 ---
 description: package and dependency mangenement
-globs: 
+globs:
 alwaysApply: true
 ---
-Use uv instead of pip. 
+Use uv instead of pip.
 
 uv add library
 
 uv run script.py
 
-DO NOT create requirements.txt. Use uv add commands. 
+DO NOT create requirements.txt. Use uv add commands.
 
 Update test code after source change.

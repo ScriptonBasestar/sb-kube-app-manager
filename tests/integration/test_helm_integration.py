@@ -122,7 +122,7 @@ class TestHelmIntegration:
         # Verify correct version was pulled
         chart_yaml_path = project_dir / "charts" / "test-chart" / "Chart.yaml"
         if chart_yaml_path.exists():
-            with open(chart_yaml_path, "r") as f:
+            with open(chart_yaml_path) as f:
                 chart = yaml.safe_load(f)
                 assert chart["version"] == "1.0.0"
 

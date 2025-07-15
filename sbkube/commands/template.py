@@ -3,8 +3,11 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from sbkube.models.config_model import (AppInfoScheme, AppInstallHelmSpec,
-                                        AppPullHelmSpec)
+from sbkube.models.config_model import (
+    AppInfoScheme,
+    AppInstallHelmSpec,
+    AppPullHelmSpec,
+)
 from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
@@ -60,7 +63,7 @@ def cmd(
     """빌드된 Helm 차트를 YAML로 렌더링합니다 (helm template). `build` 명령 이후에 실행해야 합니다."""
 
     console.print(
-        f"[bold blue]✨ `template` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]"
+        f"[bold blue]✨ `template` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]",
     )
     check_helm_installed_or_exit()
 
@@ -80,7 +83,7 @@ def cmd(
         console.print(f"[green]✅ 출력 디렉토리 준비 완료: {OUTPUT_DIR}[/green]")
     except OSError as e:
         console.print(
-            f"[red]❌ 출력 디렉토리 생성 실패: {e}. 권한 등을 확인하세요.[/red]"
+            f"[red]❌ 출력 디렉토리 생성 실패: {e}. 권한 등을 확인하세요.[/red]",
         )
         raise click.Abort()
     console.print("")
@@ -90,7 +93,7 @@ def cmd(
         config_file_path = APP_CONFIG_DIR / config_file_name
         if not config_file_path.exists() or not config_file_path.is_file():
             console.print(
-                f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]"
+                f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]",
             )
             raise click.Abort()
     else:
@@ -102,7 +105,7 @@ def cmd(
 
         if not config_file_path:
             console.print(
-                f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]"
+                f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]",
             )
             raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
@@ -122,25 +125,25 @@ def cmd(
         except Exception as e:
             app_name_for_error = app_dict.get("name", "알 수 없는 앱")
             console.print(
-                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]"
+                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]",
             )
             console.print(
-                f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]"
+                f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]",
             )
             continue
 
     if app_name is not None and not app_info_list_to_template:
         console.print(
-            f"[red]❌ 지정된 앱 '{app_name}'을 찾을 수 없거나 template 대상이 아닙니다.[/red]"
+            f"[red]❌ 지정된 앱 '{app_name}'을 찾을 수 없거나 template 대상이 아닙니다.[/red]",
         )
         raise click.Abort()
 
     if not app_info_list_to_template:
         console.print(
-            "[yellow]⚠️ 템플릿을 생성할 Helm 관련 앱이 설정 파일에 없습니다.[/yellow]"
+            "[yellow]⚠️ 템플릿을 생성할 Helm 관련 앱이 설정 파일에 없습니다.[/yellow]",
         )
         console.print(
-            "[bold blue]✨ `template` 작업 완료 (처리할 앱 없음) ✨[/bold blue]"
+            "[bold blue]✨ `template` 작업 완료 (처리할 앱 없음) ✨[/bold blue]",
         )
         return
 
@@ -150,7 +153,7 @@ def cmd(
         app_type = app_info.type
 
         console.print(
-            f"[magenta]➡️  앱 '{app_name}' (타입: {app_type}) 템플릿 생성 시작...[/magenta]"
+            f"[magenta]➡️  앱 '{app_name}' (타입: {app_type}) 템플릿 생성 시작...[/magenta]",
         )
 
         if app_type == "install-yaml":
@@ -159,10 +162,10 @@ def cmd(
 
             if not built_yaml_dir.exists() or not built_yaml_dir.is_dir():
                 console.print(
-                    f"[red]❌ 앱 '{app_name}': 빌드된 YAML 디렉토리를 찾을 수 없습니다: {built_yaml_dir}[/red]"
+                    f"[red]❌ 앱 '{app_name}': 빌드된 YAML 디렉토리를 찾을 수 없습니다: {built_yaml_dir}[/red]",
                 )
                 console.print(
-                    f"    [yellow]L 'sbkube build' 명령을 먼저 실행하여 '{app_name}' 앱을 빌드했는지 확인하세요.[/yellow]"
+                    f"    [yellow]L 'sbkube build' 명령을 먼저 실행하여 '{app_name}' 앱을 빌드했는지 확인하세요.[/yellow]",
                 )
                 console.print("")
                 continue
@@ -176,7 +179,7 @@ def cmd(
 
             if not yaml_files:
                 console.print(
-                    f"[yellow]⚠️  앱 '{app_name}': 빌드 디렉토리에 YAML 파일이 없습니다: {built_yaml_dir}[/yellow]"
+                    f"[yellow]⚠️  앱 '{app_name}': 빌드 디렉토리에 YAML 파일이 없습니다: {built_yaml_dir}[/yellow]",
                 )
                 console.print("")
                 continue
@@ -190,11 +193,11 @@ def cmd(
                         combined_yaml_content += "\n---\n"
                     combined_yaml_content += content
                     console.print(
-                        f"    [green]✓ YAML 파일 처리: {yaml_file.name}[/green]"
+                        f"    [green]✓ YAML 파일 처리: {yaml_file.name}[/green]",
                     )
                 except Exception as e:
                     console.print(
-                        f"    [yellow]⚠️  YAML 파일 읽기 실패 (건너뜀): {yaml_file.name} - {e}[/yellow]"
+                        f"    [yellow]⚠️  YAML 파일 읽기 실패 (건너뜀): {yaml_file.name} - {e}[/yellow]",
                     )
                     continue
 
@@ -203,12 +206,12 @@ def cmd(
                 try:
                     output_file_path.write_text(combined_yaml_content, encoding="utf-8")
                     console.print(
-                        f"[green]✅ 앱 '{app_name}' 템플릿 생성 완료: {output_file_path}[/green]"
+                        f"[green]✅ 앱 '{app_name}' 템플릿 생성 완료: {output_file_path}[/green]",
                     )
                     template_success_apps += 1
                 except OSError as e:
                     console.print(
-                        f"[red]❌ 앱 '{app_name}': 템플릿 파일 저장 실패: {output_file_path}[/red]"
+                        f"[red]❌ 앱 '{app_name}': 템플릿 파일 저장 실패: {output_file_path}[/red]",
                     )
                     console.print(f"    [red]L 상세: {e}[/red]")
 
@@ -219,10 +222,10 @@ def cmd(
 
         if not built_chart_path.exists() or not built_chart_path.is_dir():
             console.print(
-                f"[red]❌ 앱 '{app_name}': 빌드된 Helm 차트 디렉토리를 찾을 수 없습니다: {built_chart_path}[/red]"
+                f"[red]❌ 앱 '{app_name}': 빌드된 Helm 차트 디렉토리를 찾을 수 없습니다: {built_chart_path}[/red]",
             )
             console.print(
-                f"    [yellow]L 'sbkube build' 명령을 먼저 실행하여 '{app_name}' 앱을 빌드했는지 확인하세요.[/yellow]"
+                f"    [yellow]L 'sbkube build' 명령을 먼저 실행하여 '{app_name}' 앱을 빌드했는지 확인하세요.[/yellow]",
             )
             console.print("")
             continue
@@ -243,7 +246,7 @@ def cmd(
         if current_ns_for_template:
             helm_template_cmd.extend(["--namespace", current_ns_for_template])
             console.print(
-                f"    [grey]ℹ️ 네임스페이스 적용: {current_ns_for_template}[/grey]"
+                f"    [grey]ℹ️ 네임스페이스 적용: {current_ns_for_template}[/grey]",
             )
 
         values_from_spec = []
@@ -261,7 +264,7 @@ def cmd(
                     values_from_spec = spec_obj.values
         except Exception as e:
             console.print(
-                f"[yellow]⚠️ 앱 '{app_name}': Spec에서 values 정보 추출 중 오류 (무시하고 진행): {e}[/yellow]"
+                f"[yellow]⚠️ 앱 '{app_name}': Spec에서 values 정보 추출 중 오류 (무시하고 진행): {e}[/yellow]",
             )
             values_from_spec = []
 
@@ -275,17 +278,19 @@ def cmd(
                 if abs_vf_path.exists() and abs_vf_path.is_file():
                     helm_template_cmd.extend(["--values", str(abs_vf_path)])
                     console.print(
-                        f"        [green]✓ Values 파일 사용: {abs_vf_path}[/green]"
+                        f"        [green]✓ Values 파일 사용: {abs_vf_path}[/green]",
                     )
                 else:
                     console.print(
-                        f"        [yellow]⚠️  Values 파일 없음 (건너뜀): {abs_vf_path} (원본: '{vf_rel_path}')[/yellow]"
+                        f"        [yellow]⚠️  Values 파일 없음 (건너뜀): {abs_vf_path} (원본: '{vf_rel_path}')[/yellow]",
                     )
 
         console.print(f"    [cyan]$ {' '.join(helm_template_cmd)}[/cyan]")
         try:
             return_code, stdout, stderr = run_command(
-                helm_template_cmd, check=False, timeout=60
+                helm_template_cmd,
+                check=False,
+                timeout=60,
             )
 
             if return_code == 0:
@@ -293,17 +298,17 @@ def cmd(
                 try:
                     output_file_path.write_text(stdout, encoding="utf-8")
                     console.print(
-                        f"[green]✅ 앱 '{app_name}' 템플릿 생성 완료: {output_file_path}[/green]"
+                        f"[green]✅ 앱 '{app_name}' 템플릿 생성 완료: {output_file_path}[/green]",
                     )
                     template_success_apps += 1
                 except OSError as e:
                     console.print(
-                        f"[red]❌ 앱 '{app_name}': 렌더링된 YAML 파일 저장 실패: {output_file_path}[/red]"
+                        f"[red]❌ 앱 '{app_name}': 렌더링된 YAML 파일 저장 실패: {output_file_path}[/red]",
                     )
                     console.print(f"    [red]L 상세: {e}[/red]")
             else:
                 console.print(
-                    f"[red]❌ 앱 '{app_name}': `helm template` 실행 실패 (exit code: {return_code}):[/red]"
+                    f"[red]❌ 앱 '{app_name}': `helm template` 실행 실패 (exit code: {return_code}):[/red]",
                 )
                 if stdout:
                     console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
@@ -312,7 +317,7 @@ def cmd(
 
         except Exception as e:
             console.print(
-                f"[red]❌ 앱 '{app_name}': 템플릿 생성 중 예상치 못한 오류: {e}[/red]"
+                f"[red]❌ 앱 '{app_name}': 템플릿 생성 중 예상치 못한 오류: {e}[/red]",
             )
             import traceback
 
@@ -322,9 +327,9 @@ def cmd(
 
     if template_total_apps > 0:
         console.print(
-            f"[bold green]✅ `template` 작업 요약: 총 {template_total_apps}개 앱 중 {template_success_apps}개 성공.[/bold green]"
+            f"[bold green]✅ `template` 작업 요약: 총 {template_total_apps}개 앱 중 {template_success_apps}개 성공.[/bold green]",
         )
 
     console.print(
-        f"[bold blue]✨ `template` 작업 완료 (결과물 위치: {OUTPUT_DIR}) ✨[/bold blue]"
+        f"[bold blue]✨ `template` 작업 완료 (결과물 위치: {OUTPUT_DIR}) ✨[/bold blue]",
     )

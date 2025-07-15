@@ -9,4 +9,3 @@ data:
 {{ .Files.Get "files/apt-proxy.yaml" | indent 4}}
   proxynd_maven-proxy.yaml: |-
 {{ .Files.Get "files/maven-proxy.yaml" | indent 4}}
-

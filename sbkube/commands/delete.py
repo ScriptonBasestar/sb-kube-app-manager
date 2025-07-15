@@ -4,8 +4,10 @@ import click
 from rich.console import Console
 
 from sbkube.models.config_model import AppInfoScheme, AppInstallActionSpec
-from sbkube.utils.cli_check import (check_helm_installed_or_exit,
-                                    check_kubectl_installed_or_exit)
+from sbkube.utils.cli_check import (
+    check_helm_installed_or_exit,
+    check_kubectl_installed_or_exit,
+)
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts
@@ -14,7 +16,9 @@ console = Console()
 
 
 def check_resource_exists(
-    resource_type: str, resource_name: str, namespace: str | None
+    resource_type: str,
+    resource_name: str,
+    namespace: str | None,
 ) -> bool:
     """지정된 리소스가 Kubernetes 클러스터에 존재하는지 확인합니다."""
     cmd = ["kubectl", "get", resource_type, resource_name]
@@ -65,7 +69,7 @@ def cmd(
 ):
     """config.yaml/toml에 정의된 애플리케이션을 삭제합니다 (Helm 릴리스, Kubectl 리소스 등)."""
     console.print(
-        f"[bold blue]✨ `delete` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]"
+        f"[bold blue]✨ `delete` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]",
     )
 
     cli_namespace = ctx.obj.get("namespace")
@@ -75,7 +79,7 @@ def cmd(
 
     if not APP_CONFIG_DIR.is_dir():
         console.print(
-            f"[red]❌ 앱 설정 디렉토리가 존재하지 않습니다: {APP_CONFIG_DIR}[/red]"
+            f"[red]❌ 앱 설정 디렉토리가 존재하지 않습니다: {APP_CONFIG_DIR}[/red]",
         )
         raise click.Abort()
 
@@ -84,7 +88,7 @@ def cmd(
         config_file_path = APP_CONFIG_DIR / config_file_name
         if not config_file_path.exists() or not config_file_path.is_file():
             console.print(
-                f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]"
+                f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]",
             )
             raise click.Abort()
     else:
@@ -96,7 +100,7 @@ def cmd(
 
         if not config_file_path:
             console.print(
-                f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]"
+                f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]",
             )
             raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
@@ -118,7 +122,7 @@ def cmd(
                 break
         if not found_target_app:
             console.print(
-                f"[red]❌ 삭제 대상 앱 '{target_app_name}'을(를) 설정 파일에서 찾을 수 없습니다.[/red]"
+                f"[red]❌ 삭제 대상 앱 '{target_app_name}'을(를) 설정 파일에서 찾을 수 없습니다.[/red]",
             )
             raise click.Abort()
     else:
@@ -126,10 +130,10 @@ def cmd(
 
     if not apps_to_process:
         console.print(
-            "[yellow]⚠️ 설정 파일에 삭제할 앱이 정의되어 있지 않습니다.[/yellow]"
+            "[yellow]⚠️ 설정 파일에 삭제할 앱이 정의되어 있지 않습니다.[/yellow]",
         )
         console.print(
-            "[bold blue]✨ `delete` 작업 완료 (처리할 앱 없음) ✨[/bold blue]"
+            "[bold blue]✨ `delete` 작업 완료 (처리할 앱 없음) ✨[/bold blue]",
         )
         return
 
@@ -139,7 +143,7 @@ def cmd(
         except Exception as e:
             app_name_for_error = app_dict.get("name", "알 수 없는 앱")
             console.print(
-                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]"
+                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]",
             )
             console.print("    [yellow]L 해당 앱 설정을 건너뜁니다.[/yellow]")
             delete_skipped_apps += 1
@@ -154,7 +158,7 @@ def cmd(
         app_release_name = app_info.release_name or app_name
 
         console.print(
-            f"[magenta]➡️  앱 '{app_name}' (타입: {app_type}, 릴리스명: '{app_release_name}') 삭제 시도...[/magenta]"
+            f"[magenta]➡️  앱 '{app_name}' (타입: {app_type}, 릴리스명: '{app_release_name}') 삭제 시도...[/magenta]",
         )
 
         current_namespace = None
@@ -177,7 +181,7 @@ def cmd(
             console.print(f"    [grey]ℹ️ 네임스페이스 사용: {current_namespace}[/grey]")
         else:
             console.print(
-                "    [grey]ℹ️ 네임스페이스 미지정 (현재 컨텍스트의 기본값 사용 또는 리소스에 따라 다름)[/grey]"
+                "    [grey]ℹ️ 네임스페이스 미지정 (현재 컨텍스트의 기본값 사용 또는 리소스에 따라 다름)[/grey]",
             )
 
         delete_command_executed = False
@@ -188,11 +192,11 @@ def cmd(
             installed_charts = get_installed_charts(current_namespace)
             if app_release_name not in installed_charts:
                 console.print(
-                    f"[yellow]⚠️ Helm 릴리스 '{app_release_name}'(네임스페이스: {current_namespace or '-'})가 설치되어 있지 않습니다.[/yellow]"
+                    f"[yellow]⚠️ Helm 릴리스 '{app_release_name}'(네임스페이스: {current_namespace or '-'})가 설치되어 있지 않습니다.[/yellow]",
                 )
                 if skip_not_found:
                     console.print(
-                        "    [grey]L `--skip-not-found` 옵션으로 건너뜁니다.[/grey]"
+                        "    [grey]L `--skip-not-found` 옵션으로 건너뜁니다.[/grey]",
                     )
                     delete_skipped_apps += 1
                     console.print("")
@@ -208,11 +212,13 @@ def cmd(
 
             console.print(f"    [cyan]$ {' '.join(helm_cmd)}[/cyan]")
             return_code, stdout, stderr = run_command(
-                helm_cmd, check=False, timeout=300
+                helm_cmd,
+                check=False,
+                timeout=300,
             )
             if return_code == 0:
                 console.print(
-                    f"[green]✅ Helm 릴리스 '{app_release_name}' 삭제 완료.[/green]"
+                    f"[green]✅ Helm 릴리스 '{app_release_name}' 삭제 완료.[/green]",
                 )
                 if stdout:
                     console.print(f"    [grey]Helm STDOUT: {stdout.strip()}[/grey]")
@@ -220,7 +226,7 @@ def cmd(
                 delete_command_executed = True
             else:
                 console.print(
-                    f"[red]❌ Helm 릴리스 '{app_release_name}' 삭제 실패:[/red]"
+                    f"[red]❌ Helm 릴리스 '{app_release_name}' 삭제 실패:[/red]",
                 )
                 if stdout:
                     console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
@@ -235,12 +241,12 @@ def cmd(
                     spec_obj = AppInstallActionSpec(**app_info.specs)
                 except Exception as e:
                     console.print(
-                        f"[red]❌ 앱 '{app_name}': YAML Spec 정보 파싱 실패 (무시하고 진행): {e}[/red]"
+                        f"[red]❌ 앱 '{app_name}': YAML Spec 정보 파싱 실패 (무시하고 진행): {e}[/red]",
                     )
                     spec_obj = AppInstallActionSpec(actions=[])
             else:
                 console.print(
-                    f"[yellow]⚠️ 앱 '{app_name}': YAML Spec 정보('actions')가 없어 삭제할 파일 목록을 알 수 없습니다. 건너뜁니다.[/yellow]"
+                    f"[yellow]⚠️ 앱 '{app_name}': YAML Spec 정보('actions')가 없어 삭제할 파일 목록을 알 수 없습니다. 건너뜁니다.[/yellow]",
                 )
                 delete_skipped_apps += 1
                 console.print("")
@@ -248,7 +254,7 @@ def cmd(
 
             if not spec_obj or not spec_obj.actions:
                 console.print(
-                    f"[yellow]⚠️ 앱 '{app_name}': 삭제할 YAML 파일 액션('actions')이 지정되지 않았습니다. 건너뜁니다.[/yellow]"
+                    f"[yellow]⚠️ 앱 '{app_name}': 삭제할 YAML 파일 액션('actions')이 지정되지 않았습니다. 건너뜁니다.[/yellow]",
                 )
                 delete_skipped_apps += 1
                 console.print("")
@@ -268,7 +274,7 @@ def cmd(
 
                 if not abs_yaml_path.exists() or not abs_yaml_path.is_file():
                     console.print(
-                        f"    [yellow]⚠️ YAML 삭제 대상 파일을 찾을 수 없음 (건너뜀): {abs_yaml_path}[/yellow]"
+                        f"    [yellow]⚠️ YAML 삭제 대상 파일을 찾을 수 없음 (건너뜀): {abs_yaml_path}[/yellow]",
                     )
                     yaml_delete_failed_files += 1
                     continue
@@ -281,21 +287,23 @@ def cmd(
 
                 console.print(f"    [cyan]$ {' '.join(kubectl_cmd)}[/cyan]")
                 return_code, stdout, stderr = run_command(
-                    kubectl_cmd, check=False, timeout=120
+                    kubectl_cmd,
+                    check=False,
+                    timeout=120,
                 )
                 if return_code == 0:
                     console.print(
-                        f"[green]    ✅ YAML '{abs_yaml_path.name}' 삭제 요청 성공.[/green]"
+                        f"[green]    ✅ YAML '{abs_yaml_path.name}' 삭제 요청 성공.[/green]",
                     )
                     if stdout:
                         console.print(
-                            f"        [grey]Kubectl STDOUT: {stdout.strip()}[/grey]"
+                            f"        [grey]Kubectl STDOUT: {stdout.strip()}[/grey]",
                         )
                     yaml_delete_successful_files += 1
                     delete_command_executed = True
                 else:
                     console.print(
-                        f"[red]    ❌ YAML '{abs_yaml_path.name}' 삭제 실패:[/red]"
+                        f"[red]    ❌ YAML '{abs_yaml_path.name}' 삭제 실패:[/red]",
                     )
                     if stdout:
                         console.print(f"        [blue]STDOUT:[/blue] {stdout.strip()}")
@@ -313,11 +321,11 @@ def cmd(
                 if skip_not_found:
                     delete_successful_for_app = True
                     console.print(
-                        f"    [yellow]ℹ️ 앱 '{app_name}': 모든 YAML 리소스가 이미 삭제되었거나 대상이 없었습니다 (skip-not-found).[/yellow]"
+                        f"    [yellow]ℹ️ 앱 '{app_name}': 모든 YAML 리소스가 이미 삭제되었거나 대상이 없었습니다 (skip-not-found).[/yellow]",
                     )
 
             console.print(
-                f"    [grey]YAML 삭제 요약 (파일 기준): 성공 {yaml_delete_successful_files}, 실패 {yaml_delete_failed_files}[/grey]"
+                f"    [grey]YAML 삭제 요약 (파일 기준): 성공 {yaml_delete_successful_files}, 실패 {yaml_delete_failed_files}[/grey]",
             )
 
         elif app_type == "install-action":
@@ -330,12 +338,12 @@ def cmd(
                         uninstall_action_defined = True
                 except Exception as e:
                     console.print(
-                        f"[red]❌ 앱 '{app_name}': Action Spec 정보 파싱 실패: {e}[/red]"
+                        f"[red]❌ 앱 '{app_name}': Action Spec 정보 파싱 실패: {e}[/red]",
                     )
 
             if not uninstall_action_defined:
                 console.print(
-                    f"[yellow]⚠️ 앱 '{app_name}' (타입: {app_type}): `specs.uninstall.script`가 정의되지 않아 자동으로 삭제할 수 없습니다. 건너뜁니다.[/yellow]"
+                    f"[yellow]⚠️ 앱 '{app_name}' (타입: {app_type}): `specs.uninstall.script`가 정의되지 않아 자동으로 삭제할 수 없습니다. 건너뜁니다.[/yellow]",
                 )
                 delete_skipped_apps += 1
                 console.print("")
@@ -344,11 +352,13 @@ def cmd(
             for raw_cmd_str in spec_obj.uninstall.get("script", []):
                 console.print(f"    [cyan]$ {raw_cmd_str}[/cyan]")
                 return_code, stdout, stderr = run_command(
-                    raw_cmd_str, check=False, cwd=BASE_DIR
+                    raw_cmd_str,
+                    check=False,
+                    cwd=BASE_DIR,
                 )
                 if return_code != 0:
                     console.print(
-                        f"[red]❌ 앱 '{app_name}': uninstall 스크립트 실행 실패 ('{raw_cmd_str}'):[/red]"
+                        f"[red]❌ 앱 '{app_name}': uninstall 스크립트 실행 실패 ('{raw_cmd_str}'):[/red]",
                     )
                     if stdout:
                         console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
@@ -360,14 +370,14 @@ def cmd(
                     if stdout:
                         console.print(f"    [grey]STDOUT:[/grey] {stdout.strip()}")
                     console.print(
-                        f"[green]✅ 앱 '{app_name}': uninstall 스크립트 실행 완료 ('{raw_cmd_str}')[/green]"
+                        f"[green]✅ 앱 '{app_name}': uninstall 스크립트 실행 완료 ('{raw_cmd_str}')[/green]",
                     )
                     delete_successful_for_app = True
             delete_command_executed = True
 
         else:
             console.print(
-                f"[yellow]⚠️ 앱 '{app_name}' (타입: {app_type}): 이 타입에 대한 자동 삭제 로직이 아직 정의되지 않았습니다. 건너뜁니다.[/yellow]"
+                f"[yellow]⚠️ 앱 '{app_name}' (타입: {app_type}): 이 타입에 대한 자동 삭제 로직이 아직 정의되지 않았습니다. 건너뜁니다.[/yellow]",
             )
             delete_skipped_apps += 1
             console.print("")
@@ -383,15 +393,15 @@ def cmd(
     console.print("[bold blue]✨ `delete` 작업 요약 ✨[/bold blue]")
     if delete_total_apps > 0:
         console.print(
-            f"[green]    총 {delete_total_apps}개 앱 대상 중 {delete_success_apps}개 삭제 성공 (또는 이미 삭제됨).[/green]"
+            f"[green]    총 {delete_total_apps}개 앱 대상 중 {delete_success_apps}개 삭제 성공 (또는 이미 삭제됨).[/green]",
         )
         if delete_skipped_apps > 0:
             console.print(
-                f"[yellow]    {delete_skipped_apps}개 앱 건너뜀 (지원되지 않는 타입, 설정 오류, 리소스 없음 등).[/yellow]"
+                f"[yellow]    {delete_skipped_apps}개 앱 건너뜀 (지원되지 않는 타입, 설정 오류, 리소스 없음 등).[/yellow]",
             )
         if (delete_total_apps - delete_success_apps - delete_skipped_apps) > 0:
             console.print(
-                f"[red]    {delete_total_apps - delete_success_apps - delete_skipped_apps}개 앱 삭제 실패.[/red]"
+                f"[red]    {delete_total_apps - delete_success_apps - delete_skipped_apps}개 앱 삭제 실패.[/red]",
             )
     elif target_app_name and not apps_to_process:
         pass

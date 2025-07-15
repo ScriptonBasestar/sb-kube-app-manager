@@ -6,4 +6,4 @@ helm_repos:
 git_repos:
   example-app:
     url: "https://github.com/example/sample-app.git"
-    branch: "main" 
+    branch: "main"

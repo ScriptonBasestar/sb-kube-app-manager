@@ -85,7 +85,6 @@ def test_build_pull_helm_app(
     expected_build_app_path = build_dir / "pulled-apache"  # dest 값 사용
 
     with patch("shutil.copytree") as mock_copytree, patch("shutil.rmtree"):
-
         result = runner.invoke(
             sbkube_cli,
             [
@@ -140,7 +139,6 @@ def test_build_pull_git_app(
     build_dir / app_name
 
     with patch("shutil.copytree"), patch("shutil.rmtree"):
-
         result = runner.invoke(
             sbkube_cli,
             [
@@ -183,7 +181,6 @@ def test_build_copy_app(
 
     # source_dir_fixture는 이미 conftest에서 생성되므로 실제로 존재함
     with patch("shutil.copytree"), patch("shutil.rmtree"):
-
         result = runner.invoke(
             sbkube_cli,
             [
@@ -274,7 +271,6 @@ def test_build_specific_app(
     (actual_source_dir / "file1.txt").write_text("content1")
 
     with patch("shutil.copytree"), patch("shutil.rmtree"):
-
         result = runner.invoke(
             sbkube_cli,
             [

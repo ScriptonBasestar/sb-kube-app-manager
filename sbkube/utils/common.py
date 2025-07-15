@@ -1,7 +1,6 @@
 import shlex
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
 
 import click
 
@@ -54,7 +53,7 @@ def create_app_spec(app_info: AppInfoScheme):
         return spec_model_class(**app_info.specs)
     except Exception as e:
         logger.error(
-            f"앱 '{app_info.name}' (타입: {app_info.type})의 Spec 데이터 검증/변환 중 오류: {e}"
+            f"앱 '{app_info.name}' (타입: {app_info.type})의 Spec 데이터 검증/변환 중 오류: {e}",
         )
         logger.warning(f"해당 앱 설정을 건너뜁니다. Specs: {app_info.specs}")
         return None
@@ -76,7 +75,12 @@ def execute_command_with_logging(
 
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True, check=True, timeout=timeout, cwd=cwd
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=timeout,
+            cwd=cwd,
         )
 
         if result.stdout:
@@ -106,10 +110,12 @@ def check_required_cli_tools(app_info_list: list):
     """앱 목록에 필요한 CLI 도구들 체크"""
     import click
 
-    from sbkube.utils.cli_check import (CliToolExecutionError,
-                                        CliToolNotFoundError,
-                                        check_helm_installed,
-                                        check_kubectl_installed)
+    from sbkube.utils.cli_check import (
+        CliToolExecutionError,
+        CliToolNotFoundError,
+        check_helm_installed,
+        check_kubectl_installed,
+    )
 
     needs_helm = any(
         app.type in ["install-helm", "pull-helm", "pull-helm-oci"]
@@ -137,15 +143,15 @@ def check_required_cli_tools(app_info_list: list):
 
 
 def run_command(
-    cmd: Union[List[str], str],
+    cmd: list[str] | str,
     capture_output: bool = True,
     text: bool = True,
     check: bool = False,
-    env: Optional[Dict[str, str]] = None,
-    cwd: Optional[Union[str, Path]] = None,
-    timeout: Optional[int] = None,
+    env: dict[str, str] | None = None,
+    cwd: str | Path | None = None,
+    timeout: int | None = None,
     **kwargs,
-) -> Tuple[int, str, str]:
+) -> tuple[int, str, str]:
     """
     명령어를 실행하고 결과를 반환합니다.
 
@@ -192,7 +198,7 @@ def run_command(
         return (1, "", str(e))
 
 
-def get_absolute_path(path: Union[str, Path], base: Union[str, Path]) -> Path:
+def get_absolute_path(path: str | Path, base: str | Path) -> Path:
     """
     상대 경로를 절대 경로로 변환합니다.
 
@@ -213,8 +219,8 @@ def get_absolute_path(path: Union[str, Path], base: Union[str, Path]) -> Path:
 def check_resource_exists(
     resource_type: str,
     resource_name: str,
-    namespace: Optional[str] = None,
-    env: Optional[Dict[str, str]] = None,
+    namespace: str | None = None,
+    env: dict[str, str] | None = None,
 ) -> bool:
     """
     Kubernetes 리소스의 존재 여부를 확인합니다.

@@ -117,4 +117,3 @@ git_repos:
   stacklok-toolhive:
     url: "https://github.com/stacklok/toolhive.git"
     branch: "main"
-

@@ -8,7 +8,7 @@ with comprehensive validation and error handling.
 import os
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import field_validator, model_validator
 
@@ -20,9 +20,9 @@ class GitRepoScheme(ConfigBaseModel):
 
     url: str
     branch: str = "main"
-    username: Optional[str] = None
-    password: Optional[str] = None
-    ssh_key: Optional[str] = None
+    username: str | None = None
+    password: str | None = None
+    ssh_key: str | None = None
 
     def __repr__(self):
         return f"{self.url}#{self.branch}"
@@ -34,7 +34,7 @@ class GitRepoScheme(ConfigBaseModel):
         allowed_prefixes = ["http://", "https://", "git://", "ssh://", "git@"]
         if not any(v.startswith(prefix) for prefix in allowed_prefixes):
             raise ValueError(
-                f"Git URL must start with one of: {', '.join(allowed_prefixes)}"
+                f"Git URL must start with one of: {', '.join(allowed_prefixes)}",
             )
         return v
 
@@ -53,7 +53,7 @@ class GitRepoScheme(ConfigBaseModel):
         if sum(bool(method) for method in auth_methods) > 1:
             raise ValueError(
                 "Only one authentication method can be specified: "
-                "either username/password or ssh_key"
+                "either username/password or ssh_key",
             )
         return self
 
@@ -62,11 +62,11 @@ class HelmRepoScheme(ConfigBaseModel):
     """Helm repository configuration with enhanced validation."""
 
     url: str
-    username: Optional[str] = None
-    password: Optional[str] = None
-    ca_file: Optional[str] = None
-    cert_file: Optional[str] = None
-    key_file: Optional[str] = None
+    username: str | None = None
+    password: str | None = None
+    ca_file: str | None = None
+    cert_file: str | None = None
+    key_file: str | None = None
     insecure_skip_tls_verify: bool = False
 
     @field_validator("url")
@@ -84,12 +84,12 @@ class HelmRepoScheme(ConfigBaseModel):
         if tls_files_set > 0 and tls_files_set < 3:
             raise ValueError(
                 "When using TLS, all three files must be specified: "
-                "ca_file, cert_file, and key_file"
+                "ca_file, cert_file, and key_file",
             )
 
         if self.insecure_skip_tls_verify and tls_files_set > 0:
             raise ValueError(
-                "Cannot use insecure_skip_tls_verify with TLS certificate files"
+                "Cannot use insecure_skip_tls_verify with TLS certificate files",
             )
 
         return self
@@ -99,8 +99,8 @@ class OciRepoScheme(ConfigBaseModel):
     """OCI repository configuration with enhanced validation."""
 
     registry: str
-    username: Optional[str] = None
-    password: Optional[str] = None
+    username: str | None = None
+    password: str | None = None
 
     @field_validator("registry")
     @classmethod
@@ -124,17 +124,17 @@ class SourceScheme(InheritableConfigModel):
     """
 
     cluster: str
-    kubeconfig: Optional[str] = None
-    kubeconfig_context: Optional[str] = None
-    helm_repos: Dict[str, HelmRepoScheme] = {}
-    oci_repos: Dict[str, Dict[str, str]] = {}  # Legacy format
-    oci_registries: Dict[str, OciRepoScheme] = {}  # New format
-    git_repos: Dict[str, GitRepoScheme] = {}
+    kubeconfig: str | None = None
+    kubeconfig_context: str | None = None
+    helm_repos: dict[str, HelmRepoScheme] = {}
+    oci_repos: dict[str, dict[str, str]] = {}  # Legacy format
+    oci_registries: dict[str, OciRepoScheme] = {}  # New format
+    git_repos: dict[str, GitRepoScheme] = {}
 
     # Global proxy settings
-    http_proxy: Optional[str] = None
-    https_proxy: Optional[str] = None
-    no_proxy: Optional[List[str]] = None
+    http_proxy: str | None = None
+    https_proxy: str | None = None
+    no_proxy: list[str] | None = None
 
     def __repr__(self):
         return dedent(
@@ -144,7 +144,7 @@ class SourceScheme(InheritableConfigModel):
             helm_repos: {len(self.helm_repos)} repositories
             oci_registries: {len(self.oci_registries)} registries
             git_repos: {len(self.git_repos)} repositories
-        """
+        """,
         ).strip()
 
     @field_validator("cluster")
@@ -157,7 +157,7 @@ class SourceScheme(InheritableConfigModel):
 
     @field_validator("kubeconfig")
     @classmethod
-    def validate_kubeconfig_path(cls, v: Optional[str]) -> Optional[str]:
+    def validate_kubeconfig_path(cls, v: str | None) -> str | None:
         """Validate kubeconfig path exists if specified."""
         if v is None:
             return v
@@ -173,7 +173,7 @@ class SourceScheme(InheritableConfigModel):
 
     @field_validator("helm_repos")
     @classmethod
-    def validate_helm_repos_legacy(cls, v: Dict[str, str]) -> Dict[str, HelmRepoScheme]:
+    def validate_helm_repos_legacy(cls, v: dict[str, str]) -> dict[str, HelmRepoScheme]:
         """Convert legacy helm_repos format to new format."""
         if not v:
             return {}
@@ -197,15 +197,16 @@ class SourceScheme(InheritableConfigModel):
     @field_validator("oci_repos")
     @classmethod
     def validate_oci_repos_legacy(
-        cls, v: Dict[str, Dict[str, str]]
-    ) -> Dict[str, Dict[str, str]]:
+        cls,
+        v: dict[str, dict[str, str]],
+    ) -> dict[str, dict[str, str]]:
         """Validate legacy OCI repos format."""
         for repo_group, charts in v.items():
             for chart_name, oci_url in charts.items():
                 if not oci_url.startswith("oci://"):
                     raise ValueError(
                         f"Invalid OCI URL for {repo_group}/{chart_name}: "
-                        f"{oci_url} (must start with 'oci://')"
+                        f"{oci_url} (must start with 'oci://')",
                     )
         return v
 
@@ -227,25 +228,25 @@ class SourceScheme(InheritableConfigModel):
 
         return self
 
-    def get_helm_repo(self, name: str) -> Optional[HelmRepoScheme]:
+    def get_helm_repo(self, name: str) -> HelmRepoScheme | None:
         """Get Helm repository configuration by name."""
         return self.helm_repos.get(name)
 
-    def get_git_repo(self, name: str) -> Optional[GitRepoScheme]:
+    def get_git_repo(self, name: str) -> GitRepoScheme | None:
         """Get Git repository configuration by name."""
         return self.git_repos.get(name)
 
-    def get_oci_registry(self, name: str) -> Optional[OciRepoScheme]:
+    def get_oci_registry(self, name: str) -> OciRepoScheme | None:
         """Get OCI registry configuration by name."""
         return self.oci_registries.get(name)
 
-    def get_oci_chart_url(self, provider: str, chart: str) -> Optional[str]:
+    def get_oci_chart_url(self, provider: str, chart: str) -> str | None:
         """Get OCI chart URL from legacy format."""
         if provider in self.oci_repos:
             return self.oci_repos[provider].get(chart)
         return None
 
-    def validate_repo_references(self, app_configs: List[Dict[str, Any]]) -> List[str]:
+    def validate_repo_references(self, app_configs: list[dict[str, Any]]) -> list[str]:
         """
         Validate that all repository references in app configs exist.
 
@@ -266,21 +267,21 @@ class SourceScheme(InheritableConfigModel):
 
                 if app_type == "pull-helm" and repo not in self.helm_repos:
                     errors.append(
-                        f"App '{app.get('name')}' references unknown Helm repo: {repo}"
+                        f"App '{app.get('name')}' references unknown Helm repo: {repo}",
                     )
 
                 if app_type == "pull-helm-oci":
                     # Check both new and legacy formats
                     if repo not in self.oci_registries and repo not in self.oci_repos:
                         errors.append(
-                            f"App '{app.get('name')}' references unknown OCI registry: {repo}"
+                            f"App '{app.get('name')}' references unknown OCI registry: {repo}",
                         )
 
             elif app_type == "pull-git":
                 repo = specs.get("repo", "")
                 if repo not in self.git_repos:
                     errors.append(
-                        f"App '{app.get('name')}' references unknown Git repo: {repo}"
+                        f"App '{app.get('name')}' references unknown Git repo: {repo}",
                     )
 
         return errors

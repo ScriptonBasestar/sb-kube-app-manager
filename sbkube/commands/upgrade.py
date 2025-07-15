@@ -61,7 +61,7 @@ def cmd(
 ):
     """config.yaml/toml에 정의된 Helm 애플리케이션을 업그레이드하거나 새로 설치합니다 (install-helm 타입 대상)."""
     console.print(
-        f"[bold blue]✨ `upgrade` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]"
+        f"[bold blue]✨ `upgrade` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]",
     )
     check_helm_installed_or_exit()
 
@@ -77,7 +77,7 @@ def cmd(
 
     if not APP_CONFIG_DIR.is_dir():
         console.print(
-            f"[red]❌ 앱 설정 디렉토리가 존재하지 않습니다: {APP_CONFIG_DIR}[/red]"
+            f"[red]❌ 앱 설정 디렉토리가 존재하지 않습니다: {APP_CONFIG_DIR}[/red]",
         )
         raise click.Abort()
 
@@ -87,7 +87,7 @@ def cmd(
         config_file_path = APP_CONFIG_DIR / config_file_name
         if not config_file_path.exists() or not config_file_path.is_file():
             console.print(
-                f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]"
+                f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]",
             )
             raise click.Abort()
     else:
@@ -100,7 +100,7 @@ def cmd(
 
         if not config_file_path:
             console.print(
-                f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]"
+                f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]",
             )
             raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
@@ -122,17 +122,17 @@ def cmd(
                     found_target_app = True
                 else:
                     console.print(
-                        f"[yellow]⚠️ 앱 '{target_app_name}' (타입: {app_dict.get('type')})은 'install-helm' 타입이 아니므로 `upgrade` 대상이 아닙니다.[/yellow]"
+                        f"[yellow]⚠️ 앱 '{target_app_name}' (타입: {app_dict.get('type')})은 'install-helm' 타입이 아니므로 `upgrade` 대상이 아닙니다.[/yellow]",
                     )
                     # 이 경우는 특정 앱을 지정했으나 타입이 맞지 않아 스킵하는 것이므로 별도 처리
                     console.print(
-                        "[bold blue]✨ `upgrade` 작업 완료 (대상 앱 타입 아님) ✨[/bold blue]"
+                        "[bold blue]✨ `upgrade` 작업 완료 (대상 앱 타입 아님) ✨[/bold blue]",
                     )
                     return  # 여기서 종료
                 break
         if not found_target_app:
             console.print(
-                f"[red]❌ 업그레이드 대상 앱 '{target_app_name}'을(를) 설정 파일에서 찾을 수 없습니다.[/red]"
+                f"[red]❌ 업그레이드 대상 앱 '{target_app_name}'을(를) 설정 파일에서 찾을 수 없습니다.[/red]",
             )
             raise click.Abort()
     else:
@@ -142,10 +142,10 @@ def cmd(
 
     if not apps_to_process:
         console.print(
-            "[yellow]⚠️ 설정 파일에 업그레이드할 'install-helm' 타입의 앱이 정의되어 있지 않습니다.[/yellow]"
+            "[yellow]⚠️ 설정 파일에 업그레이드할 'install-helm' 타입의 앱이 정의되어 있지 않습니다.[/yellow]",
         )
         console.print(
-            "[bold blue]✨ `upgrade` 작업 완료 (처리할 앱 없음) ✨[/bold blue]"
+            "[bold blue]✨ `upgrade` 작업 완료 (처리할 앱 없음) ✨[/bold blue]",
         )
         return
 
@@ -155,7 +155,7 @@ def cmd(
         except Exception as e:
             app_name_for_error = app_dict.get("name", "알 수 없는 install-helm 앱")
             console.print(
-                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]"
+                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]",
             )
             console.print("    [yellow]L 해당 앱 설정을 건너뜁니다.[/yellow]")
             upgrade_skipped_apps += 1
@@ -167,17 +167,17 @@ def cmd(
         app_release_name = app_info.release_name or app_name
 
         console.print(
-            f"[magenta]➡️  Helm 앱 '{app_name}' (릴리스명: '{app_release_name}') 업그레이드/설치 시도...[/magenta]"
+            f"[magenta]➡️  Helm 앱 '{app_name}' (릴리스명: '{app_release_name}') 업그레이드/설치 시도...[/magenta]",
         )
 
         # 빌드된 차트 경로 확인 (build.py에서 app_name으로 생성됨)
         built_chart_path = BUILD_DIR / app_name
         if not built_chart_path.exists() or not built_chart_path.is_dir():
             console.print(
-                f"[red]❌ 앱 '{app_name}': 빌드된 Helm 차트 디렉토리를 찾을 수 없습니다: {built_chart_path}[/red]"
+                f"[red]❌ 앱 '{app_name}': 빌드된 Helm 차트 디렉토리를 찾을 수 없습니다: {built_chart_path}[/red]",
             )
             console.print(
-                f"    [yellow]L 'sbkube build' 명령을 먼저 실행하여 '{app_name}' 앱을 빌드했는지 확인하세요.[/yellow]"
+                f"    [yellow]L 'sbkube build' 명령을 먼저 실행하여 '{app_name}' 앱을 빌드했는지 확인하세요.[/yellow]",
             )
             upgrade_skipped_apps += 1  # 실패로 간주하고 스킵
             console.print("")
@@ -206,11 +206,11 @@ def cmd(
             helm_upgrade_cmd.extend(["--namespace", current_namespace])
             helm_upgrade_cmd.append("--create-namespace")
             console.print(
-                f"    [grey]ℹ️ 네임스페이스 사용 (필요시 생성): {current_namespace}[/grey]"
+                f"    [grey]ℹ️ 네임스페이스 사용 (필요시 생성): {current_namespace}[/grey]",
             )
         else:  # 네임스페이스가 최종적으로 결정되지 않으면 helm은 default 사용
             console.print(
-                "    [grey]ℹ️ 네임스페이스 미지정 (Helm이 'default' 네임스페이스 사용 또는 차트 내 정의 따름)[/grey]"
+                "    [grey]ℹ️ 네임스페이스 미지정 (Helm이 'default' 네임스페이스 사용 또는 차트 내 정의 따름)[/grey]",
             )
 
         # Values 파일 처리 (AppInstallHelmSpec 사용)
@@ -227,15 +227,15 @@ def cmd(
                         if abs_vf_path.exists() and abs_vf_path.is_file():
                             helm_upgrade_cmd.extend(["--values", str(abs_vf_path)])
                             console.print(
-                                f"        [green]✓ Values 파일 사용: {abs_vf_path}[/green]"
+                                f"        [green]✓ Values 파일 사용: {abs_vf_path}[/green]",
                             )
                         else:
                             console.print(
-                                f"        [yellow]⚠️ Values 파일 없음 (건너뜀): {abs_vf_path} (원본: '{vf_rel_path_str}')[/yellow]"
+                                f"        [yellow]⚠️ Values 파일 없음 (건너뜀): {abs_vf_path} (원본: '{vf_rel_path_str}')[/yellow]",
                             )
             except Exception as e:
                 console.print(
-                    f"[yellow]⚠️ 앱 '{app_name}': Spec에서 values 정보 처리 중 오류 (무시하고 진행): {e}[/yellow]"
+                    f"[yellow]⚠️ 앱 '{app_name}': Spec에서 values 정보 처리 중 오류 (무시하고 진행): {e}[/yellow]",
                 )
 
         if dry_run:
@@ -245,16 +245,18 @@ def cmd(
         console.print(f"    [cyan]$ {' '.join(helm_upgrade_cmd)}[/cyan]")
         try:
             return_code, stdout, stderr = run_command(
-                helm_upgrade_cmd, check=False, timeout=600
+                helm_upgrade_cmd,
+                check=False,
+                timeout=600,
             )
 
             if return_code == 0:
                 console.print(
-                    f"[green]✅ Helm 앱 '{app_release_name}' 업그레이드/설치 성공.[/green]"
+                    f"[green]✅ Helm 앱 '{app_release_name}' 업그레이드/설치 성공.[/green]",
                 )
                 if stdout and dry_run:
                     console.print(
-                        f"    [blue]Dry-run 결과 (STDOUT):[/blue] {stdout.strip()}"
+                        f"    [blue]Dry-run 결과 (STDOUT):[/blue] {stdout.strip()}",
                     )
                 elif stdout:
                     console.print(f"    [grey]Helm STDOUT: {stdout.strip()}[/grey]")
@@ -263,7 +265,7 @@ def cmd(
                 upgrade_success_apps += 1
             else:
                 console.print(
-                    f"[red]❌ Helm 앱 '{app_release_name}' 업그레이드/설치 실패 (exit code: {return_code}):[/red]"
+                    f"[red]❌ Helm 앱 '{app_release_name}' 업그레이드/설치 실패 (exit code: {return_code}):[/red]",
                 )
                 if stdout:
                     console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
@@ -272,7 +274,7 @@ def cmd(
 
         except Exception as e:
             console.print(
-                f"[red]❌ Helm 앱 '{app_release_name}' 업그레이드/설치 중 예상치 못한 오류: {e}[/red]"
+                f"[red]❌ Helm 앱 '{app_release_name}' 업그레이드/설치 중 예상치 못한 오류: {e}[/red]",
             )
             import traceback
 
@@ -283,17 +285,17 @@ def cmd(
     console.print("[bold blue]✨ `upgrade` 작업 요약 ✨[/bold blue]")
     if upgrade_total_apps > 0:
         console.print(
-            f"[green]    총 {upgrade_total_apps}개 'install-helm' 앱 대상 중 {upgrade_success_apps}개 업그레이드/설치 성공.[/green]"
+            f"[green]    총 {upgrade_total_apps}개 'install-helm' 앱 대상 중 {upgrade_success_apps}개 업그레이드/설치 성공.[/green]",
         )
         if upgrade_skipped_apps > 0:
             console.print(
-                f"[yellow]    {upgrade_skipped_apps}개 앱 건너뜀 (설정 오류, 빌드된 차트 없음 등).[/yellow]"
+                f"[yellow]    {upgrade_skipped_apps}개 앱 건너뜀 (설정 오류, 빌드된 차트 없음 등).[/yellow]",
             )
         failed_apps = upgrade_total_apps - upgrade_success_apps - upgrade_skipped_apps
         if failed_apps > 0:
             console.print(f"[red]    {failed_apps}개 앱 업그레이드/설치 실패.[/red]")
     else:
         console.print(
-            "[yellow]    업그레이드/설치할 'install-helm' 타입의 앱이 없었습니다.[/yellow]"
+            "[yellow]    업그레이드/설치할 'install-helm' 타입의 앱이 없었습니다.[/yellow]",
         )
     console.print("[bold blue]✨ `upgrade` 작업 완료 ✨[/bold blue]")

@@ -3,11 +3,16 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from sbkube.models.config_model import (AppExecSpec, AppInfoScheme,
-                                        AppInstallActionSpec,
-                                        AppInstallHelmSpec)
-from sbkube.utils.cli_check import (check_helm_installed_or_exit,
-                                    print_kube_connection_help)
+from sbkube.models.config_model import (
+    AppExecSpec,
+    AppInfoScheme,
+    AppInstallActionSpec,
+    AppInstallHelmSpec,
+)
+from sbkube.utils.cli_check import (
+    check_helm_installed_or_exit,
+    print_kube_connection_help,
+)
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts
@@ -22,10 +27,15 @@ console = Console()
     help="앱 구성 디렉토리 (내부 config.yaml|yml|toml) 자동 탐색",
 )
 @click.option(
-    "--base-dir", default=".", help="프로젝트 루트 디렉토리 (기본: 현재 경로)"
+    "--base-dir",
+    default=".",
+    help="프로젝트 루트 디렉토리 (기본: 현재 경로)",
 )
 @click.option(
-    "--dry-run", is_flag=True, default=False, help="실제로 적용하지 않고 dry-run"
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="실제로 적용하지 않고 dry-run",
 )
 @click.option(
     "--app",
@@ -56,7 +66,7 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
         config_file_path = (BASE_DIR / app_config_path_obj / config_file_name).resolve()
         if not config_file_path.exists() or not config_file_path.is_file():
             console.print(
-                f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]"
+                f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]",
             )
             raise click.Abort()
     else:
@@ -68,7 +78,7 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
 
         if not config_file_path or not config_file_path.exists():
             console.print(
-                f"[red]❌ 앱 설정 파일이 존재하지 않습니다: {BASE_DIR / app_config_path_obj}/config.[yaml|yml|toml][/red]"
+                f"[red]❌ 앱 설정 파일이 존재하지 않습니다: {BASE_DIR / app_config_path_obj}/config.[yaml|yml|toml][/red]",
             )
             raise click.Abort()
 
@@ -83,10 +93,10 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
         except Exception as e:
             app_name_for_error = app_dict.get("name", "알 수 없는 앱")
             console.print(
-                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 발생 (AppInfoScheme 변환 실패): {e}[/red]"
+                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 발생 (AppInfoScheme 변환 실패): {e}[/red]",
             )
             console.print(
-                f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]"
+                f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]",
             )
             continue
 
@@ -113,7 +123,7 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
         ]:
             current_ns = app_info.namespace
         elif apps_config_dict.get("namespace") and apps_config_dict.get(
-            "namespace"
+            "namespace",
         ) not in ["!ignore", "!none", "!false", ""]:
             current_ns = apps_config_dict.get("namespace")
 
@@ -129,15 +139,15 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
                 continue
         except Exception as e:
             console.print(
-                f"[red]❌ 앱 '{name}' (타입: {app_type})의 Spec 데이터 검증/변환 중 오류: {e}[/red]"
+                f"[red]❌ 앱 '{name}' (타입: {app_type})의 Spec 데이터 검증/변환 중 오류: {e}[/red]",
             )
             console.print(
-                f"    [yellow]L 해당 앱 설정을 건너뜁니다. Specs: {app_info.specs}[/yellow]"
+                f"    [yellow]L 해당 앱 설정을 건너뜁니다. Specs: {app_info.specs}[/yellow]",
             )
             continue
 
         console.print(
-            f"[magenta]➡️  앱 '{name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작[/magenta]"
+            f"[magenta]➡️  앱 '{name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작[/magenta]",
         )
 
         if app_type == "install-helm":
@@ -147,10 +157,10 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
 
             if not chart_dir_to_install.exists():
                 console.print(
-                    f"[red]❌ 앱 '{name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: {chart_dir_to_install}[/red]"
+                    f"[red]❌ 앱 '{name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: {chart_dir_to_install}[/red]",
                 )
                 console.print(
-                    "    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]"
+                    "    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]",
                 )
                 continue
 
@@ -161,7 +171,7 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
             )
             if is_installed:
                 console.print(
-                    f"[yellow]⚠️  앱 '{name}': Helm 릴리스 '{release_name}'(ns: {current_ns or 'default'})가 이미 설치되어 있습니다. 건너뜁니다.[/yellow]"
+                    f"[yellow]⚠️  앱 '{name}': Helm 릴리스 '{release_name}'(ns: {current_ns or 'default'})가 이미 설치되어 있습니다. 건너뜁니다.[/yellow]",
                 )
                 continue
 
@@ -180,11 +190,11 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
                 if abs_vf_path.exists():
                     helm_cmd_list.extend(["--values", str(abs_vf_path)])
                     console.print(
-                        f"    [green]✓ values 파일 사용: {abs_vf_path}[/green]"
+                        f"    [green]✓ values 파일 사용: {abs_vf_path}[/green]",
                     )
                 else:
                     console.print(
-                        f"    [yellow]⚠️  values 파일 없음 (건너뜀): {abs_vf_path}[/yellow]"
+                        f"    [yellow]⚠️  values 파일 없음 (건너뜀): {abs_vf_path}[/yellow]",
                     )
 
             if dry_run:
@@ -195,7 +205,7 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
 
             if return_code != 0:
                 console.print(
-                    f"[red]❌ 앱 '{name}': Helm 작업 실패 (릴리스: {release_name}):[/red]"
+                    f"[red]❌ 앱 '{name}': Helm 작업 실패 (릴리스: {release_name}):[/red]",
                 )
                 if stdout:
                     console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
@@ -204,7 +214,7 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
             else:
                 ns_msg = f" (네임스페이스: {current_ns})" if current_ns else ""
                 console.print(
-                    f"[bold green]✅ 앱 '{name}': Helm 릴리스 '{release_name}' 배포 완료{ns_msg}[/bold green]"
+                    f"[bold green]✅ 앱 '{name}': Helm 릴리스 '{release_name}' 배포 완료{ns_msg}[/bold green]",
                 )
 
         elif app_type == "install-yaml":
@@ -213,10 +223,10 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
 
             if not app_build_dir.exists():
                 console.print(
-                    f"[red]❌ 앱 '{name}': install-yaml 빌드 디렉토리가 존재하지 않습니다: {app_build_dir}[/red]"
+                    f"[red]❌ 앱 '{name}': install-yaml 빌드 디렉토리가 존재하지 않습니다: {app_build_dir}[/red]",
                 )
                 console.print(
-                    "    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]"
+                    "    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]",
                 )
                 continue
 
@@ -229,7 +239,7 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
 
             if not yaml_files:
                 console.print(
-                    f"[yellow]⚠️  앱 '{name}': 빌드 디렉토리에 YAML 파일이 없습니다: {app_build_dir}[/yellow]"
+                    f"[yellow]⚠️  앱 '{name}': 빌드 디렉토리에 YAML 파일이 없습니다: {app_build_dir}[/yellow]",
                 )
                 continue
 
@@ -256,7 +266,7 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
                     ):
                         print_kube_connection_help()
                     console.print(
-                        f"[red]❌ 앱 '{name}': YAML 파일 배포 실패 ('{yaml_file.name}'):[/red]"
+                        f"[red]❌ 앱 '{name}': YAML 파일 배포 실패 ('{yaml_file.name}'):[/red]",
                     )
                     if stdout:
                         console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
@@ -264,18 +274,20 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
                         console.print(f"    [red]STDERR:[/red] {stderr.strip()}")
                 else:
                     console.print(
-                        f"[green]✅ 앱 '{name}': YAML 파일 배포 완료 ('{yaml_file.name}')[/green]"
+                        f"[green]✅ 앱 '{name}': YAML 파일 배포 완료 ('{yaml_file.name}')[/green]",
                     )
 
         elif app_type == "exec":
             for raw_cmd_str in spec_obj.commands:
                 console.print(f"    [cyan]$ {raw_cmd_str}[/cyan]")
                 return_code, stdout, stderr = run_command(
-                    raw_cmd_str, check=False, cwd=BASE_DIR
+                    raw_cmd_str,
+                    check=False,
+                    cwd=BASE_DIR,
                 )
                 if return_code != 0:
                     console.print(
-                        f"[red]❌ 앱 '{name}': 명령어 실행 실패 ('{raw_cmd_str}'):[/red]"
+                        f"[red]❌ 앱 '{name}': 명령어 실행 실패 ('{raw_cmd_str}'):[/red]",
                     )
                     if stdout:
                         console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
@@ -285,7 +297,7 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
                     if stdout:
                         console.print(f"    [grey]STDOUT:[/grey] {stdout.strip()}")
                     console.print(
-                        f"[green]✅ 앱 '{name}': 명령어 실행 완료 ('{raw_cmd_str}')[/green]"
+                        f"[green]✅ 앱 '{name}': 명령어 실행 완료 ('{raw_cmd_str}')[/green]",
                     )
 
         console.print("")

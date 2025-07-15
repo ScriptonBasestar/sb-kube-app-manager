@@ -5,7 +5,7 @@ Command 공통 베이스 클래스
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import click
 
@@ -21,8 +21,8 @@ class BaseCommand:
         self,
         base_dir: str = ".",
         app_config_dir: str = "config",
-        cli_namespace: Optional[str] = None,
-        config_file_name: Optional[str] = None,
+        cli_namespace: str | None = None,
+        config_file_name: str | None = None,
     ):
         """
         Args:
@@ -44,9 +44,9 @@ class BaseCommand:
         self.repos_dir = self.base_dir / "repos"
 
         # 설정 파일과 앱 목록
-        self.config_file_path: Optional[Path] = None
-        self.apps_config_dict: Dict[str, Any] = {}
-        self.app_info_list: List[AppInfoScheme] = []
+        self.config_file_path: Path | None = None
+        self.apps_config_dict: dict[str, Any] = {}
+        self.app_info_list: list[AppInfoScheme] = []
 
     def execute_pre_hook(self):
         """각 명령 실행 전에 공통 처리"""
@@ -70,11 +70,11 @@ class BaseCommand:
                     return candidate
 
             logger.error(
-                f"앱 설정 파일이 존재하지 않습니다: {self.app_config_dir}/config.[yaml|yml|toml]"
+                f"앱 설정 파일이 존재하지 않습니다: {self.app_config_dir}/config.[yaml|yml|toml]",
             )
             raise click.Abort()
 
-    def load_config(self) -> Dict[str, Any]:
+    def load_config(self) -> dict[str, Any]:
         """설정 파일 로드"""
         self.config_file_path = self.find_config_file()
         logger.info(f"설정 파일 사용: {self.config_file_path}")
@@ -82,8 +82,10 @@ class BaseCommand:
         return self.apps_config_dict
 
     def parse_apps(
-        self, app_types: Optional[List[str]] = None, app_name: Optional[str] = None
-    ) -> List[AppInfoScheme]:
+        self,
+        app_types: list[str] | None = None,
+        app_name: str | None = None,
+    ) -> list[AppInfoScheme]:
         """
         앱 정보 파싱 및 필터링
 
@@ -104,7 +106,7 @@ class BaseCommand:
                 if app_types and app_info.type not in app_types:
                     if app_name and app_info.name == app_name:
                         logger.warning(
-                            f"앱 '{app_info.name}' (타입: {app_info.type}): 이 명령에서 지원하지 않는 타입입니다."
+                            f"앱 '{app_info.name}' (타입: {app_info.type}): 이 명령에서 지원하지 않는 타입입니다.",
                         )
                     continue
 
@@ -128,7 +130,7 @@ class BaseCommand:
         self.app_info_list = parsed_apps
         return parsed_apps
 
-    def get_namespace(self, app_info: AppInfoScheme) -> Optional[str]:
+    def get_namespace(self, app_info: AppInfoScheme) -> str | None:
         """
         앱의 네임스페이스 결정
         우선순위: CLI > 앱 설정 > 전역 설정
@@ -180,13 +182,21 @@ class BaseCommand:
         return create_app_spec(app_info)
 
     def execute_command_with_logging(
-        self, cmd: list, error_msg: str, success_msg: str = None, timeout: int = 300
+        self,
+        cmd: list,
+        error_msg: str,
+        success_msg: str = None,
+        timeout: int = 300,
     ):
         """명령어 실행 및 로깅 처리 (공통 함수 사용)"""
         from sbkube.utils.common import execute_command_with_logging
 
         return execute_command_with_logging(
-            cmd, error_msg, success_msg, self.base_dir, timeout
+            cmd,
+            error_msg,
+            success_msg,
+            self.base_dir,
+            timeout,
         )
 
     def check_required_cli_tools(self):
@@ -217,7 +227,7 @@ class BaseCommand:
                     success_apps += 1
             except Exception as e:
                 logger.error(
-                    f"앱 '{app_info.name}' {operation_name} 중 예상치 못한 오류: {e}"
+                    f"앱 '{app_info.name}' {operation_name} 중 예상치 못한 오류: {e}",
                 )
                 if logger._level.value <= LogLevel.DEBUG.value:
                     import traceback
@@ -227,7 +237,7 @@ class BaseCommand:
         # 결과 출력
         if total_apps > 0:
             logger.success(
-                f"{operation_name} 작업 요약: 총 {total_apps}개 앱 중 {success_apps}개 성공"
+                f"{operation_name} 작업 요약: 총 {total_apps}개 앱 중 {success_apps}개 성공",
             )
 
         logger.heading(f"{operation_name} 작업 완료")

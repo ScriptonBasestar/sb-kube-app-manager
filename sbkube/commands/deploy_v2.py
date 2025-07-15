@@ -7,13 +7,16 @@ integrates with the deployment state tracking system.
 
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import yaml
 
-from sbkube.models.config_model import (AppExecSpec, AppInfoScheme,
-                                        AppInstallActionSpec,
-                                        AppInstallHelmSpec)
+from sbkube.models.config_model import (
+    AppExecSpec,
+    AppInfoScheme,
+    AppInstallActionSpec,
+    AppInstallHelmSpec,
+)
 from sbkube.models.deployment_state import ResourceAction
 from sbkube.state import DeploymentTracker
 from sbkube.utils.base_command import BaseCommand
@@ -29,10 +32,10 @@ class EnhancedDeployCommand(BaseCommand):
         self,
         base_dir: str,
         app_config_dir: str,
-        cli_namespace: Optional[str],
+        cli_namespace: str | None,
         dry_run: bool,
-        target_app_name: Optional[str],
-        config_file_name: Optional[str],
+        target_app_name: str | None,
+        config_file_name: str | None,
         enable_tracking: bool = True,
     ):
         super().__init__(base_dir, app_config_dir, cli_namespace, config_file_name)
@@ -104,7 +107,7 @@ class EnhancedDeployCommand(BaseCommand):
         current_ns = self.get_namespace(app_info)
 
         logger.progress(
-            f"앱 '{app_name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작"
+            f"앱 '{app_name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작",
         )
 
         # Track app deployment
@@ -120,7 +123,9 @@ class EnhancedDeployCommand(BaseCommand):
             return self._deploy_app_internal(app_info, current_ns)
 
     def _deploy_app_internal(
-        self, app_info: AppInfoScheme, current_ns: Optional[str]
+        self,
+        app_info: AppInfoScheme,
+        current_ns: str | None,
     ) -> bool:
         """Internal app deployment logic"""
         try:
@@ -151,7 +156,7 @@ class EnhancedDeployCommand(BaseCommand):
         self,
         app_info: AppInfoScheme,
         spec_obj: AppInstallHelmSpec,
-        namespace: Optional[str],
+        namespace: str | None,
     ):
         """Deploy Helm chart with tracking"""
         release_name = app_info.release_name or app_info.name
@@ -168,7 +173,7 @@ class EnhancedDeployCommand(BaseCommand):
         # 차트 디렉토리 확인
         if not chart_dir.exists():
             logger.error(
-                f"앱 '{app_info.name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: {chart_dir}"
+                f"앱 '{app_info.name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: {chart_dir}",
             )
             logger.warning("'sbkube build' 명령을 먼저 실행했는지 확인하세요.")
             return
@@ -176,7 +181,7 @@ class EnhancedDeployCommand(BaseCommand):
         # 이미 설치 확인
         if self._is_helm_installed(release_name, namespace):
             logger.warning(
-                f"앱 '{app_info.name}': Helm 릴리스 '{release_name}'(ns: {namespace or 'default'})가 이미 설치되어 있습니다. 건너뜁니다."
+                f"앱 '{app_info.name}': Helm 릴리스 '{release_name}'(ns: {namespace or 'default'})가 이미 설치되어 있습니다. 건너뜁니다.",
             )
             return
 
@@ -185,7 +190,10 @@ class EnhancedDeployCommand(BaseCommand):
 
         # Helm 명령 구성
         helm_cmd = self._build_helm_command(
-            release_name, chart_dir, namespace, spec_obj
+            release_name,
+            chart_dir,
+            namespace,
+            spec_obj,
         )
 
         # 실행
@@ -201,7 +209,7 @@ class EnhancedDeployCommand(BaseCommand):
             chart_yaml_path = chart_dir / "Chart.yaml"
             chart_version = None
             if chart_yaml_path.exists():
-                with open(chart_yaml_path, "r") as f:
+                with open(chart_yaml_path) as f:
                     chart_data = yaml.safe_load(f)
                     chart_version = chart_data.get("version")
 
@@ -217,7 +225,7 @@ class EnhancedDeployCommand(BaseCommand):
         self,
         app_info: AppInfoScheme,
         spec_obj: AppInstallActionSpec,
-        namespace: Optional[str],
+        namespace: str | None,
     ):
         """Deploy YAML manifests with tracking"""
         actions = spec_obj.actions
@@ -230,7 +238,10 @@ class EnhancedDeployCommand(BaseCommand):
             self._deploy_yaml_action(app_info, action, namespace)
 
     def _deploy_yaml_action(
-        self, app_info: AppInfoScheme, action, namespace: Optional[str]
+        self,
+        app_info: AppInfoScheme,
+        action,
+        namespace: str | None,
     ):
         """Deploy single YAML action with tracking"""
         action_type = action.type
@@ -239,14 +250,14 @@ class EnhancedDeployCommand(BaseCommand):
 
         if not resolved_path:
             logger.error(
-                f"앱 '{app_info.name}': YAML 파일을 찾을 수 없습니다: {file_path}"
+                f"앱 '{app_info.name}': YAML 파일을 찾을 수 없습니다: {file_path}",
             )
             return
 
         # Track resources before applying
         if self.tracker and not self.dry_run and action_type in ["apply", "create"]:
             # Load YAML and track each resource
-            with open(resolved_path, "r") as f:
+            with open(resolved_path) as f:
                 documents = yaml.safe_load_all(f)
                 for doc in documents:
                     if doc and isinstance(doc, dict):
@@ -258,7 +269,8 @@ class EnhancedDeployCommand(BaseCommand):
                                 kind=doc.get("kind", ""),
                                 name=doc.get("metadata", {}).get("name", ""),
                                 namespace=doc.get("metadata", {}).get(
-                                    "namespace", namespace
+                                    "namespace",
+                                    namespace,
                                 ),
                             )
 
@@ -323,21 +335,21 @@ class EnhancedDeployCommand(BaseCommand):
                     logger.error(f"에러 출력:\n{e.stderr}")
                 raise
 
-    def _collect_helm_values(self, spec_obj: AppInstallHelmSpec) -> Dict[str, Any]:
+    def _collect_helm_values(self, spec_obj: AppInstallHelmSpec) -> dict[str, Any]:
         """Collect Helm values for tracking"""
         values_dict = {}
 
         for values_file in spec_obj.values:
             values_path = self.values_dir / values_file
             if values_path.exists():
-                with open(values_path, "r") as f:
+                with open(values_path) as f:
                     file_values = yaml.safe_load(f)
                     if file_values:
                         values_dict.update(file_values)
 
         return values_dict
 
-    def _is_helm_installed(self, release_name: str, namespace: Optional[str]) -> bool:
+    def _is_helm_installed(self, release_name: str, namespace: str | None) -> bool:
         """Helm 릴리스 설치 여부 확인"""
         try:
             installed_charts = get_installed_charts(namespace)
@@ -350,7 +362,7 @@ class EnhancedDeployCommand(BaseCommand):
         self,
         release_name: str,
         chart_dir: Path,
-        namespace: Optional[str],
+        namespace: str | None,
         spec_obj: AppInstallHelmSpec,
     ) -> list:
         """Helm install 명령 구성"""
@@ -373,8 +385,10 @@ class EnhancedDeployCommand(BaseCommand):
         return cmd
 
     def _resolve_yaml_path(
-        self, app_info: AppInfoScheme, file_path: str
-    ) -> Optional[Path]:
+        self,
+        app_info: AppInfoScheme,
+        file_path: str,
+    ) -> Path | None:
         """YAML 파일 경로 해석"""
         # 절대 경로인 경우
         if Path(file_path).is_absolute():

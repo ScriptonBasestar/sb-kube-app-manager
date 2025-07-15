@@ -11,7 +11,7 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import psutil
 import pytest
@@ -44,7 +44,7 @@ class ResourceMonitor:
     interval: float = 0.1
     _monitoring: bool = False
     _thread: threading.Thread = None
-    _metrics: List[Dict[str, float]] = field(default_factory=list)
+    _metrics: list[dict[str, float]] = field(default_factory=list)
 
     def start(self):
         """Start monitoring resources."""
@@ -54,7 +54,7 @@ class ResourceMonitor:
         self._thread.daemon = True
         self._thread.start()
 
-    def stop(self) -> Dict[str, float]:
+    def stop(self) -> dict[str, float]:
         """Stop monitoring and return average metrics."""
         self._monitoring = False
         if self._thread:
@@ -144,7 +144,7 @@ def performance_benchmark():
         """Add a benchmark result."""
         benchmarks.append(metrics)
 
-    def get_report() -> Dict[str, Any]:
+    def get_report() -> dict[str, Any]:
         """Generate performance report."""
         if not benchmarks:
             return {}
@@ -323,7 +323,7 @@ def large_project_generator():
 def stress_test_data():
     """Generate data for stress testing."""
 
-    def generate_large_values(size_mb: int = 1) -> Dict[str, Any]:
+    def generate_large_values(size_mb: int = 1) -> dict[str, Any]:
         """Generate large values file for testing."""
         # Calculate approximate size per entry
         entry_size = 100  # bytes
@@ -339,7 +339,7 @@ def stress_test_data():
             for i in range(num_entries)
         }
 
-    def generate_many_resources(count: int = 100) -> List[Dict[str, Any]]:
+    def generate_many_resources(count: int = 100) -> list[dict[str, Any]]:
         """Generate many Kubernetes resources."""
         faker = Faker()
         resources = []

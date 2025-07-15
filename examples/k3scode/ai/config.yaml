@@ -27,4 +27,3 @@ apps:
       path: toolhive-operator-crds
       values:
         - toolhive-operator-crds.yaml
-

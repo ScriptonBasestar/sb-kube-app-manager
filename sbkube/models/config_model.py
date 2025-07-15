@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
@@ -24,7 +24,7 @@ class AppSpecBase(BaseModel):
 
 
 class AppExecSpec(AppSpecBase):
-    commands: List[str] = Field(default_factory=list)
+    commands: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_commands(self) -> "AppExecSpec":
@@ -36,15 +36,15 @@ class AppExecSpec(AppSpecBase):
 
 
 class AppInstallHelmSpec(AppSpecBase):
-    values: List[str] = Field(default_factory=list)
+    values: list[str] = Field(default_factory=list)
 
 
 class AppInstallKubectlSpec(AppSpecBase):
-    paths: List[str] = Field(default_factory=list)
+    paths: list[str] = Field(default_factory=list)
 
 
 class AppInstallShellSpec(AppSpecBase):
-    commands: List[str] = Field(default_factory=list)
+    commands: list[str] = Field(default_factory=list)
 
 
 class AppInstallActionSpec(AppSpecBase):
@@ -60,7 +60,7 @@ class AppInstallActionSpec(AppSpecBase):
     """
 
     app_type: Literal["install-yaml"] = "install-yaml"
-    actions: List[FileActionSpec] = Field(default_factory=list)
+    actions: list[FileActionSpec] = Field(default_factory=list)
 
 
 class AppInstallKustomizeSpec(AppSpecBase):
@@ -68,43 +68,43 @@ class AppInstallKustomizeSpec(AppSpecBase):
 
 
 class AppRenderSpec(AppSpecBase):
-    templates: List[str] = Field(default_factory=list)
+    templates: list[str] = Field(default_factory=list)
 
 
 class AppCopySpec(AppSpecBase):
-    paths: List[CopyPair] = Field(default_factory=list)
+    paths: list[CopyPair] = Field(default_factory=list)
 
 
 class AppPullHelmSpec(AppSpecBase):
     repo: str
     chart: str
-    dest: Optional[str] = None
-    chart_version: Optional[str] = None
-    app_version: Optional[str] = None
-    removes: List[str] = Field(default_factory=list)
-    overrides: List[str] = Field(default_factory=list)
+    dest: str | None = None
+    chart_version: str | None = None
+    app_version: str | None = None
+    removes: list[str] = Field(default_factory=list)
+    overrides: list[str] = Field(default_factory=list)
 
 
 class AppPullHelmOciSpec(AppSpecBase):
     repo: str
     chart: str
-    dest: Optional[str] = None
-    chart_version: Optional[str] = None
-    app_version: Optional[str] = None
-    removes: List[str] = Field(default_factory=list)
-    overrides: List[str] = Field(default_factory=list)
-    registry_url: Optional[str] = None
+    dest: str | None = None
+    chart_version: str | None = None
+    app_version: str | None = None
+    removes: list[str] = Field(default_factory=list)
+    overrides: list[str] = Field(default_factory=list)
+    registry_url: str | None = None
 
 
 class AppPullGitSpec(AppSpecBase):
     repo: str
-    paths: List[CopyPair] = Field(default_factory=list)
+    paths: list[CopyPair] = Field(default_factory=list)
 
 
 class AppPullHttpSpec(AppSpecBase):
     name: Literal["pull-http"] = "pull-http"
     url: str
-    paths: List[CopyPair] = Field(default_factory=list)
+    paths: list[CopyPair] = Field(default_factory=list)
 
 
 # --- 상위 스키마 ---
@@ -124,17 +124,17 @@ class AppInfoScheme(BaseModel):
         "pull-http",
         "copy-app",
     ]
-    path: Optional[str] = None
+    path: str | None = None
     enabled: bool = False
-    namespace: Optional[str] = None
-    release_name: Optional[str] = None
-    specs: Dict[str, Any] = Field(default_factory=dict)
+    namespace: str | None = None
+    release_name: str | None = None
+    specs: dict[str, Any] = Field(default_factory=dict)
 
 
 class AppGroupScheme(BaseModel):
     namespace: str
-    deps: List[str] = Field(default_factory=list)
-    apps: List[AppInfoScheme] = Field(default_factory=list)
+    deps: list[str] = Field(default_factory=list)
+    apps: list[AppInfoScheme] = Field(default_factory=list)
 
 
 # --- YAML 로더 (pydantic 활용) ---
@@ -143,9 +143,9 @@ class AppGroupScheme(BaseModel):
 def load_apps(group_name: str) -> AppGroupScheme:
     curr_file_path = Path(__file__).parent.resolve()
     yaml_path = Path(
-        os.path.expanduser(str(curr_file_path / group_name / "config.yaml"))
+        os.path.expanduser(str(curr_file_path / group_name / "config.yaml")),
     )
-    with open(yaml_path, "r") as f:
+    with open(yaml_path) as f:
         data = yaml.safe_load(f)
     return AppGroupScheme.model_validate(data)
 

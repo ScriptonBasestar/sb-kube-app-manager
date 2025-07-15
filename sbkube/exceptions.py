@@ -6,7 +6,7 @@ error handling across the entire application.
 """
 
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class SbkubeError(Exception):
@@ -16,7 +16,10 @@ class SbkubeError(Exception):
     """
 
     def __init__(
-        self, message: str, details: Optional[Dict[str, Any]] = None, exit_code: int = 1
+        self,
+        message: str,
+        details: dict[str, Any] | None = None,
+        exit_code: int = 1,
     ):
         super().__init__(message)
         self.message = message
@@ -36,14 +39,15 @@ class ConfigurationError(SbkubeError):
 class ConfigFileNotFoundError(ConfigurationError):
     """Raised when a required configuration file is not found."""
 
-    def __init__(self, file_path: str, searched_paths: Optional[list] = None):
+    def __init__(self, file_path: str, searched_paths: list | None = None):
         self.file_path = file_path
         self.searched_paths = searched_paths or []
         message = f"Configuration file not found: {file_path}"
         if searched_paths:
             message += f" (searched: {', '.join(searched_paths)})"
         super().__init__(
-            message, {"file_path": file_path, "searched_paths": searched_paths}
+            message,
+            {"file_path": file_path, "searched_paths": searched_paths},
         )
 
 
@@ -51,7 +55,10 @@ class ConfigValidationError(ConfigurationError):
     """Raised when configuration validation fails."""
 
     def __init__(
-        self, message: str, field: Optional[str] = None, value: Optional[Any] = None
+        self,
+        message: str,
+        field: str | None = None,
+        value: Any | None = None,
     ):
         self.field = field
         self.value = value
@@ -61,7 +68,7 @@ class ConfigValidationError(ConfigurationError):
 class SchemaValidationError(ConfigurationError):
     """Raised when schema validation fails."""
 
-    def __init__(self, message: str, schema_errors: Optional[list] = None):
+    def __init__(self, message: str, schema_errors: list | None = None):
         self.schema_errors = schema_errors or []
         super().__init__(message, {"schema_errors": schema_errors})
 
@@ -75,14 +82,15 @@ class ToolError(SbkubeError):
 class CliToolNotFoundError(ToolError):
     """Raised when a required CLI tool is not found."""
 
-    def __init__(self, tool_name: str, suggested_install: Optional[str] = None):
+    def __init__(self, tool_name: str, suggested_install: str | None = None):
         self.tool_name = tool_name
         self.suggested_install = suggested_install
         message = f"Required CLI tool '{tool_name}' not found"
         if suggested_install:
             message += f". Install with: {suggested_install}"
         super().__init__(
-            message, {"tool_name": tool_name, "suggested_install": suggested_install}
+            message,
+            {"tool_name": tool_name, "suggested_install": suggested_install},
         )
 
 
@@ -94,8 +102,8 @@ class CliToolExecutionError(ToolError):
         tool_name: str,
         command: list,
         return_code: int,
-        stdout: Optional[str] = None,
-        stderr: Optional[str] = None,
+        stdout: str | None = None,
+        stderr: str | None = None,
     ):
         self.tool_name = tool_name
         self.command = command
@@ -146,7 +154,7 @@ class KubernetesError(SbkubeError):
 class KubernetesConnectionError(KubernetesError):
     """Raised when connection to Kubernetes cluster fails."""
 
-    def __init__(self, context: Optional[str] = None, kubeconfig: Optional[str] = None):
+    def __init__(self, context: str | None = None, kubeconfig: str | None = None):
         self.context = context
         self.kubeconfig = kubeconfig
         message = "Failed to connect to Kubernetes cluster"
@@ -165,8 +173,8 @@ class KubernetesResourceError(KubernetesError):
         resource_type: str,
         resource_name: str,
         operation: str,
-        namespace: Optional[str] = None,
-        reason: Optional[str] = None,
+        namespace: str | None = None,
+        reason: str | None = None,
     ):
         self.resource_type = resource_type
         self.resource_name = resource_name
@@ -202,7 +210,10 @@ class HelmChartNotFoundError(HelmError):
     """Raised when a Helm chart is not found."""
 
     def __init__(
-        self, chart_name: str, repo: Optional[str] = None, version: Optional[str] = None
+        self,
+        chart_name: str,
+        repo: str | None = None,
+        version: str | None = None,
     ):
         self.chart_name = chart_name
         self.repo = repo
@@ -215,7 +226,8 @@ class HelmChartNotFoundError(HelmError):
             message += f" (version: {version})"
 
         super().__init__(
-            message, {"chart_name": chart_name, "repo": repo, "version": version}
+            message,
+            {"chart_name": chart_name, "repo": repo, "version": version},
         )
 
 
@@ -227,8 +239,8 @@ class HelmInstallationError(HelmError):
         release_name: str,
         chart_name: str,
         operation: str,
-        namespace: Optional[str] = None,
-        reason: Optional[str] = None,
+        namespace: str | None = None,
+        reason: str | None = None,
     ):
         self.release_name = release_name
         self.chart_name = chart_name
@@ -264,7 +276,10 @@ class GitRepositoryError(GitError):
     """Raised when Git repository operations fail."""
 
     def __init__(
-        self, repository_url: str, operation: str, reason: Optional[str] = None
+        self,
+        repository_url: str,
+        operation: str,
+        reason: str | None = None,
     ):
         self.repository_url = repository_url
         self.operation = operation
@@ -293,7 +308,7 @@ class FileSystemError(SbkubeError):
 class FileOperationError(FileSystemError):
     """Raised when file operations fail."""
 
-    def __init__(self, file_path: str, operation: str, reason: Optional[str] = None):
+    def __init__(self, file_path: str, operation: str, reason: str | None = None):
         self.file_path = file_path
         self.operation = operation
         self.reason = reason
@@ -303,7 +318,8 @@ class FileOperationError(FileSystemError):
             message += f": {reason}"
 
         super().__init__(
-            message, {"file_path": file_path, "operation": operation, "reason": reason}
+            message,
+            {"file_path": file_path, "operation": operation, "reason": reason},
         )
 
 
@@ -330,7 +346,8 @@ class PathTraversalError(SecurityError):
         self.base_path = base_path
         message = f"Path traversal attempt detected: '{attempted_path}' outside of '{base_path}'"
         super().__init__(
-            message, {"attempted_path": attempted_path, "base_path": base_path}
+            message,
+            {"attempted_path": attempted_path, "base_path": base_path},
         )
 
 
@@ -349,7 +366,8 @@ class InputValidationError(ValidationError):
         self.reason = reason
         message = f"Invalid value for '{field_name}': {reason}"
         super().__init__(
-            message, {"field_name": field_name, "value": value, "reason": reason}
+            message,
+            {"field_name": field_name, "value": value, "reason": reason},
         )
 
 
@@ -362,7 +380,7 @@ class NetworkError(SbkubeError):
 class DownloadError(NetworkError):
     """Raised when file download fails."""
 
-    def __init__(self, url: str, reason: Optional[str] = None):
+    def __init__(self, url: str, reason: str | None = None):
         self.url = url
         self.reason = reason
         message = f"Download failed for URL '{url}'"
@@ -375,7 +393,10 @@ class RepositoryConnectionError(NetworkError):
     """Raised when repository connection fails."""
 
     def __init__(
-        self, repository_url: str, repository_type: str, reason: Optional[str] = None
+        self,
+        repository_url: str,
+        repository_type: str,
+        reason: str | None = None,
     ):
         self.repository_url = repository_url
         self.repository_type = repository_type
@@ -404,7 +425,7 @@ class StateError(SbkubeError):
 class StateCorruptionError(StateError):
     """Raised when state corruption is detected."""
 
-    def __init__(self, state_file: str, reason: Optional[str] = None):
+    def __init__(self, state_file: str, reason: str | None = None):
         self.state_file = state_file
         self.reason = reason
         message = f"State corruption detected in '{state_file}'"

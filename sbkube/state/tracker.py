@@ -12,14 +12,18 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import yaml
 
-from sbkube.models.deployment_state import (AppDeploymentCreate,
-                                            DeploymentCreate, DeploymentStatus,
-                                            HelmReleaseInfo, ResourceAction,
-                                            ResourceInfo)
+from sbkube.models.deployment_state import (
+    AppDeploymentCreate,
+    DeploymentCreate,
+    DeploymentStatus,
+    HelmReleaseInfo,
+    ResourceAction,
+    ResourceInfo,
+)
 from sbkube.state.database import DeploymentDatabase
 from sbkube.utils.logger import get_logger
 
@@ -34,7 +38,7 @@ class DeploymentTracker:
     before and after operations, enabling rollback capabilities.
     """
 
-    def __init__(self, db_path: Optional[Union[str, Path]] = None):
+    def __init__(self, db_path: str | Path | None = None):
         """
         Initialize deployment tracker.
 
@@ -42,9 +46,9 @@ class DeploymentTracker:
             db_path: Optional path to database file
         """
         self.db = DeploymentDatabase(db_path)
-        self.current_deployment_id: Optional[str] = None
-        self.current_deployment_record_id: Optional[int] = None
-        self.current_app_deployment_id: Optional[int] = None
+        self.current_deployment_id: str | None = None
+        self.current_deployment_record_id: int | None = None
+        self.current_app_deployment_id: int | None = None
         self._tracking_enabled = True
 
     @property
@@ -66,10 +70,10 @@ class DeploymentTracker:
         namespace: str,
         app_config_dir: str,
         config_file_path: str,
-        config_data: Dict[str, Any],
-        sources_data: Optional[Dict[str, Any]] = None,
+        config_data: dict[str, Any],
+        sources_data: dict[str, Any] | None = None,
         command: str = "deploy",
-        command_args: Optional[Dict[str, Any]] = None,
+        command_args: dict[str, Any] | None = None,
         dry_run: bool = False,
     ):
         """
@@ -128,7 +132,8 @@ class DeploymentTracker:
 
             # If we get here without exception, mark as success
             self.db.update_deployment_status(
-                self.current_deployment_id, DeploymentStatus.SUCCESS
+                self.current_deployment_id,
+                DeploymentStatus.SUCCESS,
             )
 
         except Exception as e:
@@ -150,8 +155,8 @@ class DeploymentTracker:
         self,
         app_name: str,
         app_type: str,
-        app_namespace: Optional[str],
-        app_config: Dict[str, Any],
+        app_namespace: str | None,
+        app_config: dict[str, Any],
     ):
         """
         Context manager to track an individual app deployment.
@@ -179,7 +184,8 @@ class DeploymentTracker:
             )
 
             app_deployment = self.db.add_app_deployment(
-                self.current_deployment_record_id, app_data
+                self.current_deployment_record_id,
+                app_data,
             )
             self.current_app_deployment_id = app_deployment.id
 
@@ -187,7 +193,8 @@ class DeploymentTracker:
 
             # Mark as success if no exception
             self.db.update_app_deployment_status(
-                self.current_app_deployment_id, DeploymentStatus.SUCCESS
+                self.current_app_deployment_id,
+                DeploymentStatus.SUCCESS,
             )
 
         except Exception as e:
@@ -207,8 +214,8 @@ class DeploymentTracker:
         release_name: str,
         namespace: str,
         chart: str,
-        chart_version: Optional[str] = None,
-        values: Optional[Dict[str, Any]] = None,
+        chart_version: str | None = None,
+        values: dict[str, Any] | None = None,
     ):
         """
         Track a Helm release deployment.
@@ -260,10 +267,10 @@ class DeploymentTracker:
 
     def track_resource(
         self,
-        manifest: Dict[str, Any],
+        manifest: dict[str, Any],
         action: ResourceAction,
-        source_file: Optional[str] = None,
-        previous_state: Optional[Dict[str, Any]] = None,
+        source_file: str | None = None,
+        previous_state: dict[str, Any] | None = None,
     ):
         """
         Track a Kubernetes resource deployment.
@@ -307,8 +314,12 @@ class DeploymentTracker:
             logger.warning(f"Failed to track resource: {e}")
 
     def get_resource_state(
-        self, api_version: str, kind: str, name: str, namespace: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        self,
+        api_version: str,
+        kind: str,
+        name: str,
+        namespace: str | None = None,
+    ) -> dict[str, Any] | None:
         """
         Get current state of a Kubernetes resource.
 

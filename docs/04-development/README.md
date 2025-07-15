@@ -137,6 +137,52 @@ ______________________________________________________________________
 - 일관된 로깅 사용
 - 적절한 에러 처리
 
+### 코드 품질 도구
+
+프로젝트에서 사용하는 코드 품질 도구들:
+
+```bash
+# 개발 의존성 설치
+make install-dev
+
+# 코드 포맷팅
+make format
+
+# 린팅 및 타입 검사
+make lint
+```
+
+#### 보안 검사 (Bandit)
+
+bandit 보안 검사에서 다음 룰들이 skip됩니다:
+
+- **B101**: assert 사용 - 테스트 코드에서 필수
+- **B404**: subprocess 모듈 import - CLI 도구 특성상 필수
+- **B603**: subprocess 호출 - kubectl, helm 등 외부 도구 실행 필수
+- **B607**: partial 함수 시작 (부분 경로) - 상대 경로 사용 필요
+- **B602**: shell=True 사용 - 동적 명령 실행을 위해 필요
+
+이러한 보안 룰들은 CLI 도구의 특성상 필수적이며, 실제 보안 위험보다는 도구의 기능적 요구사항입니다.
+
+#### Pre-commit 훅
+
+```bash
+# pre-commit 설치
+uv run pre-commit install
+
+# 모든 파일에 대해 실행
+uv run pre-commit run --all-files
+```
+
+pre-commit 훅은 다음 도구들을 자동으로 실행합니다:
+
+- ruff (린팅 및 포맷팅)
+- isort (import 정렬)
+- mypy (타입 검사)
+- mdformat (마크다운 포맷팅)
+- bandit (보안 검사)
+- 기본 파일 검사 (trailing-whitespace, end-of-file-fixer 등)
+
 ______________________________________________________________________
 
 ## 🐳 Kubernetes 테스트

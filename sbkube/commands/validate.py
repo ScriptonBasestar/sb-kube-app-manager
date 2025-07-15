@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import Optional
 
 import click
 from jsonschema import ValidationError
@@ -16,7 +15,7 @@ from sbkube.utils.logger import logger, setup_logging_from_context
 def load_json_schema(path: Path):
     """JSON 스키마 파일을 로드합니다."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         logger.error(f"스키마 파일을 찾을 수 없습니다: {path}")
@@ -35,9 +34,9 @@ class ValidateCommand(BaseCommand):
     def __init__(
         self,
         target_file: str,
-        schema_type: Optional[str],
+        schema_type: str | None,
         base_dir: str,
-        custom_schema_path: Optional[str],
+        custom_schema_path: str | None,
     ):
         super().__init__(base_dir, ".", None, None)
         self.target_file = target_file
@@ -66,7 +65,7 @@ class ValidateCommand(BaseCommand):
                     schema_type = "sources"
                 else:
                     logger.error(
-                        f"스키마 타입을 파일명({filename})으로 유추할 수 없습니다. --schema-type 옵션을 사용하세요."
+                        f"스키마 타입을 파일명({filename})으로 유추할 수 없습니다. --schema-type 옵션을 사용하세요.",
                     )
                     raise click.Abort()
             schema_path = base_path / "schemas" / f"{schema_type}.schema.json"
@@ -74,7 +73,7 @@ class ValidateCommand(BaseCommand):
         if not schema_path.exists():
             logger.error(f"JSON 스키마 파일을 찾을 수 없습니다: {schema_path}")
             logger.error(
-                "`sbkube init`을 실행하여 기본 스키마 파일을 생성하거나, 올바른 --base-dir 또는 --schema-path를 지정하세요."
+                "`sbkube init`을 실행하여 기본 스키마 파일을 생성하거나, 올바른 --base-dir 또는 --schema-path를 지정하세요.",
             )
             raise click.Abort()
         # 설정 파일 로드
@@ -103,7 +102,7 @@ class ValidateCommand(BaseCommand):
                 logger.error(f"Path: {'.'.join(str(p) for p in e.path)}")
             if e.instance:
                 logger.error(
-                    f"Instance: {json.dumps(e.instance, indent=2, ensure_ascii=False)}"
+                    f"Instance: {json.dumps(e.instance, indent=2, ensure_ascii=False)}",
                 )
             if e.schema_path:
                 logger.error(f"Schema Path: {'.'.join(str(p) for p in e.schema_path)}")
@@ -116,7 +115,7 @@ class ValidateCommand(BaseCommand):
             apps = data.get("apps", [])
             if not isinstance(apps, list):
                 logger.error(
-                    f"'apps' 필드는 리스트여야 합니다. 현재 타입: {type(apps)}"
+                    f"'apps' 필드는 리스트여야 합니다. 현재 타입: {type(apps)}",
                 )
                 raise click.Abort()
             if not apps:
@@ -142,7 +141,8 @@ class ValidateCommand(BaseCommand):
 
 @click.command(name="validate")
 @click.argument(
-    "target_file", type=click.Path(exists=True, dir_okay=False, resolve_path=True)
+    "target_file",
+    type=click.Path(exists=True, dir_okay=False, resolve_path=True),
 )
 @click.option(
     "--schema-type",

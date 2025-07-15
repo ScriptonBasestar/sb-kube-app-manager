@@ -24,4 +24,4 @@ spec:
   names:
     plural: myresources
     singular: myresource
-    kind: MyResource 
+    kind: MyResource

@@ -7,8 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sbkube.models.deployment_state import (AppDeploymentCreate,
-                                            DeploymentCreate)
+from sbkube.models.deployment_state import AppDeploymentCreate, DeploymentCreate
 from sbkube.state.database import DeploymentDatabase
 
 

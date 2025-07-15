@@ -42,7 +42,7 @@ class TestConfigLoadingPerformance:
 
         # Benchmark config loading
         def load_config():
-            with open(config_file, "r") as f:
+            with open(config_file) as f:
                 return yaml.safe_load(f)
 
         result = benchmark(load_config)
@@ -59,7 +59,7 @@ class TestConfigLoadingPerformance:
 
         # Benchmark config loading
         def load_config():
-            with open(config_file, "r") as f:
+            with open(config_file) as f:
                 return yaml.safe_load(f)
 
         result = benchmark(load_config)
@@ -376,10 +376,12 @@ class TestScalabilityBenchmarks:
 
     def test_state_tracking_performance(self, performance_benchmark, tmp_path):
         """Benchmark deployment state tracking overhead."""
-        from sbkube.models.deployment_state import (AppDeploymentCreate,
-                                                    DeploymentCreate,
-                                                    ResourceAction,
-                                                    ResourceInfo)
+        from sbkube.models.deployment_state import (
+            AppDeploymentCreate,
+            DeploymentCreate,
+            ResourceAction,
+            ResourceInfo,
+        )
         from sbkube.state.database import DeploymentDatabase
 
         # Create database

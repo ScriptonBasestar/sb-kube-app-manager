@@ -9,19 +9,27 @@ import hashlib
 import json
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from sbkube.models.deployment_state import (AppDeployment, AppDeploymentCreate,
-                                            Base, DeployedResource, Deployment,
-                                            DeploymentCreate, DeploymentDetail,
-                                            DeploymentStatus,
-                                            DeploymentSummary, HelmRelease,
-                                            HelmReleaseInfo, ResourceAction,
-                                            ResourceInfo)
+from sbkube.models.deployment_state import (
+    AppDeployment,
+    AppDeploymentCreate,
+    Base,
+    DeployedResource,
+    Deployment,
+    DeploymentCreate,
+    DeploymentDetail,
+    DeploymentStatus,
+    DeploymentSummary,
+    HelmRelease,
+    HelmReleaseInfo,
+    ResourceAction,
+    ResourceInfo,
+)
 from sbkube.utils.logger import get_logger
 
 logger = get_logger()
@@ -35,7 +43,7 @@ class DeploymentDatabase:
     high-level methods for deployment state management.
     """
 
-    def __init__(self, db_path: Optional[Union[str, Path]] = None):
+    def __init__(self, db_path: str | Path | None = None):
         """
         Initialize deployment database.
 
@@ -68,7 +76,9 @@ class DeploymentDatabase:
 
         # Create session factory
         self.SessionLocal = sessionmaker(
-            autocommit=False, autoflush=False, bind=self.engine
+            autocommit=False,
+            autoflush=False,
+            bind=self.engine,
         )
 
         # Initialize database
@@ -136,7 +146,9 @@ class DeploymentDatabase:
             return deployment
 
     def add_app_deployment(
-        self, deployment_id: int, app_data: AppDeploymentCreate
+        self,
+        deployment_id: int,
+        app_data: AppDeploymentCreate,
     ) -> AppDeployment:
         """
         Add an app deployment to a deployment.
@@ -174,7 +186,9 @@ class DeploymentDatabase:
             return app_deployment
 
     def add_deployed_resource(
-        self, app_deployment_id: int, resource_info: ResourceInfo
+        self,
+        app_deployment_id: int,
+        resource_info: ResourceInfo,
     ) -> DeployedResource:
         """
         Add a deployed resource record.
@@ -217,7 +231,9 @@ class DeploymentDatabase:
             return resource
 
     def add_helm_release(
-        self, app_deployment_id: int, release_info: HelmReleaseInfo
+        self,
+        app_deployment_id: int,
+        release_info: HelmReleaseInfo,
     ) -> HelmRelease:
         """
         Add a Helm release record.
@@ -261,7 +277,7 @@ class DeploymentDatabase:
         self,
         deployment_id: str,
         status: DeploymentStatus,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ):
         """
         Update deployment status.
@@ -285,8 +301,8 @@ class DeploymentDatabase:
         self,
         app_deployment_id: int,
         status: DeploymentStatus,
-        error_message: Optional[str] = None,
-        rollback_info: Optional[Dict[str, Any]] = None,
+        error_message: str | None = None,
+        rollback_info: dict[str, Any] | None = None,
     ):
         """
         Update app deployment status.
@@ -307,7 +323,7 @@ class DeploymentDatabase:
                 if rollback_info:
                     app_deployment.rollback_info = rollback_info
 
-    def get_deployment(self, deployment_id: str) -> Optional[DeploymentDetail]:
+    def get_deployment(self, deployment_id: str) -> DeploymentDetail | None:
         """
         Get detailed deployment information.
 
@@ -368,7 +384,7 @@ class DeploymentDatabase:
                             current_state=resource.current_state,
                             checksum=resource.checksum,
                             source_file=resource.source_file,
-                        )
+                        ),
                     )
 
                 # Add Helm releases
@@ -389,18 +405,18 @@ class DeploymentDatabase:
                             revision=release.revision,
                             values=release.values,
                             status=release.status,
-                        )
+                        ),
                     )
 
             return detail
 
     def list_deployments(
         self,
-        cluster: Optional[str] = None,
-        namespace: Optional[str] = None,
+        cluster: str | None = None,
+        namespace: str | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[DeploymentSummary]:
+    ) -> list[DeploymentSummary]:
         """
         List deployments with optional filtering.
 
@@ -454,14 +470,17 @@ class DeploymentDatabase:
                         success_count=success_apps,
                         failed_count=failed_apps,
                         error_message=deployment.error_message,
-                    )
+                    ),
                 )
 
             return summaries
 
     def get_latest_deployment(
-        self, cluster: str, namespace: str, app_config_dir: str
-    ) -> Optional[DeploymentDetail]:
+        self,
+        cluster: str,
+        namespace: str,
+        app_config_dir: str,
+    ) -> DeploymentDetail | None:
         """
         Get the latest deployment for a specific configuration.
 
@@ -477,7 +496,9 @@ class DeploymentDatabase:
             deployment = (
                 session.query(Deployment)
                 .filter_by(
-                    cluster=cluster, namespace=namespace, app_config_dir=app_config_dir
+                    cluster=cluster,
+                    namespace=namespace,
+                    app_config_dir=app_config_dir,
                 )
                 .order_by(Deployment.timestamp.desc())
                 .first()
@@ -489,7 +510,9 @@ class DeploymentDatabase:
             return None
 
     def cleanup_old_deployments(
-        self, days_to_keep: int = 30, max_deployments_per_app: int = 10
+        self,
+        days_to_keep: int = 30,
+        max_deployments_per_app: int = 10,
     ) -> int:
         """
         Clean up old deployment records.
@@ -521,7 +544,7 @@ class DeploymentDatabase:
             return deleted_count
 
     @staticmethod
-    def compute_resource_checksum(resource_data: Dict[str, Any]) -> str:
+    def compute_resource_checksum(resource_data: dict[str, Any]) -> str:
         """
         Compute checksum for a resource.
 

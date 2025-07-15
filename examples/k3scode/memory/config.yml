@@ -31,4 +31,3 @@ apps:
     specs:
       values:
         - memcached.yaml
-

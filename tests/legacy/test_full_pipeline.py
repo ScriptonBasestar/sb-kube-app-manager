@@ -54,7 +54,6 @@ def test_full_pipeline_prepare_build_template(runner: CliRunner, tmp_path):
         ),
         patch("subprocess.run") as mock_subprocess,
     ):
-
         mock_subprocess.return_value.returncode = 0
         mock_subprocess.return_value.stdout = ""
         mock_subprocess.return_value.stderr = ""

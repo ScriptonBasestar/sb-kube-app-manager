@@ -14,4 +14,4 @@ apps:
           - type: delete
             path: manifests/custom-operator.yaml
           - type: delete
-            path: manifests/custom-crd.yaml 
+            path: manifests/custom-crd.yaml

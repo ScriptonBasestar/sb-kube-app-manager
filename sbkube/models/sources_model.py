@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 from textwrap import dedent
-from typing import Dict
 
 import yaml
 from pydantic import BaseModel, ValidationError, field_validator
@@ -29,9 +28,9 @@ class GitRepoScheme(BaseModel):
 class SourceScheme(BaseModel):
     cluster: str
     kubeconfig: str
-    helm_repos: Dict[str, str]
-    oci_repos: Dict[str, Dict[str, str]]
-    git_repos: Dict[str, GitRepoScheme]
+    helm_repos: dict[str, str]
+    oci_repos: dict[str, dict[str, str]]
+    git_repos: dict[str, GitRepoScheme]
 
     def __repr__(self):
         return dedent(
@@ -41,7 +40,7 @@ class SourceScheme(BaseModel):
             helm_repos: {self.helm_repos}
             oci_repos: {self.oci_repos}
             git_repos: {self.git_repos}
-        """
+        """,
         )
 
     @field_validator("helm_repos")
@@ -66,7 +65,7 @@ def load_sources() -> SourceScheme:
     """Load sources.yaml into a SourceScheme object."""
     config_path = Path(__file__).parent / "sources.yaml"
     config_path = Path(os.path.expanduser(str(config_path)))
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         yaml_obj = yaml.safe_load(f)
     return SourceScheme.model_validate(yaml_obj)
 

@@ -8,11 +8,11 @@ apps:
         - echo "Starting pre-deployment checks..."
         - kubectl get nodes
         - echo "Pre-deployment checks completed!"
-  
+
   - name: post-deployment-cleanup
     type: exec
     specs:
       commands:
         - echo "Running post-deployment cleanup..."
         - kubectl delete pods --field-selector=status.phase=Succeeded -n example-exec
-        - echo "Cleanup completed!" 
+        - echo "Cleanup completed!"

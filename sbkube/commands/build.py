@@ -1,12 +1,15 @@
 import shutil
 from pathlib import Path
-from typing import List, Optional
 
 import click
 
-from sbkube.models.config_model import (AppCopySpec, AppInfoScheme,
-                                        AppInstallActionSpec, AppPullGitSpec,
-                                        AppPullHelmSpec)
+from sbkube.models.config_model import (
+    AppCopySpec,
+    AppInfoScheme,
+    AppInstallActionSpec,
+    AppPullGitSpec,
+    AppPullHelmSpec,
+)
 from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.common import common_click_options
 from sbkube.utils.logger import LogLevel, logger, setup_logging_from_context
@@ -19,8 +22,8 @@ class BuildCommand(BaseCommand):
         self,
         base_dir: str,
         app_config_dir: str,
-        target_app_name: Optional[str],
-        config_file_name: Optional[str],
+        target_app_name: str | None,
+        config_file_name: str | None,
     ):
         super().__init__(base_dir, app_config_dir, None, config_file_name)
         self.target_app_name = target_app_name
@@ -87,7 +90,7 @@ class BuildCommand(BaseCommand):
             return False
         except Exception as e:
             logger.error(
-                f"앱 '{app_name}' (타입: {app_type}) 빌드 중 예상치 못한 오류 발생: {e}"
+                f"앱 '{app_name}' (타입: {app_type}) 빌드 중 예상치 못한 오류 발생: {e}",
             )
             if logger._level.value <= LogLevel.DEBUG.value:
                 import traceback
@@ -113,10 +116,10 @@ class BuildCommand(BaseCommand):
         # 소스 확인
         if not source_chart_path.exists() or not source_chart_path.is_dir():
             logger.error(
-                f"앱 '{app_info.name}': `prepare` 단계에서 준비된 Helm 차트 소스를 찾을 수 없습니다: {source_chart_path}"
+                f"앱 '{app_info.name}': `prepare` 단계에서 준비된 Helm 차트 소스를 찾을 수 없습니다: {source_chart_path}",
             )
             logger.warning(
-                "'sbkube prepare' 명령을 먼저 실행했는지, 'dest' 필드가 올바른지 확인하세요."
+                "'sbkube prepare' 명령을 먼저 실행했는지, 'dest' 필드가 올바른지 확인하세요.",
             )
             raise FileNotFoundError(f"Prepared chart not found: {source_chart_path}")
 
@@ -126,7 +129,10 @@ class BuildCommand(BaseCommand):
 
         # Overrides 적용
         self._apply_overrides(
-            app_info.name, app_build_dest, app_final_build_path, spec_obj.overrides
+            app_info.name,
+            app_build_dest,
+            app_final_build_path,
+            spec_obj.overrides,
         )
 
         # Removes 적용
@@ -139,11 +145,11 @@ class BuildCommand(BaseCommand):
 
         if not prepared_repo_path.exists() or not prepared_repo_path.is_dir():
             logger.error(
-                f"앱 '{app_info.name}': `prepare` 단계에서 준비된 Git 저장소 소스를 찾을 수 없습니다: {prepared_repo_path}"
+                f"앱 '{app_info.name}': `prepare` 단계에서 준비된 Git 저장소 소스를 찾을 수 없습니다: {prepared_repo_path}",
             )
             logger.warning("'sbkube prepare' 명령을 먼저 실행했는지 확인하세요.")
             raise FileNotFoundError(
-                f"Prepared Git repo not found: {prepared_repo_path}"
+                f"Prepared Git repo not found: {prepared_repo_path}",
             )
 
         # 각 path 처리
@@ -171,7 +177,7 @@ class BuildCommand(BaseCommand):
                 shutil.copy2(source_path, dest_build_path / source_path.name)
             else:
                 logger.warning(
-                    f"Git 소스 경로가 파일이나 디렉토리가 아님: {source_path} (건너뜀)"
+                    f"Git 소스 경로가 파일이나 디렉토리가 아님: {source_path} (건너뜀)",
                 )
 
     def _build_copy(self, app_info: AppInfoScheme, spec_obj: AppCopySpec):
@@ -187,7 +193,7 @@ class BuildCommand(BaseCommand):
 
             if not source_path.exists():
                 logger.error(
-                    f"로컬 소스 경로 없음: {source_path} (원본: '{copy_pair.src}') (건너뜀)"
+                    f"로컬 소스 경로 없음: {source_path} (원본: '{copy_pair.src}') (건너뜀)",
                 )
                 continue
 
@@ -207,11 +213,13 @@ class BuildCommand(BaseCommand):
                 shutil.copy2(source_path, dest_build_path / source_path.name)
             else:
                 logger.warning(
-                    f"로컬 소스 경로가 파일이나 디렉토리가 아님: {source_path} (건너뜀)"
+                    f"로컬 소스 경로가 파일이나 디렉토리가 아님: {source_path} (건너뜀)",
                 )
 
     def _build_install_yaml(
-        self, app_info: AppInfoScheme, spec_obj: AppInstallActionSpec
+        self,
+        app_info: AppInfoScheme,
+        spec_obj: AppInstallActionSpec,
     ):
         """install-yaml 타입 빌드 - YAML 파일들을 빌드 디렉토리에 준비"""
         app_name = app_info.name
@@ -239,14 +247,14 @@ class BuildCommand(BaseCommand):
             # 파일이 존재하는지 확인
             if not source_path.exists():
                 logger.warning(
-                    f"install-yaml 액션 파일 없음: {source_path} (원본: '{action_path}') (건너뜀)"
+                    f"install-yaml 액션 파일 없음: {source_path} (원본: '{action_path}') (건너뜀)",
                 )
                 continue
 
             # 파일인지 확인
             if not source_path.is_file():
                 logger.warning(
-                    f"install-yaml 액션 경로가 파일이 아님: {source_path} (건너뜀)"
+                    f"install-yaml 액션 경로가 파일이 아님: {source_path} (건너뜀)",
                 )
                 continue
 
@@ -258,7 +266,11 @@ class BuildCommand(BaseCommand):
             shutil.copy2(source_path, dest_file_path)
 
     def _apply_overrides(
-        self, app_name: str, dest_name: str, build_path: Path, overrides: List[str]
+        self,
+        app_name: str,
+        dest_name: str,
+        build_path: Path,
+        overrides: list[str],
     ):
         """Override 파일 적용"""
         if not overrides:
@@ -277,7 +289,7 @@ class BuildCommand(BaseCommand):
             else:
                 logger.warning(f"Override 원본 파일 없음 (건너뜀): {override_src}")
 
-    def _apply_removes(self, build_path: Path, removes: List[str]):
+    def _apply_removes(self, build_path: Path, removes: list[str]):
         """Remove 파일/디렉토리 처리"""
         if not removes:
             return

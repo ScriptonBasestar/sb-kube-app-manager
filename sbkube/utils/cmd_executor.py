@@ -1,16 +1,20 @@
 import subprocess
 from pathlib import Path
-from typing import List, Optional
 
 from sbkube.exceptions import CliToolExecutionError, CliToolNotFoundError
 from sbkube.utils.logger import logger
-from sbkube.utils.retry import (NETWORK_RETRY_CONFIG, run_command_with_retry,
-                                run_git_command_with_retry,
-                                run_helm_command_with_retry)
+from sbkube.utils.retry import (
+    NETWORK_RETRY_CONFIG,
+    run_command_with_retry,
+    run_git_command_with_retry,
+    run_helm_command_with_retry,
+)
 
 
 def run_cmd_with_logging(
-    cmd: list, timeout: int = 300, cwd: Optional[Path] = None
+    cmd: list,
+    timeout: int = 300,
+    cwd: Path | None = None,
 ) -> bool:
     """
     Run command with logging and structured error handling.
@@ -80,7 +84,7 @@ def run_cmd_with_logging(
         raise CliToolExecutionError(tool_name, cmd, -1, None, str(e))
 
 
-def run_cmd_safely(cmd: list, timeout: int = 300, cwd: Optional[Path] = None) -> bool:
+def run_cmd_safely(cmd: list, timeout: int = 300, cwd: Path | None = None) -> bool:
     """
     Run command safely without raising exceptions.
 
@@ -102,9 +106,9 @@ def run_cmd_safely(cmd: list, timeout: int = 300, cwd: Optional[Path] = None) ->
 
 
 def run_network_cmd_with_retry(
-    cmd: List[str],
+    cmd: list[str],
     timeout: int = 300,
-    cwd: Optional[Path] = None,
+    cwd: Path | None = None,
     max_attempts: int = 3,
 ) -> bool:
     """
@@ -143,7 +147,10 @@ def run_network_cmd_with_retry(
             retryable_exceptions=NETWORK_RETRY_CONFIG.retryable_exceptions,
         )
         run_command_with_retry(
-            cmd, config=custom_config, timeout=timeout, cwd=str(cwd) if cwd else None
+            cmd,
+            config=custom_config,
+            timeout=timeout,
+            cwd=str(cwd) if cwd else None,
         )
         return True
 
@@ -178,7 +185,9 @@ def run_network_cmd_with_retry(
 
 
 def run_helm_cmd_with_retry(
-    cmd: List[str], timeout: int = 300, cwd: Optional[Path] = None
+    cmd: list[str],
+    timeout: int = 300,
+    cwd: Path | None = None,
 ) -> bool:
     """
     Run Helm command with appropriate retry configuration.
@@ -200,7 +209,9 @@ def run_helm_cmd_with_retry(
 
 
 def run_git_cmd_with_retry(
-    cmd: List[str], timeout: int = 300, cwd: Optional[Path] = None
+    cmd: list[str],
+    timeout: int = 300,
+    cwd: Path | None = None,
 ) -> bool:
     """
     Run Git command with appropriate retry configuration.

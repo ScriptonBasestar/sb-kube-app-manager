@@ -7,7 +7,7 @@ with support for inheritance, validation, and multi-environment configs.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import yaml
 
@@ -34,7 +34,9 @@ class ConfigManager:
     """
 
     def __init__(
-        self, base_dir: Union[str, Path], schema_dir: Optional[Union[str, Path]] = None
+        self,
+        base_dir: str | Path,
+        schema_dir: str | Path | None = None,
     ):
         """
         Initialize configuration manager.
@@ -48,14 +50,14 @@ class ConfigManager:
         self.loader = ConfigLoader(self.base_dir, self.schema_dir)
 
         # Cache for loaded configurations
-        self._sources_cache: Dict[str, SourceScheme] = {}
-        self._app_configs_cache: Dict[str, AppGroupScheme] = {}
-        self._defaults: Dict[str, Any] = {}
+        self._sources_cache: dict[str, SourceScheme] = {}
+        self._app_configs_cache: dict[str, AppGroupScheme] = {}
+        self._defaults: dict[str, Any] = {}
 
     def load_sources(
         self,
         sources_file: str = "sources.yaml",
-        environment: Optional[str] = None,
+        environment: str | None = None,
         validate: bool = True,
     ) -> SourceScheme:
         """
@@ -76,7 +78,9 @@ class ConfigManager:
 
         # Load base sources
         sources = self.loader.load_config(
-            sources_file, SourceScheme, validate_schema=validate
+            sources_file,
+            SourceScheme,
+            validate_schema=validate,
         )
 
         # Apply environment overlay if specified
@@ -84,7 +88,9 @@ class ConfigManager:
             env_file = self.base_dir / f"sources.{environment}.yaml"
             if env_file.exists():
                 env_sources = self.loader.load_config(
-                    env_file.name, SourceScheme, validate_schema=validate
+                    env_file.name,
+                    SourceScheme,
+                    validate_schema=validate,
                 )
                 sources = sources.merge_with(env_sources)
 
@@ -95,9 +101,9 @@ class ConfigManager:
 
     def load_app_config(
         self,
-        app_dir: Union[str, Path],
+        app_dir: str | Path,
         config_file: str = "config.yaml",
-        inherit_from: Optional[str] = None,
+        inherit_from: str | None = None,
         validate: bool = True,
     ) -> AppGroupScheme:
         """
@@ -124,7 +130,9 @@ class ConfigManager:
             config = AppGroupScheme(**config_data)
         else:
             config = self.loader.load_config(
-                config_path, AppGroupScheme, validate_schema=validate
+                config_path,
+                AppGroupScheme,
+                validate_schema=validate,
             )
 
         # Apply defaults if set
@@ -137,8 +145,10 @@ class ConfigManager:
         return config
 
     def _load_with_inheritance(
-        self, config_path: Path, parent_path: str
-    ) -> Dict[str, Any]:
+        self,
+        config_path: Path,
+        parent_path: str,
+    ) -> dict[str, Any]:
         """
         Load configuration with inheritance from parent.
 
@@ -158,7 +168,7 @@ class ConfigManager:
         if not child_path.exists():
             raise FileOperationError(f"Configuration file not found: {child_path}")
 
-        with open(child_path, "r") as f:
+        with open(child_path) as f:
             child_data = yaml.safe_load(f) or {}
 
         # Merge configurations
@@ -167,8 +177,10 @@ class ConfigManager:
         return merged
 
     def _deep_merge(
-        self, base: Dict[str, Any], overlay: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self,
+        base: dict[str, Any],
+        overlay: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         Deep merge two dictionaries.
 
@@ -220,7 +232,7 @@ class ConfigManager:
 
         return config
 
-    def set_defaults(self, defaults: Dict[str, Any]):
+    def set_defaults(self, defaults: dict[str, Any]):
         """
         Set default values for configurations.
 
@@ -230,8 +242,10 @@ class ConfigManager:
         self._defaults = defaults
 
     def validate_config_references(
-        self, app_config: AppGroupScheme, sources: SourceScheme
-    ) -> List[str]:
+        self,
+        app_config: AppGroupScheme,
+        sources: SourceScheme,
+    ) -> list[str]:
         """
         Validate that all references in app config exist in sources.
 
@@ -261,11 +275,11 @@ class ConfigManager:
 
     def load_all_configs(
         self,
-        app_dirs: List[Union[str, Path]],
+        app_dirs: list[str | Path],
         sources_file: str = "sources.yaml",
-        environment: Optional[str] = None,
+        environment: str | None = None,
         validate: bool = True,
-    ) -> Dict[str, AppGroupScheme]:
+    ) -> dict[str, AppGroupScheme]:
         """
         Load multiple application configurations.
 
@@ -294,7 +308,7 @@ class ConfigManager:
                     if errors:
                         logger.warning(
                             f"Validation errors in {app_dir}:\n"
-                            + "\n".join(f"  - {e}" for e in errors)
+                            + "\n".join(f"  - {e}" for e in errors),
                         )
 
                 configs[str(app_dir)] = config
@@ -309,7 +323,7 @@ class ConfigManager:
     def export_merged_config(
         self,
         app_config: AppGroupScheme,
-        output_path: Union[str, Path],
+        output_path: str | Path,
         format: str = "yaml",
     ):
         """

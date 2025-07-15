@@ -8,4 +8,4 @@ apps:
         - type: apply
           path: manifests/nginx-deployment.yaml
         - type: apply
-          path: manifests/nginx-service.yaml 
+          path: manifests/nginx-service.yaml

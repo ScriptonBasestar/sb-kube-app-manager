@@ -32,7 +32,6 @@
     "<C-c>": false,
     "<C-v>": false
   },
-  // To improve performance
   "extensions.experimental.affinity": {
     "vscodevim.vim": 1
   },
@@ -46,5 +45,5 @@
     {
       "path": "[[workspace]]/.venv/lib/python3.12/site-packages/idna-3.10.dist-info"
     }
-  ],
+  ]
 }

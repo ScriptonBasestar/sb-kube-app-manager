@@ -1,6 +1,7 @@
 # sbkube Test Suite
 
-This directory contains the comprehensive test suite for sbkube, including unit tests, integration tests, and performance benchmarks.
+This directory contains the comprehensive test suite for sbkube, including unit tests, integration tests, and
+performance benchmarks.
 
 ## Test Structure
 
@@ -34,6 +35,7 @@ tests/
 ### Unit Tests
 
 Unit tests verify individual components in isolation:
+
 - Configuration validation
 - Exception handling
 - Retry mechanisms
@@ -43,6 +45,7 @@ Unit tests verify individual components in isolation:
 ### Integration Tests
 
 Integration tests verify interactions between components and with external systems:
+
 - Complete workflow tests (prepare → build → template → deploy)
 - Helm integration
 - Kubernetes integration
@@ -52,6 +55,7 @@ Integration tests verify interactions between components and with external syste
 ### Performance Tests
 
 Performance tests measure execution time and resource usage:
+
 - Configuration loading benchmarks
 - Command execution performance
 - Template rendering performance
@@ -63,11 +67,13 @@ Performance tests measure execution time and resource usage:
 ### Prerequisites
 
 1. Install test dependencies:
+
 ```bash
 uv add --group test pytest pytest-cov pytest-xdist pytest-benchmark pytest-mock testcontainers kubernetes faker
 ```
 
 2. For integration tests, ensure you have:
+
 - Docker (for testcontainers)
 - Helm CLI installed
 - kubectl CLI installed
@@ -250,6 +256,7 @@ addopts = [
 ### Common Fixtures
 
 Located in `tests/conftest.py`:
+
 - `runner`: Click test runner
 - `base_dir`: Temporary base directory
 - `app_dir`: Application configuration directory
@@ -259,6 +266,7 @@ Located in `tests/conftest.py`:
 ### Integration Test Fixtures
 
 Located in `tests/integration/conftest.py`:
+
 - `k8s_cluster`: K3s Kubernetes cluster (using testcontainers)
 - `k8s_namespace`: Isolated namespace for tests
 - `helm_binary`: Validated Helm binary path
@@ -269,6 +277,7 @@ Located in `tests/integration/conftest.py`:
 ### Performance Test Fixtures
 
 Located in `tests/performance/conftest.py`:
+
 - `performance_benchmark`: Performance metrics collector
 - `large_project_generator`: Generate large test projects
 - `stress_test_data`: Generate stress test data
@@ -277,12 +286,14 @@ Located in `tests/performance/conftest.py`:
 ## Coverage Goals
 
 We aim to maintain:
+
 - Overall coverage: ≥ 90%
 - Unit test coverage: ≥ 95%
 - Integration test coverage: ≥ 80%
 - No uncovered critical paths
 
 Current coverage can be viewed by running:
+
 ```bash
 pytest --cov=sbkube --cov-report=html
 open htmlcov/index.html
@@ -293,32 +304,36 @@ open htmlcov/index.html
 ### Common Issues
 
 1. **Docker not available**: Integration tests using testcontainers require Docker
+
    ```bash
    # Check Docker is running
    docker ps
    ```
 
-2. **Helm/kubectl not found**: Some tests require these tools
+1. **Helm/kubectl not found**: Some tests require these tools
+
    ```bash
    # Install Helm
    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-   
+
    # Install kubectl
    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
    chmod +x kubectl
    sudo mv kubectl /usr/local/bin/
    ```
 
-3. **Slow tests**: Run tests in parallel
+1. **Slow tests**: Run tests in parallel
+
    ```bash
    pytest -n auto
    ```
 
-4. **Resource cleanup**: If tests fail to clean up resources
+1. **Resource cleanup**: If tests fail to clean up resources
+
    ```bash
    # Clean up test namespaces
    kubectl delete ns -l test=sbkube
-   
+
    # Clean up Helm releases
    helm list --all-namespaces | grep test- | awk '{print $1}' | xargs -I {} helm delete {}
    ```
@@ -326,8 +341,9 @@ open htmlcov/index.html
 ## Contributing
 
 When adding new features:
+
 1. Write unit tests for new functions/classes
-2. Add integration tests for user-facing features
-3. Include performance tests for critical paths
-4. Update this documentation if adding new test categories or fixtures
-5. Ensure all tests pass and coverage remains above 90%
+1. Add integration tests for user-facing features
+1. Include performance tests for critical paths
+1. Update this documentation if adding new test categories or fixtures
+1. Ensure all tests pass and coverage remains above 90%

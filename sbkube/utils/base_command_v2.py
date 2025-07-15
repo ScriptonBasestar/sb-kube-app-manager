@@ -6,7 +6,6 @@ with automatic configuration validation and inheritance capabilities.
 """
 
 from pathlib import Path
-from typing import List, Optional, Union
 
 import click
 
@@ -25,8 +24,8 @@ class EnhancedBaseCommand:
         self,
         base_dir: str = ".",
         app_config_dir: str = "config",
-        cli_namespace: Optional[str] = None,
-        config_file_name: Optional[str] = None,
+        cli_namespace: str | None = None,
+        config_file_name: str | None = None,
         sources_file: str = "sources.yaml",
         validate_on_load: bool = True,
         use_inheritance: bool = True,
@@ -66,13 +65,13 @@ class EnhancedBaseCommand:
         )
 
         # Configuration objects
-        self.config_file_path: Optional[Path] = None
-        self.app_group: Optional[AppGroupScheme] = None
-        self.sources: Optional[SourceScheme] = None
-        self.app_info_list: List[AppInfoScheme] = []
+        self.config_file_path: Path | None = None
+        self.app_group: AppGroupScheme | None = None
+        self.sources: SourceScheme | None = None
+        self.app_info_list: list[AppInfoScheme] = []
 
         # Validation errors tracking
-        self.validation_errors: List[str] = []
+        self.validation_errors: list[str] = []
 
     def execute_pre_hook(self):
         """Execute common preprocessing before each command."""
@@ -131,7 +130,7 @@ class EnhancedBaseCommand:
                     return candidate
 
             logger.error(
-                f"App config file not found: {self.app_config_dir}/config.[yaml|yml|toml]"
+                f"App config file not found: {self.app_config_dir}/config.[yaml|yml|toml]",
             )
             raise click.Abort()
 
@@ -186,7 +185,7 @@ class EnhancedBaseCommand:
         except Exception as e:
             raise ConfigValidationError(f"Failed to load sources: {e}")
 
-    def get_environment(self) -> Optional[str]:
+    def get_environment(self) -> str | None:
         """
         Determine environment name from config or CLI.
         Override in subclasses to implement custom logic.
@@ -200,19 +199,22 @@ class EnhancedBaseCommand:
             return
 
         errors = self.config_manager.validate_config_references(
-            self.app_group, self.sources
+            self.app_group,
+            self.sources,
         )
 
         if errors:
             self.validation_errors.extend(errors)
             if self.validate_on_load:
                 raise ConfigValidationError(
-                    f"Found {len(errors)} reference validation errors"
+                    f"Found {len(errors)} reference validation errors",
                 )
 
     def parse_apps(
-        self, app_types: Optional[List[str]] = None, app_name: Optional[str] = None
-    ) -> List[AppInfoScheme]:
+        self,
+        app_types: list[str] | None = None,
+        app_name: str | None = None,
+    ) -> list[AppInfoScheme]:
         """
         Parse and filter app information with validation.
 
@@ -240,7 +242,7 @@ class EnhancedBaseCommand:
                     if app_name and app_info.name == app_name:
                         logger.warning(
                             f"App '{app_info.name}' (type: {app_info.type}): "
-                            f"Type not supported by this command"
+                            f"Type not supported by this command",
                         )
                     continue
 
@@ -267,13 +269,13 @@ class EnhancedBaseCommand:
         # Raise validation errors if any
         if self.validation_errors and self.validate_on_load:
             raise ConfigValidationError(
-                f"Found {len(self.validation_errors)} validation errors"
+                f"Found {len(self.validation_errors)} validation errors",
             )
 
         self.app_info_list = parsed_apps
         return parsed_apps
 
-    def get_namespace(self, app_info: AppInfoScheme) -> Optional[str]:
+    def get_namespace(self, app_info: AppInfoScheme) -> str | None:
         """
         Determine namespace for the app.
         Priority: CLI > App config > Global config
@@ -326,13 +328,21 @@ class EnhancedBaseCommand:
             raise
 
     def execute_command_with_logging(
-        self, cmd: list, error_msg: str, success_msg: str = None, timeout: int = 300
+        self,
+        cmd: list,
+        error_msg: str,
+        success_msg: str = None,
+        timeout: int = 300,
     ):
         """Execute command with logging (using common function)."""
         from sbkube.utils.common import execute_command_with_logging
 
         return execute_command_with_logging(
-            cmd, error_msg, success_msg, self.base_dir, timeout
+            cmd,
+            error_msg,
+            success_msg,
+            self.base_dir,
+            timeout,
         )
 
     def check_required_cli_tools(self):
@@ -366,7 +376,7 @@ class EnhancedBaseCommand:
                     failed_apps.append(app_info.name)
             except Exception as e:
                 logger.error(
-                    f"Unexpected error {operation_name} app '{app_info.name}': {e}"
+                    f"Unexpected error {operation_name} app '{app_info.name}': {e}",
                 )
                 failed_apps.append(app_info.name)
                 if logger._level.value <= LogLevel.DEBUG.value:
@@ -378,7 +388,7 @@ class EnhancedBaseCommand:
         if total_apps > 0:
             logger.success(
                 f"{operation_name} summary: "
-                f"{success_apps} of {total_apps} apps succeeded"
+                f"{success_apps} of {total_apps} apps succeeded",
             )
 
             if failed_apps:
@@ -387,7 +397,9 @@ class EnhancedBaseCommand:
         logger.heading(f"{operation_name} completed")
 
     def export_validated_config(
-        self, output_path: Union[str, Path], format: str = "yaml"
+        self,
+        output_path: str | Path,
+        format: str = "yaml",
     ):
         """
         Export validated configuration to file.
@@ -402,7 +414,9 @@ class EnhancedBaseCommand:
 
         try:
             self.config_manager.export_merged_config(
-                self.app_group, output_path, format
+                self.app_group,
+                output_path,
+                format,
             )
             logger.success(f"Exported validated config to: {output_path}")
         except Exception as e:

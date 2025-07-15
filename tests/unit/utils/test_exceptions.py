@@ -2,12 +2,22 @@
 Tests for the standardized exception hierarchy.
 """
 
-from sbkube.exceptions import (CliToolExecutionError, CliToolNotFoundError,
-                               ConfigFileNotFoundError, ConfigurationError,
-                               ConfigValidationError, FileSystemError,
-                               GitError, HelmError, KubernetesError,
-                               PathTraversalError, SbkubeError, SecurityError,
-                               format_error_with_suggestions, handle_exception)
+from sbkube.exceptions import (
+    CliToolExecutionError,
+    CliToolNotFoundError,
+    ConfigFileNotFoundError,
+    ConfigurationError,
+    ConfigValidationError,
+    FileSystemError,
+    GitError,
+    HelmError,
+    KubernetesError,
+    PathTraversalError,
+    SbkubeError,
+    SecurityError,
+    format_error_with_suggestions,
+    handle_exception,
+)
 
 
 class TestSbkubeExceptionHierarchy:

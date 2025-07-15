@@ -48,9 +48,9 @@ def k8s_cluster():
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             # Update server URL to use container's exposed port
             kubeconfig_data = yaml.safe_load(kubeconfig_str)
-            kubeconfig_data["clusters"][0]["cluster"][
-                "server"
-            ] = k3s.get_connection_url()
+            kubeconfig_data["clusters"][0]["cluster"]["server"] = (
+                k3s.get_connection_url()
+            )
             yaml.dump(kubeconfig_data, f)
             kubeconfig_path = f.name
 

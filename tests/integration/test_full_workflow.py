@@ -102,7 +102,7 @@ class TestFullWorkflow:
 
         # Update project configuration to use test namespace
         config_path = sbkube_project / "config" / "config.yaml"
-        with open(config_path, "r") as f:
+        with open(config_path) as f:
             config = yaml.safe_load(f)
         config["namespace"] = k8s_namespace
         with open(config_path, "w") as f:

@@ -1,0 +1,77 @@
+# Pre-commit configuration for sbkube project
+# Run with: pre-commit run --all-files
+
+repos:
+  # Python code formatting and linting with Ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      # Linting with auto-fix (including import sorting)
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: ^(migrations/|node_modules/|examples/)
+      # Formatting (replaces black)
+      - id: ruff-format
+        exclude: ^(migrations/|node_modules/|examples/)
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        args: [--ignore-missing-imports]
+        exclude: ^(migrations/|node_modules/|examples/|tests/)
+        additional_dependencies: [types-PyYAML, types-toml]
+
+  # Markdown formatting
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.21
+    hooks:
+      - id: mdformat
+        args: [--wrap=120]
+        exclude: ^(node_modules/|examples/)
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|.*\.txt)$
+      - id: end-of-file-fixer
+        exclude: ^(.*\.md|.*\.txt)$
+      - id: check-yaml
+        exclude: ^(.github/|node_modules/|examples/)
+      - id: check-json
+        exclude: ^(node_modules/|package-lock\.json)
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: debug-statements
+        exclude: ^(debug/|scripts/debug_)
+
+  # Security checks
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        args: [-r, -s, B101,B404,B603,B607,B602, --severity-level, medium, --quiet]
+        exclude: ^(tests/|scripts/|debug/|examples/|final_review_gate\.py)
+        pass_filenames: false
+        files: ^sbkube/
+
+# Global configuration
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

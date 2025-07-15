@@ -7,16 +7,26 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from sbkube.exceptions import (GitRepositoryError, NetworkError,
-                               RepositoryConnectionError)
-from sbkube.utils.retry import (GIT_RETRY_CONFIG, HELM_RETRY_CONFIG,
-                                NETWORK_RETRY_CONFIG, RetryConfig,
-                                calculate_delay, is_retryable_exception,
-                                retry_git_operation, retry_helm_operation,
-                                retry_network_operation, retry_operation,
-                                run_command_with_retry,
-                                run_git_command_with_retry,
-                                run_helm_command_with_retry)
+from sbkube.exceptions import (
+    GitRepositoryError,
+    NetworkError,
+    RepositoryConnectionError,
+)
+from sbkube.utils.retry import (
+    GIT_RETRY_CONFIG,
+    HELM_RETRY_CONFIG,
+    NETWORK_RETRY_CONFIG,
+    RetryConfig,
+    calculate_delay,
+    is_retryable_exception,
+    retry_git_operation,
+    retry_helm_operation,
+    retry_network_operation,
+    retry_operation,
+    run_command_with_retry,
+    run_git_command_with_retry,
+    run_helm_command_with_retry,
+)
 
 
 class TestRetryConfig:

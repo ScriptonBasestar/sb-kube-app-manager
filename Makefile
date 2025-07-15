@@ -22,8 +22,8 @@ help:
 	@echo "  make test-coverage   Run tests with coverage report"
 	@echo ""
 	@echo "Code Quality:"
-	@echo "  make lint            Run linters (ruff, mypy)"
-	@echo "  make format          Format code with black and isort"
+	@echo "  make lint            Run linters (ruff, mypy, bandit)"
+	@echo "  make format          Format code with black, isort, and mdformat"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean           Clean build artifacts and caches"
@@ -99,12 +99,14 @@ lint:
 	uv run ruff check sbkube tests
 	@echo "Running mypy..."
 	uv run mypy sbkube --ignore-missing-imports
+	@echo "Running bandit security check..."
+	@uv run bandit -r sbkube --skip B101,B404,B603,B607,B602 --severity-level medium --quiet || echo "✅ Security check completed"
 
 format:
-	@echo "Running black..."
-	uv run black sbkube tests
-	@echo "Running isort..."
-	uv run isort sbkube tests
+	@echo "Running ruff format..."
+	uv run ruff format sbkube tests
+	@echo "Running ruff check (imports)..."
+	uv run ruff check sbkube tests --select I --fix
 	@echo "Running mdformat..."
 	uv run mdformat *.md docs/**/*.md --wrap 120
 

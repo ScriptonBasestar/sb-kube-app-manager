@@ -6,7 +6,7 @@ built-in support for inheritance, validation, and error handling.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Type, TypeVar, Union
+from typing import Any, TypeVar
 
 import yaml
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -53,12 +53,14 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
                 errors.append(f"  - {field_path}: {msg}")
 
             raise ConfigValidationError(
-                "Configuration validation failed:\n" + "\n".join(errors)
+                "Configuration validation failed:\n" + "\n".join(errors),
             )
 
     @classmethod
     def from_dict(
-        cls: Type[T], data: Dict[str, Any], context: Optional[Dict[str, Any]] = None
+        cls: type[T],
+        data: dict[str, Any],
+        context: dict[str, Any] | None = None,
     ) -> T:
         """
         Create instance from dictionary with optional context.
@@ -83,7 +85,9 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         return instance
 
     def merge_with(
-        self: T, other: Optional[Union[Dict[str, Any], T]], deep: bool = True
+        self: T,
+        other: dict[str, Any] | T | None,
+        deep: bool = True,
     ) -> T:
         """
         Merge this configuration with another, creating a new instance.
@@ -113,7 +117,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         return self.__class__(**merged)
 
     @staticmethod
-    def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
         """
         Perform deep merge of two dictionaries.
 
@@ -159,7 +163,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         try:
             import jsonschema
 
-            with open(schema_path, "r") as f:
+            with open(schema_path) as f:
                 schema = yaml.safe_load(f)
 
             data = self.model_dump()
@@ -168,12 +172,12 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         except jsonschema.ValidationError as e:
             raise ConfigValidationError(
                 f"Schema validation failed: {e.message}\n"
-                f"Failed at path: {'.'.join(str(x) for x in e.path)}"
+                f"Failed at path: {'.'.join(str(x) for x in e.path)}",
             )
         except Exception as e:
             raise ConfigValidationError(f"Schema validation error: {str(e)}")
 
-    def to_yaml(self, path: Optional[Path] = None) -> str:
+    def to_yaml(self, path: Path | None = None) -> str:
         """
         Convert model to YAML string or save to file.
 
@@ -193,7 +197,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         return yaml_str
 
     @classmethod
-    def from_yaml(cls: Type[T], path: Union[str, Path]) -> T:
+    def from_yaml(cls: type[T], path: str | Path) -> T:
         """
         Load model from YAML file.
 
@@ -208,7 +212,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
             raise ConfigValidationError(f"Configuration file not found: {path}")
 
         try:
-            with open(path, "r") as f:
+            with open(path) as f:
                 data = yaml.safe_load(f)
 
             if data is None:
@@ -230,12 +234,12 @@ class InheritableConfigModel(ConfigBaseModel):
     - Override specific fields
     """
 
-    _parent: Optional[str] = None  # Path to parent config
-    _defaults: Optional[Dict[str, Any]] = None  # Default values
+    _parent: str | None = None  # Path to parent config
+    _defaults: dict[str, Any] | None = None  # Default values
 
     @model_validator(mode="before")
     @classmethod
-    def apply_inheritance(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def apply_inheritance(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Apply inheritance from parent configuration."""
         parent_path = values.pop("_parent", None)
         defaults = values.pop("_defaults", None)
@@ -266,7 +270,7 @@ class ConfigLoader:
     Utility class for loading configurations with inheritance and validation.
     """
 
-    def __init__(self, base_dir: Path, schema_dir: Optional[Path] = None):
+    def __init__(self, base_dir: Path, schema_dir: Path | None = None):
         """
         Initialize configuration loader.
 
@@ -276,12 +280,12 @@ class ConfigLoader:
         """
         self.base_dir = Path(base_dir)
         self.schema_dir = Path(schema_dir) if schema_dir else None
-        self._cache: Dict[str, Any] = {}
+        self._cache: dict[str, Any] = {}
 
     def load_config(
         self,
-        config_path: Union[str, Path],
-        model_class: Type[T],
+        config_path: str | Path,
+        model_class: type[T],
         validate_schema: bool = True,
         use_cache: bool = True,
     ) -> T:

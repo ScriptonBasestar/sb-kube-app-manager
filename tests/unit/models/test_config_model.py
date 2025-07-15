@@ -5,8 +5,12 @@ Tests for sbkube.models.config_model
 import pytest
 from pydantic import ValidationError
 
-from sbkube.models.config_model import (AppCopySpec, AppInfoScheme,
-                                        AppInstallActionSpec, get_spec_model)
+from sbkube.models.config_model import (
+    AppCopySpec,
+    AppInfoScheme,
+    AppInstallActionSpec,
+    get_spec_model,
+)
 
 
 class TestAppInfoScheme:

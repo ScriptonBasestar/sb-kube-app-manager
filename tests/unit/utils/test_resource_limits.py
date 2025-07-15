@@ -84,7 +84,7 @@ class TestEdgeCaseHandling:
 
         try:
             # Should handle empty config gracefully
-            with open(empty_config_path, "r") as f:
+            with open(empty_config_path) as f:
                 content = f.read()
 
             assert content == ""
@@ -121,7 +121,7 @@ class TestEdgeCaseHandling:
             import yaml
 
             with pytest.raises(yaml.YAMLError):
-                with open(malformed_config_path, "r") as f:
+                with open(malformed_config_path) as f:
                     yaml.safe_load(f)
 
         finally:

@@ -17,23 +17,35 @@ try:
 except ImportError:
     KUBERNETES_AVAILABLE = False
 
-from sbkube.commands import (build, delete, deploy, prepare, state, template,
-                             upgrade, validate, version)
+from sbkube.commands import (
+    build,
+    delete,
+    deploy,
+    prepare,
+    state,
+    template,
+    upgrade,
+    validate,
+    version,
+)
 from sbkube.exceptions import CliToolExecutionError, CliToolNotFoundError
-from sbkube.utils.cli_check import (check_helm_installed_or_exit,
-                                    check_kubectl_installed_or_exit)
+from sbkube.utils.cli_check import (
+    check_helm_installed_or_exit,
+    check_kubectl_installed_or_exit,
+)
 
 # 기존 print_kube_connection_help, print_helm_connection_help는 display_kubeconfig_info 및 SbkubeGroup.invoke에서 직접 처리 또는 대체
 
 
 def display_kubeconfig_info(
-    kubeconfig_path: str | None = None, context_name: str | None = None
+    kubeconfig_path: str | None = None,
+    context_name: str | None = None,
 ):
     """Kubeconfig 파일 정보를 파싱하여 현재 컨텍스트, 사용 가능한 컨텍스트 목록 및 연결 방법을 안내합니다."""
     if not KUBERNETES_AVAILABLE:
         logger.error("`kubernetes` 파이썬 패키지를 찾을 수 없습니다.")
         logger.error(
-            "`pip install kubernetes` 또는 `poetry add kubernetes`로 설치해주세요."
+            "`pip install kubernetes` 또는 `poetry add kubernetes`로 설치해주세요.",
         )
         return
 
@@ -49,11 +61,11 @@ def display_kubeconfig_info(
 
     try:
         contexts, active_context = kube_config.list_kube_config_contexts(
-            config_file=resolved_kubeconfig_path
+            config_file=resolved_kubeconfig_path,
         )
     except ConfigException as e:
         logger.warning(
-            f"Kubeconfig 파일을 로드할 수 없습니다 (경로: {default_kubeconfig_path_text})."
+            f"Kubeconfig 파일을 로드할 수 없습니다 (경로: {default_kubeconfig_path_text}).",
         )
         logger.verbose(f"오류: {e}")
         logger.info("\n💡 연결 방법 안내:")
@@ -61,7 +73,7 @@ def display_kubeconfig_info(
         logger.info("      [cyan]export KUBECONFIG=/path/to/your/kubeconfig[/cyan]")
         logger.info("   2. 또는 `sbkube` 명령어에 옵션을 사용하세요:")
         logger.info(
-            "      [cyan]sbkube --kubeconfig /path/to/your/kubeconfig <command>[/cyan]"
+            "      [cyan]sbkube --kubeconfig /path/to/your/kubeconfig <command>[/cyan]",
         )
         logger.info("      [cyan]sbkube --context <your_context_name> <command>[/cyan]")
         return
@@ -71,7 +83,7 @@ def display_kubeconfig_info(
 
     if not contexts:
         logger.warning(
-            f"사용 가능한 Kubernetes 컨텍스트가 Kubeconfig 파일({default_kubeconfig_path_text})에 없습니다."
+            f"사용 가능한 Kubernetes 컨텍스트가 Kubeconfig 파일({default_kubeconfig_path_text})에 없습니다.",
         )
         return
 
@@ -129,7 +141,7 @@ def display_kubeconfig_info(
     logger.info("3. KUBECONFIG 환경 변수 (여러 파일 관리 시):")
     logger.info("export KUBECONFIG=~/.kube/config:/path/to/other/config")
     logger.info(
-        "(이 경우 현재 활성 컨텍스트는 첫 번째 유효한 파일의 현재 컨텍스트를 따릅니다)"
+        "(이 경우 현재 활성 컨텍스트는 첫 번째 유효한 파일의 현재 컨텍스트를 따릅니다)",
     )
 
 
@@ -188,7 +200,9 @@ class SbkubeGroup(click.Group):
     help="사용할 Kubernetes 컨텍스트 이름. KUBECONTEXT 환경변수 또는 현재 활성 컨텍스트를 따릅니다.",
 )
 @click.option(
-    "--namespace", envvar="KUBE_NAMESPACE", help="작업을 수행할 기본 네임스페이스."
+    "--namespace",
+    envvar="KUBE_NAMESPACE",
+    help="작업을 수행할 기본 네임스페이스.",
 )
 @click.option("-v", "--verbose", is_flag=True, help="상세 로깅을 활성화합니다.")
 @click.pass_context

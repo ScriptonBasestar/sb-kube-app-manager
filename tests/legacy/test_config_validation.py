@@ -10,11 +10,14 @@ import yaml
 
 from sbkube.exceptions import ConfigValidationError
 from sbkube.models.config_manager import ConfigManager
-from sbkube.models.config_model_v2 import (AppGroupScheme, AppInfoScheme,
-                                           AppInstallHelmSpec, AppPullGitSpec,
-                                           CopyPair)
-from sbkube.models.sources_model_v2 import (GitRepoScheme, HelmRepoScheme,
-                                            SourceScheme)
+from sbkube.models.config_model_v2 import (
+    AppGroupScheme,
+    AppInfoScheme,
+    AppInstallHelmSpec,
+    AppPullGitSpec,
+    CopyPair,
+)
+from sbkube.models.sources_model_v2 import GitRepoScheme, HelmRepoScheme, SourceScheme
 from sbkube.models.validators import ValidatorMixin, validate_spec_fields
 
 
@@ -448,7 +451,7 @@ class TestConfigManager:
 
             assert export_path.exists()
 
-            with open(export_path, "r") as f:
+            with open(export_path) as f:
                 exported = yaml.safe_load(f)
 
             assert exported["namespace"] == "test-namespace"

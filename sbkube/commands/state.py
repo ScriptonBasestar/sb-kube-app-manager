@@ -7,7 +7,6 @@ viewing deployment history, and performing rollbacks.
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -34,12 +33,14 @@ def state():
     default="table",
     help="Output format",
 )
-def list(cluster: Optional[str], namespace: Optional[str], limit: int, format: str):
+def list(cluster: str | None, namespace: str | None, limit: int, format: str):
     """List deployment history."""
     try:
         db = DeploymentDatabase()
         deployments = db.list_deployments(
-            cluster=cluster, namespace=namespace, limit=limit
+            cluster=cluster,
+            namespace=namespace,
+            limit=limit,
         )
 
         if format == "table":
@@ -106,12 +107,14 @@ def show(deployment_id: str, format: str):
     help="Specific app(s) to rollback (can be specified multiple times)",
 )
 @click.option(
-    "--dry-run", is_flag=True, help="Simulate rollback without making changes"
+    "--dry-run",
+    is_flag=True,
+    help="Simulate rollback without making changes",
 )
 @click.option("--force", is_flag=True, help="Force rollback even with warnings")
 def rollback(
     deployment_id: str,
-    target_deployment: Optional[str],
+    target_deployment: str | None,
     app: tuple,
     dry_run: bool,
     force: bool,
@@ -130,7 +133,7 @@ def rollback(
         )
 
         logger.info(
-            f"{'DRY RUN: ' if dry_run else ''}Rolling back deployment: {deployment_id}"
+            f"{'DRY RUN: ' if dry_run else ''}Rolling back deployment: {deployment_id}",
         )
 
         # Perform rollback
@@ -157,7 +160,11 @@ def rollback(
 @click.option("--namespace", "-n", required=True, help="Namespace")
 @click.option("--limit", default=10, help="Maximum number of rollback points to show")
 def rollback_points(
-    base_dir: str, app_dir: str, cluster: str, namespace: str, limit: int
+    base_dir: str,
+    app_dir: str,
+    cluster: str,
+    namespace: str,
+    limit: int,
 ):
     """List available rollback points for a configuration."""
     try:
@@ -185,7 +192,7 @@ def rollback_points(
                 f"{status_icon} {point['deployment_id']} - "
                 f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')} - "
                 f"{point['apps']} apps - "
-                f"Status: {point['status']}"
+                f"Status: {point['status']}",
             )
 
     except Exception as e:
@@ -196,7 +203,9 @@ def rollback_points(
 @state.command()
 @click.option("--days", default=30, help="Delete deployments older than this many days")
 @click.option(
-    "--keep-per-app", default=10, help="Maximum deployments to keep per application"
+    "--keep-per-app",
+    default=10,
+    help="Maximum deployments to keep per application",
 )
 @click.option(
     "--dry-run",
@@ -213,7 +222,8 @@ def cleanup(days: int, keep_per_app: int, dry_run: bool):
             # TODO: Implement dry run logic to show what would be deleted
         else:
             deleted = db.cleanup_old_deployments(
-                days_to_keep=days, max_deployments_per_app=keep_per_app
+                days_to_keep=days,
+                max_deployments_per_app=keep_per_app,
             )
             logger.success(f"Deleted {deleted} old deployment records")
 
@@ -283,7 +293,8 @@ def _print_deployment_detail(deployment):
         click.echo("\nResources:")
         for resource in deployment.resources:
             action_icon = {"create": "➕", "update": "📝", "delete": "➖"}.get(
-                resource.action.value, "❓"
+                resource.action.value,
+                "❓",
             )
 
             ns_str = f" -n {resource.namespace}" if resource.namespace else ""
@@ -295,7 +306,7 @@ def _print_deployment_detail(deployment):
         for release in deployment.helm_releases:
             click.echo(
                 f"  📦 {release.release_name} "
-                f"(rev: {release.revision}, status: {release.status})"
+                f"(rev: {release.revision}, status: {release.status})",
             )
 
 
@@ -324,15 +335,15 @@ def _print_rollback_simulation(result):
             click.echo(
                 f"  📦 Rollback Helm release '{action['details']['release']}' "
                 f"from revision {action['details']['from_revision']} "
-                f"to {action['details']['to_revision']}"
+                f"to {action['details']['to_revision']}",
             )
         elif action["type"] == "resource_delete":
             click.echo(
-                f"  ➖ Delete {action['details']['kind']}/{action['details']['name']}"
+                f"  ➖ Delete {action['details']['kind']}/{action['details']['name']}",
             )
         elif action["type"] == "resource_restore":
             click.echo(
-                f"  📝 Restore {action['details']['kind']}/{action['details']['name']}"
+                f"  📝 Restore {action['details']['kind']}/{action['details']['name']}",
             )
 
 
@@ -353,7 +364,7 @@ def _print_rollback_result(result):
             click.echo(f"  ✅ {rollback['app']} ({rollback['type']})")
             for action in rollback.get("actions", []):
                 click.echo(
-                    f"     - {action['type']}: {action.get('resource', action.get('release', ''))}"
+                    f"     - {action['type']}: {action.get('resource', action.get('release', ''))}",
                 )
 
     if result["errors"]:

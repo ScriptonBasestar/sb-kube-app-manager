@@ -12,7 +12,7 @@ ______________________________________________________________________
 
 ```bash
 # 오류 메시지
-ERROR: Python 3.11 is required, but you have 3.10
+ERROR: Python 3.12 is required, but you have 3.11
 ```
 
 **해결 방법:**

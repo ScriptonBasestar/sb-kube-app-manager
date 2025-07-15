@@ -6,9 +6,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sbkube.models.deployment_state import (AppDeployment, DeployedResource,
-                                            Deployment, DeploymentStatus,
-                                            ResourceAction, RollbackRequest)
+from sbkube.models.deployment_state import (
+    AppDeployment,
+    DeployedResource,
+    Deployment,
+    DeploymentStatus,
+    ResourceAction,
+    RollbackRequest,
+)
 from sbkube.state.database import DeploymentDatabase
 from sbkube.state.rollback import RollbackManager
 

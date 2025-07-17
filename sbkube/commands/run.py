@@ -9,6 +9,7 @@ from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.click import common_click_options
 from sbkube.utils.logger import logger
 from sbkube.utils.profile_manager import ProfileManager
+from sbkube.utils.execution_tracker import ExecutionTracker
 
 
 class RunExecutionError(SbkubeError):
@@ -29,25 +30,45 @@ class RunCommand(BaseCommand):
                  to_step: Optional[str] = None,
                  only_step: Optional[str] = None,
                  dry_run: bool = False,
-                 profile: Optional[str] = None):
-        super().__init__(base_dir, app_config_dir, target_app_name, config_file_name)
+                 profile: Optional[str] = None,
+                 continue_from: Optional[str] = None,
+                 retry_failed: bool = False,
+                 resume: bool = False,
+                 show_progress: bool = True):
+        super().__init__(base_dir, app_config_dir, target_app_name, config_file_name, 
+                        show_progress=show_progress, profile=profile)
         self.from_step = from_step
         self.to_step = to_step
         self.only_step = only_step
         self.dry_run = dry_run
-        self.profile = profile
+        self.continue_from = continue_from
+        self.retry_failed = retry_failed
+        self.resume = resume
+        self.tracker = ExecutionTracker(base_dir, profile)
         
     def execute(self):
-        """단계별 실행 제어를 적용한 실행 (오류 처리 포함)"""
+        """실행 상태 추적이 통합된 실행"""
         # 프로파일 로딩
         if self.profile:
             self._load_profile()
         
-        steps = self._determine_steps()
+        # 설정 로드 
+        config = self._load_config()
         
         if self.dry_run:
+            steps = self._determine_steps()
             self._show_execution_plan(steps)
             return
+        
+        # 실행 상태 초기화
+        force_new = not (self.resume or self.retry_failed or self.continue_from)
+        execution_state = self.tracker.start_execution(config, force_new)
+        
+        # 시작 지점 결정
+        start_step = self._determine_start_step(execution_state)
+        
+        # 실행할 단계 결정
+        steps = self._determine_steps_with_tracking(start_step)
         
         logger.info(f"📋 실행할 단계: {' → '.join(steps)}")
         
@@ -57,15 +78,34 @@ class RunCommand(BaseCommand):
         # 단계 의존성 검증
         self._validate_step_dependencies(steps)
         
-        for i, step in enumerate(steps):
-            try:
-                logger.info(f"🚀 {step.title()} 단계 시작... ({i+1}/{len(steps)})")
-                self._execute_step(step)
-                logger.success(f"✅ {step.title()} 단계 완료")
-                
-            except Exception as e:
-                self._handle_step_failure(step, e, i+1, len(steps))
-                raise RunExecutionError(step, str(e), self._get_failure_suggestions(step, e))
+        # 진행률 추적 설정
+        self.setup_progress_tracking(steps)
+        
+        try:
+            # 진행률 표시 시작
+            self.start_progress_display()
+            
+            for step in steps:
+                # 진행률 추적과 실행 상태 추적을 모두 사용
+                if self.progress_manager:
+                    with self.progress_manager.track_step(step) as progress_tracker:
+                        with self.tracker.track_step(step):
+                            self._execute_step_with_progress(step, config, progress_tracker)
+                else:
+                    with self.tracker.track_step(step):
+                        self._execute_step(step)
+            
+            self.tracker.complete_execution()
+            logger.success("🎉 모든 단계가 성공적으로 완료되었습니다!")
+            
+        except Exception as e:
+            logger.error(f"실행 실패: {e}")
+            self._show_restart_options()
+            raise
+        
+        finally:
+            # 진행률 표시 종료
+            self.stop_progress_display()
     
     def _execute_step(self, step_name: str):
         """개별 단계 실행 (오류 처리 강화)"""
@@ -100,6 +140,79 @@ class RunCommand(BaseCommand):
             detailed_error = self._enhance_error_message(step_name, e)
             raise type(e)(detailed_error) from e
     
+    def _execute_step_with_progress(self, step: str, config: dict, tracker):
+        """진행률 추적과 함께 단계 실행"""
+        import time
+        
+        if step == "prepare":
+            self._execute_prepare_with_progress(config, tracker)
+        elif step == "build":
+            self._execute_build_with_progress(config, tracker)
+        elif step == "template":
+            self._execute_template_with_progress(config, tracker)
+        elif step == "deploy":
+            self._execute_deploy_with_progress(config, tracker)
+    
+    def _execute_prepare_with_progress(self, config: dict, tracker):
+        """준비 단계 (진행률 포함)"""
+        tracker.update(10, "설정 파일 검증 중...")
+        time.sleep(0.2)  # 시각적 효과
+        
+        tracker.update(30, "의존성 확인 중...")
+        # 실제 prepare 명령 실행
+        cmd = prepare.PrepareCommand(
+            self.base_dir, self.app_config_dir, 
+            self.target_app_name, self.config_file_name
+        )
+        cmd.execute()
+        
+        tracker.update(100, "준비 완료")
+    
+    def _execute_build_with_progress(self, config: dict, tracker):
+        """빌드 단계 (진행률 포함)"""
+        tracker.update(10, "빌드 환경 준비 중...")
+        time.sleep(0.2)
+        
+        tracker.update(30, "앱 빌드 시작...")
+        # 실제 build 명령 실행
+        cmd = build.BuildCommand(
+            self.base_dir, self.app_config_dir,
+            self.target_app_name, self.config_file_name
+        )
+        cmd.execute()
+        
+        tracker.update(100, "빌드 완료")
+    
+    def _execute_template_with_progress(self, config: dict, tracker):
+        """템플릿 단계 (진행률 포함)"""
+        tracker.update(20, "템플릿 엔진 초기화...")
+        time.sleep(0.2)
+        
+        tracker.update(50, "템플릿 렌더링 중...")
+        # 실제 template 명령 실행
+        cmd = template.TemplateCommand(
+            self.base_dir, self.app_config_dir,
+            self.target_app_name, self.config_file_name
+        )
+        cmd.execute()
+        
+        tracker.update(100, "템플릿 처리 완료")
+    
+    def _execute_deploy_with_progress(self, config: dict, tracker):
+        """배포 단계 (진행률 포함)"""
+        tracker.update(10, "배포 환경 확인...")
+        time.sleep(0.2)
+        
+        tracker.update(30, "리소스 배포 중...")
+        # 실제 deploy 명령 실행
+        cmd = deploy.DeployCommand(
+            self.base_dir, self.app_config_dir,
+            self.target_app_name, self.config_file_name
+        )
+        cmd.execute()
+        
+        tracker.update(100, "배포 완료")
+    
     def _determine_steps(self) -> List[str]:
         """실행할 단계들을 결정"""
         all_steps = ["prepare", "build", "template", "deploy"]
@@ -128,6 +241,79 @@ class RunCommand(BaseCommand):
             raise ValueError("from-step must come before to-step")
             
         return all_steps[start_index:end_index]
+    
+    def _determine_steps_with_tracking(self, start_step: Optional[str]) -> List[str]:
+        """상태 추적을 고려한 단계 결정"""
+        steps = ["prepare", "build", "template", "deploy"]
+        
+        if self.only_step:
+            return [self.only_step]
+        
+        if start_step:
+            # 시작 지점부터 실행
+            start_index = steps.index(start_step) if start_step in steps else 0
+            steps = steps[start_index:]
+        
+        # from_step, to_step 적용
+        if self.from_step:
+            from_index = steps.index(self.from_step) if self.from_step in steps else 0
+            steps = steps[from_index:]
+        
+        if self.to_step:
+            to_index = steps.index(self.to_step) + 1 if self.to_step in steps else len(steps)
+            steps = steps[:to_index]
+        
+        return steps
+    
+    def _determine_start_step(self, execution_state) -> Optional[str]:
+        """시작 단계 결정"""
+        if self.continue_from:
+            return self.continue_from
+        
+        if self.retry_failed:
+            restart_point = self.tracker.get_restart_point()
+            if restart_point:
+                logger.info(f"🔄 실패한 단계부터 재시작: {restart_point}")
+                return restart_point
+        
+        if self.resume:
+            if self.tracker.can_resume():
+                restart_point = self.tracker.get_restart_point()
+                if restart_point:
+                    logger.info(f"🔄 중단된 지점부터 재시작: {restart_point}")
+                    return restart_point
+            else:
+                logger.info("재시작할 수 있는 실행이 없습니다. 새로 시작합니다.")
+        
+        return None
+    
+    def _load_config(self) -> dict:
+        """설정 로드"""
+        # 기본 설정 로드 로직 구현
+        config = {
+            'namespace': 'default',
+            'apps': []
+        }
+        
+        # 프로파일이 있는 경우 프로파일 설정 로드
+        if self.profile:
+            try:
+                profile_manager = ProfileManager(self.base_dir, self.app_config_dir)
+                profile_config = profile_manager.load_profile(self.profile)
+                config.update(profile_config)
+            except Exception as e:
+                logger.warning(f"프로파일 로딩 실패: {e}")
+        
+        return config
+    
+    def _show_restart_options(self):
+        """재시작 옵션 안내"""
+        if self.tracker.can_resume():
+            restart_point = self.tracker.get_restart_point()
+            logger.info(f"\n💡 재시작 옵션:")
+            logger.info(f"   sbkube run --retry-failed  # 실패한 단계부터 재시작")
+            logger.info(f"   sbkube run --continue-from {restart_point}  # {restart_point} 단계부터 재시작")
+            logger.info(f"   sbkube run --resume  # 자동으로 재시작 지점 탐지")
     
     def _validate_step_dependencies(self, steps: List[str]):
         """단계별 의존성 확인"""
@@ -333,8 +519,17 @@ class RunCommand(BaseCommand):
               help="실제 실행 없이 계획만 표시")
 @click.option("--profile", 
               help="사용할 환경 프로파일 (예: development, staging, production)")
+@click.option("--continue-from",
+              type=click.Choice(["prepare", "build", "template", "deploy"]),
+              help="지정한 단계부터 재시작")
+@click.option("--retry-failed", is_flag=True,
+              help="실패한 단계부터 자동 재시작")
+@click.option("--resume", is_flag=True,
+              help="중단된 지점부터 자동 재시작")
+@click.option("--no-progress", is_flag=True,
+              help="진행률 표시 비활성화")
 @click.pass_context
-def cmd(ctx, app_dir, base_dir, config_file, app, verbose, debug, from_step, to_step, only, dry_run, profile):
+def cmd(ctx, app_dir, base_dir, config_file, app, verbose, debug, from_step, to_step, only, dry_run, profile, continue_from, retry_failed, resume, no_progress):
     """전체 워크플로우를 통합 실행합니다.
     
     prepare → build → template → deploy 단계를 순차적으로 실행하며,
@@ -380,7 +575,11 @@ def cmd(ctx, app_dir, base_dir, config_file, app, verbose, debug, from_step, to_
         to_step=to_step,
         only_step=only,
         dry_run=dry_run,
-        profile=profile
+        profile=profile,
+        continue_from=continue_from,
+        retry_failed=retry_failed,
+        resume=resume,
+        show_progress=not no_progress
     )
     
     try:

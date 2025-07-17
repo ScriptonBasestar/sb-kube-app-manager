@@ -21,6 +21,9 @@ from sbkube.commands import (
     build,
     delete,
     deploy,
+    doctor,
+    fix,
+    history,
     init,
     prepare,
     profiles,
@@ -255,6 +258,10 @@ main.add_command(validate.cmd)
 main.add_command(version.cmd)
 main.add_command(state.state)
 main.add_command(profiles.cmd)
+main.add_command(history.cmd)
+main.add_command(history.diagnose_cmd)
+main.add_command(doctor.cmd)
+main.add_command(fix.cmd)
 
 
 def main_with_exception_handling():

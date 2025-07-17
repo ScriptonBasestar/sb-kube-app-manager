@@ -1,0 +1,20 @@
+namespace: {{ project_name }}
+
+deps: []
+
+apps:
+  - name: {{ app_name }}
+    type: {{ app_type }}
+    enabled: true
+    namespace: {{ namespace or project_name }}
+    {% if app_type == 'install-helm' %}
+    specs:
+      path: {{ app_name }}
+      values:
+        - {{ app_name }}-values.yaml
+    {% elif app_type == 'install-yaml' %}
+    specs:
+      actions:
+        - type: apply
+          path: manifests/{{ app_name }}.yaml
+    {% endif %}

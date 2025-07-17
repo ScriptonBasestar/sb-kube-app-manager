@@ -1,0 +1,19 @@
+# {{ app_name }} Helm Values
+replicaCount: {{ replica_count or 1 }}
+
+image:
+  repository: {{ image_repository or 'nginx' }}
+  tag: {{ image_tag or 'latest' }}
+  pullPolicy: IfNotPresent
+
+service:
+  type: {{ service_type or 'ClusterIP' }}
+  port: {{ service_port or 80 }}
+
+resources:
+  limits:
+    cpu: {{ cpu_limit or '100m' }}
+    memory: {{ memory_limit or '128Mi' }}
+  requests:
+    cpu: {{ cpu_request or '100m' }}
+    memory: {{ memory_request or '128Mi' }}

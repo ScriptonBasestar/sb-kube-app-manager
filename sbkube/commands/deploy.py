@@ -49,8 +49,12 @@ console = Console()
     default=None,
     help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)",
 )
+@click.option(
+    "--profile",
+    help="사용할 환경 프로파일 (예: development, staging, production)"
+)
 @click.pass_context
-def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name):
+def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
     """Helm chart 및 YAML, exec 명령을 클러스터에 적용"""
     check_helm_installed_or_exit()
 

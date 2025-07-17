@@ -21,7 +21,10 @@ from sbkube.commands import (
     build,
     delete,
     deploy,
+    init,
     prepare,
+    profiles,
+    run,
     state,
     template,
     upgrade,
@@ -158,6 +161,7 @@ class SbkubeGroup(click.Group):
                 "upgrade",
                 "delete",
                 "prepare",
+                "run",
             ]
             commands_requiring_helm = [
                 "template",
@@ -166,6 +170,7 @@ class SbkubeGroup(click.Group):
                 "delete",
                 "prepare",
                 "build",
+                "run",
             ]
 
             try:
@@ -238,15 +243,18 @@ def main(
 
 
 # 기존 명령어 추가 부분은 그대로 유지
+main.add_command(init.cmd)
 main.add_command(prepare.cmd)
 main.add_command(build.cmd)
 main.add_command(template.cmd)
 main.add_command(deploy.cmd)
+main.add_command(run.cmd)
 main.add_command(upgrade.cmd)
 main.add_command(delete.cmd)
 main.add_command(validate.cmd)
 main.add_command(version.cmd)
 main.add_command(state.state)
+main.add_command(profiles.cmd)
 
 
 def main_with_exception_handling():

@@ -159,7 +159,7 @@ class ExecutionTracker:
         }
 
         config_str = json.dumps(relevant_config, sort_keys=True, ensure_ascii=False)
-        return hashlib.md5(config_str.encode()).hexdigest()
+        return hashlib.md5(config_str.encode(), usedforsecurity=False).hexdigest()
 
     def _save_state(self):
         """현재 상태 저장"""

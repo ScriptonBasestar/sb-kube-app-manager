@@ -139,7 +139,7 @@ class InitCommand(BaseCommand):
     def _render_templates(self):
         """템플릿 렌더링 및 파일 생성"""
         template_dir = self._get_template_dir()
-        env = Environment(loader=FileSystemLoader(template_dir))
+        env = Environment(loader=FileSystemLoader(template_dir), autoescape=True)
 
         template_files = [
             ("config.yaml.j2", "config/config.yaml"),

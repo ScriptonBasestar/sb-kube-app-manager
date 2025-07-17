@@ -5,7 +5,12 @@ from pathlib import Path
 import click
 from rich.table import Table
 
-from sbkube.exceptions import SbkubeError, format_error_with_suggestions
+from sbkube.exceptions import (
+    CliToolExecutionError,
+    CliToolNotFoundError,
+    SbkubeError,
+    format_error_with_suggestions,
+)
 from sbkube.utils.logger import logger
 
 # kubernetes 패키지를 사용하기 위한 임포트
@@ -34,7 +39,6 @@ from sbkube.commands import (
     validate,
     version,
 )
-from sbkube.exceptions import CliToolExecutionError, CliToolNotFoundError
 from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
@@ -46,7 +50,7 @@ from sbkube.utils.cli_check import (
 def display_kubeconfig_info(
     kubeconfig_path: str | None = None,
     context_name: str | None = None,
-):
+) -> None:
     """Kubeconfig 파일 정보를 파싱하여 현재 컨텍스트, 사용 가능한 컨텍스트 목록 및 연결 방법을 안내합니다."""
     if not KUBERNETES_AVAILABLE:
         logger.error("`kubernetes` 파이썬 패키지를 찾을 수 없습니다.")
@@ -152,7 +156,7 @@ def display_kubeconfig_info(
 
 
 class SbkubeGroup(click.Group):
-    def invoke(self, ctx: click.Context):
+    def invoke(self, ctx: click.Context) -> None:
         # 이 메소드는 invoke_without_command=True 와 main 콜백 로직에 의해
         # 실제 서브커맨드가 실행될 때만 호출됩니다.
         # 'sbkube' 단독 실행 시에는 main 콜백에서 display_kubeconfig_info() 실행 후 ctx.exit() 됩니다.
@@ -193,7 +197,7 @@ class SbkubeGroup(click.Group):
                     logger.error(str(e))
                 sys.exit(1)
 
-        return super().invoke(ctx)
+        super().invoke(ctx)
 
 
 @click.group(cls=SbkubeGroup, invoke_without_command=True)
@@ -220,7 +224,7 @@ def main(
     context: str | None,
     namespace: str | None,
     verbose: bool,
-):
+) -> None:
     """sbkube: Kubernetes 애플리케이션 관리를 위한 CLI 도구.
 
     Helm 차트, YAML 매니페스트, Git 저장소 등을 사용하여 애플리케이션을 준비, 빌드, 배포, 업그레이드, 삭제합니다.
@@ -264,7 +268,7 @@ main.add_command(doctor.cmd)
 main.add_command(fix.cmd)
 
 
-def main_with_exception_handling():
+def main_with_exception_handling() -> None:
     """Main entry point with global exception handling."""
     try:
         main()

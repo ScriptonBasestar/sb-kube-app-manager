@@ -50,8 +50,7 @@ console = Console()
     help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)",
 )
 @click.option(
-    "--profile",
-    help="사용할 환경 프로파일 (예: development, staging, production)"
+    "--profile", help="사용할 환경 프로파일 (예: development, staging, production)"
 )
 @click.pass_context
 def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
@@ -82,7 +81,8 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
 
         if not config_file_path or not config_file_path.exists():
             console.print(
-                f"[red]❌ 앱 설정 파일이 존재하지 않습니다: {BASE_DIR / app_config_path_obj}/config.[yaml|yml|toml][/red]",
+                f"[red]❌ 앱 설정 파일이 존재하지 않습니다: "
+                f"{BASE_DIR / app_config_path_obj}/config.[yaml|yml|toml][/red]",
             )
             raise click.Abort()
 
@@ -97,7 +97,8 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
         except Exception as e:
             app_name_for_error = app_dict.get("name", "알 수 없는 앱")
             console.print(
-                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 발생 (AppInfoScheme 변환 실패): {e}[/red]",
+                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 발생 "
+                f"(AppInfoScheme 변환 실패): {e}[/red]",
             )
             console.print(
                 f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]",
@@ -151,7 +152,8 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
             continue
 
         console.print(
-            f"[magenta]➡️  앱 '{name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작[/magenta]",
+            f"[magenta]➡️  앱 '{name}' (타입: {app_type}, "
+            f"네임스페이스: {current_ns or '기본값'}) 배포 시작[/magenta]",
         )
 
         if app_type == "install-helm":
@@ -161,7 +163,8 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
 
             if not chart_dir_to_install.exists():
                 console.print(
-                    f"[red]❌ 앱 '{name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: {chart_dir_to_install}[/red]",
+                    f"[red]❌ 앱 '{name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: "
+                    f"{chart_dir_to_install}[/red]",
                 )
                 console.print(
                     "    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]",
@@ -175,7 +178,8 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
             )
             if is_installed:
                 console.print(
-                    f"[yellow]⚠️  앱 '{name}': Helm 릴리스 '{release_name}'(ns: {current_ns or 'default'})가 이미 설치되어 있습니다. 건너뜁니다.[/yellow]",
+                    f"[yellow]⚠️  앱 '{name}': Helm 릴리스 '{release_name}'"
+                    f"(ns: {current_ns or 'default'})가 이미 설치되어 있습니다. 건너뜁니다.[/yellow]",
                 )
                 continue
 
@@ -218,7 +222,8 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
             else:
                 ns_msg = f" (네임스페이스: {current_ns})" if current_ns else ""
                 console.print(
-                    f"[bold green]✅ 앱 '{name}': Helm 릴리스 '{release_name}' 배포 완료{ns_msg}[/bold green]",
+                    f"[bold green]✅ 앱 '{name}': Helm 릴리스 '{release_name}' "
+                    f"배포 완료{ns_msg}[/bold green]",
                 )
 
         elif app_type == "install-yaml":
@@ -227,7 +232,8 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
 
             if not app_build_dir.exists():
                 console.print(
-                    f"[red]❌ 앱 '{name}': install-yaml 빌드 디렉토리가 존재하지 않습니다: {app_build_dir}[/red]",
+                    f"[red]❌ 앱 '{name}': install-yaml 빌드 디렉토리가 존재하지 않습니다: "
+                    f"{app_build_dir}[/red]",
                 )
                 console.print(
                     "    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]",
@@ -243,7 +249,8 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
 
             if not yaml_files:
                 console.print(
-                    f"[yellow]⚠️  앱 '{name}': 빌드 디렉토리에 YAML 파일이 없습니다: {app_build_dir}[/yellow]",
+                    f"[yellow]⚠️  앱 '{name}': 빌드 디렉토리에 YAML 파일이 없습니다: "
+                    f"{app_build_dir}[/yellow]",
                 )
                 continue
 

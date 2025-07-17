@@ -69,9 +69,9 @@ def test_upgrade_helm_app(
             ],
         )
 
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # subprocess.run 호출 확인
         assert mock_subprocess.call_count >= 1  # 최소 1번은 호출되어야 함
@@ -156,9 +156,9 @@ def test_upgrade_helm_app_with_no_install(
                 "--no-install",
             ],
         )
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # --install 플래그가 없어야 함 (helm upgrade 호출에서만 확인)
         upgrade_calls = [
@@ -301,9 +301,9 @@ def test_upgrade_helm_app_namespace_override(
                 cli_namespace,
             ],
         )
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # 네임스페이스 옵션 확인 (helm upgrade 호출에서만)
         upgrade_calls = [

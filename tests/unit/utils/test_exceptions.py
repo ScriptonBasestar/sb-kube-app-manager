@@ -150,9 +150,9 @@ class TestExceptionIntegration:
         ]
 
         for exc in exceptions_to_test:
-            assert isinstance(
-                exc, SbkubeError
-            ), f"{type(exc).__name__} should inherit from SbkubeError"
+            assert isinstance(exc, SbkubeError), (
+                f"{type(exc).__name__} should inherit from SbkubeError"
+            )
 
     def test_exception_details_preservation(self):
         """Test that exception details are preserved correctly."""

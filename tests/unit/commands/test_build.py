@@ -100,9 +100,9 @@ def test_build_pull_helm_app(
             ],
         )
 
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # 새로 빌드된 디렉토리는 존재하지 않았으므로 rmtree는 호출되지 않음
         # copytree만 검증
@@ -196,9 +196,9 @@ def test_build_copy_app(
             ],
         )
 
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # copy-app의 경우 개별 파일/디렉토리 복사로 처리됨
         # CLI 출력으로 성공 확인
@@ -350,15 +350,15 @@ def test_build_pull_helm_app_uses_dest_as_build_directory_name(
     expected_build_dir = (
         build_dir / "zabbix"
     )  # app_name 'zabbix-pull'이 아닌 dest 'zabbix' 사용
-    assert (
-        expected_build_dir.exists()
-    ), f"빌드 디렉토리가 dest 값 'zabbix'로 생성되지 않았습니다: {expected_build_dir}"
+    assert expected_build_dir.exists(), (
+        f"빌드 디렉토리가 dest 값 'zabbix'로 생성되지 않았습니다: {expected_build_dir}"
+    )
 
     # Chart.yaml이 올바른 위치에 복사되었는지 확인
     chart_yaml_path = expected_build_dir / "Chart.yaml"
-    assert (
-        chart_yaml_path.exists()
-    ), f"Chart.yaml 파일이 복사되지 않았습니다: {chart_yaml_path}"
+    assert chart_yaml_path.exists(), (
+        f"Chart.yaml 파일이 복사되지 않았습니다: {chart_yaml_path}"
+    )
 
 
 @pytest.mark.unit
@@ -417,15 +417,15 @@ def test_build_pull_helm_app_fallback_to_chart_name_when_no_dest(
 
     # chart 이름인 'redis'로 빌드 디렉토리가 생성되었는지 확인
     expected_build_dir = build_dir / "redis"  # chart 이름 사용
-    assert (
-        expected_build_dir.exists()
-    ), f"빌드 디렉토리가 chart 이름 'redis'로 생성되지 않았습니다: {expected_build_dir}"
+    assert expected_build_dir.exists(), (
+        f"빌드 디렉토리가 chart 이름 'redis'로 생성되지 않았습니다: {expected_build_dir}"
+    )
 
     # Chart.yaml이 올바른 위치에 복사되었는지 확인
     chart_yaml_path = expected_build_dir / "Chart.yaml"
-    assert (
-        chart_yaml_path.exists()
-    ), f"Chart.yaml 파일이 복사되지 않았습니다: {chart_yaml_path}"
+    assert chart_yaml_path.exists(), (
+        f"Chart.yaml 파일이 복사되지 않았습니다: {chart_yaml_path}"
+    )
 
 
 @pytest.mark.unit
@@ -503,20 +503,20 @@ spec:
 
     # 앱 이름으로 빌드 디렉토리가 생성되었는지 확인
     expected_build_dir = build_dir / "my-install-yaml-app"
-    assert (
-        expected_build_dir.exists()
-    ), f"빌드 디렉토리가 생성되지 않았습니다: {expected_build_dir}"
+    assert expected_build_dir.exists(), (
+        f"빌드 디렉토리가 생성되지 않았습니다: {expected_build_dir}"
+    )
 
     # YAML 파일들이 올바른 위치에 복사되었는지 확인
     copied_deployment = expected_build_dir / "deployment.yaml"
     copied_service = expected_build_dir / "service.yaml"
 
-    assert (
-        copied_deployment.exists()
-    ), f"deployment.yaml 파일이 복사되지 않았습니다: {copied_deployment}"
-    assert (
-        copied_service.exists()
-    ), f"service.yaml 파일이 복사되지 않았습니다: {copied_service}"
+    assert copied_deployment.exists(), (
+        f"deployment.yaml 파일이 복사되지 않았습니다: {copied_deployment}"
+    )
+    assert copied_service.exists(), (
+        f"service.yaml 파일이 복사되지 않았습니다: {copied_service}"
+    )
 
     # 파일 내용이 올바르게 복사되었는지 확인
     assert "test-app" in copied_deployment.read_text()

@@ -46,6 +46,7 @@ dev = [
     "bandit>=1.8.6",
     "mdformat>=0.7.22",
     "types-toml>=0.10.8",
+    "types-requests>=2.31.0",
 ]
 test = [
     "pytest>=8.3.5",
@@ -58,34 +59,6 @@ test = [
     "testcontainers[k3s]>=4.0.0",
     "kubernetes>=28.1.0",
     "faker>=22.0.0",
-]
-
-[tool.pytest.ini_options]
-minversion = "8.0"
-testpaths = ["tests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
-addopts = [
-    "-ra",
-    "--strict-markers",
-    "--strict-config",
-    "--cov=sbkube",
-    "--cov-branch",
-    "--cov-report=term-missing:skip-covered",
-    "--cov-report=html:htmlcov",
-    "--cov-report=xml:coverage.xml",
-]
-
-markers = [
-    "unit: Unit tests that test individual components",
-    "integration: Integration tests that test multiple components together",
-    "e2e: End-to-end tests that test complete workflows",
-    "performance: Performance tests that measure execution time and resource usage",
-    "slow: Tests that take more than 5 seconds to run",
-    "requires_k8s: Tests that require a Kubernetes cluster",
-    "requires_helm: Tests that require Helm to be installed",
-    "requires_network: Tests that require network access",
 ]
 
 [tool.coverage.run]
@@ -111,36 +84,8 @@ exclude_lines = [
 [tool.coverage.html]
 directory = "htmlcov"
 
-[tool.ruff]
-line-length = 88
-target-version = "py312"
 
-[tool.ruff.lint]
-select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes
-    "I",    # isort
-    "C",    # flake8-comprehensions
-    "B",    # flake8-bugbear
-    "UP",   # pyupgrade
-    "COM",  # flake8-commas (trailing comma)
-]
-ignore = [
-    "E501",  # line too long, handled by black
-    "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
-    "COM812", # missing trailing comma (handled by formatter)
-    "B904",  # raise in except clause (acceptable in CLI tools)
-    "B017",  # pytest.raises(Exception) (acceptable in test code)
-    "B007",  # unused loop variable (acceptable in some contexts)
-]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
-
-[tool.ruff.lint.isort]
-known-first-party = ["sbkube"]
+[tool.bandit]
+# 보안 검사 설정 (Makefile과 일치)
+exclude_dirs = ["tests", "scripts", "debug", "examples"]
+skips = ["B101", "B404", "B603", "B607", "B602"]

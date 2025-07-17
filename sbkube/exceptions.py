@@ -26,7 +26,7 @@ class SbkubeError(Exception):
         self.details = details or {}
         self.exit_code = exit_code
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
 
@@ -39,7 +39,9 @@ class ConfigurationError(SbkubeError):
 class ConfigFileNotFoundError(ConfigurationError):
     """Raised when a required configuration file is not found."""
 
-    def __init__(self, file_path: str, searched_paths: list | None = None):
+    def __init__(
+        self, file_path: str, searched_paths: list[str] | None = None
+    ) -> None:
         self.file_path = file_path
         self.searched_paths = searched_paths or []
         message = f"Configuration file not found: {file_path}"
@@ -59,7 +61,7 @@ class ConfigValidationError(ConfigurationError):
         message: str,
         field: str | None = None,
         value: Any | None = None,
-    ):
+    ) -> None:
         self.field = field
         self.value = value
         super().__init__(message, {"field": field, "value": value})
@@ -68,7 +70,7 @@ class ConfigValidationError(ConfigurationError):
 class SchemaValidationError(ConfigurationError):
     """Raised when schema validation fails."""
 
-    def __init__(self, message: str, schema_errors: list | None = None):
+    def __init__(self, message: str, schema_errors: list[Any] | None = None) -> None:
         self.schema_errors = schema_errors or []
         super().__init__(message, {"schema_errors": schema_errors})
 
@@ -82,7 +84,7 @@ class ToolError(SbkubeError):
 class CliToolNotFoundError(ToolError):
     """Raised when a required CLI tool is not found."""
 
-    def __init__(self, tool_name: str, suggested_install: str | None = None):
+    def __init__(self, tool_name: str, suggested_install: str | None = None) -> None:
         self.tool_name = tool_name
         self.suggested_install = suggested_install
         message = f"Required CLI tool '{tool_name}' not found"
@@ -104,7 +106,7 @@ class CliToolExecutionError(ToolError):
         return_code: int,
         stdout: str | None = None,
         stderr: str | None = None,
-    ):
+    ) -> None:
         self.tool_name = tool_name
         self.command = command
         self.return_code = return_code
@@ -130,7 +132,9 @@ class CliToolExecutionError(ToolError):
 class CliToolVersionError(ToolError):
     """Raised when CLI tool version requirements are not met."""
 
-    def __init__(self, tool_name: str, required_version: str, found_version: str):
+    def __init__(
+        self, tool_name: str, required_version: str, found_version: str
+    ) -> None:
         self.tool_name = tool_name
         self.required_version = required_version
         self.found_version = found_version
@@ -154,7 +158,9 @@ class KubernetesError(SbkubeError):
 class KubernetesConnectionError(KubernetesError):
     """Raised when connection to Kubernetes cluster fails."""
 
-    def __init__(self, context: str | None = None, kubeconfig: str | None = None):
+    def __init__(
+        self, context: str | None = None, kubeconfig: str | None = None
+    ) -> None:
         self.context = context
         self.kubeconfig = kubeconfig
         message = "Failed to connect to Kubernetes cluster"
@@ -175,7 +181,7 @@ class KubernetesResourceError(KubernetesError):
         operation: str,
         namespace: str | None = None,
         reason: str | None = None,
-    ):
+    ) -> None:
         self.resource_type = resource_type
         self.resource_name = resource_name
         self.operation = operation
@@ -214,7 +220,7 @@ class HelmChartNotFoundError(HelmError):
         chart_name: str,
         repo: str | None = None,
         version: str | None = None,
-    ):
+    ) -> None:
         self.chart_name = chart_name
         self.repo = repo
         self.version = version
@@ -241,7 +247,7 @@ class HelmInstallationError(HelmError):
         operation: str,
         namespace: str | None = None,
         reason: str | None = None,
-    ):
+    ) -> None:
         self.release_name = release_name
         self.chart_name = chart_name
         self.operation = operation
@@ -280,7 +286,7 @@ class GitRepositoryError(GitError):
         repository_url: str,
         operation: str,
         reason: str | None = None,
-    ):
+    ) -> None:
         self.repository_url = repository_url
         self.operation = operation
         self.reason = reason
@@ -308,7 +314,9 @@ class FileSystemError(SbkubeError):
 class FileOperationError(FileSystemError):
     """Raised when file operations fail."""
 
-    def __init__(self, file_path: str, operation: str, reason: str | None = None):
+    def __init__(
+        self, file_path: str, operation: str, reason: str | None = None
+    ) -> None:
         self.file_path = file_path
         self.operation = operation
         self.reason = reason
@@ -326,7 +334,7 @@ class FileOperationError(FileSystemError):
 class DirectoryNotFoundError(FileSystemError):
     """Raised when a required directory is not found."""
 
-    def __init__(self, directory_path: str):
+    def __init__(self, directory_path: str) -> None:
         self.directory_path = directory_path
         message = f"Required directory not found: {directory_path}"
         super().__init__(message, {"directory_path": directory_path})
@@ -341,7 +349,7 @@ class SecurityError(SbkubeError):
 class PathTraversalError(SecurityError):
     """Raised when path traversal attempt is detected."""
 
-    def __init__(self, attempted_path: str, base_path: str):
+    def __init__(self, attempted_path: str, base_path: str) -> None:
         self.attempted_path = attempted_path
         self.base_path = base_path
         message = f"Path traversal attempt detected: '{attempted_path}' outside of '{base_path}'"
@@ -360,7 +368,7 @@ class ValidationError(SbkubeError):
 class InputValidationError(ValidationError):
     """Raised when user input validation fails."""
 
-    def __init__(self, field_name: str, value: Any, reason: str):
+    def __init__(self, field_name: str, value: Any, reason: str) -> None:
         self.field_name = field_name
         self.value = value
         self.reason = reason
@@ -380,7 +388,7 @@ class NetworkError(SbkubeError):
 class DownloadError(NetworkError):
     """Raised when file download fails."""
 
-    def __init__(self, url: str, reason: str | None = None):
+    def __init__(self, url: str, reason: str | None = None) -> None:
         self.url = url
         self.reason = reason
         message = f"Download failed for URL '{url}'"
@@ -397,7 +405,7 @@ class RepositoryConnectionError(NetworkError):
         repository_url: str,
         repository_type: str,
         reason: str | None = None,
-    ):
+    ) -> None:
         self.repository_url = repository_url
         self.repository_type = repository_type
         self.reason = reason
@@ -425,7 +433,7 @@ class StateError(SbkubeError):
 class StateCorruptionError(StateError):
     """Raised when state corruption is detected."""
 
-    def __init__(self, state_file: str, reason: str | None = None):
+    def __init__(self, state_file: str, reason: str | None = None) -> None:
         self.state_file = state_file
         self.reason = reason
         message = f"State corruption detected in '{state_file}'"

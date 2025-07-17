@@ -1,0 +1,49 @@
+# Ruff configuration for sbkube project
+line-length = 88
+target-version = "py312"
+
+# Exclude directories
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "migrations",
+    "node_modules",
+    "examples",
+]
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "C",    # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "COM",  # flake8-commas (trailing comma)
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "COM812", # missing trailing comma (handled by formatter)
+    "B904",  # raise in except clause (acceptable in CLI tools)
+    "B017",  # pytest.raises(Exception) (acceptable in test code)
+    "B007",  # unused loop variable (acceptable in some contexts)
+]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[lint.isort]
+known-first-party = ["sbkube"]

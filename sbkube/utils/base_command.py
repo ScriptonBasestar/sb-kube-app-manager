@@ -5,7 +5,7 @@ Command 공통 베이스 클래스
 """
 
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
 import click
 
@@ -54,9 +54,11 @@ class BaseCommand:
         self.config_file_path: Path | None = None
         self.apps_config_dict: dict[str, Any] = {}
         self.app_info_list: list[AppInfoScheme] = []
-        
+
         # 진행률 관리자
-        self.progress_manager = ProgressManager(show_progress=show_progress) if show_progress else None
+        self.progress_manager = (
+            ProgressManager(show_progress=show_progress) if show_progress else None
+        )
 
     def execute_pre_hook(self):
         """각 명령 실행 전에 공통 처리"""
@@ -251,54 +253,57 @@ class BaseCommand:
             )
 
         logger.heading(f"{operation_name} 작업 완료")
-    
-    def setup_progress_tracking(self, steps: List[str]):
+
+    def setup_progress_tracking(self, steps: list[str]):
         """진행률 추적 설정"""
         if not self.progress_manager:
             return
-        
+
         step_configs = {
-            'prepare': {
-                'display_name': '준비',
-                'estimated_duration': 30,
-                'sub_tasks': ['설정 검증', '의존성 확인', '소스 다운로드']
+            "prepare": {
+                "display_name": "준비",
+                "estimated_duration": 30,
+                "sub_tasks": ["설정 검증", "의존성 확인", "소스 다운로드"],
             },
-            'build': {
-                'display_name': '빌드',
-                'estimated_duration': 120,
-                'sub_tasks': ['Helm 차트 빌드', 'YAML 처리', '이미지 준비']
+            "build": {
+                "display_name": "빌드",
+                "estimated_duration": 120,
+                "sub_tasks": ["Helm 차트 빌드", "YAML 처리", "이미지 준비"],
             },
-            'template': {
-                'display_name': '템플릿',
-                'estimated_duration': 60,
-                'sub_tasks': ['템플릿 렌더링', '값 적용', '매니페스트 생성']
+            "template": {
+                "display_name": "템플릿",
+                "estimated_duration": 60,
+                "sub_tasks": ["템플릿 렌더링", "값 적용", "매니페스트 생성"],
             },
-            'deploy': {
-                'display_name': '배포',
-                'estimated_duration': 180,
-                'sub_tasks': ['네임스페이스 생성', '리소스 적용', '상태 확인']
-            }
+            "deploy": {
+                "display_name": "배포",
+                "estimated_duration": 180,
+                "sub_tasks": ["네임스페이스 생성", "리소스 적용", "상태 확인"],
+            },
         }
-        
+
         for step_name in steps:
             if step_name in step_configs:
                 config = step_configs[step_name]
                 self.progress_manager.add_step(
                     step_name,
-                    config['display_name'],
-                    config['estimated_duration'],
-                    config['sub_tasks']
+                    config["display_name"],
+                    config["estimated_duration"],
+                    config["sub_tasks"],
                 )
-    
+
     def start_progress_display(self):
         """진행률 표시 시작"""
         if self.progress_manager:
-            config = self.load_config() if not self.apps_config_dict else self.apps_config_dict
-            self.progress_manager.start_overall_progress(
-                profile=self.profile,
-                namespace=config.get('namespace')
+            config = (
+                self.load_config()
+                if not self.apps_config_dict
+                else self.apps_config_dict
             )
-    
+            self.progress_manager.start_overall_progress(
+                profile=self.profile, namespace=config.get("namespace")
+            )
+
     def stop_progress_display(self):
         """진행률 표시 종료"""
         if self.progress_manager:

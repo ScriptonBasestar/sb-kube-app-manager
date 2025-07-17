@@ -79,9 +79,9 @@ def test_template_helm_app(
             ],
         )
 
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # helm template이 호출되었는지 확인
         template_calls = [
@@ -89,9 +89,9 @@ def test_template_helm_app(
             for call in mock_subprocess.call_args_list
             if call[0][0][0] == "helm" and call[0][0][1] == "template"
         ]
-        assert (
-            len(template_calls) == 1
-        ), f"helm template 호출 횟수: {len(template_calls)}"
+        assert len(template_calls) == 1, (
+            f"helm template 호출 횟수: {len(template_calls)}"
+        )
 
         assert "템플릿 생성 완료" in result.output or "완료" in result.output
 
@@ -157,9 +157,9 @@ def test_template_app_not_templatable(
             for call in mock_subprocess.call_args_list
             if call[0][0][0] == "helm" and call[0][0][1] == "template"
         ]
-        assert (
-            len(template_calls) == 0
-        ), f"helm template이 호출되면 안됨: {template_calls}"
+        assert len(template_calls) == 0, (
+            f"helm template이 호출되면 안됨: {template_calls}"
+        )
 
         # Robust result checking based on actual behavior
         if result.exit_code == 1:

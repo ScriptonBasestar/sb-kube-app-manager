@@ -88,9 +88,9 @@ def test_deploy_on_test_cluster():
 
     # 4. 검증: Helm 릴리스 존재 여부
     check = run_cmd(["helm", "ls", "-n", "devops"], env=env)
-    assert (
-        RELEASE_NAME in check.stdout
-    ), f"❌ 릴리스 '{RELEASE_NAME}'이 배포되지 않았습니다."
+    assert RELEASE_NAME in check.stdout, (
+        f"❌ 릴리스 '{RELEASE_NAME}'이 배포되지 않았습니다."
+    )
 
     # 5. 검증: 리소스 생성 확인
     kget = run_cmd(["kubectl", "get", "all", "-n", "devops"], env=env)
@@ -157,9 +157,9 @@ def test_deploy_helm_app_install(
             ],
         )
 
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # helm install 명령이 호출되었는지 확인
         helm_install_calls = [
@@ -252,9 +252,9 @@ def test_deploy_helm_app_upgrade(
                 app_name,
             ],
         )
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # 이미 설치된 경우 건너뛰기 메시지 확인
         assert (
@@ -298,9 +298,9 @@ def test_deploy_kubectl_app(
                 app_name,
             ],
         )
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # kubectl apply 명령이 호출되었는지 확인 (robust check)
         assert result.exit_code == 0
@@ -359,9 +359,9 @@ def test_deploy_action_app(
                 app_name,
             ],
         )
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # exec 명령이 호출되었는지 확인
         exec_calls = [
@@ -428,9 +428,9 @@ def test_deploy_specific_app_with_namespace_override(
                 cli_namespace,
             ],
         )
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # helm install 명령에서 네임스페이스가 올바르게 설정되었는지 확인
         helm_install_calls = [

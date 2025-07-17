@@ -56,18 +56,18 @@ def test_prepare_command_runs_successfully():
     # ✅ 결과물 확인
     charts_dir = EXAMPLES_DIR / "charts"
     repos_dir = EXAMPLES_DIR / "repos"
-    assert (
-        charts_dir.exists() or repos_dir.exists()
-    ), "charts 또는 repos 디렉토리가 생성되지 않았습니다"
+    assert charts_dir.exists() or repos_dir.exists(), (
+        "charts 또는 repos 디렉토리가 생성되지 않았습니다"
+    )
 
     # toolhive-operator 관련 파일이 준비되었는지 확인
     if repos_dir.exists():
         toolhive_repo = repos_dir / "stacklok-toolhive"
         # git clone이 실제로 실행되지 않을 수 있으므로 조건부 확인
         if toolhive_repo.exists():
-            assert (
-                toolhive_repo / "deploy"
-            ).exists(), "toolhive repo가 제대로 준비되지 않았습니다"
+            assert (toolhive_repo / "deploy").exists(), (
+                "toolhive repo가 제대로 준비되지 않았습니다"
+            )
 
 
 @patch(CLI_TOOLS_CHECK_PATH, return_value=None)
@@ -165,9 +165,9 @@ def test_prepare_pull_git(
                 "my-pull-git-app",
             ],
         )
-        assert (
-            result_clone.exit_code == 0
-        ), f"CLI 실행 실패 (clone): {result_clone.output}"
+        assert result_clone.exit_code == 0, (
+            f"CLI 실행 실패 (clone): {result_clone.output}"
+        )
 
         # Git clone 호출 확인을 유연하게 수정
         [

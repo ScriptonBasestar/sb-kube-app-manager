@@ -383,9 +383,9 @@ class TestKubernetesIntegration:
                 text=True,
             )
 
-            assert (
-                rollout_status.returncode == 0
-            ), f"Rollout failed: {rollout_status.stderr}"
+            assert rollout_status.returncode == 0, (
+                f"Rollout failed: {rollout_status.stderr}"
+            )
 
             # Verify pods are running
             pods = subprocess.run(

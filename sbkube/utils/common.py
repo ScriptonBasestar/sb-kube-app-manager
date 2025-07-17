@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from sbkube.models.config_model import AppInfoScheme, get_spec_model
-from sbkube.utils import logger
+from sbkube.utils.logger import logger
 
 
 def common_click_options(func):
@@ -67,9 +67,6 @@ def execute_command_with_logging(
     timeout: int = 300,
 ):
     """명령어 실행 및 로깅 처리"""
-    import subprocess
-
-    from sbkube.utils.logger import logger
 
     logger.command(" ".join(cmd))
 

@@ -67,9 +67,9 @@ def test_delete_helm_app(
             ],
         )
 
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
 
         # CLI 출력 확인
         assert "삭제 완료" in result.output or "uninstalled" in result.output
@@ -170,9 +170,9 @@ def test_delete_app_skip_not_found_option(
                 "--skip-not-found",  # 이 옵션 사용
             ],
         )
-        assert (
-            result.exit_code == 0
-        ), f"CLI 실행 실패: {result.output}\n{result.exception}"
+        assert result.exit_code == 0, (
+            f"CLI 실행 실패: {result.output}\n{result.exception}"
+        )
         assert (
             "건너뜁니다" in result.output or "설치되어 있지 않습니다" in result.output
         )

@@ -561,9 +561,7 @@ class RiskAssessmentValidator(ValidationCheck):
                                 values_path = base_path / values_file
                                 if values_path.exists():
                                     try:
-                                        with open(
-                                            values_path, encoding="utf-8"
-                                        ) as f:
+                                        with open(values_path, encoding="utf-8") as f:
                                             values_data = yaml.safe_load(f) or {}
 
                                         # 높은 권한 설정 탐지

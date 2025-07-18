@@ -32,7 +32,7 @@ console = Console()
 @click.option("--history", is_flag=True, help="수정 히스토리 표시")
 @click.option("--config-dir", default="config", help="설정 파일 디렉토리")
 @click.pass_context
-def cmd(ctx, dry_run, force, rollback, backup_cleanup, history, config_dir):
+async def _cmd(ctx, dry_run, force, rollback, backup_cleanup, history, config_dir):
     """자동 수정 시스템
 
     sbkube doctor에서 발견된 문제들을 자동으로 수정합니다.
@@ -239,7 +239,7 @@ async def run_fix_command(
     ctx, dry_run, force, rollback, backup_cleanup, history, config_dir
 ):
     """비동기 실행을 위한 래퍼 함수"""
-    return await cmd.callback(
+    return await _cmd(
         ctx, dry_run, force, rollback, backup_cleanup, history, config_dir
     )
 
@@ -256,7 +256,7 @@ async def run_fix_command(
 def cmd_wrapper(ctx, dry_run, force, rollback, backup_cleanup, history, config_dir):
     """자동 수정 시스템 래퍼"""
     return asyncio.run(
-        cmd.callback(ctx, dry_run, force, rollback, backup_cleanup, history, config_dir)
+        _cmd(ctx, dry_run, force, rollback, backup_cleanup, history, config_dir)
     )
 
 

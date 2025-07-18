@@ -39,9 +39,7 @@ class ConfigurationError(SbkubeError):
 class ConfigFileNotFoundError(ConfigurationError):
     """Raised when a required configuration file is not found."""
 
-    def __init__(
-        self, file_path: str, searched_paths: list[str] | None = None
-    ) -> None:
+    def __init__(self, file_path: str, searched_paths: list[str] | None = None) -> None:
         self.file_path = file_path
         self.searched_paths = searched_paths or []
         message = f"Configuration file not found: {file_path}"

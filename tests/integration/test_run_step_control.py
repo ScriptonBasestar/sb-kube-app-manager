@@ -149,9 +149,7 @@ class TestRunStepControl:
         runner = CliRunner()
 
         with runner.isolated_filesystem():
-            runner.invoke(
-                cmd, ["--from-step", "build", "--to-step", "template"]
-            )
+            runner.invoke(cmd, ["--from-step", "build", "--to-step", "template"])
 
             # RunCommand가 올바른 매개변수로 생성되었는지 확인
             mock_run_command.assert_called_once_with(

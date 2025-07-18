@@ -200,6 +200,7 @@ class AutoFixEngine:
             fix_id=fix.fix_id,
             description=fix.description,
             command=result.fix_command or "",
+            result=FixResult.FAILED,  # 기본값, 나중에 업데이트
         )
 
         try:

@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 from datetime import datetime
+from io import StringIO
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -48,7 +49,8 @@ def temp_dir():
 @pytest.fixture
 def mock_console():
     """Mock console"""
-    return Mock()
+    from rich.console import Console
+    return Console(file=StringIO())
 
 
 @pytest.fixture
@@ -58,7 +60,6 @@ def sample_diagnostic_result():
         check_name="test_check",
         level=DiagnosticLevel.ERROR,
         message="Test error message",
-        is_fixable=True,
         fix_command="test fix command",
     )
 
@@ -156,7 +157,7 @@ class TestAutoFixEngine:
             check_name="non_fixable",
             level=DiagnosticLevel.WARNING,
             message="Non fixable",
-            is_fixable=False,
+            # fix_command를 None으로 설정하면 is_fixable이 False가 됨
         )
 
         results = [sample_diagnostic_result, non_fixable_result]
@@ -399,7 +400,6 @@ class TestAutoFixEngineIntegration:
             check_name="integration_test",
             level=DiagnosticLevel.ERROR,
             message="Integration test error",
-            is_fixable=True,
             fix_command="integration fix",
         )
 

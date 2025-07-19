@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Verify security fixes"""
 
-import subprocess
 import os
+import subprocess
 
 os.chdir("/Users/archmagece/myopen/scripton/sb-kube-app-manager")
 
@@ -14,7 +14,7 @@ print("\n1. Checking init.py for Jinja2 autoescape...")
 result1 = subprocess.run(
     ["uv", "run", "bandit", "sbkube/commands/init.py", "-r", "-ll"],
     capture_output=True,
-    text=True
+    text=True,
 )
 
 if "B701" in result1.stdout:
@@ -26,7 +26,7 @@ print("\n2. Checking execution_tracker.py for MD5 hash...")
 result2 = subprocess.run(
     ["uv", "run", "bandit", "sbkube/utils/execution_tracker.py", "-r", "-ll"],
     capture_output=True,
-    text=True
+    text=True,
 )
 
 if "B324" in result2.stdout:
@@ -37,11 +37,22 @@ else:
 # Run full bandit check
 print("\n3. Running full bandit security check...")
 result = subprocess.run(
-    ["uv", "run", "bandit", "-r", "sbkube", "--skip", "B101,B404,B603,B607,B602", 
-     "--severity-level", "high", "--quiet", 
-     "--exclude", "*/tests/*,*/scripts/*,*/debug/*,*/examples/*"],
+    [
+        "uv",
+        "run",
+        "bandit",
+        "-r",
+        "sbkube",
+        "--skip",
+        "B101,B404,B603,B607,B602",
+        "--severity-level",
+        "high",
+        "--quiet",
+        "--exclude",
+        "*/tests/*,*/scripts/*,*/debug/*,*/examples/*",
+    ],
     capture_output=True,
-    text=True
+    text=True,
 )
 
 if result.returncode == 0:

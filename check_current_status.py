@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check current lint status"""
 
-import subprocess
 import os
+import subprocess
 
 os.chdir("/Users/archmagece/myopen/scripton/sb-kube-app-manager")
 

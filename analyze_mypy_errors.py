@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Analyze MyPy errors from the previous lint run"""
 
-import re
-
 # The MyPy errors from the previous run
 mypy_errors = """
 sbkube/exceptions.py:18: error: "type: ignore" comment without error code (currently ignored: [arg-type])  [no-untyped-def]
@@ -50,14 +48,14 @@ sbkube/validators/pre_deployment_validators.py:502: error: Incompatible default 
 
 # Parse errors by file
 errors_by_file = {}
-for line in mypy_errors.strip().split('\n'):
-    if ': error:' in line:
-        parts = line.split(':', 3)
+for line in mypy_errors.strip().split("\n"):
+    if ": error:" in line:
+        parts = line.split(":", 3)
         if len(parts) >= 4:
             file_name = parts[0]
             line_num = parts[1]
             error_msg = parts[3].strip()
-            
+
             if file_name not in errors_by_file:
                 errors_by_file[file_name] = []
             errors_by_file[file_name].append((line_num, error_msg))
@@ -67,15 +65,17 @@ print("MyPy Error Summary")
 print("=" * 80)
 for file_name, errors in errors_by_file.items():
     print(f"\n{file_name}: {len(errors)} errors")
-    
+
     # Group by error type
     error_types = {}
     for line_num, error_msg in errors:
-        error_type = error_msg.split('[')[-1].rstrip(']') if '[' in error_msg else 'other'
+        error_type = (
+            error_msg.split("[")[-1].rstrip("]") if "[" in error_msg else "other"
+        )
         if error_type not in error_types:
             error_types[error_type] = []
         error_types[error_type].append((line_num, error_msg))
-    
+
     for error_type, type_errors in error_types.items():
         print(f"  - {error_type}: {len(type_errors)} occurrences")
         if len(type_errors) <= 3:

@@ -3,7 +3,7 @@ import tempfile
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -50,6 +50,7 @@ def temp_dir():
 def mock_console():
     """Mock console"""
     from rich.console import Console
+
     return Console(file=StringIO())
 
 

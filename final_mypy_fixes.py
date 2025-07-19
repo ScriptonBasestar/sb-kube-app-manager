@@ -15,7 +15,7 @@ print("Applying MyPy fixes...")
 # - Line 100: Cannot find module "requests" - but requests isn't imported
 # - Line 181, 183: Return type issues - these are subprocess lines, not returns
 # - Line 256: log_verbose argument type
-# - Line 327, 373, 432, 502: Default argument issues  
+# - Line 327, 373, 432, 502: Default argument issues
 # - Line 355: int/float assignment
 # - Other type mismatches
 
@@ -23,7 +23,7 @@ print("Applying MyPy fixes...")
 # module to the ignore list in mypy.ini temporarily
 
 print("\nAdding validators to mypy ignore list...")
-with open("mypy.ini", "r") as f:
+with open("mypy.ini") as f:
     content = f.read()
 
 # Check if validators is already ignored
@@ -31,12 +31,12 @@ if "[mypy-sbkube.validators.*]" not in content:
     # Add it after the other ignore sections
     new_content = content.replace(
         "[mypy-sbkube.commands.*]\nignore_errors = true",
-        "[mypy-sbkube.commands.*]\nignore_errors = true\n\n[mypy-sbkube.validators.*]\nignore_errors = true"
+        "[mypy-sbkube.commands.*]\nignore_errors = true\n\n[mypy-sbkube.validators.*]\nignore_errors = true",
     )
-    
+
     with open("mypy.ini", "w") as f:
         f.write(new_content)
-    
+
     print("Added validators to mypy ignore list")
 else:
     print("Validators already in ignore list")

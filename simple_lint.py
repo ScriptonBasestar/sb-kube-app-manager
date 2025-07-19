@@ -1,5 +1,4 @@
 import os
-import sys
 import subprocess
 
 os.chdir("/Users/archmagece/myopen/scripton/sb-kube-app-manager")
@@ -13,14 +12,20 @@ except Exception as e:
 
 # Test ruff
 try:
-    result = subprocess.run(["uv", "run", "ruff", "--version"], capture_output=True, text=True)
+    result = subprocess.run(
+        ["uv", "run", "ruff", "--version"], capture_output=True, text=True
+    )
     print(f"Ruff version: {result.stdout.strip()}")
 except Exception as e:
     print(f"Ruff not available: {e}")
 
 # Test simple ruff check
 try:
-    result = subprocess.run(["uv", "run", "ruff", "check", "sbkube", "--diff"], capture_output=True, text=True)
+    result = subprocess.run(
+        ["uv", "run", "ruff", "check", "sbkube", "--diff"],
+        capture_output=True,
+        text=True,
+    )
     print(f"Ruff check exit code: {result.returncode}")
     print(f"Ruff stdout: {result.stdout}")
     print(f"Ruff stderr: {result.stderr}")

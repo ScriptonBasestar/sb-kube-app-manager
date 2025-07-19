@@ -2,7 +2,6 @@
 """Apply fixes for MyPy errors"""
 
 import os
-import re
 
 os.chdir("/Users/archmagece/myopen/scripton/sb-kube-app-manager")
 

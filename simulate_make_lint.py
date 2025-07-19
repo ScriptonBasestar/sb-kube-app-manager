@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Simulate make lint by running the commands directly"""
 
-import subprocess
 import os
+import subprocess
 
 os.chdir("/Users/archmagece/myopen/scripton/sb-kube-app-manager")
 
@@ -12,10 +12,23 @@ print("=" * 80)
 # Run ruff check
 print("\n1. Running ruff check...")
 ruff_result = subprocess.run(
-    ["uv", "run", "ruff", "check", "sbkube", "tests", "--diff", 
-     "--exclude", "migrations", "--exclude", "node_modules", "--exclude", "examples"],
+    [
+        "uv",
+        "run",
+        "ruff",
+        "check",
+        "sbkube",
+        "tests",
+        "--diff",
+        "--exclude",
+        "migrations",
+        "--exclude",
+        "node_modules",
+        "--exclude",
+        "examples",
+    ],
     capture_output=True,
-    text=True
+    text=True,
 )
 print(f"Ruff exit code: {ruff_result.returncode}")
 if ruff_result.stdout:
@@ -27,10 +40,21 @@ if ruff_result.stdout:
 # Run mypy
 print("\n\n2. Running mypy...")
 mypy_result = subprocess.run(
-    ["uv", "run", "mypy", "sbkube", "--ignore-missing-imports",
-     "--exclude", "migrations", "--exclude", "node_modules", "--exclude", "examples"],
+    [
+        "uv",
+        "run",
+        "mypy",
+        "sbkube",
+        "--ignore-missing-imports",
+        "--exclude",
+        "migrations",
+        "--exclude",
+        "node_modules",
+        "--exclude",
+        "examples",
+    ],
     capture_output=True,
-    text=True
+    text=True,
 )
 print(f"MyPy exit code: {mypy_result.returncode}")
 if mypy_result.stdout:
@@ -42,12 +66,22 @@ if mypy_result.stdout:
 # Run bandit
 print("\n\n3. Running bandit...")
 bandit_result = subprocess.run(
-    ["uv", "run", "bandit", "-r", "sbkube", 
-     "--skip", "B101,B404,B603,B607,B602", 
-     "--severity-level", "medium", "--quiet",
-     "--exclude", "*/tests/*,*/scripts/*,*/debug/*,*/examples/*"],
+    [
+        "uv",
+        "run",
+        "bandit",
+        "-r",
+        "sbkube",
+        "--skip",
+        "B101,B404,B603,B607,B602",
+        "--severity-level",
+        "medium",
+        "--quiet",
+        "--exclude",
+        "*/tests/*,*/scripts/*,*/debug/*,*/examples/*",
+    ],
     capture_output=True,
-    text=True
+    text=True,
 )
 print(f"Bandit exit code: {bandit_result.returncode}")
 if bandit_result.stdout:
@@ -62,4 +96,6 @@ print(f"- MyPy: {'PASS' if mypy_result.returncode == 0 else 'FAIL'}")
 print(f"- Bandit: {'PASS' if bandit_result.returncode == 0 else 'FAIL'}")
 
 overall_pass = all(r.returncode == 0 for r in [ruff_result, mypy_result, bandit_result])
-print(f"\nOverall: {'✅ PASS - 0 errors' if overall_pass else '❌ FAIL - errors found'}")
+print(
+    f"\nOverall: {'✅ PASS - 0 errors' if overall_pass else '❌ FAIL - errors found'}"
+)

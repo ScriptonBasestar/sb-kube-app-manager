@@ -3,6 +3,9 @@
 This directory contains the comprehensive test suite for sbkube, including unit tests, integration tests, and
 performance benchmarks.
 
+> **🎯 핵심 원칙**: CLI 도구는 **examples/ 기반 테스트**가 우선입니다.
+> 자세한 내용은 [TEST_STRATEGY.md](./TEST_STRATEGY.md)를 참조하세요.
+
 ## Test Structure
 
 ```
@@ -23,10 +26,7 @@ tests/
 │   └── conftest.py                     # Performance test fixtures
 ├── e2e/                   # End-to-end tests - full user scenarios
 │   └── conftest.py        # E2E test fixtures
-├── legacy/                # Legacy tests - being refactored
-│   ├── test_config_validation.py  # 477 lines - being split
-│   ├── test_deployment_state.py   # 504 lines - already split
-│   └── test_full_pipeline.py      # To be moved to integration/e2e
+├── TEST_STRATEGY.md       # 🎯 테스트 전략 문서 (필독)
 └── conftest.py           # Shared fixtures and configuration
 ```
 

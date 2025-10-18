@@ -157,16 +157,25 @@ class KubernetesConnectionError(KubernetesError):
     """Raised when connection to Kubernetes cluster fails."""
 
     def __init__(
-        self, context: str | None = None, kubeconfig: str | None = None
+        self,
+        context: str | None = None,
+        kubeconfig: str | None = None,
+        reason: str | None = None,
     ) -> None:
         self.context = context
         self.kubeconfig = kubeconfig
+        self.reason = reason
         message = "Failed to connect to Kubernetes cluster"
         if context:
             message += f" (context: {context})"
         if kubeconfig:
             message += f" (kubeconfig: {kubeconfig})"
-        super().__init__(message, {"context": context, "kubeconfig": kubeconfig})
+        if reason:
+            message += f": {reason}"
+        details: dict[str, Any] = {"context": context, "kubeconfig": kubeconfig}
+        if reason:
+            details["reason"] = reason
+        super().__init__(message, details)
 
 
 class KubernetesResourceError(KubernetesError):

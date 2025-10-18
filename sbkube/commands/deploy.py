@@ -61,28 +61,38 @@ def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
 
     BASE_DIR = Path(base_dir).resolve()
     app_config_path_obj = Path(app_dir)
-    BUILD_DIR = BASE_DIR / app_config_path_obj / "build"
-    VALUES_DIR = BASE_DIR / app_config_path_obj / "values"
+    APP_CONFIG_DIR = BASE_DIR / app_config_path_obj
+    BUILD_DIR = APP_CONFIG_DIR / "build"
+    VALUES_DIR = APP_CONFIG_DIR / "values"
 
     config_file_path = None
     if config_file_name:
-        config_file_path = (BASE_DIR / app_config_path_obj / config_file_name).resolve()
+        config_file_path = (APP_CONFIG_DIR / config_file_name).resolve()
         if not config_file_path.exists() or not config_file_path.is_file():
             console.print(
                 f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]",
             )
             raise click.Abort()
     else:
+        # 1차 시도: APP_CONFIG_DIR에서 찾기
         for ext in [".yaml", ".yml", ".toml"]:
-            candidate = (BASE_DIR / app_config_path_obj / f"config{ext}").resolve()
-            if candidate.exists():
+            candidate = (APP_CONFIG_DIR / f"config{ext}").resolve()
+            if candidate.exists() and candidate.is_file():
                 config_file_path = candidate
                 break
 
-        if not config_file_path or not config_file_path.exists():
+        # 2차 시도 (fallback): BASE_DIR에서 찾기
+        if not config_file_path:
+            for ext in [".yaml", ".yml", ".toml"]:
+                candidate = (BASE_DIR / f"config{ext}").resolve()
+                if candidate.exists() and candidate.is_file():
+                    config_file_path = candidate
+                    break
+
+        if not config_file_path:
             console.print(
                 f"[red]❌ 앱 설정 파일이 존재하지 않습니다: "
-                f"{BASE_DIR / app_config_path_obj}/config.[yaml|yml|toml][/red]",
+                f"{APP_CONFIG_DIR}/config.[yaml|yml|toml] 또는 {BASE_DIR}/config.[yaml|yml|toml][/red]",
             )
             raise click.Abort()
 

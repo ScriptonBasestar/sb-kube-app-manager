@@ -91,16 +91,24 @@ def cmd(
             )
             raise click.Abort()
     else:
-        # 자동 탐색
+        # 1차 시도: APP_CONFIG_DIR에서 찾기
         for ext in [".yaml", ".yml", ".toml"]:
             candidate = APP_CONFIG_DIR / f"config{ext}"
             if candidate.exists() and candidate.is_file():
                 config_file_path = candidate
                 break
 
+        # 2차 시도 (fallback): BASE_DIR에서 찾기
+        if not config_file_path:
+            for ext in [".yaml", ".yml", ".toml"]:
+                candidate = BASE_DIR / f"config{ext}"
+                if candidate.exists() and candidate.is_file():
+                    config_file_path = candidate
+                    break
+
         if not config_file_path:
             console.print(
-                f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml][/red]",
+                f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml] 또는 {BASE_DIR}/config.[yaml|yml|toml][/red]",
             )
             raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")

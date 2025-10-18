@@ -66,7 +66,10 @@ class BaseCommand:
         logger.verbose("공통 전처리 완료")
 
     def find_config_file(self) -> Path:
-        """설정 파일 찾기 (config.yaml, config.yml, config.toml)"""
+        """설정 파일 찾기 (config.yaml, config.yml, config.toml)
+
+        탐색 순서: 1) app_config_dir 2) base_dir (fallback)
+        """
         if self.config_file_name:
             # --config-file 옵션이 지정된 경우
             config_path = self.app_config_dir / self.config_file_name
@@ -75,16 +78,42 @@ class BaseCommand:
                 raise click.Abort()
             return config_path
         else:
-            # 자동 탐색
+            # 1차 시도: app_config_dir에서 찾기
             for ext in [".yaml", ".yml", ".toml"]:
                 candidate = self.app_config_dir / f"config{ext}"
                 if candidate.exists() and candidate.is_file():
                     return candidate
 
+            # 2차 시도 (fallback): base_dir에서 찾기
+            for ext in [".yaml", ".yml", ".toml"]:
+                candidate = self.base_dir / f"config{ext}"
+                if candidate.exists() and candidate.is_file():
+                    return candidate
+
             logger.error(
-                f"앱 설정 파일이 존재하지 않습니다: {self.app_config_dir}/config.[yaml|yml|toml]",
+                f"앱 설정 파일이 존재하지 않습니다: {self.app_config_dir}/config.[yaml|yml|toml] 또는 {self.base_dir}/config.[yaml|yml|toml]",
             )
             raise click.Abort()
+
+    def find_sources_file(self, sources_file_name: str = "sources.yaml") -> Path:
+        """sources 파일 찾기
+
+        탐색 순서: 현재 디렉토리 → 상위 디렉토리
+        """
+        search_paths = [
+            self.base_dir / sources_file_name,  # 현재 디렉토리
+            self.base_dir.parent / sources_file_name,  # 상위 디렉토리
+        ]
+
+        for candidate in search_paths:
+            if candidate.exists() and candidate.is_file():
+                return candidate
+
+        logger.error(f"소스 설정 파일을 찾을 수 없습니다: {sources_file_name}")
+        logger.error(
+            f"탐색 위치: {self.base_dir}/{sources_file_name} 또는 {self.base_dir.parent}/{sources_file_name}"
+        )
+        raise click.Abort()
 
     def load_config(self) -> dict[str, Any]:
         """설정 파일 로드"""

@@ -89,40 +89,72 @@ def cmd(
     CHARTS_DIR = BASE_DIR / "charts"
     REPOS_DIR = BASE_DIR / "repos"
 
-    app_config_path_obj = BASE_DIR / app_config_dir_name
+    APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
 
     config_file_path = None
     if config_file_name:
-        config_file_path = app_config_path_obj / config_file_name
+        # 명시적으로 설정 파일이 지정된 경우
+        config_file_path = APP_CONFIG_DIR / config_file_name
         if not config_file_path.exists() or not config_file_path.is_file():
             console.print(
                 f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]",
             )
             raise click.Abort()
     else:
+        # 자동 탐색: 1차 APP_CONFIG_DIR, 2차 BASE_DIR (fallback)
         for ext in [".yaml", ".yml", ".toml"]:
-            candidate = app_config_path_obj / f"config{ext}"
+            candidate = APP_CONFIG_DIR / f"config{ext}"
             if candidate.exists() and candidate.is_file():
                 config_file_path = candidate
                 break
 
+        # Fallback: BASE_DIR에서 찾기 (현재 디렉토리 지원)
+        if not config_file_path:
+            for ext in [".yaml", ".yml", ".toml"]:
+                candidate = BASE_DIR / f"config{ext}"
+                if candidate.exists() and candidate.is_file():
+                    config_file_path = candidate
+                    break
+
         if not config_file_path:
             console.print(
-                f"[red]❌ 앱 설정 파일을 찾을 수 없습니다: {app_config_path_obj}/config.[yaml|yml|toml][/red]",
+                f"[red]❌ 앱 설정 파일을 찾을 수 없습니다.[/red]",
+            )
+            console.print(
+                f"[yellow]    탐색 위치: {APP_CONFIG_DIR}/config.[yaml|yml|toml] 또는 {BASE_DIR}/config.[yaml|yml|toml][/yellow]",
             )
             raise click.Abort()
     console.print(f"[green]ℹ️ 앱 설정 파일 사용: {config_file_path}[/green]")
 
+    # sources 파일 탐색
+    sources_file_path = None
     if sources_file_override:
         sources_file_path = BASE_DIR / sources_file_override
+        if not sources_file_path.exists() or not sources_file_path.is_file():
+            console.print(
+                f"[red]❌ 지정된 소스 설정 파일을 찾을 수 없습니다: {sources_file_path}[/red]",
+            )
+            raise click.Abort()
     else:
-        sources_file_path = BASE_DIR / sources_file_name
+        # 자동 탐색: 1) 현재 디렉토리 2) 상위 디렉토리
+        sources_search_paths = [
+            BASE_DIR / sources_file_name,  # 현재 디렉토리
+            BASE_DIR.parent / sources_file_name,  # 상위 디렉토리
+        ]
 
-    if not sources_file_path.exists() or not sources_file_path.is_file():
-        console.print(
-            f"[red]❌ 소스 설정 파일이 존재하지 않습니다: {sources_file_path}[/red]",
-        )
-        raise click.Abort()
+        for candidate in sources_search_paths:
+            if candidate.exists() and candidate.is_file():
+                sources_file_path = candidate
+                break
+
+        if not sources_file_path:
+            console.print(
+                f"[red]❌ 소스 설정 파일을 찾을 수 없습니다: {sources_file_name}[/red]",
+            )
+            console.print(
+                f"[yellow]    탐색 위치: {BASE_DIR}/{sources_file_name} 또는 {BASE_DIR.parent}/{sources_file_name}[/yellow]",
+            )
+            raise click.Abort()
     console.print(f"[green]ℹ️ 소스 설정 파일 사용: {sources_file_path}[/green]")
 
     apps_config_dict = load_config_file(str(config_file_path))

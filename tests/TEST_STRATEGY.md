@@ -1,5 +1,47 @@
 # sbkube 테스트 전략
 
+## 📊 테스트 현황 (Phase 1-2 완료)
+
+- **총 테스트 수**: 130개 (전체 통과 ✅)
+- **테스트 구조**: E2E (13개) + 단위 테스트 (117개)
+
+### 테스트 파일 구조
+```
+tests/
+├── e2e/                                  # 13 tests (examples/ 기반)
+│   ├── conftest.py                       # Helper 함수
+│   ├── test_k3scode_workflows.py         # 6 tests
+│   ├── test_prepare_examples.py          # 1 test
+│   ├── test_deploy_examples.py           # 3 tests
+│   └── test_complete_workflow.py         # 3 tests
+├── unit/
+│   ├── models/                           # 16 tests (설정 파싱/검증)
+│   │   ├── test_config_model.py          # 11 tests
+│   │   └── test_validation_errors.py     # 5 tests
+│   └── utils/                            # 101 tests (핵심 유틸리티만)
+│       ├── test_exceptions.py
+│       ├── test_profile_loader.py
+│       ├── test_profile_manager.py
+│       ├── test_progress_manager.py
+│       ├── test_resource_limits.py
+│       └── test_retry.py
+└── test_imports.py
+```
+
+### Phase 2에서 제거된 과잉 테스트
+- ❌ **tests/integration/** (2,741 lines): E2E 테스트로 대체
+- ❌ **tests/unit/commands/** (4,653 lines): Mock 기반, E2E로 커버
+- ❌ **tests/unit/fixes/**: 기능별 테스트 불필요
+- ❌ **tests/unit/state/**: E2E로 커버
+- ❌ **tests/unit/utils/** 일부: 복잡한 feature 관련 테스트 제거
+  - test_auto_fix_system.py
+  - test_interactive_assistant.py
+  - test_execution_tracker.py
+  - test_workflow_engine.py
+  - test_common_patterns.py (낡은 테스트)
+  - test_network_errors.py (낡은 테스트)
+- ❌ **tests/performance/**: CLI 도구에 불필요
+
 ## 핵심 원칙
 
 ### 1. CLI 도구는 examples/ 기반 테스트가 우선이다
@@ -44,43 +86,39 @@ Mock은 다음 경우에만 사용:
 #### 🥇 최우선: E2E 테스트 (examples/ 기반)
 ```
 tests/e2e/
-├── test_k3scode_ai.py          # examples/k3scode/ai 전체 워크플로우
-├── test_k3scode_devops.py      # examples/k3scode/devops 전체 워크플로우
-└── test_prepare_examples.py    # examples/prepare/* 시나리오
+├── test_k3scode_workflows.py      # examples/k3scode/* 전체 워크플로우
+├── test_prepare_examples.py       # examples/prepare/* 시나리오
+├── test_deploy_examples.py        # examples/deploy/* 시나리오
+└── test_complete_workflow.py      # examples/complete-workflow
 ```
 
 **커버리지**: 사용자가 실제로 사용하는 전체 시나리오
+**현재 상태**: ✅ 13개 테스트 모두 통과
 
-#### 🥈 높은 우선순위: Integration 테스트 (examples/ + 실제 도구)
+#### 🥈 높은 우선순위: Unit 테스트 (models + 핵심 utils)
 ```python
-@pytest.mark.integration
-@pytest.mark.requires_helm
-def test_prepare_helm_with_example(helm_binary):
-    """examples/prepare/pull-helm-oci 사용"""
-    example = Path("examples/prepare/pull-helm-oci")
-    # 실제 helm 명령어와 실제 예제 파일 사용
+# Models: 설정 파싱/검증 (16 tests)
+def test_config_loading_from_example():
+    """examples/k3scode/ai/config.yaml 로딩 테스트"""
+    config_path = Path("examples/k3scode/ai/config.yaml")
+    config = Config.from_file(config_path)
+    assert config.apps is not None
+
+# Utils: 핵심 유틸리티만 (101 tests)
+def test_retry_decorator():
+    """재시도 로직 테스트"""
+    @retry(max_attempts=3)
+    def flaky_function():
+        # ...
 ```
 
-**커버리지**: 실제 helm/kubectl/git 도구와의 통합
+**커버리지**: 설정 파싱, 검증, 핵심 유틸리티 (retry, exceptions, progress 등)
+**현재 상태**: ✅ 117개 테스트 모두 통과
 
-#### 🥉 중간 우선순위: Unit 테스트
-```python
-def test_config_validation():
-    """개별 함수/클래스 로직 검증"""
-    config = Config.from_file("examples/k3scode/ai/config.yaml")
-    assert config.validate() is True
-```
-
-**커버리지**: 개별 함수/클래스의 로직
-
-#### 📊 낮은 우선순위: Performance 테스트
-```python
-def test_large_config_performance(benchmark):
-    """성능 벤치마크"""
-    benchmark(load_config, "examples/complete-workflow/config.yaml")
-```
-
-**커버리지**: 성능 기준선
+#### ❌ 제거된 테스트 유형
+- **Integration 테스트**: E2E 테스트로 완전히 대체
+- **Commands 단위 테스트**: Mock 기반이며 E2E로 커버됨
+- **Performance 테스트**: CLI 도구에는 불필요
 
 ---
 
@@ -151,33 +189,10 @@ class TestK3scodeAIWorkflow:
 - ✅ `run_sbkube_command()` helper로 상세 에러 리포팅
 - ✅ debug_info로 실패 시 컨텍스트 제공
 
-### Integration 테스트 작성
+### 단위 테스트 작성 (models, utils)
 
+**Models 테스트** - 설정 파일 파싱/검증:
 ```python
-@pytest.mark.integration
-@pytest.mark.requires_helm
-def test_prepare_pull_helm_oci(tmp_path):
-    """
-    examples/prepare/pull-helm-oci 시나리오
-    실제 helm 명령어 사용
-    """
-    example_dir = Path("examples/prepare/pull-helm-oci")
-
-    runner = CliRunner()
-    result = runner.invoke(main, [
-        "prepare",
-        "--app-dir", str(example_dir),
-        "--base-dir", str(tmp_path)
-    ])
-
-    assert result.exit_code == 0
-    assert (tmp_path / "charts").exists()
-```
-
-### Unit 테스트 작성
-
-```python
-@pytest.mark.unit
 def test_config_loading_from_example():
     """examples/k3scode/ai/config.yaml 로딩 테스트"""
     config_path = Path("examples/k3scode/ai/config.yaml")
@@ -186,6 +201,26 @@ def test_config_loading_from_example():
     assert config.apps is not None
     assert len(config.apps) > 0
 ```
+
+**Utils 테스트** - 핵심 유틸리티만:
+```python
+def test_retry_with_exponential_backoff():
+    """재시도 로직 테스트"""
+    call_count = 0
+
+    @retry(max_attempts=3, backoff_factor=2)
+    def flaky_function():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            raise ValueError("Simulated error")
+        return "success"
+
+    result = flaky_function()
+    assert result == "success"
+    assert call_count == 3
+```
+
 
 ---
 
@@ -235,7 +270,7 @@ pytest tests/e2e/test_new_feature.py -v
 
 ## CI/CD에서 테스트 실행
 
-### GitHub Actions 예시
+### GitHub Actions 예시 (간소화)
 
 ```yaml
 name: Tests
@@ -243,33 +278,27 @@ name: Tests
 on: [push, pull_request]
 
 jobs:
-  unit-tests:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Run unit tests
-        run: pytest tests/unit/ -v
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Run all tests
+        run: uv run pytest tests/ -v
 
-  integration-tests:
+  e2e-with-tools:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Install helm
         run: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-      - name: Run integration tests
-        run: pytest tests/integration/ -v -m requires_helm
-
-  e2e-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup k3s
-        run: |
-          curl -sfL https://get.k3s.io | sh -
-          mkdir -p ~/.kube
-          sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
       - name: Run E2E tests
-        run: pytest tests/e2e/ -v -m requires_k8s
+        run: uv run pytest tests/e2e/ -v -m requires_helm
 ```
 
 ---
@@ -279,45 +308,36 @@ jobs:
 ```python
 # E2E 테스트
 @pytest.mark.e2e
-@pytest.mark.requires_k8s
-def test_full_workflow(): ...
+def test_k3scode_ai_workflow(): ...
 
-# Integration 테스트
-@pytest.mark.integration
+# E2E + 외부 도구 필요
+@pytest.mark.e2e
 @pytest.mark.requires_helm
-def test_helm_integration(): ...
+def test_prepare_pull_helm_oci(): ...
 
-# Unit 테스트
-@pytest.mark.unit
-def test_config_model(): ...
-
-# Performance 테스트
-@pytest.mark.performance
-@pytest.mark.benchmark
-def test_performance(): ...
-
-# 느린 테스트
+# 느린 E2E 테스트
+@pytest.mark.e2e
 @pytest.mark.slow
-def test_large_deployment(): ...
+def test_complete_workflow(): ...
 ```
 
 ### 선택적 실행
 
 ```bash
+# 전체 테스트
+uv run pytest tests/ -v
+
 # E2E만
-pytest -m e2e
+uv run pytest tests/e2e/ -v
 
-# Integration만
-pytest -m integration
+# 단위 테스트만
+uv run pytest tests/unit/ -v
 
-# 빠른 테스트만
-pytest -m "not slow"
+# 빠른 테스트만 (slow 제외)
+uv run pytest -m "not slow" -v
 
-# Helm 필요한 테스트
-pytest -m requires_helm
-
-# Kubernetes 필요한 테스트
-pytest -m requires_k8s
+# Helm 필요한 테스트만
+uv run pytest -m requires_helm -v
 ```
 
 ---
@@ -325,19 +345,18 @@ pytest -m requires_k8s
 ## 테스트 커버리지 목표
 
 - **E2E 커버리지**: examples/ 의 모든 디렉토리는 E2E 테스트 필수
-- **Integration 커버리지**: 모든 CLI 명령어는 integration 테스트 필수
-- **Unit 커버리지**: 핵심 로직 함수는 unit 테스트 필수
-- **전체 커버리지**: ≥ 90%
+- **Unit 커버리지**: models (설정 파싱/검증) + utils (핵심 유틸리티)만
+- **전체 커버리지**: 실제 사용 시나리오 중심, 불필요한 Mock 테스트 제거
 
 ### 커버리지 확인
 
 ```bash
 # 전체 커버리지
-pytest --cov=sbkube --cov-report=html
+uv run pytest --cov=sbkube --cov-report=html
 open htmlcov/index.html
 
-# examples/ 기반 테스트만으로 커버리지 확인
-pytest tests/e2e/ tests/integration/ --cov=sbkube --cov-report=term
+# E2E 테스트만으로 커버리지 확인
+uv run pytest tests/e2e/ --cov=sbkube --cov-report=term
 ```
 
 ---
@@ -347,21 +366,19 @@ pytest tests/e2e/ tests/integration/ --cov=sbkube --cov-report=term
 ### 새 기능 추가 시
 - [ ] examples/ 에 사용 예시 추가
 - [ ] examples/*/README.md 업데이트
-- [ ] E2E 테스트 작성 (examples/ 기반)
-- [ ] Integration 테스트 작성 (필요시)
-- [ ] Unit 테스트 작성 (핵심 로직)
+- [ ] E2E 테스트 작성 (examples/ 기반, tests/e2e/)
+- [ ] Unit 테스트 작성 (models/utils 핵심 로직만)
 - [ ] 모든 테스트 통과 확인
-- [ ] 커버리지 90% 이상 확인
+- [ ] Mock 사용 최소화 확인
 
 ### 기존 기능 수정 시
 - [ ] 관련 examples/ 파일 업데이트 확인
 - [ ] E2E 테스트 실행 및 업데이트
-- [ ] Integration 테스트 실행 및 업데이트
-- [ ] Unit 테스트 실행 및 업데이트
+- [ ] Unit 테스트 실행 및 업데이트 (필요시)
 - [ ] 회귀 테스트 확인
 
 ### PR 제출 전
-- [ ] `pytest -v` 전체 테스트 통과
-- [ ] `pytest --cov=sbkube --cov-report=term` 커버리지 확인
-- [ ] examples/ 기반 테스트 우선 작성 여부 확인
-- [ ] Mock 사용이 최소화되었는지 확인
+- [ ] `uv run pytest tests/ -v` 전체 테스트 통과
+- [ ] examples/ 기반 E2E 테스트 우선 작성 확인
+- [ ] Mock 기반 테스트 추가하지 않았는지 확인
+- [ ] 불필요한 테스트 파일 생성하지 않았는지 확인

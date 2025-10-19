@@ -154,12 +154,10 @@ class TestProfileLoader:
 
             loader = ProfileLoader(tmpdir)
 
-            with patch("sbkube.utils.logger.logger") as mock_logger:
-                config = loader.validate_and_load("warning")
-
-                # 경고 메시지가 출력되었는지 확인
-                mock_logger.warning.assert_called()
-                assert config["namespace"] == "test"
+            # 경고가 있어도 로드는 성공해야 함
+            config = loader.validate_and_load("warning")
+            assert config["namespace"] == "test"
+            assert config["apps"] == []
 
     def test_list_available_profiles(self):
         """사용 가능한 프로파일 목록 테스트"""

@@ -88,48 +88,68 @@ def test_large_config_performance(benchmark):
 
 ### E2E 테스트 작성
 
+**실제 구현 예시** (tests/e2e/test_k3scode_workflows.py):
+
 ```python
 @pytest.mark.e2e
-@pytest.mark.requires_k8s
-def test_full_k3scode_ai_deployment(k8s_cluster):
-    """
-    examples/k3scode/ai 전체 워크플로우 테스트
+class TestK3scodeAIWorkflow:
+    """Test k3scode AI application workflow."""
 
-    Scenario:
-    1. prepare: Helm 차트 다운로드
-    2. build: 차트 빌드
-    3. deploy: K8s 클러스터에 배포
-    4. 검증: 리소스 확인
-    """
-    runner = CliRunner()
+    def test_ai_prepare(self, runner, examples_dir, tmp_path, list_directory_contents):
+        """
+        Test k3scode AI prepare phase.
 
-    # 1. Prepare
-    result = runner.invoke(main, [
-        "prepare",
-        "--app-dir", "examples/k3scode/ai",
-        "--sources-file", "examples/k3scode/sources.yaml"
-    ])
-    assert result.exit_code == 0
+        This test verifies that the prepare command correctly downloads
+        Helm charts and Git repositories specified in examples/k3scode/ai/config.yaml.
+        """
+        # Verify example files exist
+        ai_dir = examples_dir / "k3scode" / "ai"
+        sources_file = examples_dir / "k3scode" / "sources.yaml"
 
-    # 2. Build
-    result = runner.invoke(main, [
-        "build",
-        "--app-dir", "examples/k3scode/ai"
-    ])
-    assert result.exit_code == 0
+        verify_example_exists(ai_dir)
+        assert sources_file.exists(), f"sources.yaml not found: {sources_file}"
 
-    # 3. Deploy
-    result = runner.invoke(main, [
-        "deploy",
-        "--app-dir", "examples/k3scode/ai",
-        "--namespace", "test-ai"
-    ])
-    assert result.exit_code == 0
+        # Get project root (examples/ parent directory)
+        project_root = examples_dir.parent
 
-    # 4. 검증
-    pods = k8s_cluster.list_pods("test-ai")
-    assert len(pods) > 0
+        # Run prepare command
+        # Note: --app-dir is relative to --base-dir
+        result = run_sbkube_command(
+            runner,
+            [
+                "prepare",
+                "--app-dir",
+                str(ai_dir.relative_to(project_root)),
+                "--base-dir",
+                str(project_root),
+                "--sources-file",
+                str(sources_file.relative_to(project_root)),
+            ],
+            debug_info={
+                "ai_dir": ai_dir,
+                "sources_file": sources_file,
+                "project_root": project_root,
+            },
+        )
+
+        # Verify output
+        assert "prepare" in result.output.lower() or "준비" in result.output
+
+        # Verify charts/repos were downloaded
+        charts_dir = project_root / "charts"
+        repos_dir = project_root / "repos"
+
+        # At least one of charts or repos should exist
+        assert (
+            charts_dir.exists() or repos_dir.exists()
+        ), f"Neither charts nor repos directory created in {project_root}"
 ```
+
+**핵심 포인트**:
+- ✅ 실제 examples/ 파일 사용 (Mock 없음)
+- ✅ `verify_example_exists()` helper로 예제 파일 검증
+- ✅ `run_sbkube_command()` helper로 상세 에러 리포팅
+- ✅ debug_info로 실패 시 컨텍스트 제공
 
 ### Integration 테스트 작성
 

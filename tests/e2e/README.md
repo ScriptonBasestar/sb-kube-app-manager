@@ -4,40 +4,82 @@
 
 ## 🎯 목적
 
-실제 사용자 시나리오를 기반으로 SBKube의 전체 워크플로우를 검증합니다.
+**실제 examples/ 디렉토리의 설정 파일을 사용**하여 SBKube의 전체 워크플로우를 검증합니다.
+
+> **핵심 원칙**: CLI 도구는 examples/ 기반 테스트가 우선입니다. Mock 데이터가 아닌 실제 예제 파일로 테스트합니다.
 
 ## 📁 디렉토리 구조
 
 ```
 e2e/
-├── conftest.py     # E2E 테스트 전용 fixture
-└── __init__.py     # 패키지 마커
+├── conftest.py                    # E2E 테스트 전용 fixture 및 helper 함수
+├── test_k3scode_workflows.py     # ✅ k3scode 실제 워크플로우 테스트
+├── test_prepare_examples.py      # ✅ prepare 예제 테스트
+├── test_deploy_examples.py       # ✅ deploy 예제 테스트
+├── test_complete_workflow.py     # ✅ 전체 워크플로우 테스트
+├── test_init_end_to_end.py       # init 명령어 테스트
+├── test_run_end_to_end.py        # run 명령어 테스트
+└── __init__.py                   # 패키지 마커
 ```
 
-## 🧪 테스트 시나리오 (계획)
+## ✅ 구현된 테스트 시나리오
 
-### 기본 워크플로우
+### 1. k3scode 워크플로우 (test_k3scode_workflows.py)
 
+**커버리지**: examples/k3scode/* 전체 시나리오
+
+- `test_ai_prepare` - AI 앱 prepare 단계 (Git 저장소 클론)
+- `test_ai_build` - AI 앱 build 단계
+- `test_devops_prepare` - DevOps 앱 prepare 단계
+- `test_devops_build` - DevOps 앱 build 단계
+- `test_memory_prepare` - Memory 앱 prepare (Helm 차트 다운로드)
+- `test_rdb_prepare` - RDB 앱 prepare
+
+**실행 예시**:
 ```bash
-# 전체 파이프라인 테스트
-sbkube prepare --base-dir examples/k3scode --app-dir ai
-sbkube build --base-dir examples/k3scode --app-dir ai  
-sbkube template --base-dir examples/k3scode --app-dir ai
-sbkube deploy --base-dir examples/k3scode --app-dir ai --namespace test-ai
+pytest tests/e2e/test_k3scode_workflows.py -v
+# 6 tests, 모두 실제 examples/k3scode/ 파일 사용
 ```
 
-### 실제 배포 시나리오
+### 2. prepare 예제 (test_prepare_examples.py)
 
-- **AI 워크로드**: Jupyter, MLflow 등
-- **데이터 파이프라인**: Apache Airflow, Spark
-- **모니터링 스택**: Prometheus, Grafana
-- **로깅 시스템**: ELK Stack
+**커버리지**: examples/prepare/* 시나리오
 
-### 오류 복구 시나리오
+- `test_prepare_pull_helm_oci` - OCI Helm 차트 pull 테스트
 
-- 배포 중 중단 후 재시작
-- 부분 실패 후 롤백
-- 네트워크 오류 후 재시도
+**실행 예시**:
+```bash
+pytest tests/e2e/test_prepare_examples.py -v
+# 실제 OCI 저장소에서 차트 다운로드 테스트
+```
+
+### 3. deploy 예제 (test_deploy_examples.py)
+
+**커버리지**: examples/deploy/* 시나리오 (dry-run)
+
+- `test_deploy_install_yaml_dry_run` - YAML 매니페스트 배포
+- `test_deploy_install_action_dry_run` - 커스텀 액션 배포
+- `test_deploy_exec_dry_run` - exec 명령 실행
+
+**실행 예시**:
+```bash
+pytest tests/e2e/test_deploy_examples.py -v
+# --dry-run으로 K8s 클러스터 없이 테스트
+```
+
+### 4. 전체 워크플로우 (test_complete_workflow.py)
+
+**커버리지**: examples/complete-workflow 전체 파이프라인
+
+- `test_complete_workflow_prepare_phase` - prepare 단계
+- `test_complete_workflow_build_phase` - prepare + build 단계
+- `test_complete_workflow_deploy_phase_dry_run` - prepare + build + deploy 단계
+
+**실행 예시**:
+```bash
+pytest tests/e2e/test_complete_workflow.py -v
+# 전체 워크플로우 통합 테스트
+```
 
 ## 🏃‍♂️ 실행 방법
 

@@ -1,14 +1,9 @@
-name: End-to-End Tests
+name: End-to-End Tests (Full Suite)
 
 on:
+  workflow_dispatch:     # Manual trigger only
   schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM UTC
-  workflow_dispatch:     # Manual trigger
-  pull_request:
-    paths:
-      - 'sbkube/**'
-      - 'tests/e2e/**'
-      - '.github/workflows/e2e.yml'
+    - cron: '0 2 * * 0'  # Weekly on Sunday at 2 AM UTC
 
 jobs:
   e2e:
@@ -18,7 +13,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: ["ai-workflow", "data-pipeline", "monitoring-stack"]
+        test-file:
+          - "test_k3scode_workflows.py"
+          - "test_prepare_examples.py"
+          - "test_deploy_examples.py"
+          - "test_complete_workflow.py"
 
     steps:
     - uses: actions/checkout@v4
@@ -51,7 +50,7 @@ jobs:
     - name: Setup Kind cluster
       uses: helm/kind-action@v1
       with:
-        cluster_name: sbkube-e2e-${{ matrix.scenario }}
+        cluster_name: sbkube-e2e
         config: |
           kind: Cluster
           apiVersion: kind.x-k8s.io/v1alpha4
@@ -74,10 +73,10 @@ jobs:
         kubectl wait --for=condition=Ready nodes --all --timeout=300s
         kubectl cluster-info
 
-    - name: Run E2E tests for ${{ matrix.scenario }}
+    - name: Run E2E tests for ${{ matrix.test-file }}
       run: |
         source .venv/bin/activate
-        pytest -v tests/e2e/ -k "${{ matrix.scenario }}" --timeout=1800 --maxfail=1
+        pytest -v tests/e2e/${{ matrix.test-file }} --timeout=1800 --maxfail=1
       env:
         KUBECONFIG: /home/runner/.kube/config
 
@@ -100,7 +99,7 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v3
       with:
-        name: e2e-logs-${{ matrix.scenario }}
+        name: e2e-logs-${{ matrix.test-file }}
         path: |
           /tmp/sbkube-e2e-logs/
           cluster-dump.yaml
@@ -112,7 +111,7 @@ jobs:
         kubectl get namespaces | grep test- | awk '{print $1}' | xargs -r kubectl delete namespace --ignore-not-found=true || true
 
         # Delete kind cluster
-        kind delete cluster --name sbkube-e2e-${{ matrix.scenario }} || true
+        kind delete cluster --name sbkube-e2e || true
 
   e2e-summary:
     runs-on: ubuntu-latest
@@ -134,8 +133,9 @@ jobs:
       run: |
         echo "## E2E Test Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Scenario | Result |" >> $GITHUB_STEP_SUMMARY
-        echo "|----------|---------|" >> $GITHUB_STEP_SUMMARY
-        echo "| AI Workflow | ${{ needs.e2e.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| Data Pipeline | ${{ needs.e2e.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| Monitoring Stack | ${{ needs.e2e.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Test File | Result |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| test_k3scode_workflows.py | ${{ needs.e2e.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| test_prepare_examples.py | ${{ needs.e2e.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| test_deploy_examples.py | ${{ needs.e2e.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| test_complete_workflow.py | ${{ needs.e2e.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY

@@ -118,7 +118,7 @@ def cmd(
 
         if not config_file_path:
             console.print(
-                f"[red]❌ 앱 설정 파일을 찾을 수 없습니다.[/red]",
+                "[red]❌ 앱 설정 파일을 찾을 수 없습니다.[/red]",
             )
             console.print(
                 f"[yellow]    탐색 위치: {APP_CONFIG_DIR}/config.[yaml|yml|toml] 또는 {BASE_DIR}/config.[yaml|yml|toml][/yellow]",

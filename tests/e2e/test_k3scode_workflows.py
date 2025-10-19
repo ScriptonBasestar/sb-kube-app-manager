@@ -5,7 +5,6 @@ These tests use the actual examples/k3scode/ directory to verify
 complete sbkube workflows with real configuration files.
 """
 
-from pathlib import Path
 
 import pytest
 

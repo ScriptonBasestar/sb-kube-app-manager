@@ -7,7 +7,6 @@ deploy command functionality with real configuration files.
 Note: These tests use --dry-run to avoid requiring actual Kubernetes cluster.
 """
 
-from pathlib import Path
 
 import pytest
 

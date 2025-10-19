@@ -6,8 +6,8 @@ that use actual examples/ directory files.
 """
 
 from pathlib import Path
-from typing import List, Optional
 
+import click
 import pytest
 from click.testing import CliRunner
 
@@ -36,7 +36,7 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
-def verify_example_exists(example_path: Path, required_files: Optional[List[str]] = None):
+def verify_example_exists(example_path: Path, required_files: list[str] | None = None):
     """
     Verify that an example directory exists and contains required files.
 
@@ -65,9 +65,9 @@ def verify_example_exists(example_path: Path, required_files: Optional[List[str]
 
 def run_sbkube_command(
     runner: CliRunner,
-    command_args: List[str],
+    command_args: list[str],
     expected_exit_code: int = 0,
-    debug_info: Optional[dict] = None,
+    debug_info: dict | None = None,
 ) -> "click.testing.Result":
     """
     Run sbkube command and verify exit code with detailed error reporting.
@@ -88,16 +88,16 @@ def run_sbkube_command(
 
     if result.exit_code != expected_exit_code:
         error_msg = [
-            f"\nsbkube command failed!",
+            "\nsbkube command failed!",
             f"Command: sbkube {' '.join(command_args)}",
             f"Expected exit code: {expected_exit_code}",
             f"Actual exit code: {result.exit_code}",
-            f"\n--- Output ---",
+            "\n--- Output ---",
             result.output,
         ]
 
         if result.exception:
-            error_msg.append(f"\n--- Exception ---")
+            error_msg.append("\n--- Exception ---")
             error_msg.append(str(result.exception))
             import traceback
 
@@ -105,7 +105,7 @@ def run_sbkube_command(
             error_msg.append("".join(traceback.format_exception(type(result.exception), result.exception, result.exception.__traceback__)))
 
         if debug_info:
-            error_msg.append(f"\n--- Debug Info ---")
+            error_msg.append("\n--- Debug Info ---")
             for key, value in debug_info.items():
                 error_msg.append(f"{key}: {value}")
 
@@ -126,7 +126,7 @@ def verify_charts_downloaded(tmp_path: Path):
         Callable: Function that verifies chart existence
     """
 
-    def _verify(chart_name: str, base_dir: Optional[Path] = None):
+    def _verify(chart_name: str, base_dir: Path | None = None):
         """
         Verify that a Helm chart was downloaded.
 
@@ -193,7 +193,7 @@ def list_directory_contents():
         Callable: Function that returns directory listing
     """
 
-    def _list(directory: Path, pattern: str = "**/*") -> List[str]:
+    def _list(directory: Path, pattern: str = "**/*") -> list[str]:
         """
         List all files in a directory matching pattern.
 

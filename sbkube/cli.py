@@ -3,14 +3,6 @@ import sys
 
 import click
 
-from sbkube.exceptions import (
-    CliToolExecutionError,
-    CliToolNotFoundError,
-    SbkubeError,
-    format_error_with_suggestions,
-)
-from sbkube.utils.logger import logger
-
 from sbkube.commands import (
     assistant,
     build,
@@ -31,10 +23,17 @@ from sbkube.commands import (
     version,
     workflow,
 )
+from sbkube.exceptions import (
+    CliToolExecutionError,
+    CliToolNotFoundError,
+    SbkubeError,
+    format_error_with_suggestions,
+)
 from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
 )
+from sbkube.utils.logger import logger
 
 
 class SbkubeGroup(click.Group):

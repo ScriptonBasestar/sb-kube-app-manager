@@ -5,7 +5,6 @@ This test uses the examples/complete-workflow/ directory to verify
 the entire sbkube workflow from prepare through deploy.
 """
 
-from pathlib import Path
 
 import pytest
 

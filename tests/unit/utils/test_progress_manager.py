@@ -160,7 +160,7 @@ class TestProgressManager:
     def test_step_tracking_failure(self):
         """단계 추적 중 실패 테스트"""
         manager = ProgressManager(show_progress=False)
-        step = manager.add_step("test", "테스트")
+        manager.add_step("test", "테스트")
 
         # track_step은 예외를 전파하므로 pytest.raises로 캐치
         with pytest.raises(ValueError):

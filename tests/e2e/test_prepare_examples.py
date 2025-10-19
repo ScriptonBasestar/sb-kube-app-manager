@@ -5,7 +5,6 @@ These tests use the actual examples/prepare/ directory to verify
 prepare command functionality with real configuration files.
 """
 
-from pathlib import Path
 
 import pytest
 

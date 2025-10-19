@@ -155,7 +155,7 @@ def rollback(
 
 @state.command()
 @click.option("--base-dir", "-b", default=".", help="Base directory")
-@click.option("--app-dir", "-a", default="config", help="App configuration directory")
+@click.option("--app-dir", "-a", default=".", help="App configuration directory")
 @click.option("--cluster", required=True, help="Cluster name")
 @click.option("--namespace", "-n", required=True, help="Namespace")
 @click.option("--limit", default=10, help="Maximum number of rollback points to show")

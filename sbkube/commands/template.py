@@ -19,7 +19,7 @@ console = Console()
 @click.option(
     "--app-dir",
     "app_config_dir_name",
-    default="config",
+    default=".",
     help="앱 설정 파일이 위치한 디렉토리 이름 (base-dir 기준)",
 )
 @click.option(

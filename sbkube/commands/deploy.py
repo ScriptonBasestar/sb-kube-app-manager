@@ -23,7 +23,7 @@ console = Console()
 @click.command(name="deploy")
 @click.option(
     "--app-dir",
-    default="config",
+    default=".",
     help="앱 구성 디렉토리 (내부 config.yaml|yml|toml) 자동 탐색",
 )
 @click.option(

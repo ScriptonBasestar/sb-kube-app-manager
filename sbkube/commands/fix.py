@@ -30,7 +30,7 @@ console = Console()
 @click.option("--rollback", type=int, help="최근 N개 수정 롤백")
 @click.option("--backup-cleanup", is_flag=True, help="오래된 백업 파일 정리")
 @click.option("--history", is_flag=True, help="수정 히스토리 표시")
-@click.option("--config-dir", default="config", help="설정 파일 디렉토리")
+@click.option("--config-dir", default=".", help="설정 파일 디렉토리")
 @click.pass_context
 async def _cmd(ctx, dry_run, force, rollback, backup_cleanup, history, config_dir):
     """자동 수정 시스템
@@ -251,7 +251,7 @@ async def run_fix_command(
 @click.option("--rollback", type=int, help="최근 N개 수정 롤백")
 @click.option("--backup-cleanup", is_flag=True, help="오래된 백업 파일 정리")
 @click.option("--history", is_flag=True, help="수정 히스토리 표시")
-@click.option("--config-dir", default="config", help="설정 파일 디렉토리")
+@click.option("--config-dir", default=".", help="설정 파일 디렉토리")
 @click.pass_context
 def cmd_wrapper(ctx, dry_run, force, rollback, backup_cleanup, history, config_dir):
     """자동 수정 시스템 래퍼"""

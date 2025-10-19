@@ -33,7 +33,7 @@ def check_command_available(command):
 @click.option(
     "--app-dir",
     "app_config_dir_name",
-    default="config",
+    default=".",
     help="앱 설정 디렉토리 (config.yaml 등 내부 탐색, base-dir 기준)",
 )
 @click.option(

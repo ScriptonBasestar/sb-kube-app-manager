@@ -22,7 +22,7 @@ console = Console()
 @click.option("--detailed", is_flag=True, help="상세한 진단 결과 표시")
 @click.option("--fix", is_flag=True, help="자동 수정 가능한 문제들을 수정")
 @click.option("--check", help="특정 검사만 실행 (예: k8s_connectivity)")
-@click.option("--config-dir", default="config", help="설정 파일 디렉토리")
+@click.option("--config-dir", default=".", help="설정 파일 디렉토리")
 @click.pass_context
 def cmd(ctx, detailed, fix, check, config_dir):
     """SBKube 시스템 종합 진단

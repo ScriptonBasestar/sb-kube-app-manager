@@ -11,7 +11,6 @@ import pytest
 from sbkube.exceptions import SbkubeError
 
 
-@pytest.mark.unit
 class TestResourceConstraints:
     """Test resource constraint scenarios."""
 
@@ -72,7 +71,6 @@ class TestResourceConstraints:
             pytest.skip("Low memory condition detected")
 
 
-@pytest.mark.unit
 class TestEdgeCaseHandling:
     """Test edge case handling."""
 
@@ -170,7 +168,6 @@ class TestEdgeCaseHandling:
                 Path(long_path).parent.mkdir(parents=True, exist_ok=True)
 
 
-@pytest.mark.unit
 class TestErrorRecoveryScenarios:
     """Test error recovery scenarios."""
 

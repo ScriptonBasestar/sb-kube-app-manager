@@ -7,7 +7,6 @@ import pytest
 from sbkube.models.validators import ValidatorMixin, validate_spec_fields
 
 
-@pytest.mark.unit
 class TestValidators:
     """Test custom validators."""
 

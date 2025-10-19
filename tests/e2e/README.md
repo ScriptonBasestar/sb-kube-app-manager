@@ -13,14 +13,14 @@
 ```
 e2e/
 ├── conftest.py                    # E2E 테스트 전용 fixture 및 helper 함수
-├── test_k3scode_workflows.py     # ✅ k3scode 실제 워크플로우 테스트
-├── test_prepare_examples.py      # ✅ prepare 예제 테스트
-├── test_deploy_examples.py       # ✅ deploy 예제 테스트
-├── test_complete_workflow.py     # ✅ 전체 워크플로우 테스트
-├── test_init_end_to_end.py       # init 명령어 테스트
-├── test_run_end_to_end.py        # run 명령어 테스트
+├── test_k3scode_workflows.py     # ✅ k3scode 실제 워크플로우 테스트 (6 tests)
+├── test_prepare_examples.py      # ✅ prepare 예제 테스트 (1 test)
+├── test_deploy_examples.py       # ✅ deploy 예제 테스트 (3 tests)
+├── test_complete_workflow.py     # ✅ 전체 워크플로우 테스트 (3 tests)
 └── __init__.py                   # 패키지 마커
 ```
+
+**총 13개 E2E 테스트**, 모두 실제 examples/ 파일 사용
 
 ## ✅ 구현된 테스트 시나리오
 

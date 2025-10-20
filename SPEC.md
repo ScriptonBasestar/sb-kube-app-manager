@@ -33,6 +33,16 @@ k3s 홈서버, 호스팅k3s서버 애플리케이션 관리
 prepare → build → template → deploy
 ```
 
+**통합 실행**: `sbkube apply` 명령어로 4단계를 자동으로 실행할 수 있습니다.
+
+#### 2.1.0 Apply (통합 워크플로우)
+
+- 4단계를 자동으로 순차 실행
+- 환경별 프로파일 지원 (development/staging/production)
+- 실패 지점부터 재시작 가능 (`--resume`, `--continue-from`)
+- 단계별 실행 제어 (`--from-step`, `--to-step`, `--only`)
+- 실시간 진행 상황 표시
+
 #### 2.1.1 Prepare (소스 준비)
 
 - 외부 Helm 저장소에서 차트 다운로드
@@ -86,6 +96,7 @@ prepare → build → template → deploy
 sbkube/
 ├── cli.py                    # 메인 CLI 엔트리포인트
 ├── commands/                 # 명령어 구현
+│   ├── apply.py             # 통합 워크플로우 실행
 │   ├── prepare.py           # 소스 준비
 │   ├── build.py             # 앱 빌드
 │   ├── template.py          # 템플릿 렌더링

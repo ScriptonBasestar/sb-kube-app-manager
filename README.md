@@ -16,7 +16,10 @@ ______________________________________________________________________
 # 설치
 pip install sbkube
 
-# 기본 워크플로우
+# 통합 워크플로우 (권장)
+sbkube apply --app-dir config --namespace <namespace>
+
+# 또는 단계별 실행
 sbkube prepare --base-dir . --app-dir config
 sbkube build --base-dir . --app-dir config
 sbkube template --base-dir . --app-dir config --output-dir rendered/

@@ -12,8 +12,8 @@ from sbkube.utils.logger import logger
 from sbkube.utils.profile_manager import ProfileManager
 
 
-class RunExecutionError(SbkubeError):
-    """Run 명령어 실행 중 발생하는 오류"""
+class ApplyExecutionError(SbkubeError):
+    """Apply 명령어 실행 중 발생하는 오류"""
 
     def __init__(self, step: str, message: str, suggestions: list[str] = None):
         self.step = step
@@ -21,7 +21,7 @@ class RunExecutionError(SbkubeError):
         super().__init__(f"{step} 단계 실패: {message}")
 
 
-class RunCommand(BaseCommand):
+class ApplyCommand(BaseCommand):
     """전체 워크플로우를 통합 실행하는 명령어"""
 
     def __init__(
@@ -338,11 +338,11 @@ class RunCommand(BaseCommand):
         if self.tracker.can_resume():
             restart_point = self.tracker.get_restart_point()
             logger.info("\n💡 재시작 옵션:")
-            logger.info("   sbkube run --retry-failed  # 실패한 단계부터 재시작")
+            logger.info("   sbkube apply --retry-failed  # 실패한 단계부터 재시작")
             logger.info(
-                f"   sbkube run --continue-from {restart_point}  # {restart_point} 단계부터 재시작"
+                f"   sbkube apply --continue-from {restart_point}  # {restart_point} 단계부터 재시작"
             )
-            logger.info("   sbkube run --resume  # 자동으로 재시작 지점 탐지")
+            logger.info("   sbkube apply --resume  # 자동으로 재시작 지점 탐지")
 
     def _validate_step_dependencies(self, steps: list[str]):
         """단계별 의존성 확인"""
@@ -455,7 +455,7 @@ class RunCommand(BaseCommand):
         # 공통 제안사항
         suggestions.extend(
             [
-                f"sbkube run --from-step {step}로 해당 단계부터 재시작하세요",
+                f"sbkube apply --from-step {step}로 해당 단계부터 재시작하세요",
                 "sbkube validate로 설정 파일을 검증하세요",
                 "-v 옵션으로 상세 로그를 확인하세요",
             ]
@@ -551,13 +551,13 @@ class RunCommand(BaseCommand):
             )
 
         console.print(table)
-        console.print("\n💡 실제 실행: [bold cyan]sbkube run[/bold cyan]")
+        console.print("\n💡 실제 실행: [bold cyan]sbkube apply[/bold cyan]")
         console.print(
-            f"💡 특정 단계부터: [bold cyan]sbkube run --from-step {steps[0]}[/bold cyan]"
+            f"💡 특정 단계부터: [bold cyan]sbkube apply --from-step {steps[0]}[/bold cyan]"
         )
 
 
-@click.command(name="run")
+@click.command(name="apply")
 @common_click_options
 @click.option(
     "--from-step",
@@ -612,36 +612,36 @@ def cmd(
 
     \b
     기본 사용법:
-        sbkube run                                  # 전체 워크플로우 실행
-        sbkube run --app web-frontend               # 특정 앱만 실행
-        sbkube run --dry-run                        # 실행 계획만 표시
+        sbkube apply                                  # 전체 워크플로우 실행
+        sbkube apply --app web-frontend               # 특정 앱만 실행
+        sbkube apply --dry-run                        # 실행 계획만 표시
 
     \b
     단계별 실행 제어:
-        sbkube run --from-step template             # template부터 실행
-        sbkube run --to-step build                  # build까지만 실행
-        sbkube run --only template                  # template만 실행
-        sbkube run --from-step build --to-step template  # build와 template만
+        sbkube apply --from-step template             # template부터 실행
+        sbkube apply --to-step build                  # build까지만 실행
+        sbkube apply --only template                  # template만 실행
+        sbkube apply --from-step build --to-step template  # build와 template만
 
     \b
     환경 설정:
-        sbkube run --profile production            # 프로덕션 환경 프로파일
-        sbkube run --profile development           # 개발 환경 프로파일
-        sbkube run --app-dir production             # 다른 설정 디렉토리
-        sbkube run --config-file prod-config.yaml  # 다른 설정 파일
+        sbkube apply --profile production            # 프로덕션 환경 프로파일
+        sbkube apply --profile development           # 개발 환경 프로파일
+        sbkube apply --app-dir production             # 다른 설정 디렉토리
+        sbkube apply --config-file prod-config.yaml  # 다른 설정 파일
 
     \b
     문제 해결:
-        sbkube run --from-step <단계>               # 실패한 단계부터 재시작
+        sbkube apply --from-step <단계>               # 실패한 단계부터 재시작
         sbkube validate                             # 설정 파일 검증
-        sbkube run -v                               # 상세 로그 출력
+        sbkube apply -v                               # 상세 로그 출력
     """
     # 옵션 충돌 검사
     if only and (from_step or to_step):
         logger.error("--only 옵션은 --from-step, --to-step과 함께 사용할 수 없습니다.")
         sys.exit(1)
 
-    command = RunCommand(
+    command = ApplyCommand(
         base_dir=base_dir,
         app_config_dir=app_dir,
         target_app_name=app,
@@ -669,12 +669,12 @@ def cmd(
             for i, suggestion in enumerate(e.suggestions, 1):
                 logger.info(f"   {i}. {suggestion}")
 
-        logger.info(f"\n🔄 재시작 방법: sbkube run --from-step {e.step}")
+        logger.info(f"\n🔄 재시작 방법: sbkube apply --from-step {e.step}")
         sys.exit(1)
 
     except ValueError as e:
         logger.error(f"❌ 옵션 오류: {e}")
-        logger.info("💡 sbkube run --help로 사용법을 확인하세요")
+        logger.info("💡 sbkube apply --help로 사용법을 확인하세요")
         sys.exit(1)
 
     except KeyboardInterrupt:

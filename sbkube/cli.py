@@ -4,6 +4,7 @@ import sys
 import click
 
 from sbkube.commands import (
+    apply,
     assistant,
     build,
     config,
@@ -15,7 +16,6 @@ from sbkube.commands import (
     init,
     prepare,
     profiles,
-    run,
     state,
     template,
     upgrade,
@@ -48,7 +48,7 @@ class SbkubeGroup(click.Group):
                 "upgrade",
                 "delete",
                 "prepare",
-                "run",
+                "apply",
             ]
             commands_requiring_helm = [
                 "template",
@@ -57,7 +57,7 @@ class SbkubeGroup(click.Group):
                 "delete",
                 "prepare",
                 "build",
-                "run",
+                "apply",
             ]
 
             try:
@@ -129,7 +129,7 @@ main.add_command(prepare.cmd)
 main.add_command(build.cmd)
 main.add_command(template.cmd)
 main.add_command(deploy.cmd)
-main.add_command(run.cmd)
+main.add_command(apply.cmd)
 main.add_command(upgrade.cmd)
 main.add_command(delete.cmd)
 main.add_command(validate.cmd)

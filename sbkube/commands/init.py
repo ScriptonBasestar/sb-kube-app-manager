@@ -213,7 +213,7 @@ class InitCommand(BaseCommand):
 
 ```bash
 # 전체 워크플로우 실행
-sbkube run
+sbkube apply
 
 # 단계별 실행
 sbkube prepare
@@ -238,10 +238,10 @@ sbkube deploy
 
 ```bash
 # 특정 환경 배포
-sbkube run --profile production
+sbkube apply --profile production
 
 # 특정 단계만 실행
-sbkube run --only template
+sbkube apply --only template
 
 # 설정 검증
 sbkube validate
@@ -272,7 +272,7 @@ sbkube validate
         logger.info("\n💡 다음 단계:")
         logger.info("   1. 설정 파일을 검토하고 필요에 따라 수정하세요")
         logger.info("   2. sbkube validate로 설정을 검증하세요")
-        logger.info("   3. sbkube run으로 전체 워크플로우를 실행하세요")
+        logger.info("   3. sbkube apply로 전체 워크플로우를 실행하세요")
         logger.info("\n📁 생성된 파일:")
 
         created_files = [

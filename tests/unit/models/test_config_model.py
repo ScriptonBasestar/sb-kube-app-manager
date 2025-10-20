@@ -18,21 +18,22 @@ class TestAppInfoScheme:
 
     def test_valid_app_types(self):
         """Test that all supported app types are accepted."""
-        valid_types = [
-            "exec",
-            "install-helm",
-            "install-action",
-            "install-kustomize",
-            "install-yaml",
-            "pull-helm",
-            "pull-helm-oci",
-            "pull-git",
-            "pull-http",
-            "copy-app",
+        # Each app type requires specific specs fields
+        valid_types_with_specs = [
+            ("exec", {"commands": ["echo test"]}),
+            ("install-helm", {"values": []}),
+            ("install-action", {"actions": []}),
+            ("install-kustomize", {"kustomize_path": "."}),
+            ("install-yaml", {"actions": []}),
+            ("pull-helm", {"repo": "test-repo", "chart": "test-chart"}),
+            ("pull-helm-oci", {"repo": "test-repo", "chart": "test-chart"}),
+            ("pull-git", {"repo": "https://github.com/test/repo", "paths": []}),
+            ("pull-http", {"url": "https://example.com/file.yaml", "paths": []}),
+            ("copy-app", {"paths": []}),
         ]
 
-        for app_type in valid_types:
-            app = AppInfoScheme(name="test-app", type=app_type, specs={})
+        for app_type, specs in valid_types_with_specs:
+            app = AppInfoScheme(name="test-app", type=app_type, specs=specs)
             assert app.type == app_type
 
     def test_invalid_app_type(self):

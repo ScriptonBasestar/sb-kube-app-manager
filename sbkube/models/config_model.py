@@ -285,9 +285,11 @@ class AppInfoScheme(InheritableConfigModel):
 
     @field_validator("namespace")
     @classmethod
-    def validate_namespace(cls, v: str | None) -> str | None:
+    def validate_namespace_field(cls, v: str | None) -> str | None:
         """Validate namespace if provided."""
-        return cls.validate_namespace(v)
+        if v is not None:
+            return cls.validate_kubernetes_name(v, "namespace")
+        return v
 
     @field_validator("release_name")
     @classmethod
@@ -301,7 +303,10 @@ class AppInfoScheme(InheritableConfigModel):
     def validate_specs_for_type(self) -> "AppInfoScheme":
         """Validate specs match the application type."""
         if self.enabled:
-            self.specs = validate_spec_fields(self.type, self.specs)
+            # Validate but don't reassign to avoid triggering validate_assignment recursion
+            validated_specs = validate_spec_fields(self.type, self.specs)
+            # Use object.__setattr__ to bypass Pydantic's validate_assignment
+            object.__setattr__(self, 'specs', validated_specs)
         return self
 
     def get_validated_specs(self) -> AppSpecBase:

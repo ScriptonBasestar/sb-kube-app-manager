@@ -21,7 +21,6 @@ from sbkube.commands import (
     upgrade,
     validate,
     version,
-    workflow,
 )
 from sbkube.exceptions import (
     CliToolExecutionError,
@@ -142,7 +141,6 @@ main.add_command(history.cmd)
 main.add_command(history.diagnose_cmd)
 main.add_command(doctor.cmd)
 main.add_command(fix.cmd)
-main.add_command(workflow.workflow_group)
 main.add_command(assistant.cmd)
 main.add_command(assistant.history_cmd)
 

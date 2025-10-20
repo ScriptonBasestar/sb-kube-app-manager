@@ -225,36 +225,6 @@ sbkube fix
 sbkube fix --create-missing
 ```
 
-#### 3.2 워크플로우 커스터마이징
-
-**커스텀 워크플로우 정의:**
-
-```yaml
-# .sbkube/workflows.yaml
-workflows:
-  quick-deploy:
-    description: "빠른 배포 (prepare + deploy만)"
-    steps: [prepare, deploy]
-    
-  full-deploy:
-    description: "전체 배포 (모든 단계)"
-    steps: [prepare, build, template, deploy]
-    
-  test-only:
-    description: "테스트 전용 (template까지만)"
-    steps: [prepare, build, template]
-```
-
-**사용법:**
-
-```bash
-# 커스텀 워크플로우 실행
-sbkube run --workflow quick-deploy
-sbkube run --workflow test-only
-
-# 워크플로우 목록 확인
-sbkube workflows list
-```
 
 ## 📅 구현 계획 및 로드맵
 
@@ -277,7 +247,6 @@ sbkube workflows list
 
 - [ ] 설정 검증 및 진단 도구 (`sbkube doctor`)
 - [ ] 자동 문제 해결 (`sbkube fix`)
-- [ ] 워크플로우 커스터마이징
 - [ ] 성능 최적화 및 안정성 개선
 
 ### Phase 4: 고급 사용성 기능 (6-8주)
@@ -325,7 +294,6 @@ sbkube workflows list
 
 - 플러그인 시스템 고려
 - 외부 도구 연동 지원
-- 커스텀 워크플로우 확장성
 
 ______________________________________________________________________
 

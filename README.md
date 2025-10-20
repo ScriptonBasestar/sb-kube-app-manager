@@ -45,8 +45,7 @@ sbkube deploy --base-dir . --app-dir config --namespace <namespace>
 
 ### 개발자 리소스
 - 👨‍💻 [개발자 가이드](docs/04-development/) - 개발 환경 구성
-- 🤖 [AI 에이전트 지침](AGENTS.md) - AI 도구 작업 가이드
-- 🗺️ [컨텍스트 맵](CONTEXT_MAP.md) - AI 컨텍스트 네비게이션
+- 🤖 [AI 작업 가이드](CLAUDE.md) - AI 에이전트를 위한 통합 작업 가이드
 - 🏗️ [모듈 아키텍처](docs/10-modules/sbkube/ARCHITECTURE.md) - 상세 아키텍처 설계
 
 전체 문서 인덱스는 **[docs/INDEX.md](docs/INDEX.md)**에서 확인하세요.

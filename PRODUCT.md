@@ -65,8 +65,7 @@ prepare → build → template → deploy
 
 ### 개발자 리소스
 - [개발자 가이드](docs/04-development/README.md) - 개발 환경 구성 및 기여 방법
-- [AI 에이전트 지침](AGENTS.md) - AI 도구 사용 시 프로젝트 컨텍스트
-- [컨텍스트 맵](CONTEXT_MAP.md) - AI 컨텍스트 네비게이션 가이드
+- [AI 작업 가이드](CLAUDE.md) - AI 에이전트를 위한 통합 작업 가이드
 
 ## 기술 스택
 - **언어**: Python 3.12+

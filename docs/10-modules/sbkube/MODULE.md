@@ -48,7 +48,6 @@ sbkube/
 │   ├── history.py           # 히스토리 조회
 │   ├── config.py            # 설정 관리
 │   ├── profiles.py          # 프로파일 관리
-│   ├── workflow.py          # 워크플로우 엔진
 │   ├── run.py               # 실행 명령
 │   ├── init.py              # 초기화
 │   ├── doctor.py            # 시스템 진단
@@ -70,8 +69,6 @@ sbkube/
 │   ├── kubeconfig_info.py   # Kubeconfig 정보
 │   ├── validation_system.py # 검증 시스템
 │   ├── validation_report.py # 검증 리포트
-│   ├── workflow_engine.py   # 워크플로우 엔진
-│   ├── workflow_manager.py  # 워크플로우 관리
 │   ├── progress_manager.py  # 진행 상태 관리
 │   ├── retry.py             # 재시도 로직
 │   ├── pattern_analyzer.py  # 패턴 분석

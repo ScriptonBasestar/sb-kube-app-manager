@@ -40,16 +40,18 @@ concepts:
       - "product_vision"
       - "use_cases"
 
-  # Workflow
-  workflow:
+  # Deployment Workflow (prepare → build → template → deploy)
+  deployment_workflow:
     keywords:
       - "워크플로우"
+      - "배포 단계"
       - "prepare"
       - "build"
       - "template"
       - "deploy"
       - "배포"
       - "workflow"
+      - "deployment steps"
     documents:
       - "docs/00-product/product-spec.md"
       - "docs/02-features/commands.md"
@@ -57,6 +59,7 @@ concepts:
     related_concepts:
       - "commands"
       - "app_types"
+    note: "기본 4단계 배포 흐름을 의미 (커스텀 워크플로우 기능 아님)"
 
   # Commands
   commands:
@@ -77,7 +80,7 @@ concepts:
       - "docs/00-product/product-spec.md"
       - "AGENTS.md"
     related_concepts:
-      - "workflow"
+      - "deployment_workflow"
       - "configuration"
 
   # Configuration
@@ -116,7 +119,7 @@ concepts:
       - "docs/00-product/product-spec.md"
     related_concepts:
       - "configuration"
-      - "workflow"
+      - "deployment_workflow"
 
   # State Management
   state_management:
@@ -151,7 +154,7 @@ concepts:
       - "docs/03-configuration/config-schema.md"
     related_concepts:
       - "app_types"
-      - "workflow"
+      - "deployment_workflow"
 
   # Git Integration
   git:
@@ -166,7 +169,7 @@ concepts:
       - "docs/02-features/application-types.md"
     related_concepts:
       - "app_types"
-      - "workflow"
+      - "deployment_workflow"
 
   # YAML Manifests
   yaml:
@@ -269,7 +272,7 @@ concepts:
       - "docs/00-product/product-spec.md"
       - "docs/05-deployment/README.md"
     related_concepts:
-      - "workflow"
+      - "deployment_workflow"
       - "state_management"
 
   # Troubleshooting

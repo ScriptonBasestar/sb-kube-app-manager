@@ -1,25 +1,422 @@
+"""
+Deploy command with state tracking support.
+
+This module provides the deploy command that integrates with
+the deployment state tracking system and enhanced validation.
+"""
+
+import subprocess
 from pathlib import Path
+from typing import Any
 
 import click
-from rich.console import Console
+import yaml
 
 from sbkube.models.config_model import (
     AppExecSpec,
     AppInfoScheme,
     AppInstallActionSpec,
     AppInstallHelmSpec,
+    get_spec_model,
 )
-from sbkube.utils.cli_check import (
-    check_helm_installed_or_exit,
-    print_kube_connection_help,
-)
-from sbkube.utils.common import run_command
+from sbkube.models.deployment_state import ResourceAction
+from sbkube.state import DeploymentTracker
+from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts
+from sbkube.utils.logger import LogLevel, logger
 
-console = Console()
+
+class DeployCommand(BaseCommand):
+    """Deploy command with state tracking and validation"""
+
+    def __init__(
+        self,
+        base_dir: str,
+        app_config_dir: str,
+        cli_namespace: str | None,
+        dry_run: bool,
+        target_app_name: str | None,
+        config_file_name: str | None,
+        enable_tracking: bool = True,
+    ):
+        super().__init__(base_dir, app_config_dir, cli_namespace, config_file_name)
+        self.dry_run = dry_run
+        self.target_app_name = target_app_name
+        self.enable_tracking = enable_tracking
+        self.tracker = DeploymentTracker() if enable_tracking else None
+        self.sources_data = None
+
+    def execute(self):
+        """Execute deploy command with state tracking"""
+        self.execute_pre_hook()
+        logger.heading(f"Deploy 시작 - app-dir: {self.app_config_dir.name}")
+
+        # Load sources if available
+        sources_path = self.base_dir / "sources.yaml"
+        if sources_path.exists():
+            self.sources_data = load_config_file(sources_path)
+
+        # Get cluster info from sources
+        cluster = (
+            self.sources_data.get("cluster", "default")
+            if self.sources_data
+            else "default"
+        )
+        global_namespace = self.apps_config_dict.get("namespace", "default")
+
+        # Start deployment tracking
+        if self.tracker and not self.dry_run:
+            with self.tracker.track_deployment(
+                cluster=cluster,
+                namespace=global_namespace,
+                app_config_dir=str(self.app_config_dir),
+                config_file_path=str(self.config_file_path),
+                config_data=self.apps_config_dict,
+                sources_data=self.sources_data,
+                command="deploy",
+                command_args={
+                    "dry_run": self.dry_run,
+                    "target_app": self.target_app_name,
+                    "cli_namespace": self.cli_namespace,
+                },
+                dry_run=self.dry_run,
+            ) as deployment_id:
+                if deployment_id:
+                    logger.info(f"Deployment tracking ID: {deployment_id}")
+                self._execute_deployment()
+        else:
+            self._execute_deployment()
+
+    def _execute_deployment(self):
+        """Execute the actual deployment"""
+        # 지원하는 앱 타입
+        supported_types = ["install-helm", "install-yaml", "exec"]
+
+        # 앱 파싱
+        self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
+
+        # 필요한 CLI 도구들 체크
+        self.check_required_cli_tools()
+
+        # 앱 처리
+        self.process_apps_with_stats(self._deploy_app, "배포")
+
+    def _deploy_app(self, app_info: AppInfoScheme) -> bool:
+        """Deploy individual app with tracking"""
+        app_type = app_info.type
+        app_name = app_info.name
+        current_ns = self.get_namespace(app_info)
+
+        logger.progress(
+            f"앱 '{app_name}' (타입: {app_type}, 네임스페이스: {current_ns or '기본값'}) 배포 시작",
+        )
+
+        # Track app deployment
+        if self.tracker and not self.dry_run:
+            with self.tracker.track_app_deployment(
+                app_name=app_name,
+                app_type=app_type,
+                app_namespace=current_ns,
+                app_config=app_info.specs,
+            ):
+                return self._deploy_app_internal(app_info, current_ns)
+        else:
+            return self._deploy_app_internal(app_info, current_ns)
+
+    def _deploy_app_internal(
+        self,
+        app_info: AppInfoScheme,
+        current_ns: str | None,
+    ) -> bool:
+        """Internal app deployment logic"""
+        try:
+            # Spec 모델 생성
+            spec_obj = self.create_app_spec(app_info)
+            if not spec_obj:
+                return False
+
+            # 타입별 배포 처리
+            if app_info.type == "install-helm":
+                self._deploy_helm(app_info, spec_obj, current_ns)
+            elif app_info.type == "install-yaml":
+                self._deploy_yaml(app_info, spec_obj, current_ns)
+            elif app_info.type == "exec":
+                self._deploy_exec(app_info, spec_obj)
+
+            return True
+
+        except Exception as e:
+            logger.error(f"앱 '{app_info.name}' 배포 중 예상치 못한 오류: {e}")
+            if logger._level.value <= LogLevel.DEBUG.value:
+                import traceback
+
+                logger.debug(traceback.format_exc())
+            return False
+
+    def _deploy_helm(
+        self,
+        app_info: AppInfoScheme,
+        spec_obj: AppInstallHelmSpec,
+        namespace: str | None,
+    ):
+        """Deploy Helm chart with tracking"""
+        release_name = app_info.release_name or app_info.name
+
+        # 차트 경로 결정
+        chart_path_in_build = (
+            app_info.specs.get("path")
+            if isinstance(app_info.specs, dict)
+            else getattr(app_info.specs, "path", None)
+        )
+        chart_path_in_build = chart_path_in_build or app_info.name
+        chart_dir = self.build_dir / chart_path_in_build
+
+        # 차트 디렉토리 확인
+        if not chart_dir.exists():
+            logger.error(
+                f"앱 '{app_info.name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: {chart_dir}",
+            )
+            logger.warning("'sbkube build' 명령을 먼저 실행했는지 확인하세요.")
+            return
+
+        # 이미 설치 확인
+        if self._is_helm_installed(release_name, namespace):
+            logger.warning(
+                f"앱 '{app_info.name}': Helm 릴리스 '{release_name}'(ns: {namespace or 'default'})가 이미 설치되어 있습니다. 건너뜁니다.",
+            )
+            return
+
+        # Values 파일 수집
+        values_dict = self._collect_helm_values(spec_obj)
+
+        # Helm 명령 구성
+        helm_cmd = self._build_helm_command(
+            release_name,
+            chart_dir,
+            namespace,
+            spec_obj,
+        )
+
+        # 실행
+        self.execute_command_with_logging(
+            helm_cmd,
+            error_msg=f"앱 '{app_info.name}': Helm 설치 실패",
+            success_msg=f"앱 '{app_info.name}': Helm으로 성공적으로 설치됨",
+        )
+
+        # Track Helm release
+        if self.tracker and not self.dry_run:
+            # Get chart info
+            chart_yaml_path = chart_dir / "Chart.yaml"
+            chart_version = None
+            if chart_yaml_path.exists():
+                with open(chart_yaml_path) as f:
+                    chart_data = yaml.safe_load(f)
+                    chart_version = chart_data.get("version")
+
+            self.tracker.track_helm_release(
+                release_name=release_name,
+                namespace=namespace or "default",
+                chart=str(chart_dir),
+                chart_version=chart_version,
+                values=values_dict,
+            )
+
+    def _deploy_yaml(
+        self,
+        app_info: AppInfoScheme,
+        spec_obj: AppInstallActionSpec,
+        namespace: str | None,
+    ):
+        """Deploy YAML manifests with tracking"""
+        actions = spec_obj.actions
+        if not actions:
+            logger.warning(f"앱 '{app_info.name}': 실행할 액션이 없습니다.")
+            return
+
+        # 각 액션 처리
+        for action in actions:
+            self._deploy_yaml_action(app_info, action, namespace)
+
+    def _deploy_yaml_action(
+        self,
+        app_info: AppInfoScheme,
+        action,
+        namespace: str | None,
+    ):
+        """Deploy single YAML action with tracking"""
+        action_type = action.type
+        file_path = action.path
+        resolved_path = self._resolve_yaml_path(app_info, file_path)
+
+        if not resolved_path:
+            logger.error(
+                f"앱 '{app_info.name}': YAML 파일을 찾을 수 없습니다: {file_path}",
+            )
+            return
+
+        # Track resources before applying
+        if self.tracker and not self.dry_run and action_type in ["apply", "create"]:
+            # Load YAML and track each resource
+            with open(resolved_path) as f:
+                documents = yaml.safe_load_all(f)
+                for doc in documents:
+                    if doc and isinstance(doc, dict):
+                        # Get previous state if updating
+                        previous_state = None
+                        if action_type == "apply":
+                            previous_state = self.tracker.get_resource_state(
+                                api_version=doc.get("apiVersion", ""),
+                                kind=doc.get("kind", ""),
+                                name=doc.get("metadata", {}).get("name", ""),
+                                namespace=doc.get("metadata", {}).get(
+                                    "namespace",
+                                    namespace,
+                                ),
+                            )
+
+                        # Determine action
+                        resource_action = (
+                            ResourceAction.CREATE
+                            if not previous_state
+                            else ResourceAction.UPDATE
+                        )
+
+                        # Track resource
+                        self.tracker.track_resource(
+                            manifest=doc,
+                            action=resource_action,
+                            source_file=str(resolved_path),
+                            previous_state=previous_state,
+                        )
+
+        # kubectl 명령 구성
+        kubectl_cmd = ["kubectl", action_type, "-f", str(resolved_path)]
+        if namespace:
+            kubectl_cmd.extend(["-n", namespace])
+        if self.dry_run:
+            kubectl_cmd.append("--dry-run=client")
+
+        # 실행
+        self.execute_command_with_logging(
+            kubectl_cmd,
+            error_msg=f"앱 '{app_info.name}': kubectl {action_type} 실패 (파일: {file_path})",
+            success_msg=f"앱 '{app_info.name}': kubectl {action_type} 성공 (파일: {file_path})",
+        )
+
+    def _deploy_exec(self, app_info: AppInfoScheme, spec_obj: AppExecSpec):
+        """Execute commands (no tracking for exec type)"""
+        commands = spec_obj.commands
+        if not commands:
+            logger.warning(f"앱 '{app_info.name}': 실행할 명령이 없습니다.")
+            return
+
+        for cmd_str in commands:
+            logger.info(f"앱 '{app_info.name}': 명령 실행 - {cmd_str}")
+
+            try:
+                # 쉘 명령으로 실행
+                result = subprocess.run(
+                    cmd_str,
+                    shell=True,
+                    cwd=self.base_dir,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+
+                if result.stdout:
+                    logger.verbose(f"명령 출력:\n{result.stdout}")
+
+                logger.success(f"앱 '{app_info.name}': 명령 실행 성공")
+
+            except subprocess.CalledProcessError as e:
+                logger.error(f"앱 '{app_info.name}': 명령 실행 실패")
+                if e.stderr:
+                    logger.error(f"에러 출력:\n{e.stderr}")
+                raise
+
+    def _collect_helm_values(self, spec_obj: AppInstallHelmSpec) -> dict[str, Any]:
+        """Collect Helm values for tracking"""
+        values_dict = {}
+
+        for values_file in spec_obj.values:
+            values_path = self.values_dir / values_file
+            if values_path.exists():
+                with open(values_path) as f:
+                    file_values = yaml.safe_load(f)
+                    if file_values:
+                        values_dict.update(file_values)
+
+        return values_dict
+
+    def _is_helm_installed(self, release_name: str, namespace: str | None) -> bool:
+        """Helm 릴리스 설치 여부 확인"""
+        try:
+            installed_charts = get_installed_charts(namespace)
+            return any(chart["name"] == release_name for chart in installed_charts)
+        except Exception as e:
+            logger.debug(f"Helm 릴리스 목록 조회 실패: {e}")
+            return False
+
+    def _build_helm_command(
+        self,
+        release_name: str,
+        chart_dir: Path,
+        namespace: str | None,
+        spec_obj: AppInstallHelmSpec,
+    ) -> list:
+        """Helm install 명령 구성"""
+        cmd = ["helm", "install", release_name, str(chart_dir)]
+
+        if namespace:
+            cmd.extend(["-n", namespace])
+
+        # values 파일들 추가
+        for values_file in spec_obj.values:
+            values_path = self.values_dir / values_file
+            if values_path.exists():
+                cmd.extend(["-f", str(values_path)])
+            else:
+                logger.warning(f"Values 파일을 찾을 수 없습니다: {values_path}")
+
+        if self.dry_run:
+            cmd.append("--dry-run")
+
+        return cmd
+
+    def _resolve_yaml_path(
+        self,
+        app_info: AppInfoScheme,
+        file_path: str,
+    ) -> Path | None:
+        """YAML 파일 경로 해석"""
+        # 절대 경로인 경우
+        if Path(file_path).is_absolute():
+            path = Path(file_path)
+            if path.exists():
+                return path
+
+        # 빌드 디렉토리에서 찾기
+        build_path = self.build_dir / app_info.name / file_path
+        if build_path.exists():
+            return build_path
+
+        # 앱 설정 디렉토리에서 찾기
+        config_path = self.app_config_dir / file_path
+        if config_path.exists():
+            return config_path
+
+        # base_dir에서 찾기
+        base_path = self.base_dir / file_path
+        if base_path.exists():
+            return base_path
+
+        return None
 
 
+# Click command wrapper
 @click.command(name="deploy")
 @click.option(
     "--app-dir",
@@ -50,277 +447,29 @@ console = Console()
     help="사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)",
 )
 @click.option(
-    "--profile", help="사용할 환경 프로파일 (예: development, staging, production)"
+    "--enable-tracking",
+    is_flag=True,
+    default=True,
+    help="배포 상태 추적 활성화 (기본: True)",
 )
 @click.pass_context
-def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, profile):
-    """Helm chart 및 YAML, exec 명령을 클러스터에 적용"""
-    check_helm_installed_or_exit()
+def cmd(ctx, app_dir, base_dir, dry_run, app_name, config_file_name, enable_tracking):
+    """
+    Helm chart, YAML 매니페스트, exec 명령을 클러스터에 배포합니다.
 
+    이 명령은 향상된 검증 및 배포 상태 추적 기능을 포함합니다.
+    배포 히스토리는 나중에 롤백 및 감사에 사용할 수 있습니다.
+    """
     cli_namespace = ctx.obj.get("namespace")
 
-    BASE_DIR = Path(base_dir).resolve()
-    app_config_path_obj = Path(app_dir)
-    APP_CONFIG_DIR = BASE_DIR / app_config_path_obj
-    BUILD_DIR = APP_CONFIG_DIR / "build"
-    VALUES_DIR = APP_CONFIG_DIR / "values"
+    deploy_command = DeployCommand(
+        base_dir=base_dir,
+        app_config_dir=app_dir,
+        cli_namespace=cli_namespace,
+        dry_run=dry_run,
+        target_app_name=app_name,
+        config_file_name=config_file_name,
+        enable_tracking=enable_tracking,
+    )
 
-    config_file_path = None
-    if config_file_name:
-        config_file_path = (APP_CONFIG_DIR / config_file_name).resolve()
-        if not config_file_path.exists() or not config_file_path.is_file():
-            console.print(
-                f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]",
-            )
-            raise click.Abort()
-    else:
-        # 1차 시도: APP_CONFIG_DIR에서 찾기
-        for ext in [".yaml", ".yml", ".toml"]:
-            candidate = (APP_CONFIG_DIR / f"config{ext}").resolve()
-            if candidate.exists() and candidate.is_file():
-                config_file_path = candidate
-                break
-
-        # 2차 시도 (fallback): BASE_DIR에서 찾기
-        if not config_file_path:
-            for ext in [".yaml", ".yml", ".toml"]:
-                candidate = (BASE_DIR / f"config{ext}").resolve()
-                if candidate.exists() and candidate.is_file():
-                    config_file_path = candidate
-                    break
-
-        if not config_file_path:
-            console.print(
-                f"[red]❌ 앱 설정 파일이 존재하지 않습니다: "
-                f"{APP_CONFIG_DIR}/config.[yaml|yml|toml] 또는 {BASE_DIR}/config.[yaml|yml|toml][/red]",
-            )
-            raise click.Abort()
-
-    apps_config_dict = load_config_file(str(config_file_path))
-
-    apps_to_deploy = []
-    for app_dict in apps_config_dict.get("apps", []):
-        try:
-            app_info = AppInfoScheme(**app_dict)
-            if app_name is None or app_info.name == app_name:
-                apps_to_deploy.append(app_info)
-        except Exception as e:
-            app_name_for_error = app_dict.get("name", "알 수 없는 앱")
-            console.print(
-                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 발생 "
-                f"(AppInfoScheme 변환 실패): {e}[/red]",
-            )
-            console.print(
-                f"    [yellow]L 해당 앱 설정을 건너뜁니다: {app_dict}[/yellow]",
-            )
-            continue
-
-    if app_name is not None and not apps_to_deploy:
-        console.print(f"[red]❌ 지정된 앱 '{app_name}'을 찾을 수 없습니다.[/red]")
-        raise click.Abort()
-
-    if not apps_to_deploy:
-        console.print("[yellow]⚠️ 배포할 앱이 설정 파일에 없습니다.[/yellow]")
-        return
-
-    for app_info in apps_to_deploy:
-        app_type = app_info.type
-        name = app_info.name
-
-        current_ns = None
-        if cli_namespace:
-            current_ns = cli_namespace
-        elif app_info.namespace and app_info.namespace not in [
-            "!ignore",
-            "!none",
-            "!false",
-            "",
-        ]:
-            current_ns = app_info.namespace
-        elif apps_config_dict.get("namespace") and apps_config_dict.get(
-            "namespace",
-        ) not in ["!ignore", "!none", "!false", ""]:
-            current_ns = apps_config_dict.get("namespace")
-
-        spec_obj = None
-        try:
-            if app_type == "install-helm":
-                spec_obj = AppInstallHelmSpec(**app_info.specs)
-            elif app_type == "install-yaml":
-                spec_obj = AppInstallActionSpec(**app_info.specs)
-            elif app_type == "exec":
-                spec_obj = AppExecSpec(**app_info.specs)
-            else:
-                continue
-        except Exception as e:
-            console.print(
-                f"[red]❌ 앱 '{name}' (타입: {app_type})의 Spec 데이터 검증/변환 중 오류: {e}[/red]",
-            )
-            console.print(
-                f"    [yellow]L 해당 앱 설정을 건너뜁니다. Specs: {app_info.specs}[/yellow]",
-            )
-            continue
-
-        console.print(
-            f"[magenta]➡️  앱 '{name}' (타입: {app_type}, "
-            f"네임스페이스: {current_ns or '기본값'}) 배포 시작[/magenta]",
-        )
-
-        if app_type == "install-helm":
-            release_name = app_info.path or name
-            chart_path_in_build = app_info.path or name
-            chart_dir_to_install = BUILD_DIR / chart_path_in_build
-
-            if not chart_dir_to_install.exists():
-                console.print(
-                    f"[red]❌ 앱 '{name}': Helm 차트 디렉토리가 빌드 위치에 존재하지 않습니다: "
-                    f"{chart_dir_to_install}[/red]",
-                )
-                console.print(
-                    "    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]",
-                )
-                continue
-
-            is_installed = (
-                release_name in get_installed_charts(current_ns)
-                if current_ns
-                else False
-            )
-            if is_installed:
-                console.print(
-                    f"[yellow]⚠️  앱 '{name}': Helm 릴리스 '{release_name}'"
-                    f"(ns: {current_ns or 'default'})가 이미 설치되어 있습니다. 건너뜁니다.[/yellow]",
-                )
-                continue
-
-            helm_cmd_list = ["helm", "install", release_name, str(chart_dir_to_install)]
-            if current_ns:
-                helm_cmd_list.extend(["--namespace", current_ns, "--create-namespace"])
-            else:
-                helm_cmd_list.append("--create-namespace")
-
-            for vf_rel_path in spec_obj.values:
-                abs_vf_path = (
-                    Path(vf_rel_path)
-                    if Path(vf_rel_path).is_absolute()
-                    else VALUES_DIR / vf_rel_path
-                )
-                if abs_vf_path.exists():
-                    helm_cmd_list.extend(["--values", str(abs_vf_path)])
-                    console.print(
-                        f"    [green]✓ values 파일 사용: {abs_vf_path}[/green]",
-                    )
-                else:
-                    console.print(
-                        f"    [yellow]⚠️  values 파일 없음 (건너뜀): {abs_vf_path}[/yellow]",
-                    )
-
-            if dry_run:
-                helm_cmd_list.append("--dry-run")
-
-            console.print(f"    [cyan]$ {' '.join(helm_cmd_list)}[/cyan]")
-            return_code, stdout, stderr = run_command(helm_cmd_list, check=False)
-
-            if return_code != 0:
-                console.print(
-                    f"[red]❌ 앱 '{name}': Helm 작업 실패 (릴리스: {release_name}):[/red]",
-                )
-                if stdout:
-                    console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
-                if stderr:
-                    console.print(f"    [red]STDERR:[/red] {stderr.strip()}")
-            else:
-                ns_msg = f" (네임스페이스: {current_ns})" if current_ns else ""
-                console.print(
-                    f"[bold green]✅ 앱 '{name}': Helm 릴리스 '{release_name}' "
-                    f"배포 완료{ns_msg}[/bold green]",
-                )
-
-        elif app_type == "install-yaml":
-            # install-yaml 타입은 빌드된 YAML 파일을 사용
-            app_build_dir = BUILD_DIR / name
-
-            if not app_build_dir.exists():
-                console.print(
-                    f"[red]❌ 앱 '{name}': install-yaml 빌드 디렉토리가 존재하지 않습니다: "
-                    f"{app_build_dir}[/red]",
-                )
-                console.print(
-                    "    [yellow]L 'sbkube build' 명령을 먼저 실행했는지 확인하세요.[/yellow]",
-                )
-                continue
-
-            # 빌드 디렉토리의 모든 YAML 파일 찾기
-            yaml_files = []
-            for yaml_file in app_build_dir.glob("*.yaml"):
-                yaml_files.append(yaml_file)
-            for yaml_file in app_build_dir.glob("*.yml"):
-                yaml_files.append(yaml_file)
-
-            if not yaml_files:
-                console.print(
-                    f"[yellow]⚠️  앱 '{name}': 빌드 디렉토리에 YAML 파일이 없습니다: "
-                    f"{app_build_dir}[/yellow]",
-                )
-                continue
-
-            # 각 YAML 파일에 kubectl apply 실행
-            for yaml_file in yaml_files:
-                target_yaml_path_str = str(yaml_file.resolve())
-                action_type = "apply"  # install-yaml은 항상 apply 사용
-
-                kubectl_cmd_list = ["kubectl", action_type, "-f", target_yaml_path_str]
-
-                if current_ns:
-                    kubectl_cmd_list.extend(["-n", current_ns])
-
-                if dry_run:
-                    kubectl_cmd_list.extend(["--dry-run=client", "--validate=false"])
-
-                console.print(f"    [cyan]$ {' '.join(kubectl_cmd_list)}[/cyan]")
-                return_code, stdout, stderr = run_command(kubectl_cmd_list, check=False)
-
-                if return_code != 0:
-                    if (
-                        "Unable to connect to the server" in stderr
-                        or "no such host" in stderr
-                    ):
-                        print_kube_connection_help()
-                    console.print(
-                        f"[red]❌ 앱 '{name}': YAML 파일 배포 실패 ('{yaml_file.name}'):[/red]",
-                    )
-                    if stdout:
-                        console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
-                    if stderr:
-                        console.print(f"    [red]STDERR:[/red] {stderr.strip()}")
-                else:
-                    console.print(
-                        f"[green]✅ 앱 '{name}': YAML 파일 배포 완료 ('{yaml_file.name}')[/green]",
-                    )
-
-        elif app_type == "exec":
-            for raw_cmd_str in spec_obj.commands:
-                console.print(f"    [cyan]$ {raw_cmd_str}[/cyan]")
-                return_code, stdout, stderr = run_command(
-                    raw_cmd_str,
-                    check=False,
-                    cwd=BASE_DIR,
-                )
-                if return_code != 0:
-                    console.print(
-                        f"[red]❌ 앱 '{name}': 명령어 실행 실패 ('{raw_cmd_str}'):[/red]",
-                    )
-                    if stdout:
-                        console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
-                    if stderr:
-                        console.print(f"    [red]STDERR:[/red] {stderr.strip()}")
-                else:
-                    if stdout:
-                        console.print(f"    [grey]STDOUT:[/grey] {stdout.strip()}")
-                    console.print(
-                        f"[green]✅ 앱 '{name}': 명령어 실행 완료 ('{raw_cmd_str}')[/green]",
-                    )
-
-        console.print("")
-
-    console.print("[bold blue]✨ 모든 앱 배포 작업 완료 ✨[/bold blue]")
+    deploy_command.execute()

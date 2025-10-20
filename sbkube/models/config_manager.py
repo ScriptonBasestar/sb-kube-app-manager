@@ -15,8 +15,8 @@ from sbkube.exceptions import FileOperationError
 from sbkube.utils.logger import get_logger
 
 from .base_model import ConfigLoader
-from .config_model_v2 import AppGroupScheme
-from .sources_model_v2 import SourceScheme
+from .config_model import AppGroupScheme
+from .sources_model import SourceScheme
 
 logger = get_logger()
 

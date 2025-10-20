@@ -13,13 +13,6 @@ DO NOT USE THIS FILE FOR NEW DEVELOPMENT.
 """
 
 import warnings
-
-warnings.warn(
-    "deploy_legacy is deprecated. Use deploy instead (with state tracking).",
-    DeprecationWarning,
-    stacklevel=2,
-)
-
 from pathlib import Path
 
 import click
@@ -38,6 +31,12 @@ from sbkube.utils.cli_check import (
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts
+
+warnings.warn(
+    "deploy_legacy is deprecated. Use deploy instead (with state tracking).",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 console = Console()
 

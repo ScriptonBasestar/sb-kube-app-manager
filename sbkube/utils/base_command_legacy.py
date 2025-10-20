@@ -14,13 +14,6 @@ DO NOT USE THIS FILE FOR NEW DEVELOPMENT.
 """
 
 import warnings
-
-warnings.warn(
-    "base_command_legacy is deprecated. Use base_command instead.",
-    DeprecationWarning,
-    stacklevel=2,
-)
-
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +23,12 @@ from sbkube.models.config_model import AppInfoScheme
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.logger import LogLevel, logger
 from sbkube.utils.progress_manager import ProgressManager
+
+warnings.warn(
+    "base_command_legacy is deprecated. Use base_command instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 class BaseCommand:

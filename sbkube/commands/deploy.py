@@ -17,7 +17,6 @@ from sbkube.models.config_model import (
     AppInfoScheme,
     AppInstallActionSpec,
     AppInstallHelmSpec,
-    get_spec_model,
 )
 from sbkube.models.deployment_state import ResourceAction
 from sbkube.state import DeploymentTracker

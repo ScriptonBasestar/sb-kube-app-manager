@@ -11,20 +11,19 @@ New code should use config_model.py which provides:
 DO NOT USE THIS FILE FOR NEW DEVELOPMENT.
 """
 
+import os
 import warnings
+from pathlib import Path
+from typing import Any, Literal
+
+import yaml
+from pydantic import BaseModel, Field, model_validator
 
 warnings.warn(
     "config_model_legacy is deprecated. Use config_model instead.",
     DeprecationWarning,
     stacklevel=2,
 )
-
-import os
-from pathlib import Path
-from typing import Any, Literal
-
-import yaml
-from pydantic import BaseModel, Field, model_validator
 
 # --- 각 spec 정의 ---
 

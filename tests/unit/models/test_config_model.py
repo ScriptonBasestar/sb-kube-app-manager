@@ -5,6 +5,7 @@ Tests for sbkube.models.config_model
 import pytest
 from pydantic import ValidationError
 
+from sbkube.exceptions import ConfigValidationError
 from sbkube.models.config_model import (
     AppCopySpec,
     AppInfoScheme,
@@ -38,7 +39,7 @@ class TestAppInfoScheme:
 
     def test_invalid_app_type(self):
         """Test that invalid app types are rejected."""
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ConfigValidationError) as exc_info:
             AppInfoScheme(name="test-app", type="invalid-type", specs={})
 
         assert "Input should be" in str(exc_info.value)

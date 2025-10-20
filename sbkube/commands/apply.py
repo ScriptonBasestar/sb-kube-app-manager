@@ -506,7 +506,7 @@ class ApplyCommand(BaseCommand):
 
         except Exception as e:
             logger.error(f"❌ 프로파일 로딩 실패: {e}")
-            raise RunExecutionError(
+            raise ApplyExecutionError(
                 "profile",
                 str(e),
                 [
@@ -661,7 +661,7 @@ def cmd(
         command.execute()
         logger.success("🎉 모든 단계가 성공적으로 완료되었습니다!")
 
-    except RunExecutionError as e:
+    except ApplyExecutionError as e:
         logger.error(f"\n{e}")
 
         if e.suggestions:

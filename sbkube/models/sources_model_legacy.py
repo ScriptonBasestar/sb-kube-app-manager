@@ -11,20 +11,19 @@ New code should use sources_model.py which provides:
 DO NOT USE THIS FILE FOR NEW DEVELOPMENT.
 """
 
+import os
 import warnings
+from pathlib import Path
+from textwrap import dedent
+
+import yaml
+from pydantic import BaseModel, ValidationError, field_validator
 
 warnings.warn(
     "sources_model_legacy is deprecated. Use sources_model instead.",
     DeprecationWarning,
     stacklevel=2,
 )
-
-import os
-from pathlib import Path
-from textwrap import dedent
-
-import yaml
-from pydantic import BaseModel, ValidationError, field_validator
 
 
 class GitRepoScheme(BaseModel):

@@ -110,7 +110,7 @@ class EnhancedBaseCommand:
         if not self.app_info_list:
             return False
 
-        source_types = {"pull-helm", "pull-helm-oci", "pull-git"}
+        source_types = {"helm", "git", "http"}
         return any(app.type in source_types for app in self.app_info_list)
 
     def find_config_file(self) -> Path:

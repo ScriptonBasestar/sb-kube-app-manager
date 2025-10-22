@@ -99,11 +99,11 @@ def check_required_cli_tools(app_info_list: list):
     )
 
     needs_helm = any(
-        app.type in ["install-helm", "pull-helm", "pull-helm-oci"]
+        app.type in ["helm", "helm", "helm-oci"]
         for app in app_info_list
     )
     needs_kubectl = any(
-        app.type in ["install-yaml", "install-kustomize"] for app in app_info_list
+        app.type in ["yaml", "install-kustomize"] for app in app_info_list
     )
     needs_git = any(app.type == "pull-git" for app in app_info_list)
 

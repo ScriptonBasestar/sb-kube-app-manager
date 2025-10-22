@@ -92,7 +92,7 @@ class ProfileManager:
             return
 
         for app in config["apps"]:
-            if app.get("type") == "install-helm" and "specs" in app:
+            if app.get("type") == "helm" and "specs" in app:
                 specs = app["specs"]
                 if "values" in specs:
                     resolved_values = []
@@ -133,7 +133,7 @@ class ProfileManager:
                 if not app.get("name"):
                     result["errors"].append("app name is required")
 
-                if app.get("type") == "install-helm":
+                if app.get("type") == "helm":
                     if not app.get("specs", {}).get("path"):
                         result["errors"].append(
                             f"helm path is required for app: {app.get('name')}"

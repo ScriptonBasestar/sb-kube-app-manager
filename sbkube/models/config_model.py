@@ -314,7 +314,7 @@ class SBKubeConfig(ConfigBaseModel):
 
     Breaking Changes:
     - apps: list → dict (key = app name)
-    - pull-helm + install-helm → helm (자동 처리)
+    - Unified helm type replaces legacy pull-helm and install-helm (자동 처리)
     - specs 제거 (모든 필드 평탄화)
     - 의존성 명시 (depends_on)
 

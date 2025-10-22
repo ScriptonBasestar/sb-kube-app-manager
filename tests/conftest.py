@@ -59,7 +59,7 @@ def sample_config_yaml_content():
         "apps": [
             {
                 "name": "my-helm-app",
-                "type": "install-helm",
+                "type": "helm",
                 "namespace": "helm-ns",
                 "specs": {
                     "repo": "bitnami",
@@ -71,7 +71,7 @@ def sample_config_yaml_content():
             },
             {
                 "name": "my-kubectl-app",
-                "type": "install-yaml",
+                "type": "yaml",
                 "specs": {
                     "actions": [
                         {"type": "apply", "path": "manifests/kubectl-app.yaml"}
@@ -85,8 +85,8 @@ def sample_config_yaml_content():
                 "specs": {"commands": ["echo 'action executed'"]},
             },
             {
-                "name": "my-pull-helm-app",
-                "type": "pull-helm",
+                "name": "my-helm-app",
+                "type": "helm",
                 "specs": {
                     "repo": "bitnami",
                     "chart": "apache",
@@ -96,7 +96,7 @@ def sample_config_yaml_content():
             },
             {
                 "name": "my-pull-git-app",
-                "type": "pull-git",
+                "type": "git",
                 "specs": {
                     "repo": "pulled-git-repo",
                     "paths": [{"src": ".", "dest": "."}],
@@ -104,7 +104,7 @@ def sample_config_yaml_content():
             },
             {
                 "name": "my-copy-app",
-                "type": "copy-app",
+                "type": "http",
                 "specs": {
                     "paths": [
                         {

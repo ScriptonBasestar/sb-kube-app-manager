@@ -21,10 +21,10 @@ class TestPrepareExamples:
         Test prepare with OCI Helm chart pulling.
 
         This test verifies that prepare correctly pulls Helm charts
-        from OCI registries as specified in examples/prepare/pull-helm-oci/config.yaml.
+        from OCI registries as specified in examples/prepare/helm-oci/config.yaml.
         """
         # Verify example files exist
-        example_dir = examples_dir / "prepare" / "pull-helm-oci"
+        example_dir = examples_dir / "prepare" / "helm-oci"
         verify_example_exists(example_dir, required_files=["config.yaml", "sources.yaml"])
 
         # Get project root

@@ -22,15 +22,15 @@ class TestAppInfoScheme:
         # Each app type requires specific specs fields
         valid_types_with_specs = [
             ("exec", {"commands": ["echo test"]}),
-            ("install-helm", {"values": []}),
-            ("install-action", {"actions": []}),
+            ("helm", {"values": []}),
+            ("action", {"actions": []}),
             ("install-kustomize", {"kustomize_path": "."}),
-            ("install-yaml", {"actions": []}),
-            ("pull-helm", {"repo": "test-repo", "chart": "test-chart"}),
-            ("pull-helm-oci", {"repo": "test-repo", "chart": "test-chart"}),
-            ("pull-git", {"repo": "https://github.com/test/repo", "paths": []}),
+            ("yaml", {"actions": []}),
+            ("helm", {"repo": "test-repo", "chart": "test-chart"}),
+            ("helm-oci", {"repo": "test-repo", "chart": "test-chart"}),
+            ("git", {"repo": "https://github.com/test/repo", "paths": []}),
             ("pull-http", {"url": "https://example.com/file.yaml", "paths": []}),
-            ("copy-app", {"paths": []}),
+            ("http", {"paths": []}),
         ]
 
         for app_type, specs in valid_types_with_specs:
@@ -48,21 +48,21 @@ class TestAppInfoScheme:
         """Test copy-app type validation."""
         app = AppInfoScheme(
             name="my-copy-app",
-            type="copy-app",
+            type="http",
             specs={"paths": [{"src": "source-dir", "dest": "dest-dir"}]},
         )
         assert app.name == "my-copy-app"
-        assert app.type == "copy-app"
+        assert app.type == "http"
 
     def test_install_yaml_validation(self):
-        """Test install-yaml type validation."""
+        """Test yaml type validation."""
         app = AppInfoScheme(
             name="my-yaml-app",
-            type="install-yaml",
+            type="yaml",
             specs={"actions": [{"type": "apply", "path": "manifest.yaml"}]},
         )
         assert app.name == "my-yaml-app"
-        assert app.type == "install-yaml"
+        assert app.type == "yaml"
 
 
 class TestGetSpecModel:
@@ -70,17 +70,17 @@ class TestGetSpecModel:
 
     def test_copy_app_spec_model(self):
         """Test that copy-app returns AppCopySpec."""
-        spec_model = get_spec_model("copy-app")
+        spec_model = get_spec_model("http")
         assert spec_model == AppCopySpec
 
     def test_install_yaml_spec_model(self):
-        """Test that install-yaml returns AppInstallActionSpec."""
-        spec_model = get_spec_model("install-yaml")
+        """Test that yaml returns AppInstallActionSpec."""
+        spec_model = get_spec_model("yaml")
         assert spec_model == AppInstallActionSpec
 
     def test_install_action_spec_model(self):
         """Test that install-action returns AppInstallActionSpec."""
-        spec_model = get_spec_model("install-action")
+        spec_model = get_spec_model("action")
         assert spec_model == AppInstallActionSpec
 
     def test_unknown_type(self):
@@ -92,15 +92,15 @@ class TestGetSpecModel:
         """Test that all supported types have corresponding spec models."""
         supported_types = [
             "exec",
-            "install-helm",
-            "install-action",
+            "helm",
+            "action",
             "install-kustomize",
-            "install-yaml",
-            "pull-helm",
-            "pull-helm-oci",
-            "pull-git",
+            "yaml",
+            "helm",
+            "helm-oci",
+            "git",
             "pull-http",
-            "copy-app",
+            "http",
         ]
 
         for app_type in supported_types:

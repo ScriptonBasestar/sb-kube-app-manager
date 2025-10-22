@@ -97,7 +97,7 @@ class TestProfileManager:
                 "apps": [
                     {
                         "name": "test-app",
-                        "type": "install-helm",
+                        "type": "helm",
                         # specs.path 없음
                     }
                 ]
@@ -155,7 +155,7 @@ class TestProfileManager:
                 "apps": [
                     {
                         "name": "test-app",
-                        "type": "install-helm",
+                        "type": "helm",
                         "specs": {
                             "path": "test-chart",
                             "values": [
@@ -218,7 +218,7 @@ class TestProfileManager:
             "apps": [
                 {
                     "name": "test-app",
-                    "type": "install-helm",
+                    "type": "helm",
                     "specs": {"path": "test-chart"},
                 }
             ],

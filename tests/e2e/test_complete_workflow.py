@@ -22,7 +22,7 @@ class TestCompleteWorkflow:
 
         This test verifies that prepare correctly handles the configuration
         in examples/complete-workflow/config.yaml which includes various
-        app types (pull-helm, pull-git, etc.).
+        app types (helm, pull-git, etc.).
         """
         # Verify example files exist
         example_dir = examples_dir / "complete-workflow"

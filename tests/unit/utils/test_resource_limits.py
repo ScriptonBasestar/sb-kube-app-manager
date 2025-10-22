@@ -101,7 +101,7 @@ class TestEdgeCaseHandling:
         namespace: test
         apps:
           - name: app1
-            type: install-helm
+            type: helm
             specs:
               repo: bitnami
               chart: nginx
@@ -132,7 +132,7 @@ class TestEdgeCaseHandling:
             "apps": [
                 {
                     "name": "app-한글이름",
-                    "type": "install-helm",
+                    "type": "helm",
                     "specs": {
                         "repo": "bitnami",
                         "chart": "nginx",

@@ -22,10 +22,10 @@ class TestDeployExamples:
         Test deploy with YAML manifest installation (dry-run).
 
         This test verifies that deploy correctly handles YAML manifests
-        as specified in examples/deploy/install-yaml/config.yaml.
+        as specified in examples/deploy/yaml/config.yaml.
         """
         # Verify example files exist
-        example_dir = examples_dir / "deploy" / "install-yaml"
+        example_dir = examples_dir / "deploy" / "yaml"
         verify_example_exists(example_dir)
 
         # Get project root
@@ -59,7 +59,7 @@ class TestDeployExamples:
         as specified in examples/deploy/install-action/config.yaml.
         """
         # Verify example files exist
-        example_dir = examples_dir / "deploy" / "install-action"
+        example_dir = examples_dir / "deploy" / "action"
         verify_example_exists(example_dir)
 
         # Get project root

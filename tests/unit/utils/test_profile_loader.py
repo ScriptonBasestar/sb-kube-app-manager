@@ -116,7 +116,7 @@ class TestProfileLoader:
                 "apps": [
                     {
                         "name": "test-app",
-                        "type": "install-helm",
+                        "type": "helm",
                         # specs.path 없음
                     }
                 ]
@@ -262,7 +262,7 @@ class TestProfileLoader:
             "apps": [
                 {
                     "name": "test-app",
-                    "type": "install-helm",
+                    "type": "helm",
                     "specs": {"path": "test-chart"},
                 }
             ],

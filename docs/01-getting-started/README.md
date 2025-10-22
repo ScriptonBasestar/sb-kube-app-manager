@@ -1,6 +1,10 @@
 # 🚀 SBKube 시작하기
 
-SBKube를 처음 사용하는 분들을 위한 빠른 시작 가이드입니다.
+SBKube v0.3.0을 처음 사용하는 분들을 위한 빠른 시작 가이드입니다.
+
+> **v0.3.0 주요 변경사항**: 간소화된 설정 구조, 통합된 Helm 타입, 차트 커스터마이징 기능 추가
+>
+> v0.2.x 사용자는 [마이그레이션 가이드](../MIGRATION_V3.md)를 참조하세요.
 
 ______________________________________________________________________
 
@@ -88,54 +92,71 @@ git_repos:
 
 ### Step 3: 앱 설정 파일 생성
 
-`config/config.yaml` 파일을 생성하세요:
+`config/config.yaml` 파일을 생성하세요 (v0.3.0 형식):
 
 ```yaml
-# config/config.yaml - 애플리케이션 정의
+# config/config.yaml - 애플리케이션 정의 (v0.3.0)
 namespace: default
 
 apps:
-  # Helm 차트 배포 예제
-  - name: nginx-ingress
-    type: pull-helm
-    specs:
-      repo: nginx
-      chart: ingress-nginx
-      dest: nginx-ingress
-  
-  - name: nginx-deploy
-    type: install-helm
-    specs:
-      path: nginx-ingress
-      values: []
-    release_name: my-nginx
+  # Helm 차트 배포 예제 (간소화됨!)
+  nginx-ingress:
+    type: helm
+    chart: nginx/ingress-nginx
     namespace: ingress-nginx
+    release_name: my-nginx
 
-  # YAML 매니페스트 배포 예제  
-  - name: simple-app
-    type: install-yaml
-    specs:
-      actions:
-        - type: apply
-          path: manifests/deployment.yaml
-        - type: apply  
-          path: manifests/service.yaml
+  # YAML 매니페스트 배포 예제
+  simple-app:
+    type: yaml
+    files:
+      - manifests/deployment.yaml
+      - manifests/service.yaml
+
+  # 또는 커스텀 액션 사용
+  custom-setup:
+    type: action
+    actions:
+      - type: apply
+        path: manifests/configmap.yaml
+      - type: apply
+        path: manifests/deployment.yaml
 ```
 
-### Step 4: 기본 워크플로우 실행
+**v0.3.0의 주요 개선사항**:
+- `pull-helm` + `install-helm` → 단일 `helm` 타입
+- `install-yaml` → `yaml` 타입 (간소화)
+- `install-action` → `action` 타입
+- Apps는 이름을 key로 사용 (list → dict)
+- `specs` 제거 (필드 평탄화)
 
+### Step 4: 워크플로우 실행
+
+**v0.3.0 권장 방법** - 통합 실행:
+```bash
+# 모든 단계 자동 실행 (prepare → build → deploy)
+sbkube apply --app-dir config --namespace default
+```
+
+**또는 단계별 실행**:
 ```bash
 # 1. 외부 소스 준비 (Helm 차트 다운로드)
-sbkube prepare
+sbkube prepare --app-dir config
 
-# 2. 앱 빌드 (배포 가능한 형태로 준비)
-sbkube build
+# 2. 앱 빌드 (차트 커스터마이징 적용)
+sbkube build --app-dir config
 
 # 3. 템플릿 렌더링 (YAML 미리보기)
-sbkube template --output-dir rendered
+sbkube template --app-dir config --output-dir rendered
 
 # 4. 실제 배포
-sbkube deploy
+sbkube deploy --app-dir config --namespace default
+```
+
+**빠른 배포** (커스터마이징 없는 경우):
+```bash
+# build 단계 건너뛰기
+sbkube apply --app-dir config --namespace default --skip-build
 ```
 
 ______________________________________________________________________
@@ -168,30 +189,67 @@ sbkube deploy --dry-run
 
 ______________________________________________________________________
 
-## 🛠️ 주요 사용 패턴
+## 🛠️ 주요 사용 패턴 (v0.3.0)
 
-### 패턴 1: Helm 차트 배포
+### 패턴 1: 원격 Helm 차트 배포
 
-```bash
-# 1. sources.yaml에 Helm 저장소 추가
-# 2. config.yaml에 pull-helm + install-helm 앱 정의
-# 3. prepare → build → deploy 실행
+```yaml
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: 17.13.2
+    values:
+      - redis.yaml
 ```
 
-### 패턴 2: 직접 YAML 배포
-
 ```bash
-# 1. YAML 매니페스트 파일 준비
-# 2. config.yaml에 install-yaml 앱 정의
-# 3. build → deploy 실행 (prepare 불필요)
+sbkube apply --app-dir config --namespace data
 ```
 
-### 패턴 3: Git 소스 통합
+### 패턴 2: 로컬 Helm 차트 배포
 
-```bash
-# 1. sources.yaml에 Git 저장소 추가
-# 2. config.yaml에 pull-git 앱 정의
-# 3. prepare → build → deploy 실행
+```yaml
+apps:
+  my-app:
+    type: helm
+    chart: ./charts/my-app
+    values:
+      - values.yaml
+```
+
+### 패턴 3: YAML 매니페스트 배포
+
+```yaml
+apps:
+  nginx:
+    type: yaml
+    files:
+      - manifests/deployment.yaml
+      - manifests/service.yaml
+```
+
+### 패턴 4: Git 리포지토리 사용
+
+```yaml
+apps:
+  source-code:
+    type: git
+    repo: my-app-repo
+    path: charts/app
+```
+
+### 패턴 5: 차트 커스터마이징 (v0.3.0 신규)
+
+```yaml
+apps:
+  postgresql:
+    type: helm
+    chart: bitnami/postgresql
+    overrides:
+      templates/secret.yaml: custom-secret.yaml
+    removes:
+      - templates/serviceaccount.yaml
 ```
 
 ______________________________________________________________________

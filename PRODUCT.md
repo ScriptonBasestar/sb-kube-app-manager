@@ -1,10 +1,18 @@
-# SBKube - Kubernetes 배포 자동화 도구
+# SBKube v0.3.0 - Kubernetes 배포 자동화 도구
+
+> **v0.3.0**: 간소화된 설정 구조, 통합된 Helm 타입, 차트 커스터마이징 기능 추가
 
 ## What (무엇을)
 **SBKube**는 Kubernetes(k3s) 환경에서 Helm 차트, YAML 매니페스트, Git 리포지토리를 통합하여 일관되고 자동화된 배포 워크플로우를 제공하는 Python 기반 CLI 도구입니다.
 
 ## Value (핵심 가치)
-다양한 배포 소스(Helm, YAML, Git)를 하나의 선언적 설정으로 통합하여, 수동 작업을 최소화하고 배포 일관성과 안정성을 보장합니다.
+다양한 배포 소스(Helm, YAML, Git, HTTP)를 하나의 선언적 설정으로 통합하여, 수동 작업을 최소화하고 배포 일관성과 안정성을 보장합니다.
+
+### v0.3.0 주요 개선사항
+- **간소화된 설정**: Apps는 dict 구조, `specs` 필드 제거
+- **통합된 타입**: `pull-helm` + `install-helm` → 단일 `helm` 타입
+- **차트 커스터마이징**: `overrides` 및 `removes`로 차트 파일 수정
+- **통합 워크플로우**: `sbkube apply` 명령어로 전체 워크플로우 자동 실행
 
 ## Architecture (아키텍처 개요)
 
@@ -36,8 +44,10 @@
 prepare → build → template → deploy
    │        │         │         │
    ▼        ▼         ▼         ▼
-소스준비  앱빌드   템플릿화   클러스터배포
+소스준비  커스터마이징 템플릿화  클러스터배포
 ```
+
+또는 **통합 실행**: `sbkube apply` (v0.3.0+)
 
 ### 주요 모듈
 - **sbkube**: 단일 Python 패키지로 구성된 모놀리식 CLI 도구
@@ -76,12 +86,18 @@ prepare → build → template → deploy
 - **외부 도구**: Helm v3.x, kubectl, Git
 
 ## 프로젝트 정보
-- **버전**: 0.2.1
+- **버전**: 0.3.0
 - **라이선스**: MIT
 - **저장소**: [github.com/ScriptonBasestar/kube-app-manaer](https://github.com/ScriptonBasestar/kube-app-manaer)
 - **PyPI**: [pypi.org/project/sbkube](https://pypi.org/project/sbkube/)
 - **개발자**: ScriptonBasestar
 - **용도**: 웹호스팅/서버호스팅 기반 DevOps 인프라 실무 활용
+
+## 버전 정보
+- **v0.3.0**: Breaking Changes - 간소화된 설정 구조, 통합 Helm 타입, 차트 커스터마이징
+  - [CHANGELOG_V3.0.0.md](CHANGELOG_V3.0.0.md)
+  - [Migration Guide](docs/MIGRATION_V3.md)
+- **v0.2.x**: Legacy 버전 (legacy- 접두사 명령어로 사용 가능)
 
 ---
 

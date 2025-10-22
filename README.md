@@ -3,10 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)](<>)
 [![Repo](https://img.shields.io/badge/GitHub-kube--app--manaer-blue?logo=github)](https://github.com/ScriptonBasestar/kube-app-manaer)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue)](CHANGELOG_V3.0.0.md)
 
 **SBKube**는 `YAML`, `Helm`, `Git` 리소스를 로컬에서 정의하고 `k3s` 등 Kubernetes 환경에 일관되게 배포할 수 있는 CLI 도구입니다.
 
-> k3s용 헬름+yaml+git 배포 자동화 CLI 도구
+> k3s용 헬름+yaml+git 배포 자동화 CLI 도구 (v0.3.0)
 
 ______________________________________________________________________
 
@@ -57,15 +58,77 @@ sbkube deploy --base-dir . --app-dir config --namespace <namespace>
 prepare → build → template → deploy
 ```
 
+또는 **통합 실행**: `sbkube apply` (4단계 자동 실행)
+
 ### 지원 애플리케이션 타입
-- **pull-helm** / **pull-helm-oci** / **pull-git** - 소스 준비
-- **copy-app** - 로컬 파일 복사
-- **install-helm** / **install-yaml** / **install-action** - 배포 방법
+- **helm** - Helm 차트 (원격/로컬)
+- **yaml** - YAML 매니페스트
+- **git** - Git 리포지토리
+- **http** - HTTP 파일 다운로드
+- **action** - 커스텀 액션 (apply/delete)
+- **exec** - 커스텀 명령어 실행
 
 ### 설정 기반 관리
-- **config.yaml** - 애플리케이션 정의 및 배포 스펙
+- **config.yaml** - 애플리케이션 정의 및 배포 스펙 (간소화된 v0.3.0 형식)
 - **sources.yaml** - 외부 소스 정의 (Helm repos, Git repos)
 - **values/** - Helm 값 파일 디렉토리
+
+### 차트 커스터마이징 (v0.3.0)
+- **overrides** - 차트 내 파일 교체
+- **removes** - 차트 내 파일 삭제
+
+### 설정 예제 (v0.3.0)
+
+**간단한 Helm 배포**:
+```yaml
+namespace: my-namespace
+
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: 17.13.2
+    values:
+      - redis.yaml
+```
+
+**차트 커스터마이징**:
+```yaml
+apps:
+  postgresql:
+    type: helm
+    chart: bitnami/postgresql
+    overrides:
+      templates/secret.yaml: my-custom-secret.yaml
+    removes:
+      - templates/serviceaccount.yaml
+```
+
+**의존성 관리**:
+```yaml
+apps:
+  database:
+    type: helm
+    chart: bitnami/postgresql
+
+  backend:
+    type: helm
+    chart: ./charts/backend
+    depends_on:
+      - database
+```
+
+더 많은 예제는 [examples/](examples/) 디렉토리를 참조하세요.
+
+## 🔄 마이그레이션
+
+v0.2.x에서 v0.3.0으로 업그레이드하는 경우, 자동 마이그레이션 도구를 사용하세요:
+
+```bash
+sbkube migrate old-config.yaml -o config.yaml
+```
+
+자세한 내용은 [CHANGELOG_V3.0.0.md](CHANGELOG_V3.0.0.md) 및 [Migration Guide](docs/MIGRATION_V3.md)를 참조하세요.
 
 ## 💬 지원
 

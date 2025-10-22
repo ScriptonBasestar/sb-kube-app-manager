@@ -1,4 +1,4 @@
-# SBKube v0.3.0 Configuration
+# SBKube Configuration
 # AI/ML tools: Toolhive operator
 
 namespace: toolhive
@@ -8,7 +8,7 @@ apps:
     type: git
     repo: stacklok-toolhive
     path: deploy/charts/operator
-    # Note: v0.3.0 git type supports single path
+    # Note: SBKube git type supports single path
     # For multi-path, use separate apps or manual copy
 
   # If you need local charts from git repo:

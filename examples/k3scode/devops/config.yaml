@@ -1,4 +1,4 @@
-# SBKube v0.3.0 Configuration
+# SBKube Configuration
 # DevOps tools: Custom proxy
 
 namespace: devops
@@ -6,8 +6,8 @@ namespace: devops
 apps:
   proxynd-custom:
     type: helm
-    chart: ./proxynd-custom  # Local chart (no copy needed in v0.3.0)
+    chart: ./proxynd-custom  # Local chart (no copy needed in SBKube)
     values:
       - proxynd-custom.yaml
-    # Note: v0.3.0 automatically uses local charts
+    # Note: SBKube automatically uses local charts
     # No need for separate copy-app step

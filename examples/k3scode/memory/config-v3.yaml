@@ -1,5 +1,5 @@
-# SBKube v0.3.0 설정 파일
-# 마이그레이션: v0.2.x → v0.3.0
+# SBKube 설정 파일
+# 마이그레이션: v0.2.x → SBKube
 
 namespace: data
 

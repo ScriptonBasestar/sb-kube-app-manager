@@ -1,4 +1,4 @@
-# SBKube v0.3.0 Example: Local Helm Chart
+# SBKube Example: Local Helm Chart
 
 namespace: local-example
 

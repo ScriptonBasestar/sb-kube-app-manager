@@ -1,4 +1,4 @@
-# SBKube v0.3.0 Configuration
+# SBKube Configuration
 # Memory stores: Redis and Memcached
 
 namespace: data

@@ -1,4 +1,4 @@
-# SBKube v0.3.0 Configuration
+# SBKube Configuration
 # Relational databases: PostgreSQL and MariaDB
 
 namespace: data

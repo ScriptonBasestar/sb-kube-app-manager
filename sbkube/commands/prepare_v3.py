@@ -1,0 +1,367 @@
+"""
+SBKube v0.3.0 prepare 명령어.
+
+새로운 기능:
+- helm 타입: 자동으로 chart pull (repo/chart 형식 파싱)
+- git 타입: 리포지토리 clone
+"""
+
+import shutil
+from pathlib import Path
+
+import click
+from rich.console import Console
+
+from sbkube.models.config_v3 import GitApp, HelmApp, HttpApp, SBKubeConfigV3
+from sbkube.utils.cli_check import check_helm_installed_or_exit
+from sbkube.utils.common import run_command
+from sbkube.utils.file_loader import load_config_file
+
+console = Console()
+
+
+def parse_helm_chart(chart: str) -> tuple[str, str]:
+    """
+    'repo/chart' 형식을 파싱.
+
+    Args:
+        chart: "bitnami/redis" 형식의 문자열
+
+    Returns:
+        (repo_name, chart_name) 튜플
+    """
+    parts = chart.split("/")
+    if len(parts) != 2:
+        raise ValueError(f"Invalid chart format: {chart}. Expected 'repo/chart'")
+    return parts[0], parts[1]
+
+
+def prepare_helm_app(
+    app_name: str,
+    app: HelmApp,
+    base_dir: Path,
+    charts_dir: Path,
+    sources_file: Path,
+) -> bool:
+    """
+    Helm 앱 준비 (chart pull).
+
+    로컬 차트는 prepare 단계를 건너뜁니다.
+
+    Args:
+        app_name: 앱 이름
+        app: HelmApp 설정
+        base_dir: 프로젝트 루트
+        charts_dir: charts 디렉토리
+        sources_file: sources.yaml 파일 경로
+
+    Returns:
+        성공 여부
+    """
+    console.print(f"[cyan]📦 Preparing Helm app: {app_name}[/cyan]")
+
+    # 로컬 차트는 prepare 불필요
+    if not app.is_remote_chart():
+        console.print(f"[yellow]⏭️  Local chart detected, skipping prepare: {app.chart}[/yellow]")
+        return True
+
+    # Remote chart: pull 수행
+    repo_name = app.get_repo_name()
+    chart_name = app.get_chart_name()
+
+    # sources.yaml에서 repo URL 찾기
+    if not sources_file.exists():
+        console.print(f"[red]❌ sources.yaml not found: {sources_file}[/red]")
+        return False
+
+    sources = load_config_file(sources_file)
+    helm_sources = sources.get("helm", {})
+
+    if repo_name not in helm_sources:
+        console.print(f"[red]❌ Helm repo '{repo_name}' not found in sources.yaml[/red]")
+        return False
+
+    repo_url = helm_sources[repo_name]
+
+    # Helm repo 추가
+    console.print(f"  Adding Helm repo: {repo_name} ({repo_url})")
+    cmd = ["helm", "repo", "add", repo_name, repo_url]
+    return_code, stdout, stderr = run_command(cmd)
+
+    if return_code != 0:
+        console.print(f"[yellow]⚠️ Failed to add repo (might already exist): {stderr}[/yellow]")
+
+    # Helm repo 업데이트
+    console.print(f"  Updating Helm repo: {repo_name}")
+    cmd = ["helm", "repo", "update", repo_name]
+    return_code, stdout, stderr = run_command(cmd)
+
+    if return_code != 0:
+        console.print(f"[red]❌ Failed to update repo: {stderr}[/red]")
+        return False
+
+    # Chart pull
+    dest_dir = charts_dir / chart_name
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    console.print(f"  Pulling chart: {app.chart} → {dest_dir}")
+    cmd = ["helm", "pull", f"{repo_name}/{chart_name}", "--untar", "--untardir", str(dest_dir)]
+
+    if app.version:
+        cmd.extend(["--version", app.version])
+
+    return_code, stdout, stderr = run_command(cmd)
+
+    if return_code != 0:
+        console.print(f"[red]❌ Failed to pull chart: {stderr}[/red]")
+        return False
+
+    console.print(f"[green]✅ Helm app prepared: {app_name}[/green]")
+    return True
+
+
+def prepare_http_app(
+    app_name: str,
+    app: HttpApp,
+    base_dir: Path,
+    app_config_dir: Path,
+) -> bool:
+    """
+    HTTP 앱 준비 (파일 다운로드).
+
+    Args:
+        app_name: 앱 이름
+        app: HttpApp 설정
+        base_dir: 프로젝트 루트
+        app_config_dir: 앱 설정 디렉토리
+
+    Returns:
+        성공 여부
+    """
+    console.print(f"[cyan]📦 Preparing HTTP app: {app_name}[/cyan]")
+
+    # 다운로드 대상 경로
+    dest_path = app_config_dir / app.dest
+
+    # 이미 존재하면 건너뛰기
+    if dest_path.exists():
+        console.print(f"[yellow]⏭️  File already exists, skipping download: {dest_path}[/yellow]")
+        return True
+
+    # 디렉토리 생성
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # HTTP 다운로드 (curl 사용)
+    console.print(f"  Downloading: {app.url} → {dest_path}")
+    cmd = ["curl", "-L", "-o", str(dest_path), app.url]
+
+    # Headers 추가
+    for key, value in app.headers.items():
+        cmd.extend(["-H", f"{key}: {value}"])
+
+    return_code, stdout, stderr = run_command(cmd, timeout=300)
+
+    if return_code != 0:
+        console.print(f"[red]❌ Failed to download: {stderr}[/red]")
+        # 실패 시 파일 삭제
+        if dest_path.exists():
+            dest_path.unlink()
+        return False
+
+    console.print(f"[green]✅ HTTP app prepared: {app_name}[/green]")
+    return True
+
+
+def prepare_git_app(
+    app_name: str,
+    app: GitApp,
+    base_dir: Path,
+    repos_dir: Path,
+    sources_file: Path,
+) -> bool:
+    """
+    Git 앱 준비 (repo clone).
+
+    Args:
+        app_name: 앱 이름
+        app: GitApp 설정
+        base_dir: 프로젝트 루트
+        repos_dir: repos 디렉토리
+        sources_file: sources.yaml 파일 경로
+
+    Returns:
+        성공 여부
+    """
+    console.print(f"[cyan]📦 Preparing Git app: {app_name}[/cyan]")
+
+    # sources.yaml에서 repo URL 찾기
+    if not sources_file.exists():
+        console.print(f"[red]❌ sources.yaml not found: {sources_file}[/red]")
+        return False
+
+    sources = load_config_file(sources_file)
+    git_sources = sources.get("git", {})
+
+    # app.repo가 alias인지 URL인지 판단
+    if app.repo.startswith("http://") or app.repo.startswith("https://") or app.repo.startswith("git@"):
+        repo_url = app.repo
+        repo_alias = app_name
+    else:
+        # sources.yaml에서 찾기
+        if app.repo not in git_sources:
+            console.print(f"[red]❌ Git repo '{app.repo}' not found in sources.yaml[/red]")
+            return False
+        repo_url = git_sources[app.repo]
+        repo_alias = app.repo
+
+    dest_dir = repos_dir / repo_alias
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    # Git clone
+    console.print(f"  Cloning: {repo_url} → {dest_dir}")
+    cmd = ["git", "clone", repo_url, str(dest_dir)]
+
+    if app.ref:
+        cmd.extend(["--branch", app.ref])
+    elif app.branch:
+        cmd.extend(["--branch", app.branch])
+
+    return_code, stdout, stderr = run_command(cmd)
+
+    if return_code != 0:
+        console.print(f"[yellow]⚠️ Failed to clone (might already exist): {stderr}[/yellow]")
+        # 이미 존재하면 pull
+        if dest_dir.exists() and (dest_dir / ".git").exists():
+            console.print(f"  Pulling latest changes...")
+            cmd = ["git", "-C", str(dest_dir), "pull"]
+            return_code, stdout, stderr = run_command(cmd)
+            if return_code != 0:
+                console.print(f"[red]❌ Failed to pull: {stderr}[/red]")
+                return False
+
+    console.print(f"[green]✅ Git app prepared: {app_name}[/green]")
+    return True
+
+
+@click.command(name="prepare")
+@click.option(
+    "--app-dir",
+    "app_config_dir_name",
+    default=".",
+    help="앱 설정 디렉토리 (config.yaml 위치, base-dir 기준)",
+)
+@click.option(
+    "--base-dir",
+    default=".",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    help="프로젝트 루트 디렉토리",
+)
+@click.option(
+    "--config-file",
+    "config_file_name",
+    default="config.yaml",
+    help="설정 파일 이름 (app-dir 내부)",
+)
+@click.option(
+    "--sources",
+    "sources_file_name",
+    default="sources.yaml",
+    help="소스 설정 파일 (base-dir 기준)",
+)
+@click.option(
+    "--app",
+    "app_name",
+    default=None,
+    help="준비할 특정 앱 이름 (지정하지 않으면 모든 앱 준비)",
+)
+def cmd(
+    app_config_dir_name: str,
+    base_dir: str,
+    config_file_name: str,
+    sources_file_name: str,
+    app_name: str | None,
+):
+    """
+    SBKube v0.3.0 prepare 명령어.
+
+    외부 리소스를 준비합니다:
+    - helm 타입: Helm chart pull
+    - git 타입: Git repository clone
+    """
+    console.print("[bold blue]✨ SBKube v0.3.0 `prepare` 시작 ✨[/bold blue]")
+
+    # Helm 설치 확인
+    check_helm_installed_or_exit()
+
+    # 경로 설정
+    BASE_DIR = Path(base_dir).resolve()
+    APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
+    config_file_path = APP_CONFIG_DIR / config_file_name
+    sources_file_path = BASE_DIR / sources_file_name
+
+    CHARTS_DIR = BASE_DIR / "charts"
+    REPOS_DIR = BASE_DIR / "repos"
+
+    # 디렉토리 생성
+    CHARTS_DIR.mkdir(parents=True, exist_ok=True)
+    REPOS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # 설정 파일 로드
+    if not config_file_path.exists():
+        console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+        raise click.Abort()
+
+    console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+    config_data = load_config_file(config_file_path)
+
+    try:
+        config = SBKubeConfigV3(**config_data)
+    except Exception as e:
+        console.print(f"[red]❌ Invalid config file: {e}[/red]")
+        raise click.Abort()
+
+    # 배포 순서 얻기 (의존성 고려)
+    deployment_order = config.get_deployment_order()
+
+    if app_name:
+        # 특정 앱만 준비
+        if app_name not in config.apps:
+            console.print(f"[red]❌ App not found: {app_name}[/red]")
+            raise click.Abort()
+        apps_to_prepare = [app_name]
+    else:
+        # 모든 앱 준비 (의존성 순서대로)
+        apps_to_prepare = deployment_order
+
+    # 앱 준비
+    success_count = 0
+    total_count = len(apps_to_prepare)
+
+    for app_name in apps_to_prepare:
+        app = config.apps[app_name]
+
+        if not app.enabled:
+            console.print(f"[yellow]⏭️  Skipping disabled app: {app_name}[/yellow]")
+            continue
+
+        success = False
+
+        if isinstance(app, HelmApp):
+            success = prepare_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, sources_file_path)
+        elif isinstance(app, GitApp):
+            success = prepare_git_app(app_name, app, BASE_DIR, REPOS_DIR, sources_file_path)
+        elif isinstance(app, HttpApp):
+            success = prepare_http_app(app_name, app, BASE_DIR, APP_CONFIG_DIR)
+        else:
+            console.print(f"[yellow]⏭️  App type '{app.type}' does not require prepare: {app_name}[/yellow]")
+            success = True  # 건너뛰어도 성공으로 간주
+            continue
+
+        if success:
+            success_count += 1
+
+    # 결과 출력
+    console.print(f"\n[bold green]✅ Prepare completed: {success_count}/{total_count} apps[/bold green]")
+
+    if success_count < total_count:
+        raise click.Abort()

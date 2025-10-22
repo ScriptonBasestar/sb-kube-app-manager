@@ -24,14 +24,14 @@ apps.0.specs.repo
 # 잘못된 설정
 apps:
   - name: redis
-    type: pull-helm
+    type: helm
     specs:
       chart: redis  # repo 필드 누락!
 
 # 올바른 설정
 apps:
   - name: redis
-    type: pull-helm
+    type: helm
     specs:
       repo: bitnami
       chart: redis
@@ -332,7 +332,7 @@ sbkube deploy --verbose
 
 # 출력 예시:
 # [DEBUG] Loading config from /path/to/config.yaml
-# [DEBUG] Validating app: redis (type: pull-helm)
+# [DEBUG] Validating app: redis (type: helm)
 # [DEBUG] Executing helm install my-redis charts/redis
 ```
 

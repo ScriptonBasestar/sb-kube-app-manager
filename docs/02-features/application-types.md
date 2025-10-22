@@ -3,10 +3,10 @@
 SBKube은 다양한 소스와 배포 방식을 지원하는 **7가지 애플리케이션 타입**을 제공합니다.
 
 > **주요 기능**:
-> - `pull-helm` + `install-helm` → 단일 `helm` 타입으로 통합
-> - `install-yaml` → `yaml` 타입으로 간소화
-> - `install-action` → `action` 타입으로 간소화
-> - `pull-git`, `copy-app`, `pull-helm-oci` 제거 (단순화)
+> - `helm` + `helm` → 단일 `helm` 타입으로 통합
+> - `yaml` → `yaml` 타입으로 간소화
+> - `action` → `action` 타입으로 간소화
+> - `git`, `http`, `helm-oci` 제거 (단순화)
 > - `http`, `exec` 타입 추가
 
 ______________________________________________________________________
@@ -365,14 +365,14 @@ ______________________________________________________________________
 ```yaml
 apps:
   - name: redis-pull
-    type: pull-helm
+    type: helm
     specs:
       repo: bitnami
       chart: redis
       dest: redis
 
   - name: redis
-    type: install-helm
+    type: helm
     specs:
       path: redis
       values:

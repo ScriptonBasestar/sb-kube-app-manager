@@ -63,9 +63,9 @@ prepare → build → template → deploy
 
 ### 지원 애플리케이션 타입
 
-- **pull-helm** / **pull-helm-oci** / **pull-git** - 소스 준비
+- **helm** / **helm-oci** / **pull-git** - 소스 준비
 - **copy-app** - 로컬 파일 복사
-- **install-helm** / **install-yaml** / **install-action** - 배포 방법
+- **helm** / **yaml** / **install-action** - 배포 방법
 
 ### 설정 파일
 

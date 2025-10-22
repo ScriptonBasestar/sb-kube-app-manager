@@ -44,17 +44,17 @@ ______________________________________________________________________
 
 ### 📦 소스 준비 타입
 
-- **`pull-helm`** - Helm 저장소에서 차트 다운로드
-- **`pull-helm-oci`** - OCI 레지스트리에서 Helm 차트 pull
-- **`pull-git`** - Git 저장소 클론
+- **`helm`** - Helm 저장소에서 차트 다운로드
+- **`helm-oci`** - OCI 레지스트리에서 Helm 차트 pull
+- **`git`** - Git 저장소 클론
 - **`pull-http`** - HTTP URL에서 파일 다운로드
-- **`copy-app`** - 로컬 파일/디렉토리 복사
+- **`http`** - 로컬 파일/디렉토리 복사
 
 ### 🚀 배포 실행 타입
 
-- **`install-helm`** - Helm 차트를 사용한 설치
-- **`install-yaml`** - 직접 YAML 매니페스트 배포
-- **`install-action`** - 사용자 정의 액션 스크립트 실행
+- **`helm`** - Helm 차트를 사용한 설치
+- **`yaml`** - 직접 YAML 매니페스트 배포
+- **`action`** - 사용자 정의 액션 스크립트 실행
 - **`install-kustomize`** - Kustomize 기반 배포
 - **`exec`** - 임의 명령어 실행
 

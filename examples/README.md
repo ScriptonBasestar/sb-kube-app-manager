@@ -17,7 +17,7 @@ examples/
 └── deploy/                     # 배포 타입별 예제
     ├── exec/                   # 커스텀 명령어 실행
     ├── install-action/         # 커스텀 액션
-    └── install-yaml/           # YAML 매니페스트
+    └── yaml/           # YAML 매니페스트
 ```
 
 ## 🚀 빠른 시작
@@ -68,7 +68,7 @@ sbkube apply
 | [k3scode/devops](k3scode/devops/) | DevOps 도구 | 로컬 차트 |
 | [deploy/exec](deploy/exec/) | 커스텀 명령어 | exec 타입 |
 | [deploy/install-action](deploy/install-action/) | 커스텀 액션 | action 타입 |
-| [deploy/install-yaml](deploy/install-yaml/) | YAML 매니페스트 | yaml 타입 |
+| [deploy/yaml](deploy/yaml/) | YAML 매니페스트 | yaml 타입 |
 
 ## 🔧 앱 타입별 예제
 

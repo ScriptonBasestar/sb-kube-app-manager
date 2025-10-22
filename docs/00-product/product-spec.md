@@ -17,16 +17,16 @@
 **목적**: 외부 소스(Helm 차트, Git 리포지토리, OCI 이미지)를 로컬로 다운로드 및 준비
 
 **지원 애플리케이션 타입**:
-- `pull-helm`: Helm 저장소에서 차트 다운로드
-- `pull-helm-oci`: OCI 레지스트리에서 차트 풀
-- `pull-git`: Git 리포지토리 클론
-- `copy-app`: 로컬 파일 복사
+- `helm`: Helm 저장소에서 차트 다운로드
+- `helm-oci`: OCI 레지스트리에서 차트 풀
+- `git`: Git 리포지토리 클론
+- `http`: 로컬 파일 복사
 
 **사용자 시나리오**:
 ```
 개발자 Alice는 Bitnami Redis 차트를 사용하려고 합니다.
 1. sources.yaml에 Bitnami Helm 저장소 추가
-2. config.yaml에 pull-helm 타입 앱 정의
+2. config.yaml에 helm 타입 앱 정의
 3. sbkube prepare 실행
 → charts/redis 디렉토리에 차트 다운로드 완료
 ```
@@ -50,8 +50,8 @@
 **목적**: 준비된 소스를 배포 가능한 형태로 변환 및 패키징
 
 **지원 애플리케이션 타입**:
-- `pull-helm`, `pull-helm-oci`, `pull-git`: 다운로드된 소스 정리
-- `copy-app`: 로컬 파일/디렉토리 복사
+- `helm`, `helm-oci`, `git`: 다운로드된 소스 정리
+- `http`: 로컬 파일/디렉토리 복사
 
 **사용자 시나리오**:
 ```
@@ -77,14 +77,14 @@
 **목적**: Helm 차트 및 YAML 파일에 환경별 설정 적용 및 최종 매니페스트 생성
 
 **지원 애플리케이션 타입**:
-- `install-helm`: Helm 차트 렌더링
-- `install-yaml`: YAML 파일 템플릿화 (Jinja2)
+- `helm`: Helm 차트 렌더링
+- `yaml`: YAML 파일 템플릿화 (Jinja2)
 
 **사용자 시나리오**:
 ```
 운영자 Carol은 프로덕션 환경에 맞는 매니페스트를 생성하려 합니다.
 1. values/production.yaml 준비
-2. config.yaml의 install-helm 앱에 values 파일 지정
+2. config.yaml의 helm 앱에 values 파일 지정
 3. sbkube template --output-dir rendered/
 → rendered/ 디렉토리에 프로덕션용 YAML 생성
 ```
@@ -107,9 +107,9 @@
 **목적**: Kubernetes 클러스터에 렌더링된 매니페스트 또는 Helm 릴리스 배포
 
 **지원 애플리케이션 타입**:
-- `install-helm`: Helm 릴리스 설치/업그레이드
-- `install-yaml`: YAML 매니페스트 적용 (kubectl apply)
-- `install-action`: 사용자 정의 스크립트 실행
+- `helm`: Helm 릴리스 설치/업그레이드
+- `yaml`: YAML 매니페스트 적용 (kubectl apply)
+- `action`: 사용자 정의 스크립트 실행
 - `exec`: 임의 명령어 실행
 
 **사용자 시나리오**:
@@ -152,7 +152,7 @@ helm_repos:
 # config.yaml
 apps:
   - name: redis-pull
-    type: pull-helm
+    type: helm
     specs:
       repo: bitnami
       chart: redis
@@ -160,7 +160,7 @@ apps:
       dest: redis
 
   - name: redis-install
-    type: install-helm
+    type: helm
     release_name: my-redis
     specs:
       path: redis
@@ -171,7 +171,7 @@ apps:
 **지원 기능**:
 - Helm 저장소 자동 추가 (`helm repo add`)
 - 차트 버전 고정 및 업데이트
-- OCI 레지스트리 지원 (`pull-helm-oci`)
+- OCI 레지스트리 지원 (`helm-oci`)
 
 ### 2.2 Git 리포지토리 통합
 
@@ -207,7 +207,7 @@ apps:
 ```yaml
 apps:
   - name: custom-resources
-    type: install-yaml
+    type: yaml
     specs:
       actions:
         - type: apply
@@ -230,7 +230,7 @@ apps:
 namespace: <string>  # 기본 네임스페이스
 apps:
   - name: <string>   # 앱 이름 (고유)
-    type: <string>   # 앱 타입 (pull-helm, install-helm 등)
+    type: <string>   # 앱 타입 (helm, helm 등)
     enabled: <bool>  # 활성화 여부 (기본: true)
     specs: <object>  # 타입별 상세 설정
 ```
@@ -238,7 +238,7 @@ apps:
 **선택 필드**:
 ```yaml
 deps: [<string>]     # 전역 의존성 (미사용 예정)
-release_name: <string>  # Helm 릴리스 이름 (install-helm 전용)
+release_name: <string>  # Helm 릴리스 이름 (helm 전용)
 namespace: <string>     # 앱별 네임스페이스 오버라이드
 ```
 
@@ -267,7 +267,7 @@ git_repos:
 ```
 ValidationError: config.yaml
   apps[0].specs.repo: field required
-  apps[1].type: invalid app type 'install-helmm' (typo?)
+  apps[1].type: invalid app type 'helmm' (typo?)
 ```
 
 ## 4. 상태 관리 시스템
@@ -340,7 +340,7 @@ CREATE TABLE deployment_history (
 ```
 개발자 Eve는 설정 파일을 수정한 후 배포 전 검증하려 합니다.
 1. sbkube validate --app-dir config
-→ 오류 발견: apps[2].type: 'install-helmm' (오타)
+→ 오류 발견: apps[2].type: 'helmm' (오타)
 2. 수정 후 재검증
 → ✅ All configurations are valid
 ```
@@ -446,7 +446,7 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 
 **Acceptance Criteria**:
 - [ ] sources.yaml에 Helm 저장소 추가
-- [ ] config.yaml에 pull-helm 및 install-helm 정의
+- [ ] config.yaml에 helm 및 helm 정의
 - [ ] sbkube prepare && sbkube deploy 실행으로 배포 완료
 - [ ] Helm 릴리스가 클러스터에 생성됨
 
@@ -457,7 +457,7 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 
 **Acceptance Criteria**:
 - [ ] sources.yaml에 Git 리포지토리 추가
-- [ ] config.yaml에 pull-git 및 install-yaml 정의
+- [ ] config.yaml에 pull-git 및 yaml 정의
 - [ ] 특정 브랜치/태그 지정 가능
 - [ ] sbkube 워크플로우로 자동 배포
 

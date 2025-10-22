@@ -124,9 +124,9 @@ apps:
 ```
 
 **SBKube의 주요 개선사항**:
-- `pull-helm` + `install-helm` → 단일 `helm` 타입
-- `install-yaml` → `yaml` 타입 (간소화)
-- `install-action` → `action` 타입
+- `helm` + `helm` → 단일 `helm` 타입
+- `yaml` → `yaml` 타입 (간소화)
+- `action` → `action` 타입
 - Apps는 이름을 key로 사용 (list → dict)
 - `specs` 제거 (필드 평탄화)
 

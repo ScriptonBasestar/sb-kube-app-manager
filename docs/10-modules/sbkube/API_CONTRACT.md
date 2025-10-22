@@ -107,9 +107,9 @@ class MyCommand(BaseCommand):
                 continue
 
             # 3. 타입별 로직
-            if app.type == 'install-helm':
+            if app.type == 'helm':
                 self.process_helm(app)
-            elif app.type == 'install-yaml':
+            elif app.type == 'yaml':
                 self.process_yaml(app)
 
     def process_helm(self, app: AppInfoScheme):
@@ -143,8 +143,8 @@ class AppInfoScheme(BaseModel):
 
     name: str  # 앱 이름 (고유해야 함)
     type: Literal[
-        'exec', 'install-helm', 'install-action', 'install-yaml',
-        'pull-helm', 'pull-helm-oci', 'pull-git', 'copy-app'
+        'exec', 'helm', 'install-action', 'yaml',
+        'helm', 'helm-oci', 'pull-git', 'copy-app'
     ]  # 앱 타입
     path: Optional[str] = None  # 경로 (타입별 의미 다름)
     enabled: bool = True  # 활성화 여부
@@ -167,19 +167,19 @@ class AppSpecBase(BaseModel):
     pass
 
 class AppPullHelmSpec(AppSpecBase):
-    """pull-helm 타입 Spec"""
+    """helm 타입 Spec"""
     repo: str  # Helm 저장소 이름
     chart: str  # 차트 이름
     version: str  # 차트 버전
     dest: str  # 저장 경로
 
 class AppInstallHelmSpec(AppSpecBase):
-    """install-helm 타입 Spec"""
+    """helm 타입 Spec"""
     path: str  # 차트 경로
     values: List[str] = Field(default_factory=list)  # values 파일 목록
 
 class AppInstallYamlSpec(AppSpecBase):
-    """install-yaml 타입 Spec"""
+    """yaml 타입 Spec"""
     actions: List[Dict[str, Any]]  # apply/delete 액션 목록
 
 class AppCopyAppSpec(AppSpecBase):
@@ -220,8 +220,8 @@ class AppMyNewTypeSpec(AppSpecBase):
 ```python
 class AppInfoScheme(BaseModel):
     type: Literal[
-        'exec', 'install-helm', 'install-yaml',
-        'pull-helm', 'pull-git', 'copy-app',
+        'exec', 'helm', 'yaml',
+        'helm', 'pull-git', 'copy-app',
         'my-new-type'  # 추가
     ]
 ```
@@ -231,8 +231,8 @@ class AppInfoScheme(BaseModel):
 def get_spec_model(app_type: str):
     """앱 타입별 Spec 모델 반환"""
     spec_model_mapping = {
-        'pull-helm': AppPullHelmSpec,
-        'install-helm': AppInstallHelmSpec,
+        'helm': AppPullHelmSpec,
+        'helm': AppInstallHelmSpec,
         # ... 기존 매핑
         'my-new-type': AppMyNewTypeSpec,  # 추가
     }

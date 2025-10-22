@@ -151,11 +151,11 @@ class PrepareCommand(BaseCommand):
             if not self.should_process_app(app):
                 continue
 
-            if app.type == 'pull-helm':
+            if app.type == 'helm':
                 self.prepare_helm_chart(app, sources)
             elif app.type == 'pull-git':
                 self.prepare_git_repo(app, sources)
-            elif app.type == 'pull-helm-oci':
+            elif app.type == 'helm-oci':
                 self.prepare_oci_chart(app)
 ```
 
@@ -376,8 +376,8 @@ class AppMyNewTypeSpec(AppSpecBase):
 ```python
 class AppInfoScheme(BaseModel):
     type: Literal[
-        'exec', 'install-helm', 'install-yaml',
-        'pull-helm', 'pull-git', 'copy-app',
+        'exec', 'helm', 'yaml',
+        'helm', 'pull-git', 'copy-app',
         'my-new-type'  # 추가
     ]
 ```
@@ -465,7 +465,7 @@ def prepare_apps_parallel(apps: List[AppInfoScheme]):
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = []
         for app in apps:
-            if app.type in ['pull-helm', 'pull-git']:
+            if app.type in ['helm', 'pull-git']:
                 future = executor.submit(download_app, app)
                 futures.append(future)
 

@@ -93,11 +93,11 @@ sbkube build [옵션]
 
 ### 🎯 지원 앱 타입
 
-- **`pull-helm`** - Helm 차트 준비
-- **`pull-helm-oci`** - OCI 차트 준비
-- **`pull-git`** - Git 소스 준비
-- **`copy-app`** - 로컬 파일 복사
-- **`install-yaml`** - YAML 매니페스트 준비
+- **`helm`** - Helm 차트 준비
+- **`helm-oci`** - OCI 차트 준비
+- **`git`** - Git 소스 준비
+- **`http`** - 로컬 파일 복사
+- **`yaml`** - YAML 매니페스트 준비
 
 ### 💡 사용 예제
 
@@ -139,8 +139,8 @@ sbkube template [옵션]
 
 ### 🎯 지원 앱 타입
 
-- **`install-helm`** - Helm 차트 템플릿
-- **`install-yaml`** - YAML 매니페스트 템플릿
+- **`helm`** - Helm 차트 템플릿
+- **`yaml`** - YAML 매니페스트 템플릿
 
 ### 💡 사용 예제
 
@@ -177,9 +177,9 @@ sbkube deploy [옵션]
 
 ### 🎯 지원 앱 타입
 
-- **`install-helm`** - Helm 차트 설치
-- **`install-yaml`** - YAML 매니페스트 적용
-- **`install-action`** - 사용자 정의 스크립트 실행
+- **`helm`** - Helm 차트 설치
+- **`yaml`** - YAML 매니페스트 적용
+- **`action`** - 사용자 정의 스크립트 실행
 - **`exec`** - 임의 명령어 실행
 
 ### 💡 사용 예제
@@ -219,7 +219,7 @@ sbkube upgrade [옵션]
 
 ### 🎯 지원 앱 타입
 
-- **`install-helm`** - Helm 릴리스 업그레이드
+- **`helm`** - Helm 릴리스 업그레이드
 
 ### 💡 사용 예제
 
@@ -252,9 +252,9 @@ sbkube delete [옵션]
 
 ### 🎯 지원 앱 타입
 
-- **`install-helm`** - Helm 릴리스 삭제
-- **`install-yaml`** - YAML 리소스 삭제
-- **`install-action`** - 사용자 정의 삭제 스크립트 실행
+- **`helm`** - Helm 릴리스 삭제
+- **`yaml`** - YAML 리소스 삭제
+- **`action`** - 사용자 정의 삭제 스크립트 실행
 
 ### 💡 사용 예제
 

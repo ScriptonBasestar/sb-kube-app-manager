@@ -107,7 +107,7 @@ apps:
 apps:
   # 1단계: 소스 준비
   - name: nginx-source
-    type: pull-helm
+    type: helm
     specs:
       repo: bitnami           # sources.yaml의 저장소명
       chart: nginx            # 차트명
@@ -116,7 +116,7 @@ apps:
       
   # 2단계: 배포 실행
   - name: nginx-app
-    type: install-helm
+    type: helm
     specs:
       path: nginx-custom      # 빌드된 차트 경로
       values:                 # Helm values 파일들
@@ -131,7 +131,7 @@ apps:
 ```yaml
 apps:
   - name: simple-webapp
-    type: install-yaml
+    type: yaml
     specs:
       actions:
         - type: apply         # apply, create, delete
@@ -160,7 +160,7 @@ apps:
           
   # 가져온 설정으로 배포
   - name: deploy-configs
-    type: install-yaml
+    type: yaml
     specs:
       actions:
         - type: apply
@@ -200,14 +200,14 @@ sbkube --app-dir environments/production deploy
 apps:
   # 개발 환경에서만 활성화
   - name: debug-tools
-    type: install-helm
+    type: helm
     enabled: false            # 기본적으로 비활성화
     specs:
       path: debug-chart
       
   # 프로덕션에서만 활성화  
   - name: monitoring
-    type: install-helm
+    type: helm
     enabled: true
     specs:
       path: prometheus-stack
@@ -227,7 +227,7 @@ apps:
         
   # 2. 기본 리소스
   - name: base-resources
-    type: install-yaml
+    type: yaml
     specs:
       actions:
         - type: apply
@@ -237,7 +237,7 @@ apps:
           
   # 3. 애플리케이션
   - name: main-app
-    type: install-helm
+    type: helm
     specs:
       path: main-chart
       values: [app-values.yaml]
@@ -279,7 +279,7 @@ apps:
 # ✅ 올바른 예제  
 apps:
   - name: "valid-app"
-    type: "install-helm"
+    type: "helm"
     specs:
       path: "chart-path"
       values: []

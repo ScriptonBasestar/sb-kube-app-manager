@@ -133,14 +133,14 @@ prepare → build → deploy를 한 번에 실행합니다.
 ```yaml
 apps:
   - name: redis-pull
-    type: pull-helm
+    type: helm
     specs:
       repo: bitnami
       chart: redis
       dest: redis
 
   - name: redis
-    type: install-helm
+    type: helm
     specs:
       path: redis
       overrides:

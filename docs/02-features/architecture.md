@@ -81,8 +81,8 @@ class AppInfoScheme(BaseModel):
     """애플리케이션 정의 모델"""
     name: str
     type: Literal[
-        'exec', 'install-helm', 'install-action', 'install-kustomize', 'install-yaml',
-        'pull-helm', 'pull-helm-oci', 'pull-git', 'pull-http', 'copy-app'
+        'exec', 'helm', 'install-action', 'install-kustomize', 'yaml',
+        'helm', 'helm-oci', 'pull-git', 'pull-http', 'copy-app'
     ]
     path: Optional[str] = None
     enabled: bool = True
@@ -234,7 +234,7 @@ class AppMyNewTypeSpec(AppSpecBase):
 
 # 2. AppInfoScheme의 type Literal에 추가
 type: Literal[
-    'exec', 'install-helm', ..., 'my-new-type'  # 새 타입 추가
+    'exec', 'helm', ..., 'my-new-type'  # 새 타입 추가
 ]
 
 # 3. get_spec_model 함수에 매핑 추가

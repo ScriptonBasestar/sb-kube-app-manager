@@ -26,7 +26,7 @@ namespace: production
 
 apps:
   - name: webapp
-    type: install-helm
+    type: helm
     path: webapp-nginx     # build 디렉토리 내 경로
     namespace: web         # 앱별 네임스페이스 (선택사항)
     specs:
@@ -40,7 +40,7 @@ apps:
 ```yaml
 apps:
   - name: configs
-    type: install-yaml
+    type: yaml
     namespace: default
     specs:
       actions:
@@ -76,7 +76,7 @@ sbkube deploy --app-dir config
 # 실행 결과:
 # ✅ 클러스터 접속 확인됨
 # 
-# ➡️ 앱 'webapp' (타입: install-helm, 네임스페이스: web) 배포 시작
+# ➡️ 앱 'webapp' (타입: helm, 네임스페이스: web) 배포 시작
 # ✅ values: config/values/values-prod.yaml
 # ✅ values: config/values/values-common.yaml
 # $ helm install webapp config/build/webapp-nginx --namespace web --create-namespace --values config/values/values-prod.yaml --values config/values/values-common.yaml
@@ -122,12 +122,12 @@ sbkube deploy --app frontend
 
 ## 배포 타입별 상세
 
-### 1. install-helm 타입
+### 1. helm 타입
 
 ```yaml
 apps:
   - name: redis
-    type: install-helm
+    type: helm
     path: redis-cache       # 차트 경로 (build/redis-cache)
     release_name: my-redis  # Helm 릴리스 이름 (선택사항)
     specs:
@@ -140,12 +140,12 @@ Values 파일 우선순위:
 - 나중에 지정된 파일이 앞의 파일을 오버라이드
 - 절대 경로 또는 values 디렉토리 상대 경로 사용 가능
 
-### 2. install-yaml 타입
+### 2. yaml 타입
 
 ```yaml
 apps:
   - name: base-resources
-    type: install-yaml
+    type: yaml
     specs:
       actions:
         # 로컬 파일
@@ -255,13 +255,13 @@ apps:
 
 # 2. 데이터베이스
   - name: postgres
-    type: install-helm
+    type: helm
     namespace: db
     # ...
 
 # 3. 애플리케이션
   - name: webapp
-    type: install-helm
+    type: helm
     namespace: web
     # ...
 ```

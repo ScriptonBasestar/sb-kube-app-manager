@@ -69,7 +69,7 @@ apps:
 
   # 2. 시크릿 및 설정 적용
   - name: configs
-    type: install-yaml
+    type: yaml
     specs:
       actions:
         - type: apply
@@ -79,7 +79,7 @@ apps:
 
   # 3. 데이터베이스 - PostgreSQL
   - name: database
-    type: pull-helm
+    type: helm
     specs:
       repo: bitnami
       chart: postgresql
@@ -87,7 +87,7 @@ apps:
       dest: postgres-db
 
   - name: database-deploy
-    type: install-helm
+    type: helm
     path: postgres-db
     namespace: myapp
     specs:
@@ -96,7 +96,7 @@ apps:
 
   # 4. 캐시 - Redis  
   - name: cache
-    type: pull-helm
+    type: helm
     specs:
       repo: bitnami
       chart: redis
@@ -104,7 +104,7 @@ apps:
       dest: redis-cache
 
   - name: cache-deploy
-    type: install-helm
+    type: helm
     path: redis-cache
     namespace: myapp
     specs:
@@ -128,7 +128,7 @@ apps:
           dest: webapp-built
 
   - name: webapp-deploy
-    type: install-helm
+    type: helm
     path: webapp-built
     namespace: myapp
     specs:
@@ -137,14 +137,14 @@ apps:
 
   # 6. 모니터링
   - name: monitoring
-    type: pull-helm
+    type: helm
     specs:
       repo: prometheus
       chart: kube-prometheus-stack
       dest: monitoring-stack
 
   - name: monitoring-deploy
-    type: install-helm
+    type: helm
     path: monitoring-stack
     namespace: monitoring
     specs:
@@ -301,7 +301,7 @@ sbkube delete --app-dir config
 namespace: myapp-dev
 apps:
   - name: database
-    type: install-helm
+    type: helm
     specs:
       values:
         - postgres-values-dev.yaml  # 개발용 가벼운 설정
@@ -310,7 +310,7 @@ apps:
 namespace: myapp-prod
 apps:
   - name: database
-    type: install-helm
+    type: helm
     specs:
       values:
         - postgres-values-prod.yaml  # 프로덕션용 고가용성 설정
@@ -347,7 +347,7 @@ steps:
 # Sealed Secrets 또는 External Secrets 사용
 apps:
   - name: secrets
-    type: install-yaml
+    type: yaml
     specs:
       actions:
         - type: apply
@@ -386,7 +386,7 @@ kubectl top pods -n myapp
 # 필요한 경우 NetworkPolicy 추가
 apps:
   - name: network-policies
-    type: install-yaml
+    type: yaml
     specs:
       actions:
         - type: apply

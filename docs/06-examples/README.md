@@ -36,7 +36,7 @@ ______________________________________________________________________
 
 ```bash
 # 예제 디렉토리로 이동
-cd examples/deploy/install-yaml
+cd examples/deploy/yaml
 
 # 설정 파일 확인
 cat config.yaml
@@ -48,7 +48,7 @@ namespace: default
 
 apps:
   - name: nginx-simple
-    type: install-yaml
+    type: yaml
     specs:
       actions:
         - type: apply
@@ -85,7 +85,7 @@ ______________________________________________________________________
 ### Helm 저장소 차트 준비
 
 ```bash
-cd examples/prepare/pull-helm-oci
+cd examples/prepare/helm-oci
 
 # OCI 레지스트리에서 Helm 차트 가져오기
 sbkube prepare
@@ -101,7 +101,7 @@ helm_repos:
 # config.yaml  
 apps:
   - name: argocd-source
-    type: pull-helm-oci
+    type: helm-oci
     specs:
       repo: ghcr.io/argoproj/argo-helm
       chart: argo-cd
@@ -245,7 +245,7 @@ apps:
           
   # 2단계: 백엔드 배포
   - name: backend-app
-    type: install-helm
+    type: helm
     specs:
       path: backend-chart
       values: [backend-values.yaml]
@@ -253,7 +253,7 @@ apps:
     
   # 3단계: 프론트엔드 배포  
   - name: frontend-app
-    type: install-helm
+    type: helm
     specs:
       path: frontend-chart
       values: [frontend-values.yaml]

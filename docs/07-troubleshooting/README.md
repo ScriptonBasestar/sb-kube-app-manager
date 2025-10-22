@@ -178,7 +178,7 @@ cat -A config.yaml  # 탭 문자 확인
 
 ```bash
 # 오류 메시지
-ValidationError: 'invalid-type' is not one of ['exec', 'install-helm', ...]
+ValidationError: 'invalid-type' is not one of ['exec', 'helm', ...]
 ```
 
 **해결 방법:**
@@ -191,8 +191,8 @@ sbkube validate
 sbkube --help
 
 # 올바른 타입으로 수정
-# 지원 타입: pull-helm, pull-helm-oci, pull-git, pull-http, copy-app
-#           install-helm, install-yaml, install-action, install-kustomize, exec
+# 지원 타입: helm, helm-oci, pull-git, pull-http, copy-app
+#           helm, yaml, install-action, install-kustomize, exec
 ```
 
 ______________________________________________________________________

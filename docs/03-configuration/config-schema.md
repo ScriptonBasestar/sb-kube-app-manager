@@ -5,7 +5,7 @@ SBKube의 메인 설정 파일인 `config.yaml`의 완전한 스키마 문서입
 > **주요 기능**:
 > - Apps는 이름을 key로 사용하는 dict 구조 (list → dict)
 > - `specs` 필드 제거 (필드 평탄화)
-> - `pull-helm` + `install-helm` → 단일 `helm` 타입
+> - `helm` + `helm` → 단일 `helm` 타입
 > - 지원 타입 단순화 (10개 → 7개)
 
 ______________________________________________________________________
@@ -77,8 +77,8 @@ apps:
 
 | 타입 | 설명 | v0.2.x 동등 타입 |
 |------|------|------------------|
-| `helm` | Helm 차트 (원격/로컬) | pull-helm + install-helm |
-| `yaml` | YAML 매니페스트 | install-yaml |
+| `helm` | Helm 차트 (원격/로컬) | helm + helm |
+| `yaml` | YAML 매니페스트 | yaml |
 | `git` | Git 리포지토리 | pull-git |
 | `http` | HTTP 파일 다운로드 | pull-http |
 | `action` | 커스텀 액션 | install-action |

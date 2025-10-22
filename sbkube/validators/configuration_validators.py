@@ -158,11 +158,11 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
         if "type" in app:
             app_type = app["type"]
             valid_types = [
-                "install-helm",
-                "pull-helm",
-                "pull-git",
-                "copy-app",
-                "install-yaml",
+                "helm",
+                "helm",
+                "git",
+                "http",
+                "yaml",
                 "exec",
             ]
             if app_type not in valid_types:
@@ -375,19 +375,19 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
         app_type = app.get("type")
         specs = app.get("specs", {})
 
-        if app_type == "install-helm":
+        if app_type == "helm":
             issues.extend(
                 await self._validate_install_helm_content(app_prefix, specs, base_path)
             )
-        elif app_type == "pull-helm":
+        elif app_type == "helm":
             issues.extend(await self._validate_pull_helm_content(app_prefix, specs))
-        elif app_type == "pull-git":
+        elif app_type == "git":
             issues.extend(await self._validate_pull_git_content(app_prefix, specs))
-        elif app_type == "copy-app":
+        elif app_type == "http":
             issues.extend(
                 await self._validate_copy_app_content(app_prefix, specs, base_path)
             )
-        elif app_type == "install-yaml":
+        elif app_type == "yaml":
             issues.extend(
                 await self._validate_install_yaml_content(app_prefix, specs, base_path)
             )
@@ -399,12 +399,12 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_install_helm_content(
         self, app_prefix: str, specs: dict[str, Any], base_path: Path
     ) -> list[str]:
-        """install-helm 앱 내용 검증"""
+        """helm 앱 내용 검증"""
         issues = []
 
         # path 필드 검증
         if "path" not in specs:
-            issues.append(f"{app_prefix}: install-helm 타입에는 path 필드가 필요합니다")
+            issues.append(f"{app_prefix}: helm 타입에는 path 필드가 필요합니다")
         else:
             chart_path = base_path / specs["path"]
             if not chart_path.exists():
@@ -432,7 +432,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_pull_helm_content(
         self, app_prefix: str, specs: dict[str, Any]
     ) -> list[str]:
-        """pull-helm 앱 내용 검증"""
+        """helm 앱 내용 검증"""
         issues = []
 
         # 필수 필드 검증
@@ -440,7 +440,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
         for field in required_fields:
             if field not in specs:
                 issues.append(
-                    f"{app_prefix}: pull-helm 타입에는 {field} 필드가 필요합니다"
+                    f"{app_prefix}: helm 타입에는 {field} 필드가 필요합니다"
                 )
 
         # 버전 형식 검증
@@ -510,13 +510,13 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_install_yaml_content(
         self, app_prefix: str, specs: dict[str, Any], base_path: Path
     ) -> list[str]:
-        """install-yaml 앱 내용 검증"""
+        """yaml 앱 내용 검증"""
         issues = []
 
         # actions 검증
         if "actions" not in specs:
             issues.append(
-                f"{app_prefix}: install-yaml 타입에는 actions 필드가 필요합니다"
+                f"{app_prefix}: yaml 타입에는 actions 필드가 필요합니다"
             )
         else:
             actions = specs["actions"]
@@ -657,14 +657,14 @@ class SourcesIntegrityValidator(ValidationCheck):
                 app_type = app.get("type")
                 specs = app.get("specs", {})
 
-                if app_type == "pull-git":
+                if app_type == "git":
                     repo_name = specs.get("repo")
                     if repo_name and repo_name not in git_sources:
                         issues.append(
                             f"앱 '{app_name}': Git 저장소 '{repo_name}'가 sources.yaml에 정의되지 않았습니다"
                         )
 
-                elif app_type == "pull-helm":
+                elif app_type == "helm":
                     repo_name = specs.get("repo")
                     if repo_name and repo_name not in helm_sources:
                         issues.append(
@@ -681,9 +681,9 @@ class SourcesIntegrityValidator(ValidationCheck):
                     app_type = app.get("type")
                     specs = app.get("specs", {})
 
-                    if app_type == "pull-git" and "repo" in specs:
+                    if app_type == "git" and "repo" in specs:
                         used_git_repos.add(specs["repo"])
-                    elif app_type == "pull-helm" and "repo" in specs:
+                    elif app_type == "helm" and "repo" in specs:
                         used_helm_repos.add(specs["repo"])
 
         # 사용되지 않는 Git 저장소
@@ -792,7 +792,7 @@ class CrossReferenceValidator(ValidationCheck):
             app_info[app_name] = {"type": app_type, "specs": specs, "index": i}
 
             # 포트 사용 검증 (Helm 차트의 경우)
-            if app_type in ["install-helm", "pull-helm"]:
+            if app_type in ["helm", "helm"]:
                 # 여기서는 기본적인 검증만 수행 (실제로는 values 파일을 파싱해야 함)
                 if "values" in specs:
                     # values 파일에서 포트 정보 추출은 복잡하므로 기본 검증만 수행
@@ -804,7 +804,7 @@ class CrossReferenceValidator(ValidationCheck):
             app_type = info["type"]
             specs = info["specs"]
 
-            if app_type in ["pull-helm", "pull-git"]:
+            if app_type in ["helm", "git"]:
                 dest = specs.get("dest")
                 if dest:
                     if dest in dest_paths:
@@ -814,7 +814,7 @@ class CrossReferenceValidator(ValidationCheck):
                     else:
                         dest_paths[dest] = app_name
 
-            if app_type == "copy-app" and "paths" in specs:
+            if app_type == "http" and "paths" in specs:
                 for path_spec in specs["paths"]:
                     if isinstance(path_spec, dict) and "dest" in path_spec:
                         dest = path_spec["dest"]
@@ -838,9 +838,9 @@ class CrossReferenceValidator(ValidationCheck):
 
         # 타입별 실행 순서 규칙
         # prepare -> build -> deploy 순서로 실행되어야 함
-        prepare_types = ["pull-helm", "pull-git"]
-        build_types = ["copy-app"]
-        deploy_types = ["install-helm", "install-yaml", "exec"]
+        prepare_types = ["helm", "git"]
+        build_types = ["http"]
+        deploy_types = ["helm", "yaml", "exec"]
 
         phases = {}
         for app_name, info in app_info.items():

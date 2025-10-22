@@ -135,7 +135,7 @@ class DeploymentSimulator(ValidationCheck):
                     if isinstance(app, dict):
                         app_type = app.get("type")
                         # 실제 배포하는 타입들만 포함
-                        if app_type in ["install-helm", "install-yaml"]:
+                        if app_type in ["helm", "yaml"]:
                             app_name = app.get("name", "unknown")
                             apps.append((app_name, app))
 
@@ -216,9 +216,9 @@ class DeploymentSimulator(ValidationCheck):
         specs = app_config.get("specs", {})
 
         try:
-            if app_type == "install-helm":
+            if app_type == "helm":
                 await self._simulate_helm_deployment(app_name, specs, context, result)
-            elif app_type == "install-yaml":
+            elif app_type == "yaml":
                 await self._simulate_yaml_deployment(app_name, specs, context, result)
 
         except Exception as e:
@@ -553,7 +553,7 @@ class RiskAssessmentValidator(ValidationCheck):
                         app_type = app.get("type")
 
                         # Helm 차트의 경우 values에서 권한 확인
-                        if app_type == "install-helm":
+                        if app_type == "helm":
                             specs = app.get("specs", {})
                             values_files = specs.get("values", [])
 

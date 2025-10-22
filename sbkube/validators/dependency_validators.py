@@ -152,7 +152,7 @@ class HelmChartValidator(ValidationCheck):
                 for app in apps:
                     if isinstance(app, dict):
                         app_type = app.get("type")
-                        if app_type in ["install-helm", "pull-helm"]:
+                        if app_type in ["helm", "helm"]:
                             app_name = app.get("name", "unknown")
                             helm_apps.append((app_name, app))
 
@@ -169,11 +169,11 @@ class HelmChartValidator(ValidationCheck):
         app_type = app_config.get("type")
         specs = app_config.get("specs", {})
 
-        if app_type == "install-helm":
+        if app_type == "helm":
             issues.extend(
                 await self._validate_install_helm_chart(app_name, specs, context)
             )
-        elif app_type == "pull-helm":
+        elif app_type == "helm":
             issues.extend(
                 await self._validate_pull_helm_chart(app_name, specs, context)
             )
@@ -183,7 +183,7 @@ class HelmChartValidator(ValidationCheck):
     async def _validate_install_helm_chart(
         self, app_name: str, specs: dict[str, Any], context: ValidationContext
     ) -> list[str]:
-        """install-helm 타입 차트 검증"""
+        """helm 타입 차트 검증"""
         issues = []
         base_path = Path(context.base_dir)
 
@@ -241,7 +241,7 @@ class HelmChartValidator(ValidationCheck):
     async def _validate_pull_helm_chart(
         self, app_name: str, specs: dict[str, Any], context: ValidationContext
     ) -> list[str]:
-        """pull-helm 타입 차트 검증"""
+        """helm 타입 차트 검증"""
         issues = []
 
         # 필수 필드 확인
@@ -614,7 +614,7 @@ class ValuesCompatibilityValidator(ValidationCheck):
                 for app in apps:
                     if isinstance(app, dict):
                         app_type = app.get("type")
-                        if app_type == "install-helm":  # values 파일이 있는 경우만
+                        if app_type == "helm":  # values 파일이 있는 경우만
                             app_name = app.get("name", "unknown")
                             helm_apps.append((app_name, app))
 
@@ -854,7 +854,7 @@ class DependencyResolutionValidator(ValidationCheck):
                 for app in apps:
                     if isinstance(app, dict):
                         app_type = app.get("type")
-                        if app_type == "install-helm":  # 로컬 차트만 의존성 확인
+                        if app_type == "helm":  # 로컬 차트만 의존성 확인
                             app_name = app.get("name", "unknown")
                             helm_apps.append((app_name, app))
 

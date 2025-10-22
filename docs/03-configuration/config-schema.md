@@ -517,50 +517,6 @@ apps:
 
 ______________________________________________________________________
 
-## 🔄 v0.2.x에서 마이그레이션
-
-### Before (v0.2.x)
-
-```yaml
-namespace: production
-
-apps:
-  - name: redis-pull
-    type: pull-helm
-    specs:
-      repo: bitnami
-      chart: redis
-      dest: redis
-      chart_version: 17.13.2
-
-  - name: redis
-    type: install-helm
-    specs:
-      path: redis
-      values:
-        - redis-values.yaml
-```
-
-### After
-
-```yaml
-namespace: production
-
-apps:
-  redis:
-    type: helm
-    chart: bitnami/redis
-    version: 17.13.2
-    values:
-      - redis-values.yaml
-```
-
-**자동 마이그레이션**:
-```bash
-sbkube migrate old-config.yaml -o config.yaml
-```
-
-______________________________________________________________________
 
 ## ⚠️ 주의사항
 

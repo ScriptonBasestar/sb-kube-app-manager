@@ -14,7 +14,6 @@ from sbkube.commands import (
     fix,
     history,
     init,
-    migrate,
     prepare,
     profiles,
     state,
@@ -130,7 +129,6 @@ main.add_command(build.cmd)
 main.add_command(template.cmd)
 main.add_command(deploy.cmd)
 main.add_command(apply.cmd)
-main.add_command(migrate.cmd)
 
 # 기타 명령어
 main.add_command(init.cmd)

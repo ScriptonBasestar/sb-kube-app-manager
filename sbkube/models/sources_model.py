@@ -127,8 +127,7 @@ class SourceScheme(InheritableConfigModel):
     kubeconfig: str | None = None
     kubeconfig_context: str | None = None
     helm_repos: dict[str, HelmRepoScheme] = {}
-    oci_repos: dict[str, dict[str, str]] = {}  # Legacy format
-    oci_registries: dict[str, OciRepoScheme] = {}  # New format
+    oci_registries: dict[str, OciRepoScheme] = {}
     git_repos: dict[str, GitRepoScheme] = {}
 
     # Global proxy settings
@@ -171,62 +170,6 @@ class SourceScheme(InheritableConfigModel):
 
         return v
 
-    @field_validator("helm_repos")
-    @classmethod
-    def validate_helm_repos_legacy(cls, v: dict[str, str]) -> dict[str, HelmRepoScheme]:
-        """Convert legacy helm_repos format to new format."""
-        if not v:
-            return {}
-
-        # Check if already in new format
-        if all(isinstance(repo, HelmRepoScheme) for repo in v.values()):
-            return v
-
-        # Convert from legacy format
-        converted = {}
-        for name, url in v.items():
-            if isinstance(url, str):
-                converted[name] = HelmRepoScheme(url=url)
-            elif isinstance(url, dict):
-                converted[name] = HelmRepoScheme(**url)
-            else:
-                converted[name] = url
-
-        return converted
-
-    @field_validator("oci_repos")
-    @classmethod
-    def validate_oci_repos_legacy(
-        cls,
-        v: dict[str, dict[str, str]],
-    ) -> dict[str, dict[str, str]]:
-        """Validate legacy OCI repos format."""
-        for repo_group, charts in v.items():
-            for chart_name, oci_url in charts.items():
-                if not oci_url.startswith("oci://"):
-                    raise ValueError(
-                        f"Invalid OCI URL for {repo_group}/{chart_name}: "
-                        f"{oci_url} (must start with 'oci://')",
-                    )
-        return v
-
-    @model_validator(mode="after")
-    def migrate_oci_repos(self) -> "SourceScheme":
-        """Migrate legacy oci_repos to new oci_registries format."""
-        if self.oci_repos and not self.oci_registries:
-            # Migrate from legacy format
-            registries = {}
-            for provider, charts in self.oci_repos.items():
-                # Extract registry URL from first chart
-                if charts:
-                    first_url = next(iter(charts.values()))
-                    # Extract registry from oci://registry/path
-                    registry = first_url.split("/")[2]
-                    registries[provider] = OciRepoScheme(registry=f"oci://{registry}")
-
-            self.oci_registries = registries
-
-        return self
 
     def get_helm_repo(self, name: str) -> HelmRepoScheme | None:
         """Get Helm repository configuration by name."""
@@ -240,11 +183,6 @@ class SourceScheme(InheritableConfigModel):
         """Get OCI registry configuration by name."""
         return self.oci_registries.get(name)
 
-    def get_oci_chart_url(self, provider: str, chart: str) -> str | None:
-        """Get OCI chart URL from legacy format."""
-        if provider in self.oci_repos:
-            return self.oci_repos[provider].get(chart)
-        return None
 
     def validate_repo_references(self, app_configs: list[dict[str, Any]]) -> list[str]:
         """
@@ -271,8 +209,7 @@ class SourceScheme(InheritableConfigModel):
                     )
 
                 if app_type == "pull-helm-oci":
-                    # Check both new and legacy formats
-                    if repo not in self.oci_registries and repo not in self.oci_repos:
+                    if repo not in self.oci_registries:
                         errors.append(
                             f"App '{app.get('name')}' references unknown OCI registry: {repo}",
                         )

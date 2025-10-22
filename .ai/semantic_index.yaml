@@ -105,13 +105,13 @@ concepts:
   app_types:
     keywords:
       - "앱 타입"
-      - "pull-helm"
-      - "pull-helm-oci"
-      - "pull-git"
-      - "copy-app"
-      - "install-helm"
-      - "install-yaml"
-      - "install-action"
+      - "helm"
+      - "helm-oci"
+      - "git"
+      - "http"
+      - "helm"
+      - "yaml"
+      - "action"
       - "exec"
       - "app types"
     documents:
@@ -163,7 +163,7 @@ concepts:
       - "리포지토리"
       - "repository"
       - "clone"
-      - "pull-git"
+      - "git"
     documents:
       - "docs/00-product/product-spec.md"
       - "docs/02-features/application-types.md"
@@ -178,7 +178,7 @@ concepts:
       - "매니페스트"
       - "manifest"
       - "kubectl"
-      - "install-yaml"
+      - "yaml"
     documents:
       - "docs/00-product/product-spec.md"
       - "docs/02-features/application-types.md"

@@ -289,7 +289,7 @@ ARCHITECTURE.md → commands/ (구현 코드)
 - 문서: [docs/00-product/product-spec.md](docs/00-product/product-spec.md) (섹션 4), [sbkube/state/](sbkube/state/)
 
 **앱 타입**
-- 키워드: pull-helm, install-yaml, copy-app, exec
+- 키워드: helm, yaml, action, http, exec
 - 문서: [docs/02-features/application-types.md](docs/02-features/application-types.md)
 
 ---
@@ -749,7 +749,7 @@ console.print_table(data)
 def test_config_validation():
     config = SBKubeConfig(
         namespace="test",
-        apps=[{"name": "app1", "type": "pull-helm", "specs": {}}]
+        apps=[{"name": "app1", "type": "helm", "specs": {"repo": "bitnami", "chart": "redis"}}]
     )
     assert config.namespace == "test"
 ```

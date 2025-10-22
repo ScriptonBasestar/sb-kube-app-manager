@@ -1,0 +1,4 @@
+# SBKube v0.3.0 소스 설정
+
+helm:
+  bitnami: https://charts.bitnami.com/bitnami

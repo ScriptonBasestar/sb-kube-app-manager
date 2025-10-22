@@ -1,17 +1,15 @@
+# SBKube v0.3.0 Configuration
+# Example: Custom actions (kubectl apply/create/delete)
+
 namespace: example-action
 
 apps:
-  - name: custom-operator-install
-    type: install-action
-    specs:
-      actions:
-        - type: apply
-          path: manifests/custom-crd.yaml
-        - type: apply
-          path: manifests/custom-operator.yaml
-      uninstall:
-        actions:
-          - type: delete
-            path: manifests/custom-operator.yaml
-          - type: delete
-            path: manifests/custom-crd.yaml
+  custom-operator:
+    type: action
+    actions:
+      - type: apply
+        path: manifests/custom-crd.yaml
+      - type: apply
+        path: manifests/custom-operator.yaml
+    # Note: v0.3.0 action type supports apply, create, delete
+    # For uninstall, use 'sbkube delete' command

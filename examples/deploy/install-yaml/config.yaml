@@ -1,11 +1,12 @@
+# SBKube v0.3.0 Configuration
+# Example: Deploy YAML manifests
+
 namespace: example-yaml
 
 apps:
-  - name: nginx-deployment
-    type: install-yaml
-    specs:
-      actions:
-        - type: apply
-          path: manifests/nginx-deployment.yaml
-        - type: apply
-          path: manifests/nginx-service.yaml
+  nginx:
+    type: yaml
+    files:
+      - manifests/nginx-deployment.yaml
+      - manifests/nginx-service.yaml
+    namespace: example-yaml

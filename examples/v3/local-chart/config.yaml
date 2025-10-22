@@ -1,0 +1,28 @@
+# SBKube v0.3.0 Example: Local Helm Chart
+
+namespace: local-example
+
+apps:
+  # Remote chart (자동 pull)
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: 17.13.2
+    values:
+      - redis-values.yaml
+
+  # Local custom chart (app_dir/charts/myapp/)
+  myapp:
+    type: helm
+    chart: ./charts/myapp
+    values:
+      - myapp-values.yaml
+    depends_on:
+      - redis
+
+  # Another local chart
+  nginx:
+    type: helm
+    chart: ./charts/nginx-custom
+    values:
+      - nginx-values.yaml

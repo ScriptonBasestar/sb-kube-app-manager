@@ -1,29 +1,25 @@
+# SBKube v0.3.0 Configuration
+# AI/ML tools: Toolhive operator
+
 namespace: toolhive
 
-deps: []
-
 apps:
+  toolhive-operator:
+    type: git
+    repo: stacklok-toolhive
+    path: deploy/charts/operator
+    # Note: v0.3.0 git type supports single path
+    # For multi-path, use separate apps or manual copy
 
-  - name: toolhive-operator-pull
-    type: pull-git
-    specs:
-      repo: stacklok-toolhive
-      paths:
-        - src: deploy/charts/operator
-          dest: toolhive-operator
-        - src: deploy/charts/operator-crds
-          dest: toolhive-operator-crds
-
-  - name: toolhive-operator
-    type: install-helm
-    specs:
-      path: toolhive-operator
-      values:
-        - toolhive-operator.yaml
-
-  - name: toolhive-operator-crds
-    type: install-helm
-    specs:
-      path: toolhive-operator-crds
-      values:
-        - toolhive-operator-crds.yaml
+  # If you need local charts from git repo:
+  # toolhive-operator-chart:
+  #   type: helm
+  #   chart: ./repos/stacklok-toolhive/deploy/charts/operator
+  #   values:
+  #     - toolhive-operator.yaml
+  #
+  # toolhive-operator-crds:
+  #   type: helm
+  #   chart: ./repos/stacklok-toolhive/deploy/charts/operator-crds
+  #   values:
+  #     - toolhive-operator-crds.yaml

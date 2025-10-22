@@ -1,59 +1,58 @@
+# SBKube v0.3.0 Configuration
+# Complete workflow example demonstrating all features
+
 namespace: complete-example
 
-deps: []
-
 apps:
-  # 1. 외부 리소스 준비 (prepare 단계)
-  - name: redis-chart-pull
-    type: pull-helm
-    specs:
-      repo: bitnami
-      chart: redis
-      version: "18.0.0"
-      dest: redis
+  # 1. Remote Helm chart
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: "18.0.0"
+    values:
+      - redis-values.yaml
+    depends_on: []
 
-  - name: custom-app-source
-    type: pull-git
-    specs:
-      repo: example-app
-      paths:
-        - src: charts/myapp
-          dest: myapp-chart
+  # 2. Git repository (for custom charts)
+  custom-app-source:
+    type: git
+    repo: example-app
+    path: charts/myapp
+    # Note: After prepare, use as local chart below
 
-  # 2. 로컬 리소스 복사 (build 단계)
-  - name: config-copy
-    type: copy-app
-    specs:
-      paths:
-        - src: local-configs
-          dest: configs
+  # 3. Local chart from git repo
+  custom-app:
+    type: helm
+    chart: ./repos/example-app/charts/myapp
+    values:
+      - myapp-values.yaml
+    depends_on:
+      - custom-app-source  # Wait for git clone
 
-  # 3. 애플리케이션 배포 (deploy 단계)
-  - name: redis-deployment
-    type: install-helm
-    specs:
-      path: redis
-      values:
-        - redis-values.yaml
+  # 4. YAML manifests
+  monitoring:
+    type: yaml
+    files:
+      - manifests/monitoring.yaml
+    namespace: complete-example
 
-  - name: custom-app
-    type: install-helm
-    specs:
-      path: myapp-chart
-      values:
-        - myapp-values.yaml
+  # 5. Custom actions
+  monitoring-setup:
+    type: action
+    actions:
+      - type: apply
+        path: manifests/monitoring.yaml
+      - type: apply
+        path: manifests/alerts.yaml
 
-  - name: monitoring-setup
-    type: install-yaml
-    specs:
-      actions:
-        - type: apply
-          path: manifests/monitoring.yaml
-
-  - name: post-install-check
+  # 6. Custom commands
+  post-install-check:
     type: exec
-    specs:
-      commands:
-        - echo "Checking deployment status..."
-        - kubectl get pods -n complete-example
-        - echo "Deployment check completed!"
+    commands:
+      - echo "Checking deployment status..."
+      - kubectl get pods -n complete-example
+      - echo "Deployment check completed!"
+    depends_on:
+      - redis
+      - custom-app
+      - monitoring

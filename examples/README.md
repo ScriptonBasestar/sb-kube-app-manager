@@ -1,122 +1,161 @@
-# sbkube Examples
+# SBKube v0.3.0 Examples
 
-이 디렉토리는 sbkube의 각 명령어별 사용 예시를 포함합니다.
+이 디렉토리에는 SBKube v0.3.0의 다양한 사용 사례를 보여주는 예제들이 있습니다.
 
-## 디렉토리 구조
+## 📁 디렉토리 구조
 
 ```
 examples/
-├── README.md           # 이 파일
-├── prepare/           # prepare 명령 예시
-│   └── pull-helm-oci/ # OCI Helm 차트 pull 예시
-├── build/            # build 명령 예시  
-├── deploy/           # deploy 명령 예시
-│   ├── install-yaml/ # YAML 매니페스트 배포 예시
-│   ├── install-action/ # 커스텀 액션 배포 예시
-│   └── exec/         # 명령 실행 예시
-├── template/         # template 명령 예시
-├── upgrade/          # upgrade 명령 예시
-├── delete/           # delete 명령 예시
-├── complete-workflow/ # 전체 워크플로우 예시
-└── k3scode/          # 실제 프로젝트 예시
+├── README.md                    # 이 파일
+├── v3-overrides/               # 차트 커스터마이징 예제 (overrides/removes)
+├── complete-workflow/          # 전체 워크플로우 예제
+├── k3scode/                    # k3s 코드 서버 스택
+│   ├── memory/                 # Redis, Memcached
+│   ├── rdb/                    # PostgreSQL, MariaDB
+│   ├── ai/                     # AI/ML tools
+│   └── devops/                 # DevOps tools
+└── deploy/                     # 배포 타입별 예제
+    ├── exec/                   # 커스텀 명령어 실행
+    ├── install-action/         # 커스텀 액션
+    └── install-yaml/           # YAML 매니페스트
 ```
 
-## 지원하는 앱 타입
+## 🚀 빠른 시작
 
-### prepare 명령
-- **pull-helm**: Helm 저장소에서 차트 다운로드
-- **pull-helm-oci**: OCI 저장소에서 Helm 차트 다운로드
-- **pull-git**: Git 저장소에서 소스 코드 다운로드
-
-### build 명령
-- **copy-app**: 로컬 파일/디렉토리 복사
-
-### deploy 명령
-- **install-helm**: Helm 차트 설치
-- **install-yaml**: YAML 매니페스트 적용
-- **install-action**: 커스텀 액션 실행 (CRD, Operator 등)
-- **exec**: 임의 명령 실행
-
-## 빠른 시작
-
-### 1. 기본 워크플로우
+### 1. 기본 사용 (Helm 차트)
 
 ```bash
-# 1단계: 외부 리소스 준비
-sbkube prepare --app-dir config
-
-# 2단계: 빌드
-sbkube build --app-dir config  
-
-# 3단계: 배포
-sbkube deploy --app-dir config
+cd examples/k3scode/memory
+sbkube apply
 ```
 
-### 2. 개별 명령어 예시
+**설정 파일** (`config.yaml`):
+```yaml
+namespace: data
 
-각 디렉토리에서 더 자세한 예시를 확인할 수 있습니다:
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    values:
+      - redis.yaml
 
-- **[prepare/](./prepare/)**: Helm 차트, Git 저장소 등 외부 리소스 준비
-- **[build/](./build/)**: 배포 가능한 형태로 리소스 빌드
-- **[deploy/](./deploy/)**: Kubernetes 클러스터에 애플리케이션 배포
-  - **[install-yaml/](./deploy/install-yaml/)**: YAML 매니페스트 배포
-  - **[install-action/](./deploy/install-action/)**: 커스텀 액션 (CRD, Operator)
-  - **[exec/](./deploy/exec/)**: 명령 실행
-- **[template/](./template/)**: Helm 차트를 YAML로 렌더링
-- **[upgrade/](./upgrade/)**: 기존 배포 업그레이드
-- **[delete/](./delete/)**: 배포된 리소스 삭제
-- **[complete-workflow/](./complete-workflow/)**: 모든 타입을 포함한 완전한 예시
+  memcached:
+    type: helm
+    chart: bitnami/memcached
+    values:
+      - memcached.yaml
+```
 
-### 3. 실제 프로젝트 예시
-
-**[k3scode/](./k3scode/)** 디렉토리는 실제 운영 환경에서 사용할 수 있는 완전한 예시입니다:
+### 2. 차트 커스터마이징 (Overrides & Removes)
 
 ```bash
-# AI 도구 준비 및 배포
-cd examples/k3scode
-sbkube prepare --app-dir ai --sources-file sources.yaml
-sbkube build --app-dir ai
-sbkube deploy --app-dir ai
-
-# DevOps 도구 배포
-sbkube build --app-dir devops
-sbkube deploy --app-dir devops
+cd examples/v3-overrides
+sbkube apply
 ```
 
-## 설정 파일 형식
+**더 많은 예제와 상세 설명은 각 디렉토리의 README.md를 참조하세요.**
 
-sbkube는 YAML, TOML 형식의 설정 파일을 지원합니다:
+## 📚 예제 카탈로그
 
-- `config.yaml` / `config.yml`
-- `config.toml`
+| 예제 | 설명 | 주요 기능 |
+|------|------|----------|
+| [v3-overrides](v3-overrides/) | 차트 커스터마이징 | overrides, removes |
+| [complete-workflow](complete-workflow/) | 전체 워크플로우 | 모든 앱 타입, 의존성 |
+| [k3scode/memory](k3scode/memory/) | 메모리 저장소 | Redis, Memcached |
+| [k3scode/rdb](k3scode/rdb/) | 관계형 DB | PostgreSQL, MariaDB |
+| [k3scode/ai](k3scode/ai/) | AI/ML 도구 | Git 리포지토리 |
+| [k3scode/devops](k3scode/devops/) | DevOps 도구 | 로컬 차트 |
+| [deploy/exec](deploy/exec/) | 커스텀 명령어 | exec 타입 |
+| [deploy/install-action](deploy/install-action/) | 커스텀 액션 | action 타입 |
+| [deploy/install-yaml](deploy/install-yaml/) | YAML 매니페스트 | yaml 타입 |
 
-설정 파일 구조는 [schemas/](../schemas/) 디렉토리의 JSON Schema를 참조하세요.
+## 🔧 앱 타입별 예제
 
-## 예상되는 오류 케이스
+### Helm (Remote)
+```yaml
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: 17.13.2
+    values:
+      - redis.yaml
+```
 
-### 1. CLI 도구 누락
+### Helm (Local)
+```yaml
+apps:
+  my-app:
+    type: helm
+    chart: ./charts/my-app
+    values:
+      - values.yaml
+```
+
+### YAML
+```yaml
+apps:
+  nginx:
+    type: yaml
+    files:
+      - deployment.yaml
+      - service.yaml
+```
+
+### Git
+```yaml
+apps:
+  source:
+    type: git
+    repo: my-repo
+    path: charts/app
+```
+
+### HTTP
+```yaml
+apps:
+  manifest:
+    type: http
+    url: https://example.com/manifest.yaml
+    dest: downloaded.yaml
+```
+
+### Action
+```yaml
+apps:
+  setup:
+    type: action
+    actions:
+      - type: apply
+        path: crd.yaml
+```
+
+### Exec
+```yaml
+apps:
+  check:
+    type: exec
+    commands:
+      - kubectl get pods
+```
+
+## 🆕 v0.2.x에서 마이그레이션
+
 ```bash
-❌ helm 명령이 시스템에 설치되어 있지 않습니다.
-❌ kubectl 명령이 시스템에 설치되어 있지 않습니다.
+# 자동 마이그레이션
+sbkube migrate old-config.yaml -o config.yaml
 ```
-**해결**: 필요한 CLI 도구를 설치하세요.
 
-### 2. 저장소 정보 누락
-```bash
-❌ sources.yaml에서 저장소 'example-repo'을 찾을 수 없습니다.
-```
-**해결**: `sources.yaml`에 필요한 저장소 정보를 추가하세요.
+자세한 내용은 [Migration Guide](../docs/MIGRATION_V3.md)를 참조하세요.
 
-### 3. 빌드 결과물 누락
-```bash
-❌ 빌드된 Helm 차트 디렉토리를 찾을 수 없습니다
-⚠️  'sbkube build' 명령을 먼저 실행했는지 확인하세요.
-```
-**해결**: `sbkube build` 명령을 먼저 실행하세요.
+## 📚 추가 자료
 
-### 4. 네트워크 연결 문제
-```bash
-❌ Git 저장소 클론 실패: fatal: unable to access
-❌ Helm 차트 다운로드 실패: failed to download
-```
-**해결**: 네트워크 연결과 저장소 접근 권한을 확인하세요. 
+- [SBKube Documentation](../docs/)
+- [Chart Customization Guide](../docs/03-configuration/chart-customization.md)
+- [Configuration Schema](../docs/03-configuration/config-schema.md)
+- [CHANGELOG](../CHANGELOG_V3.0.0.md)
+
+---
+
+**Happy deploying with SBKube v0.3.0! 🚀**

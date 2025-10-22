@@ -1,0 +1,11 @@
+# Redis values 파일
+
+auth:
+  enabled: false
+
+master:
+  persistence:
+    enabled: false
+
+replica:
+  replicaCount: 0

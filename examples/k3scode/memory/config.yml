@@ -1,33 +1,29 @@
+# SBKube Configuration
+# Memory stores: Redis, Memcached
+
 namespace: data
 
 deps: []
 
 apps:
-  # install name
-  - name: redis-pull
-    type: pull-helm
+  # Redis
+  - name: redis
+    type: helm
     specs:
       repo: bitnami
       chart: redis
 #      chart_version: 17.13.2
 #      app_version: 7.0.12
-      dest: redis
-  - name: redis
-    type: install-helm
-    specs:
       values:
         - redis.yaml
 
-  - name: memcached-pull
-    type: pull-helm
+  # Memcached
+  - name: memcached
+    type: helm
     specs:
       repo: bitnami
       chart: memcached
 #      chart_version: 7.0.5
 #      app_version: 1.6.27
-      dest: memcached
-  - name: memcached
-    type: install-helm
-    specs:
       values:
         - memcached.yaml

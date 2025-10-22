@@ -1,6 +1,6 @@
-# Helm Chart Customization (v0.3.0)
+# Helm Chart Customization
 
-SBKube v0.3.0은 Helm 차트를 배포 전에 커스터마이징할 수 있는 강력한 기능을 제공합니다.
+SBKube은 Helm 차트를 배포 전에 커스터마이징할 수 있는 강력한 기능을 제공합니다.
 
 ## 개요
 

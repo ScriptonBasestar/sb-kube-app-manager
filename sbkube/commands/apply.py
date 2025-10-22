@@ -1,5 +1,5 @@
 """
-SBKube v0.3.0 apply 명령어.
+SBKube apply 명령어.
 
 통합 명령어: prepare → deploy를 자동으로 실행.
 의존성을 고려하여 올바른 순서로 배포합니다.
@@ -76,7 +76,7 @@ def cmd(
     skip_build: bool,
 ):
     """
-    SBKube v0.3.0 apply 명령어.
+    SBKube apply 명령어.
 
     전체 워크플로우를 한 번에 실행합니다:
     1. prepare: 외부 리소스 준비 (Helm chart pull, Git clone, HTTP download 등)
@@ -85,7 +85,7 @@ def cmd(
 
     의존성(depends_on)을 자동으로 해결하여 올바른 순서로 배포합니다.
     """
-    console.print("[bold blue]✨ SBKube v0.3.0 `apply` 시작 ✨[/bold blue]")
+    console.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]")
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()

@@ -1,5 +1,5 @@
 """
-SBKube v0.3.0 deploy 명령어.
+SBKube deploy 명령어.
 
 새로운 기능:
 - helm 타입: Helm install/upgrade
@@ -379,7 +379,7 @@ def cmd(
     dry_run: bool,
 ):
     """
-    SBKube v0.3.0 deploy 명령어.
+    SBKube deploy 명령어.
 
     애플리케이션을 Kubernetes 클러스터에 배포합니다:
     - helm 타입: Helm install/upgrade
@@ -388,7 +388,7 @@ def cmd(
     - exec 타입: 커스텀 명령어
     - kustomize 타입: kubectl apply -k
     """
-    console.print("[bold blue]✨ SBKube v0.3.0 `deploy` 시작 ✨[/bold blue]")
+    console.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]")
 
     # kubectl 설치 확인
     check_kubectl_installed_or_exit()

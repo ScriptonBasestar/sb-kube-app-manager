@@ -1,5 +1,5 @@
 """
-SBKube v0.3.0 build 명령어.
+SBKube build 명령어.
 
 빌드 디렉토리 준비 + 커스터마이징:
 - Remote chart: charts/ → build/ 복사
@@ -191,14 +191,14 @@ def cmd(
     app_name: str | None,
 ):
     """
-    SBKube v0.3.0 build 명령어.
+    SBKube build 명령어.
 
     빌드 디렉토리 준비 및 커스터마이징:
     - Remote chart를 charts/에서 build/로 복사
     - Overrides 적용 (overrides/<app-name>/* → build/<app-name>/*)
     - Removes 적용 (불필요한 파일/디렉토리 삭제)
     """
-    console.print("[bold blue]✨ SBKube v0.3.0 `build` 시작 ✨[/bold blue]")
+    console.print("[bold blue]✨ SBKube `build` 시작 ✨[/bold blue]")
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()

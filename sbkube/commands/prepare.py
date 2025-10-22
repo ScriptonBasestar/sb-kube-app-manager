@@ -1,5 +1,5 @@
 """
-SBKube v0.3.0 prepare 명령어.
+SBKube prepare 명령어.
 
 새로운 기능:
 - helm 타입: 자동으로 chart pull (repo/chart 형식 파싱)
@@ -282,13 +282,13 @@ def cmd(
     app_name: str | None,
 ):
     """
-    SBKube v0.3.0 prepare 명령어.
+    SBKube prepare 명령어.
 
     외부 리소스를 준비합니다:
     - helm 타입: Helm chart pull
     - git 타입: Git repository clone
     """
-    console.print("[bold blue]✨ SBKube v0.3.0 `prepare` 시작 ✨[/bold blue]")
+    console.print("[bold blue]✨ SBKube `prepare` 시작 ✨[/bold blue]")
 
     # Helm 설치 확인
     check_helm_installed_or_exit()

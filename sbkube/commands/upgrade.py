@@ -29,7 +29,7 @@ console = Console()
     "--app",
     "target_app_name",
     default=None,
-    help="특정 앱만 업그레이드 (지정하지 않으면 모든 install-helm 타입 앱 대상)",
+    help="특정 앱만 업그레이드 (지정하지 않으면 모든 helm 타입 앱 대상)",
 )
 @click.option(
     "--dry-run",
@@ -60,7 +60,7 @@ def cmd(
     skip_install: bool,
     config_file_name: str | None,
 ):
-    """config.yaml/toml에 정의된 Helm 애플리케이션을 업그레이드하거나 새로 설치합니다 (install-helm 타입 대상)."""
+    """config.yaml/toml에 정의된 Helm 애플리케이션을 업그레이드하거나 새로 설치합니다 (helm 타입 대상)."""
     console.print(
         f"[bold blue]✨ `upgrade` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]",
     )
@@ -114,7 +114,7 @@ def cmd(
             raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
 
-    # v0.3.0 SBKubeConfig 모델로 로드
+    # SBKubeConfig 모델로 로드
     try:
         config_data = load_config_file(str(config_file_path))
         config = SBKubeConfig(**config_data)
@@ -133,7 +133,7 @@ def cmd(
     upgrade_success_apps = 0
     upgrade_skipped_apps = 0
 
-    # v0.3.0: apps는 dict (key=name, value=AppConfig)
+    # apps는 dict (key=name, value=AppConfig)
     apps_to_process = []
     if target_app_name:
         if target_app_name not in config.apps:
@@ -166,7 +166,7 @@ def cmd(
         )
         return
 
-    # v0.3.0: (app_name, app_config) 튜플 처리
+    # (app_name, app_config) 튜플 처리
     for app_name, app_config in apps_to_process:
         if not isinstance(app_config, HelmApp):
             console.print(
@@ -226,7 +226,7 @@ def cmd(
                 "    [grey]ℹ️ 네임스페이스 미지정 (Helm이 'default' 네임스페이스 사용 또는 차트 내 정의 따름)[/grey]",
             )
 
-        # v0.3.0 HelmApp의 values 파일 처리
+        # HelmApp의 values 파일 처리
         if app_config.values:
             console.print("    [grey]🔩 Values 파일 적용 시도...[/grey]")
             for vf_rel_path_str in app_config.values:

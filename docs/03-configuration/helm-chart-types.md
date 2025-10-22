@@ -1,6 +1,6 @@
-# Helm Chart Types in SBKube v0.3.0
+# Helm Chart Types in SBKube
 
-SBKube v0.3.0은 다양한 형태의 Helm 차트를 지원합니다.
+SBKube은 다양한 형태의 Helm 차트를 지원합니다.
 
 ---
 

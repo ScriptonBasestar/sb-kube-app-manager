@@ -69,15 +69,15 @@ prepare → build → template → deploy
 - **exec** - 커스텀 명령어 실행
 
 ### 설정 기반 관리
-- **config.yaml** - 애플리케이션 정의 및 배포 스펙 (간소화된 v0.3.0 형식)
+- **config.yaml** - 애플리케이션 정의 및 배포 스펙 (간소화된 현재 버전 형식)
 - **sources.yaml** - 외부 소스 정의 (Helm repos, Git repos)
 - **values/** - Helm 값 파일 디렉토리
 
-### 차트 커스터마이징 (v0.3.0)
+### 차트 커스터마이징 (현재 버전)
 - **overrides** - 차트 내 파일 교체
 - **removes** - 차트 내 파일 삭제
 
-### 설정 예제 (v0.3.0)
+### 설정 예제 (현재 버전)
 
 **간단한 Helm 배포**:
 ```yaml
@@ -122,7 +122,7 @@ apps:
 
 ## 🔄 마이그레이션
 
-v0.2.x에서 v0.3.0으로 업그레이드하는 경우, 자동 마이그레이션 도구를 사용하세요:
+v0.2.x에서 현재 버전으로 업그레이드하는 경우, 자동 마이그레이션 도구를 사용하세요:
 
 ```bash
 sbkube migrate old-config.yaml -o config.yaml

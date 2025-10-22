@@ -115,7 +115,7 @@ def cmd(
             raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
 
-    # v0.3.0 SBKubeConfig 모델로 로드
+    # SBKubeConfig 모델로 로드
     try:
         config_data = load_config_file(str(config_file_path))
         config = SBKubeConfig(**config_data)
@@ -134,7 +134,7 @@ def cmd(
     delete_success_apps = 0
     delete_skipped_apps = 0
 
-    # v0.3.0: apps는 dict (key=name, value=AppConfig)
+    # apps는 dict (key=name, value=AppConfig)
     apps_to_process = []
     if target_app_name:
         if target_app_name not in config.apps:
@@ -155,12 +155,12 @@ def cmd(
         )
         return
 
-    # v0.3.0: (app_name, app_config) 튜플
+    # (app_name, app_config) 튜플
     for app_name, app_config in apps_to_process:
-        # v0.3.0 타입은 'helm', 'yaml', 'action' 등으로 단순화됨
-        # v0.2.x의 'install-helm'은 v0.3.0에서 'helm'
-        # v0.2.x의 'install-yaml'은 v0.3.0에서 'yaml'
-        # v0.2.x의 'install-action'은 v0.3.0에서 'action'
+        # 타입은 'helm', 'yaml', 'action' 등으로 단순화됨
+        # Legacy 'install-helm' → 'helm'
+        # Legacy 'install-yaml' → 'yaml'
+        # Legacy 'install-action' → 'action'
 
         if app_config.type not in ["helm", "yaml", "action"]:
             continue
@@ -245,7 +245,7 @@ def cmd(
         elif app_type == "yaml":
             check_kubectl_installed_or_exit()
 
-            # v0.3.0 YamlApp은 files 리스트를 직접 가짐
+            # YamlApp은 files 리스트를 직접 가짐
             if not isinstance(app_config, YamlApp):
                 console.print(
                     f"[red]❌ 앱 '{app_name}': 타입이 'yaml'이나 YamlApp 모델이 아님[/red]",
@@ -265,7 +265,7 @@ def cmd(
             yaml_delete_successful_files = 0
             yaml_delete_failed_files = 0
 
-            # v0.3.0: files를 역순으로 삭제
+            # files를 역순으로 삭제
             for file_rel_path in reversed(app_config.files):
                 file_path = Path(file_rel_path)
                 abs_yaml_path = file_path
@@ -329,7 +329,7 @@ def cmd(
             )
 
         elif app_type == "action":
-            # v0.3.0 ActionApp
+            # ActionApp
             if not isinstance(app_config, ActionApp):
                 console.print(
                     f"[red]❌ 앱 '{app_name}': 타입이 'action'이나 ActionApp 모델이 아님[/red]",

@@ -75,8 +75,8 @@ class InitCommand(BaseCommand):
                 ),
                 "app_type": click.prompt(
                     "애플리케이션 타입",
-                    type=click.Choice(["install-helm", "install-yaml", "copy-app"]),
-                    default="install-helm",
+                    type=click.Choice(["helm", "yaml", "http"]),
+                    default="helm",
                 ),
             }
         )
@@ -103,7 +103,7 @@ class InitCommand(BaseCommand):
                 "project_name": self.project_name or self.base_dir.name,
                 "namespace": self.project_name or self.base_dir.name,
                 "app_name": self.project_name or self.base_dir.name,
-                "app_type": "install-helm",
+                "app_type": "helm",
                 "create_environments": True,
                 "environments": ["development", "staging", "production"],
                 "use_bitnami": True,

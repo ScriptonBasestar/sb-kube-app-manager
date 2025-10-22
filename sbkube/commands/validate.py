@@ -111,7 +111,7 @@ class ValidateCommand(BaseCommand):
         except Exception as e:
             logger.error(f"JSON 스키마 검증 중 오류: {e}")
             raise click.Abort()
-        # 데이터 모델 검증 (v0.3.0 Pydantic 모델 사용)
+        # 데이터 모델 검증 (Pydantic 모델 사용)
         if schema_path.name == "config.schema.json":
             try:
                 logger.info("Pydantic 모델 검증 중 (SBKubeConfig)...")

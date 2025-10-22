@@ -53,7 +53,7 @@ class HelmApp(ConfigBaseModel):
     version: str | None = None  # chart version (remote chart만 해당)
     values: list[str] = Field(default_factory=list)  # values 파일 목록
 
-    # 커스터마이징 (v0.2.x 호환)
+    # 커스터마이징 (호환성 유지)
     overrides: list[str] = Field(default_factory=list)  # overrides/ 디렉토리의 파일로 교체
     removes: list[str] = Field(default_factory=list)  # 빌드 시 제거할 파일/디렉토리 패턴
 
@@ -310,7 +310,7 @@ AppConfig = Annotated[
 
 class SBKubeConfig(ConfigBaseModel):
     """
-    SBKube v0.3.0 메인 설정 모델.
+    SBKube 메인 설정 모델.
 
     Breaking Changes:
     - apps: list → dict (key = app name)

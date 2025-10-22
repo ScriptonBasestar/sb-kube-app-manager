@@ -1,5 +1,5 @@
 """
-SBKube v0.2.x → v0.3.0 설정 파일 마이그레이션 도구.
+SBKube Legacy format → Current format 설정 파일 마이그레이션 도구.
 
 자동으로 기존 설정 파일을 새 형식으로 변환합니다:
 - apps: list → dict
@@ -49,7 +49,7 @@ def migrate_app_type(old_type: str) -> str:
 
 def migrate_config_v2_to_v3(old_config: dict[str, Any]) -> dict[str, Any]:
     """
-    v0.2.x 설정을 v0.3.0 형식으로 변환.
+    Legacy 설정을 현재 형식으로 변환.
 
     변환 규칙:
     1. apps: list → dict (name → key)
@@ -58,7 +58,7 @@ def migrate_config_v2_to_v3(old_config: dict[str, Any]) -> dict[str, Any]:
     4. 불필요한 필드 제거
 
     Args:
-        old_config: v0.2.x 설정 딕셔너리
+        old_config: Legacy 설정 딕셔너리
 
     Returns:
         v0.3.0 설정 딕셔너리
@@ -276,7 +276,7 @@ def migrate_config_v2_to_v3(old_config: dict[str, Any]) -> dict[str, Any]:
 )
 def cmd(config_file: str, output: str | None, force: bool):
     """
-    SBKube v0.2.x 설정 파일을 v0.3.0 형식으로 마이그레이션.
+    SBKube Legacy 설정 파일을 현재 형식으로 마이그레이션.
 
     Examples:
         # 미리보기
@@ -288,7 +288,7 @@ def cmd(config_file: str, output: str | None, force: bool):
         # 기존 파일 덮어쓰기
         sbkube migrate config.yaml -o config.yaml --force
     """
-    console.print("[bold blue]🔄 SBKube v0.2.x → v0.3.0 Migration[/bold blue]")
+    console.print("[bold blue]🔄 SBKube Legacy format → Current format Migration[/bold blue]")
 
     config_path = Path(config_file)
 
@@ -320,7 +320,7 @@ def cmd(config_file: str, output: str | None, force: bool):
         console.print(f"[green]✅ Migration completed: {output_path}[/green]")
     else:
         # 미리보기
-        console.print("\n[bold cyan]📋 Preview (v0.3.0 format):[/bold cyan]")
+        console.print("\n[bold cyan]📋 Preview (current format):[/bold cyan]")
         syntax = Syntax(new_yaml, "yaml", theme="monokai", line_numbers=True)
         console.print(syntax)
 

@@ -216,7 +216,7 @@ class ConfigValidityCheck(DiagnosticCheck):
                         return self.create_result(
                             DiagnosticLevel.ERROR,
                             f"앱 '{app.get('name', f'#{i + 1}')}에 type 필드가 없습니다",
-                            "앱 타입(install-helm, install-yaml 등)을 지정해주세요",
+                            "앱 타입(helm, yaml, action 등)을 지정해주세요",
                         )
 
                 return self.create_result(

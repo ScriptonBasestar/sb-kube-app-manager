@@ -1,5 +1,5 @@
 """
-SBKube v0.3.0 template 명령어.
+SBKube template 명령어.
 
 빌드된 Helm 차트를 YAML로 렌더링:
 - build/ 디렉토리의 차트를 helm template으로 렌더링
@@ -295,14 +295,14 @@ def cmd(
     app_name: str | None,
 ):
     """
-    SBKube v0.3.0 template 명령어.
+    SBKube template 명령어.
 
     빌드된 차트를 YAML로 렌더링:
     - build/ 디렉토리의 차트를 helm template으로 렌더링
     - 렌더링된 YAML을 rendered/ 디렉토리에 저장
     - 배포 전 미리보기 및 CI/CD 검증용
     """
-    console.print("[bold blue]✨ SBKube v0.3.0 `template` 시작 ✨[/bold blue]")
+    console.print("[bold blue]✨ SBKube `template` 시작 ✨[/bold blue]")
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()

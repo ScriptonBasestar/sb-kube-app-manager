@@ -1,421 +1,468 @@
 """
-Enhanced configuration models with validation and inheritance support.
+SBKube Configuration Models
 
-This module provides improved Pydantic models for sbkube configuration
-with comprehensive validation, inheritance, and error handling.
+설정 구조:
+- apps: dict (key = app name)
+- 타입: helm, yaml, git, http, action, exec, noop
+- 의존성: depends_on 필드
 """
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, Union
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-from .base_model import ConfigBaseModel, InheritableConfigModel
-from .validators import validate_spec_fields
-
-# --- Base spec definitions with enhanced validation ---
+from .base_model import ConfigBaseModel
 
 
-class CopyPair(ConfigBaseModel):
-    """Source and destination pair for copy operations."""
+# ============================================================================
+# App Type Models (Discriminated Union)
+# ============================================================================
 
-    src: str
-    dest: str
 
-    @field_validator("src", "dest")
+class HelmApp(ConfigBaseModel):
+    """
+    Helm 차트 배포 앱.
+
+    지원하는 chart 형식:
+    1. Remote chart: "repo/chart" (예: "bitnami/redis")
+       → 자동으로 pull 후 install
+    2. Local chart: "./charts/my-chart" (상대 경로)
+       → 로컬 차트를 직접 install
+    3. Absolute path: "/path/to/chart"
+       → 절대 경로 차트 install
+
+    Examples:
+        # Remote chart (자동 pull + install)
+        redis:
+          type: helm
+          chart: bitnami/redis
+          version: 17.13.2
+          values:
+            - redis.yaml
+
+        # Local chart (install only)
+        my-app:
+          type: helm
+          chart: ./charts/my-app
+          values:
+            - values.yaml
+    """
+
+    type: Literal["helm"] = "helm"
+    chart: str  # "repo/chart", "./path", "/path" 형식
+    version: str | None = None  # chart version (remote chart만 해당)
+    values: list[str] = Field(default_factory=list)  # values 파일 목록
+
+    # 커스터마이징 (v0.2.x 호환)
+    overrides: list[str] = Field(default_factory=list)  # overrides/ 디렉토리의 파일로 교체
+    removes: list[str] = Field(default_factory=list)  # 빌드 시 제거할 파일/디렉토리 패턴
+
+    # Helm 옵션
+    set_values: dict[str, Any] = Field(default_factory=dict)  # --set 옵션
+    release_name: str | None = None  # 릴리스 이름 (기본값: 앱 이름)
+    namespace: str | None = None  # 네임스페이스 오버라이드
+    create_namespace: bool = False
+    wait: bool = True
+    timeout: str = "5m"
+    atomic: bool = False
+
+    # 메타데이터
+    labels: dict[str, str] = Field(default_factory=dict)  # Kubernetes labels
+    annotations: dict[str, str] = Field(default_factory=dict)  # Kubernetes annotations
+
+    # 제어
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+
+    @field_validator("chart")
     @classmethod
-    def validate_paths(cls, v: str) -> str:
-        """Validate that paths are not empty and don't contain dangerous patterns."""
-        return cls.validate_path_exists(v, must_exist=False)
+    def validate_chart(cls, v: str) -> str:
+        """
+        chart 형식 검증.
+
+        허용되는 형식:
+        - "repo/chart" (remote)
+        - "./path" (relative local)
+        - "/path" (absolute local)
+        """
+        if not v or not v.strip():
+            raise ValueError("chart cannot be empty")
+        return v.strip()
+
+    def is_remote_chart(self) -> bool:
+        """
+        Remote chart 여부 판단.
+
+        Returns:
+            True if "repo/chart" 형식, False if local path
+        """
+        # 로컬 경로 패턴
+        if self.chart.startswith("./") or self.chart.startswith("/"):
+            return False
+        # repo/chart 형식
+        if "/" in self.chart and not self.chart.startswith("."):
+            return True
+        # chart만 있는 경우는 로컬로 간주
+        return False
+
+    def get_repo_name(self) -> str | None:
+        """
+        repo 이름 추출 (remote chart만).
+
+        Returns:
+            repo 이름 (예: 'bitnami/redis' → 'bitnami') 또는 None (local chart)
+        """
+        if not self.is_remote_chart():
+            return None
+        return self.chart.split("/")[0]
+
+    def get_chart_name(self) -> str:
+        """
+        chart 이름 추출.
+
+        Returns:
+            chart 이름 (예: 'bitnami/redis' → 'redis', './my-chart' → 'my-chart')
+        """
+        if self.is_remote_chart():
+            return self.chart.split("/")[1]
+        # 로컬 경로에서 마지막 부분 추출
+        return self.chart.rstrip("/").split("/")[-1]
 
 
-class FileActionSpec(ConfigBaseModel):
-    """Specification for file actions (apply, create, delete)."""
+class YamlApp(ConfigBaseModel):
+    """
+    YAML 매니페스트 직접 배포 앱.
 
-    type: Literal["apply", "create", "delete"]
-    path: str
+    kubectl apply -f 로 배포.
+
+    Examples:
+        my-app:
+          type: yaml
+          files:
+            - deployment.yaml
+            - service.yaml
+          namespace: custom-ns
+    """
+
+    type: Literal["yaml"] = "yaml"
+    files: list[str]  # YAML 파일 목록
     namespace: str | None = None
+    labels: dict[str, str] = Field(default_factory=dict)
+    annotations: dict[str, str] = Field(default_factory=dict)
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
 
-    @field_validator("path")
+    @field_validator("files")
     @classmethod
-    def validate_action_path(cls, v: str) -> str:
-        """Validate action path - can be local file or URL."""
-        if v.startswith(("http://", "https://")):
-            return cls.validate_url(v, allowed_schemes=["http", "https"])
-        return cls.validate_path_exists(v, must_exist=False)
+    def validate_files(cls, v: list[str]) -> list[str]:
+        """파일 목록이 비어있지 않은지 확인."""
+        return cls.validate_non_empty_list(v, "files")
 
 
-# --- App spec base classes ---
+class ActionApp(ConfigBaseModel):
+    """
+    커스텀 액션 실행 앱 (apply/create/delete).
+
+    Examples:
+        setup:
+          type: action
+          actions:
+            - type: apply
+              path: setup.yaml
+            - type: create
+              path: configmap.yaml
+    """
+
+    type: Literal["action"] = "action"
+    actions: list[dict[str, Any]]  # FileActionSpec 형태
+    namespace: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+
+    @field_validator("actions")
+    @classmethod
+    def validate_actions(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """액션 목록이 비어있지 않은지 확인."""
+        return cls.validate_non_empty_list(v, "actions")
 
 
-class AppSpecBase(ConfigBaseModel):
-    """Base class for all application specifications."""
+class ExecApp(ConfigBaseModel):
+    """
+    커스텀 명령어 실행 앱.
 
-    pass
+    Examples:
+        post-install:
+          type: exec
+          commands:
+            - echo "Deployment completed"
+            - kubectl get pods
+    """
 
-
-class AppExecSpec(AppSpecBase):
-    """Specification for executing commands."""
-
-    commands: list[str] = Field(default_factory=list)
+    type: Literal["exec"] = "exec"
+    commands: list[str]
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
 
     @field_validator("commands")
     @classmethod
     def validate_commands(cls, v: list[str]) -> list[str]:
-        """Validate command list is not empty and contains strings."""
-        if not v:
-            raise ValueError("commands cannot be empty")
-        if not all(isinstance(cmd, str) and cmd.strip() for cmd in v):
-            raise ValueError("all commands must be non-empty strings")
-        return v
+        """명령어 목록이 비어있지 않은지 확인."""
+        return cls.validate_non_empty_list(v, "commands")
 
 
-class AppInstallHelmSpec(AppSpecBase):
-    """Specification for Helm chart installation."""
+class GitApp(ConfigBaseModel):
+    """
+    Git 리포지토리에서 매니페스트 가져오기 앱.
 
-    path: str | None = None
-    values: list[str] = Field(default_factory=list)
-    release_name: str | None = None
+    Examples:
+        my-repo:
+          type: git
+          repo: https://github.com/user/repo
+          path: k8s/
+          branch: main
+    """
+
+    type: Literal["git"] = "git"
+    repo: str  # Git repository URL
+    path: str | None = None  # 리포지토리 내 경로
+    branch: str = "main"  # Git branch/tag
+    ref: str | None = None  # 특정 commit/tag (branch보다 우선)
     namespace: str | None = None
-    create_namespace: bool = False
-    wait: bool = False
-    timeout: str | None = None
-    atomic: bool = False
-
-    @field_validator("path")
-    @classmethod
-    def validate_helm_path(cls, v: str | None) -> str | None:
-        """Validate Helm chart path."""
-        if v is not None:
-            return cls.validate_path_exists(v, must_exist=False)
-        return v
-
-    @field_validator("release_name")
-    @classmethod
-    def validate_release_name(cls, v: str | None) -> str | None:
-        """Validate Helm release name."""
-        if v is not None:
-            return cls.validate_kubernetes_name(v, "release_name")
-        return v
-
-    @field_validator("namespace")
-    @classmethod
-    def validate_namespace(cls, v: str | None) -> str | None:
-        """Validate namespace name."""
-        return cls.validate_namespace(v)
-
-    @field_validator("timeout")
-    @classmethod
-    def validate_timeout(cls, v: str | None) -> str | None:
-        """Validate timeout format (e.g., 5m30s)."""
-        if v is not None:
-            import re
-
-            if not re.match(r"^\d+[hms](\d+[ms])?$", v):
-                raise ValueError("timeout must be in format like '5m30s', '1h', '300s'")
-        return v
-
-
-class AppInstallKubectlSpec(AppSpecBase):
-    """Specification for kubectl-based installation."""
-
-    paths: list[str] = Field(default_factory=list)
-    namespace: str | None = None
-
-    @field_validator("paths")
-    @classmethod
-    def validate_kubectl_paths(cls, v: list[str]) -> list[str]:
-        """Validate kubectl manifest paths."""
-        return cls.validate_non_empty_list(v, "paths")
-
-
-class AppInstallActionSpec(AppSpecBase):
-    """Specification for action-based installation."""
-
-    actions: list[FileActionSpec] = Field(default_factory=list)
-    uninstall: dict[str, list[FileActionSpec]] | None = None
-
-    @field_validator("actions")
-    @classmethod
-    def validate_actions(cls, v: list[FileActionSpec]) -> list[FileActionSpec]:
-        """Validate action list is not empty."""
-        return cls.validate_non_empty_list(v, "actions")
-
-
-class AppInstallKustomizeSpec(AppSpecBase):
-    """Specification for Kustomize-based installation."""
-
-    kustomize_path: str
-    namespace: str | None = None
-
-    @field_validator("kustomize_path")
-    @classmethod
-    def validate_kustomize_path(cls, v: str) -> str:
-        """Validate Kustomize directory path."""
-        return cls.validate_path_exists(v, must_exist=False)
-
-
-class AppRenderSpec(AppSpecBase):
-    """Specification for template rendering."""
-
-    templates: list[str] = Field(default_factory=list)
-    values: dict[str, Any] | None = None
-
-    @field_validator("templates")
-    @classmethod
-    def validate_templates(cls, v: list[str]) -> list[str]:
-        """Validate template list."""
-        return cls.validate_non_empty_list(v, "templates")
-
-
-class AppCopySpec(AppSpecBase):
-    """Specification for copy operations."""
-
-    paths: list[CopyPair] = Field(default_factory=list)
-
-    @field_validator("paths")
-    @classmethod
-    def validate_copy_paths(cls, v: list[CopyPair]) -> list[CopyPair]:
-        """Validate copy paths list."""
-        return cls.validate_non_empty_list(v, "paths")
-
-
-class AppPullHelmSpec(AppSpecBase):
-    """Specification for pulling Helm charts."""
-
-    repo: str
-    chart: str
-    dest: str | None = None
-    chart_version: str | None = None
-    app_version: str | None = None
-    removes: list[str] = Field(default_factory=list)
-    overrides: list[str] = Field(default_factory=list)
-
-    @field_validator("repo", "chart")
-    @classmethod
-    def validate_required_fields(cls, v: str) -> str:
-        """Validate required fields are not empty."""
-        if not v or not v.strip():
-            raise ValueError("field cannot be empty")
-        return v.strip()
-
-    @field_validator("chart_version")
-    @classmethod
-    def validate_chart_version(cls, v: str | None) -> str | None:
-        """Validate Helm chart version."""
-        return cls.validate_helm_version(v)
-
-
-class AppPullHelmOciSpec(AppPullHelmSpec):
-    """Specification for pulling Helm charts from OCI registries."""
-
-    pass  # Inherits all validators from AppPullHelmSpec
-
-
-class AppPullGitSpec(AppSpecBase):
-    """Specification for pulling from Git repositories."""
-
-    repo: str
-    paths: list[CopyPair] = Field(default_factory=list)
-    ref: str | None = None  # Git ref (branch, tag, commit)
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
 
     @field_validator("repo")
     @classmethod
     def validate_repo(cls, v: str) -> str:
-        """Validate repository name."""
+        """Git repo URL 검증."""
         if not v or not v.strip():
             raise ValueError("repo cannot be empty")
         return v.strip()
 
 
-class AppPullHttpSpec(AppSpecBase):
-    """Specification for pulling from HTTP sources."""
+class KustomizeApp(ConfigBaseModel):
+    """
+    Kustomize 기반 배포 앱.
 
-    url: str
-    dest: str
-    headers: dict[str, str] | None = None
+    Examples:
+        kustomize-app:
+          type: kustomize
+          path: overlays/production
+          namespace: prod
+    """
+
+    type: Literal["kustomize"] = "kustomize"
+    path: str  # kustomization.yaml이 있는 디렉토리
+    namespace: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+
+    @field_validator("path")
+    @classmethod
+    def validate_kustomize_path(cls, v: str) -> str:
+        """Kustomize 경로 검증."""
+        return cls.validate_path_exists(v, must_exist=False)
+
+
+class HttpApp(ConfigBaseModel):
+    """
+    HTTP URL에서 파일 다운로드 앱.
+
+    Examples:
+        external-manifest:
+          type: http
+          url: https://raw.githubusercontent.com/example/repo/main/manifest.yaml
+          dest: manifests/external.yaml
+    """
+
+    type: Literal["http"] = "http"
+    url: str  # HTTP(S) URL
+    dest: str  # 저장할 파일 경로 (app_dir 기준)
+    headers: dict[str, str] = Field(default_factory=dict)  # HTTP 헤더
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
 
     @field_validator("url")
     @classmethod
     def validate_http_url(cls, v: str) -> str:
-        """Validate HTTP URL."""
-        return cls.validate_url(v, allowed_schemes=["http", "https"])
+        """HTTP URL 검증."""
+        if not v or not v.strip():
+            raise ValueError("url cannot be empty")
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        return v.strip()
 
 
-# --- Main configuration schemas with inheritance support ---
+# ============================================================================
+# Discriminated Union
+# ============================================================================
+
+AppConfig = Annotated[
+    Union[HelmApp, YamlApp, ActionApp, ExecApp, GitApp, KustomizeApp, HttpApp],
+    Field(discriminator="type"),
+]
 
 
-class AppInfoScheme(InheritableConfigModel):
+# ============================================================================
+# Main Configuration Model
+# ============================================================================
+
+
+class SBKubeConfig(ConfigBaseModel):
     """
-    Application definition with enhanced validation.
+    SBKube v0.3.0 메인 설정 모델.
 
-    Supports inheritance from parent app definitions and
-    comprehensive validation of all fields.
-    """
+    Breaking Changes:
+    - apps: list → dict (key = app name)
+    - pull-helm + install-helm → helm (자동 처리)
+    - specs 제거 (모든 필드 평탄화)
+    - 의존성 명시 (depends_on)
 
-    name: str
-    type: Literal[
-        "exec",
-        "copy-repo",
-        "copy-chart",
-        "copy-root",
-        "copy-app",
-        "install-helm",
-        "install-kubectl",
-        "install-yaml",
-        "install-action",
-        "install-kustomize",
-        "pull-helm",
-        "pull-helm-oci",
-        "pull-git",
-        "pull-http",
-        "render",
-    ]
-    enabled: bool = True
-    namespace: str | None = None
-    release_name: str | None = None
-    specs: dict[str, Any] = Field(default_factory=dict)
-    labels: dict[str, str] = Field(default_factory=dict)
-    annotations: dict[str, str] = Field(default_factory=dict)
+    Examples:
+        namespace: production
 
-    @field_validator("name")
-    @classmethod
-    def validate_app_name(cls, v: str) -> str:
-        """Validate application name follows Kubernetes naming convention."""
-        return cls.validate_kubernetes_name(v, "name")
+        apps:
+          redis:
+            type: helm
+            chart: bitnami/redis
+            version: 17.13.2
+            values:
+              - redis.yaml
 
-    @field_validator("namespace")
-    @classmethod
-    def validate_namespace_field(cls, v: str | None) -> str | None:
-        """Validate namespace if provided."""
-        if v is not None:
-            return cls.validate_kubernetes_name(v, "namespace")
-        return v
+          backend:
+            type: helm
+            chart: my-org/backend
+            depends_on:
+              - redis
 
-    @field_validator("release_name")
-    @classmethod
-    def validate_release_name(cls, v: str | None) -> str | None:
-        """Validate release name if provided."""
-        if v is not None:
-            return cls.validate_kubernetes_name(v, "release_name")
-        return v
-
-    @model_validator(mode="after")
-    def validate_specs_for_type(self) -> "AppInfoScheme":
-        """Validate specs match the application type."""
-        if self.enabled:
-            # Validate but don't reassign to avoid triggering validate_assignment recursion
-            validated_specs = validate_spec_fields(self.type, self.specs)
-            # Use object.__setattr__ to bypass Pydantic's validate_assignment
-            object.__setattr__(self, 'specs', validated_specs)
-        return self
-
-    def get_validated_specs(self) -> AppSpecBase:
-        """
-        Get validated spec instance for this app type.
-
-        Returns:
-            Validated spec model instance
-
-        Raises:
-            ConfigValidationError: If specs don't match the app type
-        """
-        from .config_model import get_spec_model
-
-        spec_class = get_spec_model(self.type)
-
-        if spec_class is None:
-            raise ValueError(f"No spec model found for app type: {self.type}")
-
-        return spec_class(**self.specs)
-
-
-class AppGroupScheme(InheritableConfigModel):
-    """
-    Application group configuration with enhanced validation.
-
-    Supports:
-    - Inheritance from parent configurations
-    - Namespace inheritance to apps
-    - Dependency resolution
-    - Comprehensive validation
+          custom:
+            type: yaml
+            files:
+              - deployment.yaml
     """
 
     namespace: str
-    deps: list[str] = Field(default_factory=list)
-    apps: list[AppInfoScheme] = Field(default_factory=list)
+    apps: dict[str, AppConfig] = Field(default_factory=dict)
     global_labels: dict[str, str] = Field(default_factory=dict)
     global_annotations: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("namespace")
     @classmethod
-    def validate_namespace(cls, v: str) -> str:
-        """Validate namespace name."""
-        return cls.validate_namespace(v)
+    def validate_namespace_name(cls, v: str) -> str:
+        """네임스페이스 이름 검증."""
+        return cls.validate_kubernetes_name(v, "namespace")
 
-    @field_validator("deps")
+    @field_validator("apps")
     @classmethod
-    def validate_deps(cls, v: list[str]) -> list[str]:
-        """Validate dependency list contains unique values."""
-        return cls.validate_unique_list(v, "deps")
+    def validate_app_names(cls, v: dict[str, AppConfig]) -> dict[str, AppConfig]:
+        """앱 이름이 Kubernetes 네이밍 규칙을 따르는지 검증."""
+        for app_name in v.keys():
+            cls.validate_kubernetes_name(app_name, "app_name")
+        return v
 
     @model_validator(mode="after")
-    def apply_namespace_inheritance(self) -> "AppGroupScheme":
+    def apply_namespace_inheritance(self) -> "SBKubeConfigV3":
         """
-        Apply namespace inheritance to apps that don't specify one.
-        Also apply global labels and annotations.
+        네임스페이스 상속 및 글로벌 레이블/어노테이션 적용.
+
+        앱에 namespace가 없으면 전역 namespace 사용.
         """
-        for app in self.apps:
-            # Inherit namespace if not specified
-            if app.namespace is None:
+        for app_name, app in self.apps.items():
+            # 네임스페이스 상속 (HelmApp, YamlApp 등에만 적용)
+            if hasattr(app, "namespace") and app.namespace is None:
                 app.namespace = self.namespace
 
-            # Merge global labels and annotations
-            if self.global_labels:
-                app.labels = {**self.global_labels, **app.labels}
-
-            if self.global_annotations:
-                app.annotations = {**self.global_annotations, **app.annotations}
+            # 글로벌 레이블/어노테이션은 Helm 앱에만 적용 가능
+            # (향후 확장 가능)
 
         return self
 
     @model_validator(mode="after")
-    def validate_app_names_unique(self) -> "AppGroupScheme":
-        """Ensure all app names are unique within the group."""
-        app_names = [app.name for app in self.apps if app.enabled]
-        if len(app_names) != len(set(app_names)):
-            duplicates = [name for name in app_names if app_names.count(name) > 1]
-            raise ValueError(f"Duplicate app names found: {', '.join(set(duplicates))}")
+    def validate_dependencies(self) -> "SBKubeConfigV3":
+        """
+        의존성 검증:
+        1. 존재하지 않는 앱에 대한 의존성 체크
+        2. 순환 의존성 체크
+        """
+        app_names = set(self.apps.keys())
+
+        # 1. 존재하지 않는 앱 참조 체크
+        for app_name, app in self.apps.items():
+            if hasattr(app, "depends_on"):
+                for dep in app.depends_on:
+                    if dep not in app_names:
+                        raise ValueError(f"App '{app_name}' depends on non-existent app '{dep}'")
+
+        # 2. 순환 의존성 체크 (DFS 기반)
+        visited = set()
+        rec_stack = set()
+
+        def has_cycle(node: str) -> bool:
+            visited.add(node)
+            rec_stack.add(node)
+
+            app = self.apps[node]
+            if hasattr(app, "depends_on"):
+                for dep in app.depends_on:
+                    if dep not in visited:
+                        if has_cycle(dep):
+                            return True
+                    elif dep in rec_stack:
+                        return True
+
+            rec_stack.remove(node)
+            return False
+
+        for app_name in self.apps.keys():
+            if app_name not in visited:
+                if has_cycle(app_name):
+                    raise ValueError(f"Circular dependency detected involving app '{app_name}'")
+
         return self
 
-    def get_enabled_apps(self) -> list[AppInfoScheme]:
-        """Get list of enabled applications."""
-        return [app for app in self.apps if app.enabled]
+    def get_enabled_apps(self) -> dict[str, AppConfig]:
+        """활성화된 앱만 반환."""
+        return {name: app for name, app in self.apps.items() if app.enabled}
 
-    def get_apps_by_type(self, app_type: str) -> list[AppInfoScheme]:
-        """Get list of applications by type."""
-        return [app for app in self.apps if app.type == app_type and app.enabled]
+    def get_deployment_order(self) -> list[str]:
+        """
+        의존성을 고려한 배포 순서 반환 (위상 정렬).
 
+        Returns:
+            배포할 앱 이름 리스트 (순서대로)
+        """
+        enabled_apps = self.get_enabled_apps()
+        in_degree = {name: 0 for name in enabled_apps}
+        graph = {name: [] for name in enabled_apps}
 
-# --- Enhanced spec model mapping ---
+        # 그래프 구성
+        for name, app in enabled_apps.items():
+            if hasattr(app, "depends_on"):
+                for dep in app.depends_on:
+                    if dep in enabled_apps:  # 활성화된 앱에만 의존
+                        graph[dep].append(name)
+                        in_degree[name] += 1
 
+        # 위상 정렬 (Kahn's algorithm)
+        queue = [name for name, degree in in_degree.items() if degree == 0]
+        result = []
 
-def get_spec_model(app_type: str) -> type[AppSpecBase] | None:
-    """Get the appropriate spec model class for an app type."""
-    spec_model_mapping = {
-        "exec": AppExecSpec,
-        "install-helm": AppInstallHelmSpec,
-        "install-kubectl": AppInstallKubectlSpec,
-        "install-yaml": AppInstallActionSpec,
-        "install-action": AppInstallActionSpec,
-        "install-kustomize": AppInstallKustomizeSpec,
-        "render": AppRenderSpec,
-        "copy-repo": AppCopySpec,
-        "copy-chart": AppCopySpec,
-        "copy-root": AppCopySpec,
-        "copy-app": AppCopySpec,
-        "pull-helm": AppPullHelmSpec,
-        "pull-helm-oci": AppPullHelmOciSpec,
-        "pull-git": AppPullGitSpec,
-        "pull-http": AppPullHttpSpec,
-    }
-    return spec_model_mapping.get(app_type)
+        while queue:
+            # 알파벳 순서로 정렬하여 일관성 보장
+            queue.sort()
+            node = queue.pop(0)
+            result.append(node)
+
+            for neighbor in graph[node]:
+                in_degree[neighbor] -= 1
+                if in_degree[neighbor] == 0:
+                    queue.append(neighbor)
+
+        if len(result) != len(enabled_apps):
+            raise ValueError("Circular dependency detected (this should not happen)")
+
+        return result
+
+    def get_apps_by_type(self, app_type: str) -> dict[str, AppConfig]:
+        """특정 타입의 앱만 반환."""
+        return {name: app for name, app in self.apps.items() if app.type == app_type and app.enabled}

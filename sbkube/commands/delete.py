@@ -1,9 +1,10 @@
 from pathlib import Path
 
 import click
+from pydantic import ValidationError as PydanticValidationError
 from rich.console import Console
 
-from sbkube.models.config_model import AppInfoScheme, AppInstallActionSpec
+from sbkube.models.config_model import SBKubeConfig, YamlApp, ActionApp
 from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
@@ -114,28 +115,36 @@ def cmd(
             raise click.Abort()
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
 
-    apps_config_dict = load_config_file(str(config_file_path))
-    global_namespace_from_config = apps_config_dict.get("config", {}).get("namespace")
+    # v0.3.0 SBKubeConfig 모델로 로드
+    try:
+        config_data = load_config_file(str(config_file_path))
+        config = SBKubeConfig(**config_data)
+    except PydanticValidationError as e:
+        console.print("[red]❌ 설정 파일 검증 실패:[/red]")
+        for error in e.errors():
+            console.print(f"  - {error['loc']}: {error['msg']}")
+        raise click.Abort()
+    except Exception as e:
+        console.print(f"[red]❌ 설정 파일 로드 실패: {e}[/red]")
+        raise click.Abort()
+
+    global_namespace_from_config = config.namespace
 
     delete_total_apps = 0
     delete_success_apps = 0
     delete_skipped_apps = 0
 
+    # v0.3.0: apps는 dict (key=name, value=AppConfig)
     apps_to_process = []
     if target_app_name:
-        found_target_app = False
-        for app_dict in apps_config_dict.get("apps", []):
-            if app_dict.get("name") == target_app_name:
-                apps_to_process.append(app_dict)
-                found_target_app = True
-                break
-        if not found_target_app:
+        if target_app_name not in config.apps:
             console.print(
                 f"[red]❌ 삭제 대상 앱 '{target_app_name}'을(를) 설정 파일에서 찾을 수 없습니다.[/red]",
             )
             raise click.Abort()
+        apps_to_process.append((target_app_name, config.apps[target_app_name]))
     else:
-        apps_to_process = apps_config_dict.get("apps", [])
+        apps_to_process = list(config.apps.items())
 
     if not apps_to_process:
         console.print(
@@ -146,44 +155,35 @@ def cmd(
         )
         return
 
-    for app_dict in apps_to_process:
-        try:
-            app_info = AppInfoScheme(**app_dict)
-        except Exception as e:
-            app_name_for_error = app_dict.get("name", "알 수 없는 앱")
-            console.print(
-                f"[red]❌ 앱 정보 '{app_name_for_error}' 처리 중 오류 (AppInfoScheme 변환 실패): {e}[/red]",
-            )
-            console.print("    [yellow]L 해당 앱 설정을 건너뜁니다.[/yellow]")
-            delete_skipped_apps += 1
-            continue
+    # v0.3.0: (app_name, app_config) 튜플
+    for app_name, app_config in apps_to_process:
+        # v0.3.0 타입은 'helm', 'yaml', 'action' 등으로 단순화됨
+        # v0.2.x의 'install-helm'은 v0.3.0에서 'helm'
+        # v0.2.x의 'install-yaml'은 v0.3.0에서 'yaml'
+        # v0.2.x의 'install-action'은 v0.3.0에서 'action'
 
-        if app_info.type not in ["install-helm", "install-yaml", "install-action"]:
+        if app_config.type not in ["helm", "yaml", "action"]:
             continue
 
         delete_total_apps += 1
-        app_name = app_info.name
-        app_type = app_info.type
-        app_release_name = app_info.release_name or app_name
+        app_type = app_config.type
+        app_release_name = getattr(app_config, "release_name", None) or app_name
 
         console.print(
             f"[magenta]➡️  앱 '{app_name}' (타입: {app_type}, 릴리스명: '{app_release_name}') 삭제 시도...[/magenta]",
         )
 
+        # Namespace 우선순위: CLI > App > Global
         current_namespace = None
-        if app_info.namespace and app_info.namespace not in [
-            "!ignore",
-            "!none",
-            "!false",
-            "",
-        ]:
-            current_namespace = app_info.namespace
+        app_namespace = getattr(app_config, "namespace", None)
+        if app_namespace and app_namespace not in ["!ignore", "!none", "!false", ""]:
+            current_namespace = app_namespace
         elif cli_namespace:
             current_namespace = cli_namespace
         elif global_namespace_from_config:
             current_namespace = global_namespace_from_config
         else:
-            if app_type == "install-helm":
+            if app_type == "helm":
                 current_namespace = "default"
 
         if current_namespace:
@@ -196,7 +196,7 @@ def cmd(
         delete_command_executed = False
         delete_successful_for_app = False
 
-        if app_type == "install-helm":
+        if app_type == "helm":
             check_helm_installed_or_exit()
             installed_charts = get_installed_charts(current_namespace)
             if app_release_name not in installed_charts:
@@ -242,28 +242,21 @@ def cmd(
                 if stderr:
                     console.print(f"    [red]STDERR:[/red] {stderr.strip()}")
 
-        elif app_type == "install-yaml":
+        elif app_type == "yaml":
             check_kubectl_installed_or_exit()
-            spec_obj = None
-            if app_info.specs:
-                try:
-                    spec_obj = AppInstallActionSpec(**app_info.specs)
-                except Exception as e:
-                    console.print(
-                        f"[red]❌ 앱 '{app_name}': YAML Spec 정보 파싱 실패 (무시하고 진행): {e}[/red]",
-                    )
-                    spec_obj = AppInstallActionSpec(actions=[])
-            else:
+
+            # v0.3.0 YamlApp은 files 리스트를 직접 가짐
+            if not isinstance(app_config, YamlApp):
                 console.print(
-                    f"[yellow]⚠️ 앱 '{app_name}': YAML Spec 정보('actions')가 없어 삭제할 파일 목록을 알 수 없습니다. 건너뜁니다.[/yellow]",
+                    f"[red]❌ 앱 '{app_name}': 타입이 'yaml'이나 YamlApp 모델이 아님[/red]",
                 )
                 delete_skipped_apps += 1
                 console.print("")
                 continue
 
-            if not spec_obj or not spec_obj.actions:
+            if not app_config.files:
                 console.print(
-                    f"[yellow]⚠️ 앱 '{app_name}': 삭제할 YAML 파일 액션('actions')이 지정되지 않았습니다. 건너뜁니다.[/yellow]",
+                    f"[yellow]⚠️ 앱 '{app_name}': 삭제할 YAML 파일이 지정되지 않았습니다. 건너뜁니다.[/yellow]",
                 )
                 delete_skipped_apps += 1
                 console.print("")
@@ -272,11 +265,9 @@ def cmd(
             yaml_delete_successful_files = 0
             yaml_delete_failed_files = 0
 
-            for action in reversed(spec_obj.actions):
-                if action.type not in ["apply", "create"]:
-                    continue
-
-                file_path = Path(action.path)
+            # v0.3.0: files를 역순으로 삭제
+            for file_rel_path in reversed(app_config.files):
+                file_path = Path(file_rel_path)
                 abs_yaml_path = file_path
                 if not abs_yaml_path.is_absolute():
                     abs_yaml_path = APP_CONFIG_DIR / file_path
@@ -337,28 +328,25 @@ def cmd(
                 f"    [grey]YAML 삭제 요약 (파일 기준): 성공 {yaml_delete_successful_files}, 실패 {yaml_delete_failed_files}[/grey]",
             )
 
-        elif app_type == "install-action":
-            spec_obj = None
-            uninstall_action_defined = False
-            if app_info.specs:
-                try:
-                    spec_obj = AppInstallActionSpec(**app_info.specs)
-                    if spec_obj.uninstall and spec_obj.uninstall.get("script"):
-                        uninstall_action_defined = True
-                except Exception as e:
-                    console.print(
-                        f"[red]❌ 앱 '{app_name}': Action Spec 정보 파싱 실패: {e}[/red]",
-                    )
-
-            if not uninstall_action_defined:
+        elif app_type == "action":
+            # v0.3.0 ActionApp
+            if not isinstance(app_config, ActionApp):
                 console.print(
-                    f"[yellow]⚠️ 앱 '{app_name}' (타입: {app_type}): `specs.uninstall.script`가 정의되지 않아 자동으로 삭제할 수 없습니다. 건너뜁니다.[/yellow]",
+                    f"[red]❌ 앱 '{app_name}': 타입이 'action'이나 ActionApp 모델이 아님[/red]",
                 )
                 delete_skipped_apps += 1
                 console.print("")
                 continue
 
-            for raw_cmd_str in spec_obj.uninstall.get("script", []):
+            if not app_config.uninstall or not app_config.uninstall.script:
+                console.print(
+                    f"[yellow]⚠️ 앱 '{app_name}' (타입: {app_type}): `uninstall.script`가 정의되지 않아 자동으로 삭제할 수 없습니다. 건너뜁니다.[/yellow]",
+                )
+                delete_skipped_apps += 1
+                console.print("")
+                continue
+
+            for raw_cmd_str in app_config.uninstall.script:
                 console.print(f"    [cyan]$ {raw_cmd_str}[/cyan]")
                 return_code, stdout, stderr = run_command(
                     raw_cmd_str,

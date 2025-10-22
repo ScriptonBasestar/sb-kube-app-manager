@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sbkube.models.config_v3 import HelmApp, SBKubeConfigV3
+from sbkube.models.config_model import HelmApp, SBKubeConfig
 
 
 class TestBuildV3:
@@ -39,7 +39,7 @@ class TestBuildV3:
         build_dir = tmp_path / "build"
 
         # 빌드 실행 (모의)
-        from sbkube.commands.build_v3 import build_helm_app
+        from sbkube.commands.build import build_helm_app
 
         success = build_helm_app(
             app_name="redis",
@@ -75,7 +75,7 @@ class TestBuildV3:
         build_dir = tmp_path / "build"
 
         # 빌드 실행
-        from sbkube.commands.build_v3 import build_helm_app
+        from sbkube.commands.build import build_helm_app
 
         success = build_helm_app(
             app_name="redis",
@@ -113,7 +113,7 @@ class TestBuildV3:
         build_dir = tmp_path / "build"
 
         # 빌드 실행
-        from sbkube.commands.build_v3 import build_helm_app
+        from sbkube.commands.build import build_helm_app
 
         success = build_helm_app(
             app_name="my-app",

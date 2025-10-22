@@ -3,11 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)](<>)
 [![Repo](https://img.shields.io/badge/GitHub-kube--app--manaer-blue?logo=github)](https://github.com/ScriptonBasestar/kube-app-manaer)
-[![Version](https://img.shields.io/badge/version-0.3.0-blue)](CHANGELOG_V3.0.0.md)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue)](CHANGELOG.md)
 
 **SBKube**는 `YAML`, `Helm`, `Git` 리소스를 로컬에서 정의하고 `k3s` 등 Kubernetes 환경에 일관되게 배포할 수 있는 CLI 도구입니다.
 
-> k3s용 헬름+yaml+git 배포 자동화 CLI 도구 (v0.3.0)
+> k3s용 헬름+yaml+git 배포 자동화 CLI 도구
 
 ______________________________________________________________________
 
@@ -128,7 +128,7 @@ v0.2.x에서 v0.3.0으로 업그레이드하는 경우, 자동 마이그레이�
 sbkube migrate old-config.yaml -o config.yaml
 ```
 
-자세한 내용은 [CHANGELOG_V3.0.0.md](CHANGELOG_V3.0.0.md) 및 [Migration Guide](docs/MIGRATION_V3.md)를 참조하세요.
+자세한 내용은 [CHANGELOG.md](CHANGELOG.md) 및 [Migration Guide](docs/MIGRATION.md)를 참조하세요.
 
 ## 💬 지원
 

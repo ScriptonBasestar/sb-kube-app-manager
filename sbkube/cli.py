@@ -14,6 +14,7 @@ from sbkube.commands import (
     fix,
     history,
     init,
+    migrate,
     prepare,
     profiles,
     state,
@@ -22,9 +23,6 @@ from sbkube.commands import (
     validate,
     version,
 )
-
-# v0.3.0 명령어 (기본으로 사용)
-from sbkube.commands import apply_v3, build_v3, deploy_v3, migrate, prepare_v3, template_v3
 from sbkube.exceptions import (
     CliToolExecutionError,
     CliToolNotFoundError,
@@ -126,22 +124,15 @@ def main(
         logger.verbose("상세 로깅 활성화됨.")
 
 
-# v0.3.0 명령어 (기본으로 사용)
-main.add_command(prepare_v3.cmd, name="prepare")
-main.add_command(build_v3.cmd, name="build")
-main.add_command(template_v3.cmd, name="template")
-main.add_command(deploy_v3.cmd, name="deploy")
-main.add_command(apply_v3.cmd, name="apply")
-main.add_command(migrate.cmd, name="migrate")
+# 핵심 워크플로우 명령어
+main.add_command(prepare.cmd)
+main.add_command(build.cmd)
+main.add_command(template.cmd)
+main.add_command(deploy.cmd)
+main.add_command(apply.cmd)
+main.add_command(migrate.cmd)
 
-# v0.2.x 명령어 (레거시, legacy- 접두사로 제공)
-main.add_command(prepare.cmd, name="legacy-prepare")
-main.add_command(build.cmd, name="legacy-build")
-main.add_command(template.cmd, name="legacy-template")
-main.add_command(deploy.cmd, name="legacy-deploy")
-main.add_command(apply.cmd, name="legacy-apply")
-
-# 기타 명령어 (버전 무관)
+# 기타 명령어
 main.add_command(init.cmd)
 main.add_command(upgrade.cmd)
 main.add_command(delete.cmd)

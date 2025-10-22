@@ -1,338 +1,274 @@
+"""
+SBKube v0.3.0 build 명령어.
+
+빌드 디렉토리 준비 + 커스터마이징:
+- Remote chart: charts/ → build/ 복사
+- Local chart: app_dir 기준 경로 → build/ 복사
+- Overrides 적용: overrides/<app-name>/* → build/<app-name>/*
+- Removes 적용: build/<app-name>/<remove-pattern> 삭제
+"""
+
 import shutil
 from pathlib import Path
 
 import click
+from rich.console import Console
 
-from sbkube.models.config_model import (
-    AppCopySpec,
-    AppInfoScheme,
-    AppInstallActionSpec,
-    AppPullGitSpec,
-    AppPullHelmSpec,
-)
-from sbkube.utils.base_command import BaseCommand
-from sbkube.utils.common import common_click_options
-from sbkube.utils.logger import LogLevel, logger, setup_logging_from_context
+from sbkube.models.config_model import HelmApp, HttpApp, SBKubeConfig
+from sbkube.utils.file_loader import load_config_file
+
+console = Console()
 
 
-class BuildCommand(BaseCommand):
-    """Build 명령 구현"""
+def build_helm_app(
+    app_name: str,
+    app: HelmApp,
+    base_dir: Path,
+    charts_dir: Path,
+    build_dir: Path,
+    app_config_dir: Path,
+) -> bool:
+    """
+    Helm 앱 빌드 + 커스터마이징.
 
-    def __init__(
-        self,
-        base_dir: str,
-        app_config_dir: str,
-        target_app_name: str | None,
-        config_file_name: str | None,
-    ):
-        super().__init__(base_dir, app_config_dir, None, config_file_name)
-        self.target_app_name = target_app_name
+    Args:
+        app_name: 앱 이름
+        app: HelmApp 설정
+        base_dir: 프로젝트 루트
+        charts_dir: charts 디렉토리
+        build_dir: build 디렉토리
+        app_config_dir: 앱 설정 디렉토리
 
-    def execute(self):
-        """build 명령 실행"""
-        self.execute_pre_hook()
-        logger.heading(f"Build 시작 - app-dir: {self.app_config_dir.name}")
+    Returns:
+        성공 여부
+    """
+    console.print(f"[cyan]🔨 Building Helm app: {app_name}[/cyan]")
 
-        # 빌드 디렉토리 준비
-        self._prepare_build_directory()
+    # 1. 소스 차트 경로 결정
+    if app.is_remote_chart():
+        # Remote chart: charts/<chart-name>/<chart-name>/
+        chart_name = app.get_chart_name()
+        source_path = charts_dir / chart_name / chart_name
 
-        # 지원하는 앱 타입
-        supported_types = [
-            "pull-helm",
-            "pull-helm-oci",
-            "pull-git",
-            "copy-app",
-            "install-yaml",
-        ]
-
-        # 앱 파싱
-        self.parse_apps(app_types=supported_types, app_name=self.target_app_name)
-
-        # 앱 처리 (공통 로직 사용)
-        self.process_apps_with_stats(self._build_app, "빌드")
-
-        logger.heading(f"Build 작업 완료 (결과물 위치: {self.build_dir})")
-
-    def _prepare_build_directory(self):
-        """빌드 디렉토리 준비"""
-        logger.info(f"기존 빌드 디렉토리 정리 중: {self.build_dir}")
-        self.clean_directory(self.build_dir, "빌드 디렉토리")
-        logger.success(f"빌드 디렉토리 준비 완료: {self.build_dir}")
-
-    def _build_app(self, app_info: AppInfoScheme) -> bool:
-        """개별 앱 빌드"""
-        app_name = app_info.name
-        app_type = app_info.type
-
-        logger.progress(f"앱 '{app_name}' (타입: {app_type}) 빌드 시작...")
-
-        try:
-            # Spec 모델 생성 (공통 함수 사용)
-            spec_obj = self.create_app_spec(app_info)
-            if not spec_obj:
-                return False
-
-            # 타입별 빌드 처리
-            if app_type in ["pull-helm", "pull-helm-oci"]:
-                self._build_helm(app_info, spec_obj)
-            elif app_type == "pull-git":
-                self._build_git(app_info, spec_obj)
-            elif app_type == "copy-app":
-                self._build_copy(app_info, spec_obj)
-            elif app_type == "install-yaml":
-                self._build_install_yaml(app_info, spec_obj)
-
-            logger.success(f"앱 '{app_name}' 빌드 완료")
-            return True
-
-        except FileNotFoundError as e:
-            logger.error(f"앱 '{app_name}'의 빌드를 중단합니다. (상세: {e})")
+        if not source_path.exists():
+            console.print(f"[red]❌ Remote chart not found: {source_path}[/red]")
+            console.print(f"[yellow]💡 Run 'sbkube prepare' first[/yellow]")
             return False
-        except Exception as e:
-            logger.error(
-                f"앱 '{app_name}' (타입: {app_type}) 빌드 중 예상치 못한 오류 발생: {e}",
-            )
-            if logger._level.value <= LogLevel.DEBUG.value:
-                import traceback
+    else:
+        # Local chart: app_config_dir 기준
+        if app.chart.startswith("./"):
+            source_path = app_config_dir / app.chart[2:]
+        elif app.chart.startswith("/"):
+            source_path = Path(app.chart)
+        else:
+            source_path = app_config_dir / app.chart
 
-                logger.debug(traceback.format_exc())
+        if not source_path.exists():
+            console.print(f"[red]❌ Local chart not found: {source_path}[/red]")
             return False
 
-    def _build_helm(self, app_info: AppInfoScheme, spec_obj: AppPullHelmSpec):
-        """Helm 차트 빌드"""
-        # 대상 디렉토리 결정
-        app_build_dest = spec_obj.dest or spec_obj.chart
-        app_final_build_path = self.build_dir / app_build_dest
+    # 2. 빌드 디렉토리로 복사
+    dest_path = build_dir / app_name
 
-        # 기존 빌드 디렉토리 정리
-        if app_final_build_path.exists():
-            logger.verbose(f"기존 앱 빌드 디렉토리 삭제: {app_final_build_path}")
-            shutil.rmtree(app_final_build_path)
+    # 기존 디렉토리 삭제
+    if dest_path.exists():
+        console.print(f"  Removing existing build directory: {dest_path}")
+        shutil.rmtree(dest_path)
 
-        # 소스 차트 경로
-        prepared_chart_name = spec_obj.dest or spec_obj.chart
-        source_chart_path = self.charts_dir / prepared_chart_name
+    console.print(f"  Copying chart: {source_path} → {dest_path}")
+    shutil.copytree(source_path, dest_path)
 
-        # 소스 확인
-        if not source_chart_path.exists() or not source_chart_path.is_dir():
-            logger.error(
-                f"앱 '{app_info.name}': `prepare` 단계에서 준비된 Helm 차트 소스를 찾을 수 없습니다: {source_chart_path}",
-            )
-            logger.warning(
-                "'sbkube prepare' 명령을 먼저 실행했는지, 'dest' 필드가 올바른지 확인하세요.",
-            )
-            raise FileNotFoundError(f"Prepared chart not found: {source_chart_path}")
+    # 3. Overrides 적용
+    if app.overrides:
+        console.print(f"  Applying {len(app.overrides)} overrides...")
+        overrides_base = app_config_dir / "overrides" / app_name
 
-        # 차트 복사
-        logger.info(f"Helm 차트 복사: {source_chart_path} → {app_final_build_path}")
-        shutil.copytree(source_chart_path, app_final_build_path, dirs_exist_ok=True)
+        if not overrides_base.exists():
+            console.print(f"[yellow]⚠️ Overrides directory not found: {overrides_base}[/yellow]")
+        else:
+            for override_rel_path in app.overrides:
+                src_file = overrides_base / override_rel_path
+                dst_file = dest_path / override_rel_path
 
-        # Overrides 적용
-        self._apply_overrides(
-            app_info.name,
-            app_build_dest,
-            app_final_build_path,
-            spec_obj.overrides,
-        )
+                if src_file.exists() and src_file.is_file():
+                    # 대상 디렉토리 생성
+                    dst_file.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src_file, dst_file)
+                    console.print(f"    ✓ Override: {override_rel_path}")
+                else:
+                    console.print(f"[yellow]    ⚠️ Override file not found: {src_file}[/yellow]")
 
-        # Removes 적용
-        self._apply_removes(app_final_build_path, spec_obj.removes)
+    # 4. Removes 적용
+    if app.removes:
+        console.print(f"  Removing {len(app.removes)} patterns...")
+        for remove_pattern in app.removes:
+            remove_target = dest_path / remove_pattern
 
-    def _build_git(self, app_info: AppInfoScheme, spec_obj: AppPullGitSpec):
-        """Git 소스 빌드"""
-        # 준비된 Git 저장소 경로
-        prepared_repo_path = self.repos_dir / spec_obj.repo
-
-        if not prepared_repo_path.exists() or not prepared_repo_path.is_dir():
-            logger.error(
-                f"앱 '{app_info.name}': `prepare` 단계에서 준비된 Git 저장소 소스를 찾을 수 없습니다: {prepared_repo_path}",
-            )
-            logger.warning("'sbkube prepare' 명령을 먼저 실행했는지 확인하세요.")
-            raise FileNotFoundError(
-                f"Prepared Git repo not found: {prepared_repo_path}",
-            )
-
-        # 각 path 처리
-        for copy_pair in spec_obj.paths:
-            dest_build_path = self.build_dir / copy_pair.dest
-            source_path = prepared_repo_path / copy_pair.src
-
-            if not source_path.exists():
-                logger.error(f"Git 소스 경로 없음: {source_path} (건너뜀)")
-                continue
-
-            # 기존 빌드 디렉토리 정리
-            if dest_build_path.exists():
-                logger.verbose(f"기존 빌드 디렉토리 삭제: {dest_build_path}")
-                shutil.rmtree(dest_build_path)
-
-            # 복사
-            logger.info(f"Git 콘텐츠 복사: {source_path} → {dest_build_path}")
-            dest_build_path.parent.mkdir(parents=True, exist_ok=True)
-
-            if source_path.is_dir():
-                shutil.copytree(source_path, dest_build_path, dirs_exist_ok=True)
-            elif source_path.is_file():
-                dest_build_path.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source_path, dest_build_path / source_path.name)
+            if remove_target.exists():
+                if remove_target.is_dir():
+                    shutil.rmtree(remove_target)
+                    console.print(f"    ✓ Removed directory: {remove_pattern}")
+                elif remove_target.is_file():
+                    remove_target.unlink()
+                    console.print(f"    ✓ Removed file: {remove_pattern}")
             else:
-                logger.warning(
-                    f"Git 소스 경로가 파일이나 디렉토리가 아님: {source_path} (건너뜀)",
-                )
+                console.print(f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]")
 
-    def _build_copy(self, app_info: AppInfoScheme, spec_obj: AppCopySpec):
-        """로컬 파일 복사"""
-        # 각 path 처리
-        for copy_pair in spec_obj.paths:
-            dest_build_path = self.build_dir / copy_pair.dest
+    console.print(f"[green]✅ Helm app built: {app_name}[/green]")
+    return True
 
-            # 소스 경로 해석
-            source_path = Path(copy_pair.src)
-            if not source_path.is_absolute():
-                source_path = self.app_config_dir / copy_pair.src
 
-            if not source_path.exists():
-                logger.error(
-                    f"로컬 소스 경로 없음: {source_path} (원본: '{copy_pair.src}') (건너뜀)",
-                )
-                continue
+def build_http_app(
+    app_name: str,
+    app: HttpApp,
+    base_dir: Path,
+    build_dir: Path,
+    app_config_dir: Path,
+) -> bool:
+    """
+    HTTP 앱 빌드 (다운로드된 파일을 build/로 복사).
 
-            # 기존 빌드 디렉토리 정리
-            if dest_build_path.exists():
-                logger.verbose(f"기존 빌드 디렉토리 삭제: {dest_build_path}")
-                shutil.rmtree(dest_build_path)
+    Args:
+        app_name: 앱 이름
+        app: HttpApp 설정
+        base_dir: 프로젝트 루트
+        build_dir: build 디렉토리
+        app_config_dir: 앱 설정 디렉토리
 
-            # 복사
-            logger.info(f"로컬 콘텐츠 복사: {source_path} → {dest_build_path}")
-            dest_build_path.parent.mkdir(parents=True, exist_ok=True)
+    Returns:
+        성공 여부
+    """
+    console.print(f"[cyan]🔨 Building HTTP app: {app_name}[/cyan]")
 
-            if source_path.is_dir():
-                shutil.copytree(source_path, dest_build_path, dirs_exist_ok=True)
-            elif source_path.is_file():
-                dest_build_path.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source_path, dest_build_path / source_path.name)
-            else:
-                logger.warning(
-                    f"로컬 소스 경로가 파일이나 디렉토리가 아님: {source_path} (건너뜀)",
-                )
+    # 다운로드된 파일 위치 (prepare 단계에서 생성됨)
+    source_file = app_config_dir / app.dest
 
-    def _build_install_yaml(
-        self,
-        app_info: AppInfoScheme,
-        spec_obj: AppInstallActionSpec,
-    ):
-        """install-yaml 타입 빌드 - YAML 파일들을 빌드 디렉토리에 준비"""
-        app_name = app_info.name
-        app_build_dest = app_name  # install-yaml은 앱 이름으로 디렉토리 생성
-        app_final_build_path = self.build_dir / app_build_dest
+    if not source_file.exists():
+        console.print(f"[red]❌ Downloaded file not found: {source_file}[/red]")
+        console.print(f"[yellow]💡 Run 'sbkube prepare' first[/yellow]")
+        return False
 
-        # 기존 빌드 디렉토리 정리
-        if app_final_build_path.exists():
-            logger.verbose(f"기존 앱 빌드 디렉토리 삭제: {app_final_build_path}")
-            shutil.rmtree(app_final_build_path)
+    # build/ 디렉토리로 복사
+    dest_file = build_dir / app_name / source_file.name
+    dest_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # 빌드 디렉토리 생성
-        app_final_build_path.mkdir(parents=True, exist_ok=True)
+    console.print(f"  Copying: {source_file} → {dest_file}")
+    shutil.copy2(source_file, dest_file)
 
-        # 각 action 처리
-        for action in spec_obj.actions:
-            action_path = action.path
-
-            # 절대 경로가 아닌 경우 app_config_dir 기준으로 해석
-            if not Path(action_path).is_absolute():
-                source_path = self.app_config_dir / action_path
-            else:
-                source_path = Path(action_path)
-
-            # 파일이 존재하는지 확인
-            if not source_path.exists():
-                logger.warning(
-                    f"install-yaml 액션 파일 없음: {source_path} (원본: '{action_path}') (건너뜀)",
-                )
-                continue
-
-            # 파일인지 확인
-            if not source_path.is_file():
-                logger.warning(
-                    f"install-yaml 액션 경로가 파일이 아님: {source_path} (건너뜀)",
-                )
-                continue
-
-            # 대상 파일명 결정 (원본 파일명 유지)
-            dest_file_path = app_final_build_path / source_path.name
-
-            # 파일 복사
-            logger.info(f"install-yaml 파일 복사: {source_path} → {dest_file_path}")
-            shutil.copy2(source_path, dest_file_path)
-
-    def _apply_overrides(
-        self,
-        app_name: str,
-        dest_name: str,
-        build_path: Path,
-        overrides: list[str],
-    ):
-        """Override 파일 적용"""
-        if not overrides:
-            return
-
-        logger.verbose("Overrides 적용 중...")
-
-        for override_rel_path in overrides:
-            override_src = self.overrides_dir / dest_name / override_rel_path
-            override_dst = build_path / override_rel_path
-
-            if override_src.exists() and override_src.is_file():
-                override_dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(override_src, override_dst)
-                logger.verbose(f"Override 적용: {override_src} → {override_dst}")
-            else:
-                logger.warning(f"Override 원본 파일 없음 (건너뜀): {override_src}")
-
-    def _apply_removes(self, build_path: Path, removes: list[str]):
-        """Remove 파일/디렉토리 처리"""
-        if not removes:
-            return
-
-        logger.verbose("Removes 적용 중...")
-
-        for remove_rel_path in removes:
-            target = build_path / remove_rel_path
-
-            if target.exists():
-                if target.is_file():
-                    target.unlink()
-                    logger.verbose(f"파일 삭제: {target}")
-                elif target.is_dir():
-                    shutil.rmtree(target)
-                    logger.verbose(f"디렉토리 삭제: {target}")
-            else:
-                logger.warning(f"삭제할 파일/디렉토리 없음 (건너뜀): {target}")
+    console.print(f"[green]✅ HTTP app built: {app_name}[/green]")
+    return True
 
 
 @click.command(name="build")
-@common_click_options
-@click.pass_context
+@click.option(
+    "--app-dir",
+    "app_config_dir_name",
+    default=".",
+    help="앱 설정 디렉토리 (config.yaml 위치, base-dir 기준)",
+)
+@click.option(
+    "--base-dir",
+    default=".",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    help="프로젝트 루트 디렉토리",
+)
+@click.option(
+    "--config-file",
+    "config_file_name",
+    default="config.yaml",
+    help="설정 파일 이름 (app-dir 내부)",
+)
+@click.option(
+    "--app",
+    "app_name",
+    default=None,
+    help="빌드할 특정 앱 이름 (지정하지 않으면 모든 앱 빌드)",
+)
 def cmd(
-    ctx,
     app_config_dir_name: str,
     base_dir: str,
-    config_file_name: str | None,
+    config_file_name: str,
     app_name: str | None,
-    verbose: bool,
-    debug: bool,
 ):
-    """앱 설정을 기반으로 빌드 디렉토리에 배포 가능한 형태로 준비"""
-    ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["debug"] = debug
-    setup_logging_from_context(ctx)
+    """
+    SBKube v0.3.0 build 명령어.
 
-    build_cmd = BuildCommand(
-        base_dir=base_dir,
-        app_config_dir=app_config_dir_name,
-        target_app_name=app_name,
-        config_file_name=config_file_name,
-    )
+    빌드 디렉토리 준비 및 커스터마이징:
+    - Remote chart를 charts/에서 build/로 복사
+    - Overrides 적용 (overrides/<app-name>/* → build/<app-name>/*)
+    - Removes 적용 (불필요한 파일/디렉토리 삭제)
+    """
+    console.print("[bold blue]✨ SBKube v0.3.0 `build` 시작 ✨[/bold blue]")
 
-    build_cmd.execute()
+    # 경로 설정
+    BASE_DIR = Path(base_dir).resolve()
+    APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
+    config_file_path = APP_CONFIG_DIR / config_file_name
+
+    CHARTS_DIR = BASE_DIR / "charts"
+    BUILD_DIR = BASE_DIR / "build"
+
+    # build 디렉토리 생성
+    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+
+    # 설정 파일 로드
+    if not config_file_path.exists():
+        console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+        raise click.Abort()
+
+    console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+    config_data = load_config_file(config_file_path)
+
+    try:
+        config = SBKubeConfig(**config_data)
+    except Exception as e:
+        console.print(f"[red]❌ Invalid config file: {e}[/red]")
+        raise click.Abort()
+
+    # 배포 순서 얻기 (의존성 고려)
+    deployment_order = config.get_deployment_order()
+
+    if app_name:
+        # 특정 앱만 빌드
+        if app_name not in config.apps:
+            console.print(f"[red]❌ App not found: {app_name}[/red]")
+            raise click.Abort()
+        apps_to_build = [app_name]
+    else:
+        # 모든 앱 빌드 (의존성 순서대로)
+        apps_to_build = deployment_order
+
+    # 앱 빌드
+    success_count = 0
+    total_count = len(apps_to_build)
+
+    for app_name in apps_to_build:
+        app = config.apps[app_name]
+
+        if not app.enabled:
+            console.print(f"[yellow]⏭️  Skipping disabled app: {app_name}[/yellow]")
+            continue
+
+        success = False
+
+        if isinstance(app, HelmApp):
+            # Helm 앱만 빌드 (커스터마이징 필요)
+            if app.overrides or app.removes or app.is_remote_chart():
+                success = build_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR)
+            else:
+                console.print(f"[yellow]⏭️  Skipping Helm app (no customization): {app_name}[/yellow]")
+                success = True  # 건너뛰어도 성공으로 간주
+        elif isinstance(app, HttpApp):
+            success = build_http_app(app_name, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR)
+        else:
+            console.print(f"[yellow]⏭️  App type '{app.type}' does not require build: {app_name}[/yellow]")
+            success = True  # 건너뛰어도 성공으로 간주
+
+        if success:
+            success_count += 1
+
+    # 결과 출력
+    console.print(f"\n[bold green]✅ Build completed: {success_count}/{total_count} apps[/bold green]")
+
+    if success_count < total_count:
+        raise click.Abort()

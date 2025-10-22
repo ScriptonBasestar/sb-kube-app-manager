@@ -4,7 +4,6 @@ from pathlib import Path
 
 import click
 
-from sbkube.models.config_model import AppInfoScheme, get_spec_model
 from sbkube.utils.logger import logger
 
 
@@ -42,21 +41,6 @@ def common_click_options(func):
     return func
 
 
-def create_app_spec(app_info: AppInfoScheme):
-    """앱 타입에 맞는 Spec 객체 생성"""
-    try:
-        spec_model_class = get_spec_model(app_info.type)
-        if not spec_model_class:
-            logger.error(f"앱 '{app_info.name}': 지원하지 않는 타입 '{app_info.type}'")
-            return None
-
-        return spec_model_class(**app_info.specs)
-    except Exception as e:
-        logger.error(
-            f"앱 '{app_info.name}' (타입: {app_info.type})의 Spec 데이터 검증/변환 중 오류: {e}",
-        )
-        logger.warning(f"해당 앱 설정을 건너뜁니다. Specs: {app_info.specs}")
-        return None
 
 
 def execute_command_with_logging(

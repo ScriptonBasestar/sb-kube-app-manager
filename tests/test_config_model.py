@@ -5,7 +5,7 @@ SBKube v0.3.0 설정 모델 테스트.
 import pytest
 from pydantic import ValidationError
 
-from sbkube.models.config_v3 import HelmApp, SBKubeConfigV3, YamlApp
+from sbkube.models.config_model import HelmApp, SBKubeConfig, YamlApp
 
 
 class TestHelmApp:
@@ -54,12 +54,12 @@ class TestYamlApp:
             YamlApp(files=[])
 
 
-class TestSBKubeConfigV3:
-    """SBKubeConfigV3 메인 설정 모델 테스트."""
+class TestSBKubeConfig:
+    """SBKubeConfig 메인 설정 모델 테스트."""
 
     def test_valid_config(self):
         """정상적인 설정 검증."""
-        config = SBKubeConfigV3(
+        config = SBKubeConfig(
             namespace="production",
             apps={
                 "redis": {
@@ -78,7 +78,7 @@ class TestSBKubeConfigV3:
 
     def test_namespace_inheritance(self):
         """네임스페이스 상속 검증."""
-        config = SBKubeConfigV3(
+        config = SBKubeConfig(
             namespace="production",
             apps={
                 "redis": {
@@ -93,7 +93,7 @@ class TestSBKubeConfigV3:
 
     def test_namespace_override(self):
         """네임스페이스 오버라이드 검증."""
-        config = SBKubeConfigV3(
+        config = SBKubeConfig(
             namespace="production",
             apps={
                 "redis": {
@@ -108,7 +108,7 @@ class TestSBKubeConfigV3:
 
     def test_deployment_order_simple(self):
         """간단한 배포 순서 검증 (의존성 없음)."""
-        config = SBKubeConfigV3(
+        config = SBKubeConfig(
             namespace="test",
             apps={
                 "redis": {"type": "helm", "chart": "bitnami/redis"},
@@ -121,7 +121,7 @@ class TestSBKubeConfigV3:
 
     def test_deployment_order_with_dependencies(self):
         """의존성이 있는 배포 순서 검증."""
-        config = SBKubeConfigV3(
+        config = SBKubeConfig(
             namespace="test",
             apps={
                 "backend": {
@@ -148,7 +148,7 @@ class TestSBKubeConfigV3:
 
         # model_validator에서 초기화 시점에 순환 의존성 검출
         with pytest.raises(ConfigValidationError, match="Circular dependency"):
-            SBKubeConfigV3(
+            SBKubeConfig(
                 namespace="test",
                 apps={
                     "app1": {
@@ -170,7 +170,7 @@ class TestSBKubeConfigV3:
 
         # model_validator에서 초기화 시점에 존재하지 않는 의존성 검출
         with pytest.raises(ConfigValidationError, match="depends on non-existent app"):
-            SBKubeConfigV3(
+            SBKubeConfig(
                 namespace="test",
                 apps={
                     "backend": {
@@ -183,7 +183,7 @@ class TestSBKubeConfigV3:
 
     def test_disabled_apps(self):
         """비활성화된 앱 처리 검증."""
-        config = SBKubeConfigV3(
+        config = SBKubeConfig(
             namespace="test",
             apps={
                 "redis": {"type": "helm", "chart": "bitnami/redis", "enabled": True},
@@ -197,7 +197,7 @@ class TestSBKubeConfigV3:
 
     def test_get_apps_by_type(self):
         """타입별 앱 조회 검증."""
-        config = SBKubeConfigV3(
+        config = SBKubeConfig(
             namespace="test",
             apps={
                 "redis": {"type": "helm", "chart": "bitnami/redis"},

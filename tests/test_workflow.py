@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from sbkube.commands.build_v3 import build_helm_app
-from sbkube.commands.prepare_v3 import prepare_helm_app
-from sbkube.models.config_v3 import HelmApp, SBKubeConfigV3
+from sbkube.commands.build import build_helm_app
+from sbkube.commands.prepare import prepare_helm_app
+from sbkube.models.config_model import HelmApp, SBKubeConfig
 
 
 class TestWorkflowV3:
@@ -128,7 +128,7 @@ class TestWorkflowV3:
         config_file.write_text(yaml.dump(config_data))
 
         # 설정 로드
-        config = SBKubeConfigV3(**config_data)
+        config = SBKubeConfig(**config_data)
 
         # 의존성 순서 확인
         deployment_order = config.get_deployment_order()
@@ -196,7 +196,7 @@ class TestWorkflowV3:
 
         HTTP 다운로드 → build 단계를 검증합니다.
         """
-        from sbkube.models.config_v3 import HttpApp
+        from sbkube.models.config_model import HttpApp
 
         # 1. Mock 다운로드 파일 생성 (prepare 시뮬레이션)
         app_config_dir = tmp_path / "config"

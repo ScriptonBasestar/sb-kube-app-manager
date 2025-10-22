@@ -15,7 +15,7 @@ from sbkube.exceptions import FileOperationError
 from sbkube.utils.logger import get_logger
 
 from .base_model import ConfigLoader
-from .config_model import AppGroupScheme
+from .config_model import SBKubeConfig
 from .sources_model import SourceScheme
 
 logger = get_logger()
@@ -51,7 +51,7 @@ class ConfigManager:
 
         # Cache for loaded configurations
         self._sources_cache: dict[str, SourceScheme] = {}
-        self._app_configs_cache: dict[str, AppGroupScheme] = {}
+        self._app_configs_cache: dict[str, SBKubeConfig] = {}
         self._defaults: dict[str, Any] = {}
 
     def load_sources(
@@ -105,7 +105,7 @@ class ConfigManager:
         config_file: str = "config.yaml",
         inherit_from: str | None = None,
         validate: bool = True,
-    ) -> AppGroupScheme:
+    ) -> SBKubeConfig:
         """
         Load application configuration with inheritance support.
 
@@ -116,7 +116,7 @@ class ConfigManager:
             validate: Whether to validate against schema
 
         Returns:
-            Loaded and validated AppGroupScheme
+            Loaded and validated SBKubeConfig
         """
         config_path = Path(app_dir) / config_file
         cache_key = f"{config_path}:{inherit_from or 'no-parent'}"
@@ -127,11 +127,11 @@ class ConfigManager:
         # Load configuration with inheritance
         if inherit_from:
             config_data = self._load_with_inheritance(config_path, inherit_from)
-            config = AppGroupScheme(**config_data)
+            config = SBKubeConfig(**config_data)
         else:
             config = self.loader.load_config(
                 config_path,
-                AppGroupScheme,
+                SBKubeConfig,
                 validate_schema=validate,
             )
 
@@ -208,7 +208,7 @@ class ConfigManager:
 
         return result
 
-    def _apply_defaults(self, config: AppGroupScheme) -> AppGroupScheme:
+    def _apply_defaults(self, config: SBKubeConfig) -> SBKubeConfig:
         """
         Apply default values to configuration.
 
@@ -243,7 +243,7 @@ class ConfigManager:
 
     def validate_config_references(
         self,
-        app_config: AppGroupScheme,
+        app_config: SBKubeConfig,
         sources: SourceScheme,
     ) -> list[str]:
         """
@@ -279,7 +279,7 @@ class ConfigManager:
         sources_file: str = "sources.yaml",
         environment: str | None = None,
         validate: bool = True,
-    ) -> dict[str, AppGroupScheme]:
+    ) -> dict[str, SBKubeConfig]:
         """
         Load multiple application configurations.
 
@@ -290,7 +290,7 @@ class ConfigManager:
             validate: Whether to validate configurations
 
         Returns:
-            Dictionary mapping app_dir to AppGroupScheme
+            Dictionary mapping app_dir to SBKubeConfig
         """
         configs = {}
 
@@ -322,7 +322,7 @@ class ConfigManager:
 
     def export_merged_config(
         self,
-        app_config: AppGroupScheme,
+        app_config: SBKubeConfig,
         output_path: str | Path,
         format: str = "yaml",
     ):

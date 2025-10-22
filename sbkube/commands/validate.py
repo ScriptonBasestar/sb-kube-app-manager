@@ -4,9 +4,10 @@ from pathlib import Path
 import click
 from jsonschema import ValidationError
 from jsonschema import validate as jsonschema_validate
+from pydantic import ValidationError as PydanticValidationError
 
-from sbkube.models import get_spec_model
-from sbkube.models.config_model import AppInfoScheme
+from sbkube.models.config_model import SBKubeConfig
+from sbkube.models.sources_model import SourceScheme
 from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.logger import logger, setup_logging_from_context
@@ -110,32 +111,29 @@ class ValidateCommand(BaseCommand):
         except Exception as e:
             logger.error(f"JSON 스키마 검증 중 오류: {e}")
             raise click.Abort()
-        # 데이터 모델 검증
+        # 데이터 모델 검증 (v0.3.0 Pydantic 모델 사용)
         if schema_path.name == "config.schema.json":
-            apps = data.get("apps", [])
-            if not isinstance(apps, list):
-                logger.error(
-                    f"'apps' 필드는 리스트여야 합니다. 현재 타입: {type(apps)}",
-                )
+            try:
+                logger.info("Pydantic 모델 검증 중 (SBKubeConfig)...")
+                config = SBKubeConfig(**data)
+                logger.success(f"데이터 모델 유효성 검사 통과 (앱 {len(config.apps)}개)")
+            except PydanticValidationError as e:
+                logger.error("Pydantic 모델 검증 실패:")
+                for error in e.errors():
+                    loc = " -> ".join(str(x) for x in error["loc"])
+                    logger.error(f"  - {loc}: {error['msg']}")
                 raise click.Abort()
-            if not apps:
-                logger.warning("'apps' 목록이 비어있습니다. 모델 검증을 건너뜁니다.")
-            else:
-                errors_found = False
-                for idx, app_dict in enumerate(apps):
-                    name = app_dict.get("name", f"인덱스 {idx}의 앱")
-                    try:
-                        app_info = AppInfoScheme(**app_dict)
-                        SpecModel = get_spec_model(app_info.type)
-                        if SpecModel and app_info.specs:
-                            SpecModel(**app_info.specs)
-                    except Exception as e:
-                        logger.error(f"앱 '{name}' 데이터 모델 검증 실패: {e}")
-                        errors_found = True
-                if errors_found:
-                    raise click.Abort()
-                else:
-                    logger.success("데이터 모델 유효성 검사 통과 ('apps' 목록)")
+        elif schema_path.name == "sources.schema.json":
+            try:
+                logger.info("Pydantic 모델 검증 중 (SourceScheme)...")
+                sources = SourceScheme(**data)
+                logger.success("데이터 모델 유효성 검사 통과 (SourceScheme)")
+            except PydanticValidationError as e:
+                logger.error("Pydantic 모델 검증 실패:")
+                for error in e.errors():
+                    loc = " -> ".join(str(x) for x in error["loc"])
+                    logger.error(f"  - {loc}: {error['msg']}")
+                raise click.Abort()
         logger.success(f"'{filename}' 파일 유효성 검사 완료")
 
 

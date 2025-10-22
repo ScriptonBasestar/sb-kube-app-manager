@@ -11,7 +11,7 @@ import click
 
 from sbkube.exceptions import ConfigValidationError
 from sbkube.models.config_manager import ConfigManager
-from sbkube.models.config_model import AppGroupScheme, AppInfoScheme
+from sbkube.models.config_model import SBKubeConfig
 from sbkube.models.sources_model import SourceScheme
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.logger import LogLevel, logger
@@ -66,9 +66,9 @@ class EnhancedBaseCommand:
 
         # Configuration objects
         self.config_file_path: Path | None = None
-        self.app_group: AppGroupScheme | None = None
+        self.app_group: SBKubeConfig | None = None
         self.sources: SourceScheme | None = None
-        self.app_info_list: list[AppInfoScheme] = []
+        self.app_info_list: list = []
 
         # Validation errors tracking
         self.validation_errors: list[str] = []
@@ -134,7 +134,7 @@ class EnhancedBaseCommand:
             )
             raise click.Abort()
 
-    def load_config(self) -> AppGroupScheme:
+    def load_config(self) -> SBKubeConfig:
         """Load and validate configuration file."""
         self.config_file_path = self.find_config_file()
         logger.info(f"Using config file: {self.config_file_path}")
@@ -214,7 +214,7 @@ class EnhancedBaseCommand:
         self,
         app_types: list[str] | None = None,
         app_name: str | None = None,
-    ) -> list[AppInfoScheme]:
+    ) -> list:
         """
         Parse and filter app information with validation.
 
@@ -223,7 +223,7 @@ class EnhancedBaseCommand:
             app_name: Specific app name (None for all apps)
 
         Returns:
-            Filtered list of AppInfoScheme
+            Filtered list of 
         """
         if not self.app_group:
             logger.error("Configuration not loaded")
@@ -275,7 +275,7 @@ class EnhancedBaseCommand:
         self.app_info_list = parsed_apps
         return parsed_apps
 
-    def get_namespace(self, app_info: AppInfoScheme) -> str | None:
+    def get_namespace(self, app_info) -> str | None:
         """
         Determine namespace for the app.
         Priority: CLI > App config > Global config
@@ -319,7 +319,7 @@ class EnhancedBaseCommand:
             logger.error(f"Failed to clean/create {description}: {e}")
             raise click.Abort()
 
-    def create_app_spec(self, app_info: AppInfoScheme):
+    def create_app_spec(self, app_info):
         """Create spec object for app type with validation."""
         try:
             return app_info.get_validated_specs()

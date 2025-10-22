@@ -135,21 +135,11 @@ def validate_spec_fields(app_type: str, specs: dict[str, Any]) -> dict[str, Any]
     This function checks for required fields specific to each application type.
     """
     required_fields = {
-        "pull-helm": ["repo", "chart"],
-        "pull-helm-oci": ["repo", "chart"],
-        "pull-git": ["repo"],
-        "pull-http": ["url"],
-        "copy-app": ["paths"],
-        "copy-repo": ["paths"],
-        "copy-chart": ["paths"],
-        "copy-root": ["paths"],
-        "install-helm": [],  # path is optional, can use release_name
-        "install-kubectl": ["paths"],
-        "install-action": ["actions"],
-        "install-yaml": ["actions"],
-        "install-kustomize": ["kustomize_path"],
-        "exec": ["commands"],
-        "render": ["templates"],
+        "helm": ["repo", "chart"],  # Unified Helm type (pull + install)
+        "yaml": ["actions"],  # YAML manifests deployment
+        "action": ["actions"],  # Custom actions
+        "http": ["url"],  # HTTP download
+        "exec": ["commands"],  # Command execution
     }
 
     if app_type not in required_fields:

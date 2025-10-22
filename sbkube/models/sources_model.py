@@ -200,25 +200,11 @@ class SourceScheme(InheritableConfigModel):
             app_type = app.get("type", "")
             specs = app.get("specs", {})
 
-            if app_type in ["pull-helm", "pull-helm-oci"]:
+            if app_type == "helm":
                 repo = specs.get("repo", "")
-
-                if app_type == "pull-helm" and repo not in self.helm_repos:
+                if repo and repo not in self.helm_repos:
                     errors.append(
                         f"App '{app.get('name')}' references unknown Helm repo: {repo}",
-                    )
-
-                if app_type == "pull-helm-oci":
-                    if repo not in self.oci_registries:
-                        errors.append(
-                            f"App '{app.get('name')}' references unknown OCI registry: {repo}",
-                        )
-
-            elif app_type == "pull-git":
-                repo = specs.get("repo", "")
-                if repo not in self.git_repos:
-                    errors.append(
-                        f"App '{app.get('name')}' references unknown Git repo: {repo}",
                     )
 
         return errors

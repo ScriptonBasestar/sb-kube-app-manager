@@ -289,7 +289,7 @@ def cmd(
     console.print("[bold blue]✨ `upgrade` 작업 요약 ✨[/bold blue]")
     if upgrade_total_apps > 0:
         console.print(
-            f"[green]    총 {upgrade_total_apps}개 'install-helm' 앱 대상 중 {upgrade_success_apps}개 업그레이드/설치 성공.[/green]",
+            f"[green]    총 {upgrade_total_apps}개 'helm' 앱 대상 중 {upgrade_success_apps}개 업그레이드/설치 성공.[/green]",
         )
         if upgrade_skipped_apps > 0:
             console.print(
@@ -300,6 +300,6 @@ def cmd(
             console.print(f"[red]    {failed_apps}개 앱 업그레이드/설치 실패.[/red]")
     else:
         console.print(
-            "[yellow]    업그레이드/설치할 'install-helm' 타입의 앱이 없었습니다.[/yellow]",
+            "[yellow]    업그레이드/설치할 'helm' 타입의 앱이 없었습니다.[/yellow]",
         )
     console.print("[bold blue]✨ `upgrade` 작업 완료 ✨[/bold blue]")

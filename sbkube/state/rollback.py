@@ -164,7 +164,7 @@ class RollbackManager:
             app_type = app["type"]
             rollback_info = app.get("rollback_info", {})
 
-            if app_type == "install-helm" and rollback_info.get("type") == "helm":
+            if app_type == "helm" and rollback_info.get("type") == "helm":
                 action = {
                     "app": app["name"],
                     "type": "helm_rollback",
@@ -177,7 +177,7 @@ class RollbackManager:
                 }
                 results["actions"].append(action)
 
-            elif app_type in ["install-yaml", "install-action"]:
+            elif app_type in ["yaml", "action"]:
                 # Find resources for this app
                 app_resources = [
                     r
@@ -283,7 +283,7 @@ class RollbackManager:
 
         result = {"app": app["name"], "type": app_type, "success": True, "actions": []}
 
-        if app_type == "install-helm" and rollback_info.get("type") == "helm":
+        if app_type == "helm" and rollback_info.get("type") == "helm":
             # Rollback Helm release
             self._rollback_helm_release(
                 rollback_info["release_name"],
@@ -299,7 +299,7 @@ class RollbackManager:
                 },
             )
 
-        elif app_type in ["install-yaml", "install-action", "install-kubectl"]:
+        elif app_type in ["yaml", "action"]:
             # Rollback Kubernetes resources
             app_resources = [
                 r

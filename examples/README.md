@@ -7,7 +7,8 @@
 ```
 examples/
 ├── README.md                    # 이 파일
-├── v3-overrides/               # 차트 커스터마이징 예제 (overrides/removes)
+├── overrides/
+│   └── advanced-example/       # 차트 커스터마이징 예제 (overrides/removes)
 ├── complete-workflow/          # 전체 워크플로우 예제
 ├── k3scode/                    # k3s 코드 서버 스택
 │   ├── memory/                 # Redis, Memcached
@@ -50,7 +51,7 @@ apps:
 ### 2. 차트 커스터마이징 (Overrides & Removes)
 
 ```bash
-cd examples/v3-overrides
+cd examples/overrides/advanced-example
 sbkube apply
 ```
 
@@ -60,7 +61,7 @@ sbkube apply
 
 | 예제 | 설명 | 주요 기능 |
 |------|------|----------|
-| [v3-overrides](v3-overrides/) | 차트 커스터마이징 | overrides, removes |
+| [overrides/advanced-example](overrides/advanced-example/) | 차트 커스터마이징 | overrides, removes |
 | [complete-workflow](complete-workflow/) | 전체 워크플로우 | 모든 앱 타입, 의존성 |
 | [k3scode/memory](k3scode/memory/) | 메모리 저장소 | Redis, Memcached |
 | [k3scode/rdb](k3scode/rdb/) | 관계형 DB | PostgreSQL, MariaDB |

@@ -1,11 +1,11 @@
-# SBKube v0.3.0 Overrides 및 Removes 예제
+# SBKube 차트 커스터마이징 예제 (Advanced)
 
-이 예제는 SBKube v0.3.0의 차트 커스터마이징 기능을 보여줍니다.
+이 예제는 SBKube의 고급 차트 커스터마이징 기능을 보여줍니다.
 
 ## 디렉토리 구조
 
 ```
-v3-overrides/
+overrides/advanced-example/
 ├── config.yaml                # SBKube 설정
 ├── redis.yaml                 # Redis values
 ├── overrides/
@@ -21,7 +21,7 @@ v3-overrides/
 ### 1. Prepare (차트 다운로드)
 
 ```bash
-sbkube prepare --app-dir examples/v3-overrides
+sbkube prepare --app-dir examples/overrides/advanced-example
 ```
 
 **결과**:
@@ -42,7 +42,7 @@ charts/
 ### 2. Build (차트 커스터마이징)
 
 ```bash
-sbkube build --app-dir examples/v3-overrides
+sbkube build --app-dir examples/overrides/advanced-example
 ```
 
 **처리 과정**:
@@ -68,7 +68,7 @@ build/
 ### 3. Template (YAML 렌더링, 선택 사항)
 
 ```bash
-sbkube template --app-dir examples/v3-overrides
+sbkube template --app-dir examples/overrides/advanced-example
 ```
 
 **결과**:
@@ -80,7 +80,7 @@ rendered/
 ### 4. Deploy (클러스터 배포)
 
 ```bash
-sbkube deploy --app-dir examples/v3-overrides
+sbkube deploy --app-dir examples/overrides/advanced-example
 ```
 
 **처리 과정**:
@@ -91,7 +91,7 @@ sbkube deploy --app-dir examples/v3-overrides
 ### 또는 통합 실행
 
 ```bash
-sbkube apply --app-dir examples/v3-overrides
+sbkube apply --app-dir examples/overrides/advanced-example
 ```
 
 prepare → build → deploy를 한 번에 실행합니다.

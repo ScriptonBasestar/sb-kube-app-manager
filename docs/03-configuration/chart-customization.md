@@ -392,4 +392,4 @@ ls build/redis/README.md
 - [Configuration Schema](config-schema-v3.md) - 설정 파일 전체 구조
 - [Application Types](../02-features/application-types.md) - 앱 타입 설명
 - [Commands Reference](../02-features/commands.md) - 명령어 상세
-- [Examples](../../examples/v3-overrides/) - 실제 사용 예제
+- [Examples](../../examples/overrides/advanced-example/) - 실제 사용 예제

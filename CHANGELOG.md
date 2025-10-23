@@ -276,7 +276,7 @@ project/
 - [Migration Guide](docs/MIGRATION_V3.md) - 상세 마이그레이션 가이드
 - [Chart Customization](docs/03-configuration/chart-customization.md) - 차트 커스터마이징
 - [Helm Chart Types](docs/03-configuration/helm-chart-types.md) - Remote vs Local 차트
-- [Examples](examples/v3-overrides/) - v0.3.0 예제
+- [Examples](examples/overrides/advanced-example/) - 차트 커스터마이징 예제
 
 ### 🐛 버그 수정
 

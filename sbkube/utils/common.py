@@ -8,6 +8,23 @@ from sbkube.utils.logger import logger
 
 
 def common_click_options(func):
+    """
+    Click 명령어에 공통 옵션을 추가하는 데코레이터.
+
+    다음 옵션들을 자동으로 추가합니다:
+    - --app-dir: 앱 설정 디렉토리
+    - --base-dir: 프로젝트 루트 디렉토리
+    - --config-file: 설정 파일 이름
+    - --app: 대상 앱 이름
+    - --verbose: 상세 로그
+    - --debug: 디버그 로그
+
+    Args:
+        func: 데코레이트할 Click 명령어 함수
+
+    Returns:
+        데코레이트된 함수
+    """
     options = [
         click.option(
             "--app-dir",
@@ -88,7 +105,21 @@ def execute_command_with_logging(
 
 
 def check_required_cli_tools(app_info_list: list):
-    """앱 목록에 필요한 CLI 도구들 체크"""
+    """
+    앱 목록에 필요한 CLI 도구들을 체크합니다.
+
+    앱 타입에 따라 필요한 도구(helm, kubectl, git)를 확인하고,
+    설치되지 않은 경우 프로그램을 종료합니다.
+
+    Args:
+        app_info_list: 앱 정보 리스트
+
+    Returns:
+        dict: 필요한 도구 목록 {"helm": bool, "kubectl": bool, "git": bool}
+
+    Raises:
+        click.Abort: 필수 CLI 도구가 설치되지 않은 경우
+    """
     import click
 
     from sbkube.utils.cli_check import (

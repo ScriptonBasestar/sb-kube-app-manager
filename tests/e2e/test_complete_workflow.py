@@ -13,6 +13,7 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 
 @pytest.mark.e2e
 @pytest.mark.slow
+@pytest.mark.requires_helm
 class TestCompleteWorkflow:
     """Test complete sbkube workflow with all phases."""
 

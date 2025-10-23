@@ -12,6 +12,7 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 
 
 @pytest.mark.e2e
+@pytest.mark.requires_helm
 class TestK3scodeAIWorkflow:
     """Test k3scode AI application workflow."""
 
@@ -118,6 +119,7 @@ class TestK3scodeAIWorkflow:
 
 
 @pytest.mark.e2e
+@pytest.mark.requires_helm
 class TestK3scodeDevOpsWorkflow:
     """Test k3scode DevOps application workflow."""
 
@@ -210,6 +212,7 @@ class TestK3scodeDevOpsWorkflow:
 
 
 @pytest.mark.e2e
+@pytest.mark.requires_helm
 class TestK3scodeMemoryWorkflow:
     """Test k3scode Memory application workflow."""
 
@@ -250,6 +253,7 @@ class TestK3scodeMemoryWorkflow:
 
 
 @pytest.mark.e2e
+@pytest.mark.requires_helm
 class TestK3scodeRDBWorkflow:
     """Test k3scode RDB application workflow."""
 

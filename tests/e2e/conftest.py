@@ -5,6 +5,8 @@ This module provides fixtures and helper functions for E2E tests
 that use actual examples/ directory files.
 """
 
+import shutil
+import subprocess
 from pathlib import Path
 
 import click
@@ -218,3 +220,90 @@ def list_directory_contents():
         return files
 
     return _list
+
+
+# ============================================================================
+# Environment Check Fixtures (for E2E test stability)
+# ============================================================================
+
+
+@pytest.fixture(scope="session")
+def helm_available() -> bool:
+    """
+    Check if helm is available in PATH.
+
+    Returns:
+        bool: True if helm is available, False otherwise
+    """
+    return shutil.which("helm") is not None
+
+
+@pytest.fixture(scope="session")
+def kubectl_available() -> bool:
+    """
+    Check if kubectl is available in PATH.
+
+    Returns:
+        bool: True if kubectl is available, False otherwise
+    """
+    return shutil.which("kubectl") is not None
+
+
+@pytest.fixture(scope="session")
+def helm_version(helm_available) -> str | None:
+    """
+    Get helm version if available.
+
+    Args:
+        helm_available: Helm availability fixture
+
+    Returns:
+        str | None: Helm version string or None if not available
+    """
+    if not helm_available:
+        return None
+    try:
+        result = subprocess.run(
+            ["helm", "version", "--short"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=5,
+        )
+        return result.stdout.strip()
+    except Exception:
+        return None
+
+
+@pytest.fixture(autouse=True, scope="function")
+def skip_if_helm_unavailable(request, helm_available):
+    """
+    Auto-skip tests marked with requires_helm if helm is not available.
+
+    This fixture runs automatically for all E2E tests and checks if the test
+    requires helm. If helm is not available, the test is skipped with a clear message.
+
+    Args:
+        request: pytest request object
+        helm_available: Helm availability fixture
+    """
+    if request.node.get_closest_marker("requires_helm"):
+        if not helm_available:
+            pytest.skip("Helm is not installed or not in PATH. Install helm to run this test.")
+
+
+@pytest.fixture(autouse=True, scope="function")
+def skip_if_k8s_unavailable(request, kubectl_available):
+    """
+    Auto-skip tests marked with requires_k8s if kubectl is not available.
+
+    This fixture runs automatically for all E2E tests and checks if the test
+    requires kubectl. If kubectl is not available, the test is skipped with a clear message.
+
+    Args:
+        request: pytest request object
+        kubectl_available: kubectl availability fixture
+    """
+    if request.node.get_closest_marker("requires_k8s"):
+        if not kubectl_available:
+            pytest.skip("kubectl is not installed or not in PATH. Install kubectl to run this test.")

@@ -45,6 +45,7 @@ class TestCompleteWorkflow:
                 str(project_root),
                 "--sources",
                 str(sources_file.relative_to(project_root)),
+                "--force",
             ],
             debug_info={
                 "example_dir": example_dir,
@@ -82,6 +83,7 @@ class TestCompleteWorkflow:
                 str(project_root),
                 "--sources",
                 str(sources_file.relative_to(project_root)),
+                "--force",
             ],
         )
 
@@ -130,6 +132,7 @@ class TestCompleteWorkflow:
                 str(project_root),
                 "--sources",
                 str(sources_file.relative_to(project_root)),
+                "--force",
             ],
         )
 

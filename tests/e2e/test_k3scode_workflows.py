@@ -45,6 +45,7 @@ class TestK3scodeAIWorkflow:
                 str(project_root),
                 "--sources",
                 str(sources_file.relative_to(project_root)),
+                "--force",
             ],
             debug_info={
                 "ai_dir": ai_dir,
@@ -94,6 +95,7 @@ class TestK3scodeAIWorkflow:
                 str(project_root),
                 "--sources",
                 str(sources_file.relative_to(project_root)),
+                "--force",
             ],
         )
 
@@ -151,6 +153,7 @@ class TestK3scodeDevOpsWorkflow:
                 str(project_root),
                 "--sources",
                 str(sources_file.relative_to(project_root)),
+                "--force",
             ],
             debug_info={
                 "devops_dir": devops_dir,
@@ -188,6 +191,7 @@ class TestK3scodeDevOpsWorkflow:
                 str(project_root),
                 "--sources",
                 str(sources_file.relative_to(project_root)),
+                "--force",
             ],
         )
 
@@ -244,6 +248,7 @@ class TestK3scodeMemoryWorkflow:
                 str(project_root),
                 "--sources",
                 str(sources_file.relative_to(project_root)),
+                "--force",
             ],
         )
 
@@ -283,6 +288,7 @@ class TestK3scodeRDBWorkflow:
                 str(project_root),
                 "--sources",
                 str(sources_file.relative_to(project_root)),
+                "--force",
             ],
         )
 

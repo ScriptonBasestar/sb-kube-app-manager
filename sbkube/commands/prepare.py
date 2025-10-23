@@ -41,6 +41,7 @@ def prepare_helm_app(
     base_dir: Path,
     charts_dir: Path,
     sources_file: Path,
+    force: bool = False,
 ) -> bool:
     """
     Helm 앱 준비 (chart pull).
@@ -53,6 +54,7 @@ def prepare_helm_app(
         base_dir: 프로젝트 루트
         charts_dir: charts 디렉토리
         sources_file: sources.yaml 파일 경로
+        force: 기존 차트를 덮어쓰기
 
     Returns:
         성공 여부
@@ -101,6 +103,13 @@ def prepare_helm_app(
 
     # Chart pull
     dest_dir = charts_dir / chart_name
+
+    # If force flag is set, remove existing chart directory
+    if force and dest_dir.exists():
+        import shutil
+        console.print(f"[yellow]⚠️  Removing existing chart (--force): {dest_dir}[/yellow]")
+        shutil.rmtree(dest_dir)
+
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     console.print(f"  Pulling chart: {app.chart} → {dest_dir}")
@@ -273,12 +282,19 @@ def prepare_git_app(
     default=None,
     help="준비할 특정 앱 이름 (지정하지 않으면 모든 앱 준비)",
 )
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="기존 리소스를 덮어쓰기 (Helm chart pull --force)",
+)
 def cmd(
     app_config_dir_name: str,
     base_dir: str,
     config_file_name: str,
     sources_file_name: str,
     app_name: str | None,
+    force: bool,
 ):
     """
     SBKube prepare 명령어.
@@ -346,7 +362,7 @@ def cmd(
         success = False
 
         if isinstance(app, HelmApp):
-            success = prepare_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, sources_file_path)
+            success = prepare_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, sources_file_path, force)
         elif isinstance(app, GitApp):
             success = prepare_git_app(app_name, app, BASE_DIR, REPOS_DIR, sources_file_path)
         elif isinstance(app, HttpApp):
@@ -354,7 +370,6 @@ def cmd(
         else:
             console.print(f"[yellow]⏭️  App type '{app.type}' does not require prepare: {app_name}[/yellow]")
             success = True  # 건너뛰어도 성공으로 간주
-            continue
 
         if success:
             success_count += 1

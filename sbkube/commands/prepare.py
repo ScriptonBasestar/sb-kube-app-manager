@@ -214,25 +214,32 @@ def prepare_git_app(
     if app.repo.startswith("http://") or app.repo.startswith("https://") or app.repo.startswith("git@"):
         repo_url = app.repo
         repo_alias = app_name
+        branch = app.branch or app.ref or "main"
     else:
         # sources.yaml에서 찾기
         if app.repo not in git_sources:
             console.print(f"[red]❌ Git repo '{app.repo}' not found in sources.yaml[/red]")
             return False
-        repo_url = git_sources[app.repo]
+        repo_config = git_sources[app.repo]
+        # repo_config는 dict 형태: {url: ..., branch: ...}
+        if isinstance(repo_config, dict):
+            repo_url = repo_config.get("url")
+            branch = app.branch or app.ref or repo_config.get("branch", "main")
+        else:
+            # 구버전 호환: 단순 URL string
+            repo_url = repo_config
+            branch = app.branch or app.ref or "main"
         repo_alias = app.repo
 
     dest_dir = repos_dir / repo_alias
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     # Git clone
-    console.print(f"  Cloning: {repo_url} → {dest_dir}")
+    console.print(f"  Cloning: {repo_url} (branch: {branch}) → {dest_dir}")
     cmd = ["git", "clone", repo_url, str(dest_dir)]
 
-    if app.ref:
-        cmd.extend(["--branch", app.ref])
-    elif app.branch:
-        cmd.extend(["--branch", app.branch])
+    if branch:
+        cmd.extend(["--branch", branch])
 
     return_code, stdout, stderr = run_command(cmd)
 

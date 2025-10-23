@@ -8,7 +8,6 @@ from pydantic import ValidationError as PydanticValidationError
 
 from sbkube.models.config_model import SBKubeConfig
 from sbkube.models.sources_model import SourceScheme
-from sbkube.utils.base_command import BaseCommand
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.logger import logger, setup_logging_from_context
 
@@ -29,7 +28,7 @@ def load_json_schema(path: Path):
         raise
 
 
-class ValidateCommand(BaseCommand):
+class ValidateCommand:
     """Validate 명령 구현"""
 
     def __init__(
@@ -39,44 +38,45 @@ class ValidateCommand(BaseCommand):
         base_dir: str,
         custom_schema_path: str | None,
     ):
-        super().__init__(base_dir, ".", None, None)
+        self.base_dir = Path(base_dir)
         self.target_file = target_file
         self.schema_type = schema_type
         self.custom_schema_path = custom_schema_path
 
     def execute(self):
         """validate 명령 실행"""
-        self.execute_pre_hook()
-
         logger.heading(f"Validate 시작 - 파일: {self.target_file}")
         target_path = Path(self.target_file)
         filename = target_path.name
         logger.info(f"'{filename}' 파일 유효성 검사 시작")
-        base_path = Path(self.base_dir)
-        # 스키마 경로 결정
+        base_path = self.base_dir
+        # 파일 타입 결정
+        if not self.schema_type:
+            if filename.startswith("config."):
+                file_type = "config"
+            elif filename.startswith("sources."):
+                file_type = "sources"
+            else:
+                logger.error(
+                    f"파일 타입을 파일명({filename})으로 유추할 수 없습니다. --schema-type 옵션을 사용하세요.",
+                )
+                raise click.Abort()
+        else:
+            file_type = self.schema_type
+
+        # JSON 스키마 검증 (선택적)
+        schema_path = None
         if self.custom_schema_path:
             schema_path = Path(self.custom_schema_path)
             logger.info(f"사용자 정의 스키마 사용: {schema_path}")
         else:
-            schema_type = self.schema_type
-            if not schema_type:
-                if filename.startswith("config."):
-                    schema_type = "config"
-                elif filename.startswith("sources."):
-                    schema_type = "sources"
-                else:
-                    logger.error(
-                        f"스키마 타입을 파일명({filename})으로 유추할 수 없습니다. --schema-type 옵션을 사용하세요.",
-                    )
-                    raise click.Abort()
-            schema_path = base_path / "schemas" / f"{schema_type}.schema.json"
-            logger.info(f"자동 결정된 스키마 사용 ({schema_type}): {schema_path}")
-        if not schema_path.exists():
-            logger.error(f"JSON 스키마 파일을 찾을 수 없습니다: {schema_path}")
-            logger.error(
-                "`sbkube init`을 실행하여 기본 스키마 파일을 생성하거나, 올바른 --base-dir 또는 --schema-path를 지정하세요.",
-            )
-            raise click.Abort()
+            default_schema_path = base_path / "schemas" / f"{file_type}.schema.json"
+            if default_schema_path.exists():
+                schema_path = default_schema_path
+                logger.info(f"JSON 스키마 사용: {schema_path}")
+            else:
+                logger.warning("JSON 스키마 파일이 없습니다. Pydantic 모델 검증만 수행합니다.")
+                logger.info("스키마 생성: sbkube init 또는 --schema-path 옵션 사용")
         # 설정 파일 로드
         try:
             logger.info(f"설정 파일 로드 중: {target_path}")
@@ -85,34 +85,37 @@ class ValidateCommand(BaseCommand):
         except Exception as e:
             logger.error(f"설정 파일 ({target_path}) 로딩 실패: {e}")
             raise click.Abort()
-        # JSON 스키마 로드
-        try:
-            logger.info(f"JSON 스키마 로드 중: {schema_path}")
-            schema_def = load_json_schema(schema_path)
-            logger.success("JSON 스키마 로드 성공")
-        except Exception:
-            raise click.Abort()
-        # JSON 스키마 검사
-        try:
-            logger.info("JSON 스키마 기반 유효성 검사 중...")
-            jsonschema_validate(instance=data, schema=schema_def)
-            logger.success("JSON 스키마 유효성 검사 통과")
-        except ValidationError as e:
-            logger.error(f"JSON 스키마 유효성 검사 실패: {e.message}")
-            if e.path:
-                logger.error(f"Path: {'.'.join(str(p) for p in e.path)}")
-            if e.instance:
-                logger.error(
-                    f"Instance: {json.dumps(e.instance, indent=2, ensure_ascii=False)}",
-                )
-            if e.schema_path:
-                logger.error(f"Schema Path: {'.'.join(str(p) for p in e.schema_path)}")
-            raise click.Abort()
-        except Exception as e:
-            logger.error(f"JSON 스키마 검증 중 오류: {e}")
-            raise click.Abort()
+
+        # JSON 스키마 검증 (있을 경우만)
+        if schema_path:
+            try:
+                logger.info(f"JSON 스키마 로드 중: {schema_path}")
+                schema_def = load_json_schema(schema_path)
+                logger.success("JSON 스키마 로드 성공")
+            except Exception:
+                raise click.Abort()
+
+            try:
+                logger.info("JSON 스키마 기반 유효성 검사 중...")
+                jsonschema_validate(instance=data, schema=schema_def)
+                logger.success("JSON 스키마 유효성 검사 통과")
+            except ValidationError as e:
+                logger.error(f"JSON 스키마 유효성 검사 실패: {e.message}")
+                if e.path:
+                    logger.error(f"Path: {'.'.join(str(p) for p in e.path)}")
+                if e.instance:
+                    logger.error(
+                        f"Instance: {json.dumps(e.instance, indent=2, ensure_ascii=False)}",
+                    )
+                if e.schema_path:
+                    logger.error(f"Schema Path: {'.'.join(str(p) for p in e.schema_path)}")
+                raise click.Abort()
+            except Exception as e:
+                logger.error(f"JSON 스키마 검증 중 오류: {e}")
+                raise click.Abort()
+
         # 데이터 모델 검증 (Pydantic 모델 사용)
-        if schema_path.name == "config.schema.json":
+        if file_type == "config":
             try:
                 logger.info("Pydantic 모델 검증 중 (SBKubeConfig)...")
                 config = SBKubeConfig(**data)
@@ -123,7 +126,7 @@ class ValidateCommand(BaseCommand):
                     loc = " -> ".join(str(x) for x in error["loc"])
                     logger.error(f"  - {loc}: {error['msg']}")
                 raise click.Abort()
-        elif schema_path.name == "sources.schema.json":
+        elif file_type == "sources":
             try:
                 logger.info("Pydantic 모델 검증 중 (SourceScheme)...")
                 _sources = SourceScheme(**data)

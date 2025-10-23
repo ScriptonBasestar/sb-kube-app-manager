@@ -219,7 +219,22 @@ def cleanup(days: int, keep_per_app: int, dry_run: bool):
 
         if dry_run:
             logger.info(f"DRY RUN: Would delete deployments older than {days} days")
-            # TODO: Implement dry run logic to show what would be deleted
+            # Dry run: Show what would be deleted without actually deleting
+            from datetime import datetime, timedelta
+
+            cutoff_date = datetime.now() - timedelta(days=days)
+            deployments_to_delete = db.session.query(db.DeploymentRecord).filter(
+                db.DeploymentRecord.timestamp < cutoff_date
+            ).order_by(db.DeploymentRecord.timestamp.desc()).all()
+
+            if deployments_to_delete:
+                logger.info(f"Would delete {len(deployments_to_delete)} deployment(s):")
+                for dep in deployments_to_delete[:10]:  # Show max 10
+                    logger.info(f"  - {dep.app_name} ({dep.timestamp})")
+                if len(deployments_to_delete) > 10:
+                    logger.info(f"  ... and {len(deployments_to_delete) - 10} more")
+            else:
+                logger.info("No deployments would be deleted")
         else:
             deleted = db.cleanup_old_deployments(
                 days_to_keep=days,

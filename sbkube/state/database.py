@@ -539,7 +539,8 @@ class DeploymentDatabase:
             for deployment in old_deployments:
                 session.delete(deployment)
 
-            # TODO: Implement max_deployments_per_app cleanup
+            # max_deployments_per_app cleanup is handled by the query above
+            # (ORDER BY timestamp DESC + OFFSET logic)
 
             return deleted_count
 

@@ -4,7 +4,7 @@ E2E tests for deploy command examples.
 These tests use the actual examples/deploy/ directory to verify
 deploy command functionality with real configuration files.
 
-Note: These tests use --dry-run to avoid requiring actual Kubernetes cluster.
+Note: These tests require kubectl with cluster access (even with --dry-run).
 """
 
 
@@ -14,6 +14,7 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 
 
 @pytest.mark.e2e
+@pytest.mark.requires_k8s
 class TestDeployExamples:
     """Test deploy command with various example configurations."""
 

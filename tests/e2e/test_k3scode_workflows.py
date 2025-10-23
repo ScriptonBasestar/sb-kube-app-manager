@@ -226,9 +226,8 @@ class TestK3scodeMemoryWorkflow:
         memory_dir = examples_dir / "k3scode" / "memory"
         sources_file = examples_dir / "k3scode" / "sources.yaml"
 
-        # Memory uses config.yml instead of config.yaml
-        config_file = memory_dir / "config.yml"
-        assert config_file.exists(), f"config.yml not found: {config_file}"
+        config_file = memory_dir / "config.yaml"
+        assert config_file.exists(), f"config.yaml not found: {config_file}"
         assert sources_file.exists(), f"sources.yaml not found: {sources_file}"
 
         # Get project root

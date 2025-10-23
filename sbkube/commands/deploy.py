@@ -186,6 +186,7 @@ def deploy_yaml_app(
 
         if dry_run:
             cmd.append("--dry-run=client")
+            cmd.append("--validate=false")
 
         console.print(f"  Applying: {yaml_file}")
         return_code, stdout, stderr = run_command(cmd)
@@ -244,6 +245,7 @@ def deploy_action_app(
 
         if dry_run:
             cmd.append("--dry-run=client")
+            cmd.append("--validate=false")
 
         console.print(f"  {action_type.capitalize()}: {action_path}")
         return_code, stdout, stderr = run_command(cmd)
@@ -331,6 +333,7 @@ def deploy_kustomize_app(
 
     if dry_run:
         cmd.append("--dry-run=client")
+        cmd.append("--validate=false")
 
     console.print(f"  Applying: {kustomize_path}")
     return_code, stdout, stderr = run_command(cmd)

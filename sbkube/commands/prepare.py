@@ -74,7 +74,7 @@ def prepare_helm_app(
         return False
 
     sources = load_config_file(sources_file)
-    helm_sources = sources.get("helm", {})
+    helm_sources = sources.get("helm_repos", {})
 
     if repo_name not in helm_sources:
         console.print(f"[red]❌ Helm repo '{repo_name}' not found in sources.yaml[/red]")
@@ -199,7 +199,7 @@ def prepare_git_app(
         return False
 
     sources = load_config_file(sources_file)
-    git_sources = sources.get("git", {})
+    git_sources = sources.get("git_repos", {})
 
     # app.repo가 alias인지 URL인지 판단
     if app.repo.startswith("http://") or app.repo.startswith("https://") or app.repo.startswith("git@"):

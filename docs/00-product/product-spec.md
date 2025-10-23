@@ -14,13 +14,13 @@
 
 ### 1.1 prepare - 소스 준비
 
-**목적**: 외부 소스(Helm 차트, Git 리포지토리, OCI 이미지)를 로컬로 다운로드 및 준비
+**목적**: 외부 소스(Helm 차트, Git 리포지토리, HTTP URL)를 로컬로 다운로드 및 준비
 
 **지원 애플리케이션 타입**:
-- `helm`: Helm 저장소에서 차트 다운로드
-- `helm-oci`: OCI 레지스트리에서 차트 풀
+- `helm`: Helm 차트 배포 (remote repository 또는 local path)
 - `git`: Git 리포지토리 클론
-- `http`: 로컬 파일 복사
+- `http`: HTTP(S) URL에서 파일 다운로드
+- `kustomize`: Kustomize 디렉토리 처리
 
 **사용자 시나리오**:
 ```
@@ -50,15 +50,17 @@
 **목적**: 준비된 소스를 배포 가능한 형태로 변환 및 패키징
 
 **지원 애플리케이션 타입**:
-- `helm`, `helm-oci`, `git`: 다운로드된 소스 정리
-- `http`: 로컬 파일/디렉토리 복사
+- `helm`: Helm 차트 커스터마이징 (overrides, removes 적용)
+- `git`: Git 리포지토리 특정 경로 추출
+- `http`: 다운로드된 파일 정리
+- `kustomize`: Kustomize 빌드 실행
 
 **사용자 시나리오**:
 ```
-개발자 Bob은 커스텀 설정 파일을 빌드 디렉토리에 포함하려 합니다.
-1. config.yaml에 copy-app 타입으로 local-configs 정의
+개발자 Bob은 Helm 차트에 커스텀 values를 적용하려 합니다.
+1. config.yaml에 helm 타입 앱 정의 및 values 파일 지정
 2. sbkube build 실행
-→ build/ 디렉토리에 모든 소스가 배포 가능한 형태로 준비됨
+→ build/ 디렉토리에 커스터마이징된 차트 준비
 ```
 
 **입력**:
@@ -171,7 +173,8 @@ apps:
 **지원 기능**:
 - Helm 저장소 자동 추가 (`helm repo add`)
 - 차트 버전 고정 및 업데이트
-- OCI 레지스트리 지원 (`helm-oci`)
+- Remote 및 Local 차트 모두 지원
+- Values override 및 파일 제거 기능
 
 ### 2.2 Git 리포지토리 통합
 
@@ -201,58 +204,127 @@ apps:
 
 ### 2.3 YAML 매니페스트 직접 관리
 
-**기능**: 로컬 YAML 파일을 Jinja2 템플릿으로 렌더링 후 배포
+**기능**: 로컬 YAML 파일을 직접 배포
 
 **설정 예시**:
 ```yaml
 apps:
-  - name: custom-resources
+  custom-resources:
     type: yaml
-    specs:
-      actions:
-        - type: apply
-          path: manifests/namespace.yaml
-        - type: apply
-          path: manifests/deployment.yaml
+    files:
+      - manifests/namespace.yaml
+      - manifests/deployment.yaml
+      - manifests/service.yaml
 ```
 
 **지원 기능**:
-- Jinja2 템플릿 변수 치환
 - 여러 YAML 파일 순차 적용
-- kubectl apply/delete 지원
+- kubectl apply를 통한 배포
+- 네임스페이스 오버라이드
 
 ## 3. 설정 관리 시스템
 
 ### 3.1 config.yaml 스키마
 
-**필수 필드**:
+**기본 구조**:
 ```yaml
 namespace: <string>  # 기본 네임스페이스
-apps:
-  - name: <string>   # 앱 이름 (고유)
-    type: <string>   # 앱 타입 (helm, helm 등)
+
+apps:  # 앱 정의 (dict 형식, key = 앱 이름)
+  <app-name>:
+    type: <string>   # 앱 타입 (helm, yaml, action, exec, git, http, kustomize)
     enabled: <bool>  # 활성화 여부 (기본: true)
-    specs: <object>  # 타입별 상세 설정
+    depends_on: [<string>]  # 의존성 (다른 앱 이름 목록)
+    # ... 타입별 추가 필드 (평탄화됨, specs 래퍼 없음)
 ```
 
-**선택 필드**:
+**앱 타입별 필드**:
+
+**`helm` 타입**:
 ```yaml
-deps: [<string>]     # 전역 의존성 (미사용 예정)
-release_name: <string>  # Helm 릴리스 이름 (helm 전용)
-namespace: <string>     # 앱별 네임스페이스 오버라이드
+apps:
+  redis:
+    type: helm
+    chart: <string>          # "repo/chart" or "./path" or "/path"
+    version: <string>        # 차트 버전 (선택, remote chart만)
+    values: [<string>]       # values 파일 목록
+    overrides: [<string>]    # 덮어쓸 파일 목록
+    removes: [<string>]      # 제거할 파일 패턴
+    namespace: <string>      # 네임스페이스 오버라이드
+    release_name: <string>   # Helm 릴리스 이름
+```
+
+**`yaml` 타입**:
+```yaml
+apps:
+  manifests:
+    type: yaml
+    files: [<string>]        # YAML 파일 목록
+    namespace: <string>
+```
+
+**`action` 타입**:
+```yaml
+apps:
+  setup:
+    type: action
+    actions:                 # kubectl 액션 목록
+      - type: apply          # apply, create, delete
+        path: <string>
+```
+
+**`exec` 타입**:
+```yaml
+apps:
+  post-install:
+    type: exec
+    commands: [<string>]     # 실행할 명령어 목록
+```
+
+**`git` 타입**:
+```yaml
+apps:
+  manifests-repo:
+    type: git
+    repo: <string>           # Git repository URL
+    path: <string>           # 리포지토리 내 경로 (선택)
+    branch: <string>         # 브랜치 (기본: main)
+    ref: <string>            # 특정 commit/tag (선택)
+```
+
+**`http` 타입**:
+```yaml
+apps:
+  external-manifest:
+    type: http
+    url: <string>            # HTTP(S) URL
+    dest: <string>           # 저장할 파일 경로
+    headers: {<key>: <value>}  # HTTP 헤더 (선택)
+```
+
+**`kustomize` 타입**:
+```yaml
+apps:
+  kustomize-app:
+    type: kustomize
+    path: <string>           # kustomization.yaml이 있는 디렉토리
 ```
 
 ### 3.2 sources.yaml 스키마
 
 ```yaml
-helm_repos:
-  - name: <string>   # 저장소 이름
-    url: <string>    # 저장소 URL
+# Helm 차트 리포지토리 (dict 형식)
+helm:
+  <repo-name>: <string>  # 저장소 이름: URL 매핑
+  # 예:
+  # bitnami: https://charts.bitnami.com/bitnami
+  # stable: https://charts.helm.sh/stable
 
-git_repos:
-  - name: <string>   # 리포지토리 이름
-    url: <string>    # Git URL
-    ref: <string>    # 브랜치/태그/커밋
+# Git 리포지토리 (향후 지원 예정)
+git:
+  <repo-name>:
+    url: <string>      # Git URL
+    ref: <string>      # 브랜치/태그/커밋 (선택)
 ```
 
 ### 3.3 Pydantic 검증
@@ -266,8 +338,9 @@ git_repos:
 **오류 메시지 예시**:
 ```
 ValidationError: config.yaml
-  apps[0].specs.repo: field required
-  apps[1].type: invalid app type 'helmm' (typo?)
+  apps.redis.chart: field required
+  apps.backend.type: invalid app type 'helmm' (did you mean 'helm'?)
+  apps.database.version: version requires remote chart (repo/chart format)
 ```
 
 ## 4. 상태 관리 시스템

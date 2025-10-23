@@ -30,9 +30,9 @@ class TestWorkflowV3:
         app_config_dir = tmp_path / "config"
         overrides_dir = app_config_dir / "overrides" / "redis"
 
-        charts_dir.mkdir(parents=True)
-        app_config_dir.mkdir(parents=True)
-        overrides_dir.mkdir(parents=True)
+        charts_dir.mkdir(parents=True, exist_ok=True)
+        app_config_dir.mkdir(parents=True, exist_ok=True)
+        overrides_dir.mkdir(parents=True, exist_ok=True)
 
         # 2. sources.yaml 생성
         sources_file = tmp_path / "sources.yaml"
@@ -49,10 +49,10 @@ class TestWorkflowV3:
         # 3. Mock chart (prepare 시뮬레이션)
         # 실제로는 helm pull을 실행하지만, 테스트에서는 미리 차트를 생성
         mock_chart_dir = charts_dir / "redis" / "redis"
-        mock_chart_dir.mkdir(parents=True)
+        mock_chart_dir.mkdir(parents=True, exist_ok=True)
         (mock_chart_dir / "Chart.yaml").write_text("name: redis\nversion: 17.13.2")
         (mock_chart_dir / "values.yaml").write_text("replicaCount: 1\nimage:\n  tag: 7.0")
-        (mock_chart_dir / "templates").mkdir()
+        (mock_chart_dir / "templates").mkdir(exist_ok=True)
         (mock_chart_dir / "templates" / "deployment.yaml").write_text(
             "kind: Deployment\nmetadata:\n  name: redis"
         )
@@ -145,16 +145,16 @@ class TestWorkflowV3:
         """
         # 1. 로컬 차트 생성
         local_chart_dir = tmp_path / "my-chart"
-        local_chart_dir.mkdir()
+        local_chart_dir.mkdir(exist_ok=True)
         (local_chart_dir / "Chart.yaml").write_text("name: my-chart\nversion: 1.0.0")
         (local_chart_dir / "values.yaml").write_text("enabled: true\nport: 8080")
-        (local_chart_dir / "templates").mkdir()
+        (local_chart_dir / "templates").mkdir(exist_ok=True)
         (local_chart_dir / "templates" / "deployment.yaml").write_text("kind: Deployment")
         (local_chart_dir / "LICENSE").write_text("MIT License")
 
         # 2. Overrides 디렉토리
         overrides_dir = tmp_path / "overrides" / "my-app"
-        overrides_dir.mkdir(parents=True)
+        overrides_dir.mkdir(parents=True, exist_ok=True)
         (overrides_dir / "values.yaml").write_text("enabled: false\nport: 9000")
 
         # 3. HelmApp 설정 (로컬 차트)
@@ -200,7 +200,7 @@ class TestWorkflowV3:
 
         # 1. Mock 다운로드 파일 생성 (prepare 시뮬레이션)
         app_config_dir = tmp_path / "config"
-        app_config_dir.mkdir()
+        app_config_dir.mkdir(exist_ok=True)
         downloaded_file = app_config_dir / "downloaded.yaml"
         downloaded_file.write_text("apiVersion: v1\nkind: ConfigMap")
 
@@ -211,7 +211,7 @@ class TestWorkflowV3:
         )
 
         # 3. Build 실행
-        from sbkube.commands.build_v3 import build_http_app
+        from sbkube.commands.build import build_http_app
 
         build_dir = tmp_path / "build"
         success = build_http_app(

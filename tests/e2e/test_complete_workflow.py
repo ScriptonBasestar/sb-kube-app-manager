@@ -106,6 +106,7 @@ class TestCompleteWorkflow:
         # Verify output
         assert "build" in result.output.lower() or "빌드" in result.output
 
+    @pytest.mark.requires_k8s
     def test_complete_workflow_deploy_phase_dry_run(self, runner, examples_dir, tmp_path):
         """
         Test deploy phase of complete workflow (dry-run).

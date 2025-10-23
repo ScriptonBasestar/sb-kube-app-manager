@@ -7,10 +7,11 @@ from pydantic import ValidationError
 
 from sbkube.exceptions import ConfigValidationError
 from sbkube.models.config_model import (
-    AppCopySpec,
-    AppInfoScheme,
-    AppInstallActionSpec,
-    get_spec_model,
+    HelmApp,
+    YamlApp,
+    ActionApp,
+    ExecApp,
+    HttpApp,
 )
 
 

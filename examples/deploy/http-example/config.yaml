@@ -1,0 +1,27 @@
+# SBKube Configuration - HTTP Example
+# This demonstrates downloading and deploying files from HTTP(S) URLs
+
+namespace: http-demo
+
+apps:
+  # Example 1: Download a single YAML manifest from a URL
+  nginx-deployment:
+    type: http
+    url: https://raw.githubusercontent.com/kubernetes/website/main/content/en/examples/application/deployment.yaml
+    dest: nginx-deployment.yaml    # Destination filename
+
+  # Example 2: Download multiple files
+  sample-config:
+    type: http
+    url: https://example.com/manifests/config.yaml
+    dest: config/sample-config.yaml
+    enabled: false                  # Disabled by default (example URL)
+
+  # Example 3: Download and deploy in sequence
+  kustomize-base:
+    type: http
+    url: https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+    dest: cert-manager.yaml
+    namespace: cert-manager
+    depends_on:
+      - nginx-deployment            # Deploy after nginx-deployment

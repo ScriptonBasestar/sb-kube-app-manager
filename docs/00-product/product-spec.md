@@ -145,30 +145,6 @@ DevOps 엔지니어 Dave는 전체 스택을 배포하려 합니다.
 **기능**: Helm 저장소에서 차트 다운로드 및 설치
 
 **설정 예시**:
-```yaml
-# sources.yaml
-helm_repos:
-  - name: bitnami
-    url: https://charts.bitnami.com/bitnami
-
-# config.yaml
-apps:
-  - name: redis-pull
-    type: helm
-    specs:
-      repo: bitnami
-      chart: redis
-      version: "18.0.0"
-      dest: redis
-
-  - name: redis-install
-    type: helm
-    release_name: my-redis
-    specs:
-      path: redis
-      values:
-        - values/redis-prod.yaml
-```
 
 **지원 기능**:
 - Helm 저장소 자동 추가 (`helm repo add`)

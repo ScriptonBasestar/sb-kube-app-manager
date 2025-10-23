@@ -175,7 +175,7 @@ BaseModel (Pydantic)
   │   ├─ enabled: bool
   │   ├─ namespace: Optional[str]
   │   ├─ release_name: Optional[str]
-  │   └─ specs: Union[AppSpecBase, dict]
+  │   # Flattened structure (no specs wrapper)
   │
   ├─ AppSpecBase (추상)
   │   ├─ AppPullHelmSpec
@@ -343,7 +343,7 @@ config.yaml (YAML)
     │               │
     │               ├─► name: str
     │               ├─► type: str
-    │               └─► specs: AppSpecBase
+    │               # Direct fields at app level
     │
     └─► 명령어 실행
             │

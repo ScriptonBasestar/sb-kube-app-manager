@@ -88,7 +88,6 @@ class AppInfoScheme(BaseModel):
     enabled: bool = True
     namespace: Optional[str] = None
     release_name: Optional[str] = None
-    specs: Dict[str, Any] = Field(default_factory=dict)
 ```
 
 #### 특징

@@ -132,7 +132,6 @@ class AppConfig(BaseModel):
     name: str
     type: str
     enabled: bool = True
-    specs: dict
 
 class SBKubeConfig(BaseModel):
     namespace: str

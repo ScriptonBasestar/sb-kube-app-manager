@@ -1,12 +1,25 @@
-# SBKube Configuration
-# Example: Deploy YAML manifests
+# SBKube Configuration - YAML Example
+# This demonstrates deploying raw Kubernetes YAML manifests
 
+# Default namespace for all apps
 namespace: example-yaml
 
+# Application definitions
 apps:
+  # Deploy Nginx using raw YAML manifests
   nginx:
-    type: yaml
-    files:
-      - manifests/nginx-deployment.yaml
-      - manifests/nginx-service.yaml
-    namespace: example-yaml
+    type: yaml                           # Application type: yaml manifests
+    files:                               # List of YAML files to deploy
+      - manifests/nginx-deployment.yaml  # Deployment manifest
+      - manifests/nginx-service.yaml     # Service manifest
+    namespace: example-yaml              # Optional: override global namespace
+
+  # You can add more yaml apps here
+  # Example: Deploy ConfigMaps and Secrets
+  # configs:
+  #   type: yaml
+  #   files:
+  #     - manifests/configmap.yaml
+  #     - manifests/secret.yaml
+  #   depends_on:
+  #     - nginx                          # Deploy after nginx

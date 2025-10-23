@@ -1,21 +1,37 @@
-# SBKube Configuration
-# Example: Execute custom commands
+# SBKube Configuration - Exec Example
+# This demonstrates executing custom shell commands during deployment
 
+# Default namespace for all apps
 namespace: example-exec
 
+# Application definitions
 apps:
+  # Run pre-deployment validation checks
   pre-deployment-check:
-    type: exec
-    commands:
+    type: exec                           # Application type: execute commands
+    commands:                            # List of shell commands (executed sequentially)
       - echo "Starting pre-deployment checks..."
-      - kubectl get nodes
+      - kubectl get nodes                # Verify cluster connectivity
       - echo "Pre-deployment checks completed!"
 
+  # Run post-deployment cleanup tasks
   post-deployment-cleanup:
     type: exec
     commands:
       - echo "Running post-deployment cleanup..."
       - kubectl delete pods --field-selector=status.phase=Succeeded -n example-exec
       - echo "Cleanup completed!"
-    depends_on:
+    depends_on:                          # Execute after other apps
       - pre-deployment-check
+
+  # Example: Database migration
+  # db-migration:
+  #   type: exec
+  #   commands:
+  #     - echo "Running database migrations..."
+  #     - kubectl exec -n database deploy/postgres -- psql -U admin -d app -f /migrations/001_init.sql
+  #     - echo "Migrations completed!"
+  #   enabled: false
+
+# Note: Commands are executed on the machine running SBKube, not inside containers
+# Use kubectl exec for in-container commands

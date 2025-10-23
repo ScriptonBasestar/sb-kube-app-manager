@@ -167,7 +167,7 @@ git_repos:
 # config.yaml
 apps:
   - name: app-manifests
-    type: pull-git
+    type: git
     specs:
       repo: my-app
       dest: manifests

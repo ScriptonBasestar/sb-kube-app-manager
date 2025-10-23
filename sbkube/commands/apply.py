@@ -146,7 +146,7 @@ def cmd(
     if not skip_prepare:
         console.print("\n[bold cyan]📦 Step 1: Prepare[/bold cyan]")
 
-        from sbkube.commands.prepare_v3 import cmd as prepare_cmd
+        from sbkube.commands.prepare import cmd as prepare_cmd
 
         ctx = click.Context(prepare_cmd)
         ctx.invoke(
@@ -164,7 +164,7 @@ def cmd(
     if not skip_build:
         console.print("\n[bold cyan]🔨 Step 2: Build[/bold cyan]")
 
-        from sbkube.commands.build_v3 import cmd as build_cmd
+        from sbkube.commands.build import cmd as build_cmd
 
         ctx = click.Context(build_cmd)
         ctx.invoke(
@@ -180,7 +180,7 @@ def cmd(
     # Step 3: Deploy
     console.print("\n[bold cyan]🚀 Step 3: Deploy[/bold cyan]")
 
-    from sbkube.commands.deploy_v3 import cmd as deploy_cmd
+    from sbkube.commands.deploy import cmd as deploy_cmd
 
     ctx = click.Context(deploy_cmd)
     ctx.invoke(

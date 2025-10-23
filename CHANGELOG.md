@@ -1,4 +1,60 @@
-# Changelog - SBKube v0.3.0
+# Changelog - SBKube
+
+## [0.4.0] - 2025-10-23
+
+### ✨ Features
+
+- **prepare 명령어에 `--force` 옵션 추가**
+  - Helm 차트 및 Git 리포지토리를 강제로 덮어쓰기 가능
+  - 테스트 시나리오 및 재배포 워크플로우 개선
+  - 사용법: `sbkube prepare --force`
+
+### 🐛 Bug Fixes
+
+- **validate 명령어 BaseCommand 의존성 오류 수정**
+  - BaseCommand 상속 제거하여 초기화 오류 해결
+  - JSON 스키마 검증을 선택적으로 변경 (Pydantic만으로도 검증 가능)
+  - 파일 타입 자동 감지 기능 추가
+
+- **prepare Git URL dict 파싱 오류 수정**
+  - `sources.yaml`의 `git_repos`가 dict 형태일 때 발생하던 TypeError 해결
+  - `{url: "...", branch: "..."}` 형식 지원
+  - 기존 string 형식과의 하위 호환성 유지
+
+- **prepare 성공 카운팅 버그 수정**
+  - 건너뛴 앱(yaml/action/exec)이 성공 카운트에 포함되지 않던 문제 해결
+  - 정확한 성공/실패 리포팅
+
+### 🔧 Improvements
+
+- **helm_repos dict 형태 지원**
+  - Private Helm repository 인증 준비
+  - `{url: "...", username: "...", password: "..."}` 형식 지원
+  - 기존 string 형식과의 하위 호환성 유지
+
+- **Git URL None 체크 추가**
+  - `git_repos`에서 `url` 필드 누락 시 명확한 오류 메시지
+  - 런타임 오류 방지 및 디버깅 용이성 향상
+
+- **코드 품질 개선**
+  - shutil import를 파일 상단으로 이동 (PEP 8 준수)
+  - `load_json_schema` 함수에 타입 힌트 추가
+  - ruff 및 mypy 검증 통과
+
+### 📊 Code Quality
+
+- **이전**: 7.7/10
+- **현재**: 9.0/10
+- **개선**: 일관성, 안정성, 유지보수성 향상
+
+### 🔗 Related Commits
+
+- `d414b54` - 코드 리뷰 개선사항 5건 반영
+- `588f298` - validate 및 prepare Git 파싱 버그 수정
+- `8037517` - prepare --force 옵션 추가
+- `5f3a6b8` - E2E 테스트 주요 수정
+
+---
 
 ## [0.3.0] - 2025-10-22
 

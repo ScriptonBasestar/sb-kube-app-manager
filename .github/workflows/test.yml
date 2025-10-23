@@ -51,15 +51,17 @@ jobs:
         source .venv/bin/activate
         case "${{ matrix.test-category }}" in
           "unit")
-            pytest -v tests/unit/ tests/test_imports.py --cov=sbkube --cov-report=xml --cov-report=html || exit 1
+            pytest -v tests/unit/ tests/test_imports.py --cov=sbkube --cov-report=xml --cov-report=html
             ;;
           "e2e")
-            pytest -v tests/e2e/ -m e2e --cov=sbkube --cov-report=xml --cov-report=html || exit 1
+            pytest -v tests/e2e/ -m e2e --cov=sbkube --cov-report=xml --cov-report=html
             ;;
         esac
+      continue-on-error: false
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
+      if: hashFiles('coverage.xml') != ''
       with:
         file: ./coverage.xml
         flags: unittests
@@ -67,14 +69,14 @@ jobs:
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
-      if: always()
+      if: always() && hashFiles('coverage.xml') != ''
       with:
         name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}-${{ matrix.test-category }}
         path: |
           htmlcov/
           coverage.xml
           .coverage
-        if-no-files-found: warn
+        if-no-files-found: ignore
 
   lint:
     runs-on: ubuntu-latest

@@ -105,9 +105,9 @@ def print_helm_connection_help():
     helm_dir = os.path.join(home, ".config", "helm")
     # 0. helm 설치 여부
     if shutil.which("helm") is None:
-        print("\n❌ helm 명령이 시스템에 설치되어 있지 않습니다.")
-        print("Helm을 설치하거나, asdf 등 버전 매니저에서 helm 버전을 활성화하세요.")
-        print("https://helm.sh/docs/intro/install/")
+        logger.error("helm 명령이 시스템에 설치되어 있지 않습니다.")
+        logger.info("Helm을 설치하거나, asdf 등 버전 매니저에서 helm 버전을 활성화하세요.")
+        logger.info("https://helm.sh/docs/intro/install/")
         return
     # 1. repo 목록
     try:
@@ -119,9 +119,9 @@ def print_helm_connection_help():
         )
         repos = json.loads(result.stdout)
     except Exception as e:
-        print("\n⚠️ helm이 정상적으로 동작하지 않습니다.")
-        print(f"에러: {e}")
-        print("helm version, helm repo list 명령이 정상 동작하는지 확인하세요.")
+        logger.warning("helm이 정상적으로 동작하지 않습니다.")
+        logger.error(f"에러: {e}")
+        logger.info("helm version, helm repo list 명령이 정상 동작하는지 확인하세요.")
         return
     # 2. repo 파일 목록
     try:
@@ -136,17 +136,17 @@ def print_helm_connection_help():
         repo_files = []
     # 3. 안내 메시지
     if repos:
-        print("등록된 helm repo 목록:")
+        logger.info("등록된 helm repo 목록:")
         for repo in repos:
-            print(f"  * {repo.get('name', '')}: {repo.get('url', '')}")
-        print("helm repo add <name> <url> 명령으로 repo를 추가할 수 있습니다.")
+            logger.info(f"  * {repo.get('name', '')}: {repo.get('url', '')}")
+        logger.info("helm repo add <name> <url> 명령으로 repo를 추가할 수 있습니다.")
     else:
-        print("등록된 helm repo가 없습니다.")
+        logger.info("등록된 helm repo가 없습니다.")
     if repo_files:
-        print("\n~/.config/helm 디렉토리 내 파일:")
+        logger.info("~/.config/helm 디렉토리 내 파일:")
         for f in repo_files:
-            print(f"  - {f}")
-    print("helm version, helm repo list 명령이 정상 동작하는지 확인하세요.\n")
+            logger.info(f"  - {f}")
+    logger.info("helm version, helm repo list 명령이 정상 동작하는지 확인하세요.")
 
 
 def print_kube_contexts():

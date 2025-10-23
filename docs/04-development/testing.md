@@ -62,11 +62,23 @@ uv run -m sbkube.cli deploy --base-dir examples/k3scode --app-dir rdb --namespac
 
 ### upgrade
 
-TODO
+```bash
+# Helm 릴리스 업그레이드 테스트
+uv run -m sbkube.cli upgrade --base-dir examples/basic --app-dir . --app-name redis --namespace test
+
+# 전체 앱 업그레이드
+uv run -m sbkube.cli upgrade --base-dir examples/k3scode --app-dir memory --namespace data-memory
+```
 
 ### delete
 
-TODO
+```bash
+# 특정 앱 삭제
+uv run -m sbkube.cli delete --base-dir examples/basic --app-dir . --app-name redis --namespace test
+
+# 전체 앱 삭제
+uv run -m sbkube.cli delete --base-dir examples/k3scode --app-dir rdb --namespace data-rdb --all
+```
 
 ### validate
 

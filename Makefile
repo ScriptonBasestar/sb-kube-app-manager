@@ -15,6 +15,8 @@ help:
 	@echo "Testing:"
 	@echo "  make test            Run all tests"
 	@echo "  make test-unit       Run unit tests (tests/unit/)"
+	@echo "  make test-quick      Run fast unit tests (no E2E, no slow)"
+	@echo "  make test-unit-only  Run unit tests excluding E2E"
 	@echo "  make test-integration Run integration tests (tests/integration/)"
 	@echo "  make test-performance Run performance tests (tests/performance/)"
 	@echo "  make test-e2e        Run end-to-end tests (tests/e2e/)"
@@ -78,6 +80,14 @@ test-helm:
 
 test-fast:
 	pytest -v -m "not slow"
+
+# Quick unit tests (no E2E, no slow tests)
+test-quick:
+	pytest -v -m "not e2e and not slow" tests/unit/
+
+# Unit tests only (no E2E)
+test-unit-only:
+	pytest -v -m "not e2e" tests/unit/
 
 # Specific test directories
 test-commands:

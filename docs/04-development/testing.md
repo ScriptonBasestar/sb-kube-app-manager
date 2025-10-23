@@ -94,7 +94,115 @@ sbkube validate a000_infra/config.yaml
 
 sbkube validate somefile.yaml --schema schemas/custom.schema.json
 
-## Unit TEST
+## 자동화 테스트 (Automated Testing)
+
+### 테스트 실행 방법
+
+#### 전체 테스트
+
+```bash
+# 모든 테스트 실행 (단위 + 통합 + E2E)
+make test
+
+# 커버리지 포함 전체 테스트
+make test-coverage
+```
+
+#### 단위 테스트 (Unit Tests)
+
+```bash
+# 모든 단위 테스트 (tests/unit/)
+make test-unit
+
+# 빠른 단위 테스트 (E2E 제외, slow 제외)
+make test-quick
+
+# E2E 제외 단위 테스트
+make test-unit-only
+```
+
+#### E2E 테스트 (End-to-End Tests)
+
+```bash
+# E2E 테스트만 실행
+make test-e2e
+```
+
+**참고**: E2E 테스트는 Kubernetes 클러스터와 네트워크 의존성이 필요하므로 로컬 개발 시에는 `make test-quick`을 사용하는 것을 권장합니다.
+
+#### 특정 모듈 테스트
+
+```bash
+# 명령어 테스트
+make test-commands
+
+# 모델 테스트
+make test-models
+
+# State 테스트
+make test-state
+
+# Utils 테스트
+make test-utils
+```
+
+#### 마커 기반 테스트
+
+```bash
+# Kubernetes 필요 테스트
+make test-k8s
+
+# Helm 필요 테스트
+make test-helm
+
+# 빠른 테스트 (slow 제외)
+make test-fast
+```
+
+### 테스트 구조
+
+```
+tests/
+├── unit/                 # 단위 테스트
+│   ├── commands/        # 명령어 테스트
+│   ├── models/          # 모델 검증 테스트
+│   ├── state/           # 상태 관리 테스트
+│   └── utils/           # 유틸리티 테스트
+├── integration/          # 통합 테스트
+└── e2e/                  # E2E 테스트 (네트워크/클러스터 필요)
+```
+
+### 테스트 마커
+
+- `@pytest.mark.e2e`: E2E 테스트 (느림, 네트워크 필요)
+- `@pytest.mark.slow`: 느린 테스트
+- `@pytest.mark.requires_k8s`: Kubernetes 클러스터 필요
+- `@pytest.mark.requires_helm`: Helm CLI 필요
+
+### 로컬 개발 권장 워크플로우
+
+```bash
+# 1. 빠른 피드백 (코드 수정 후)
+make test-quick
+
+# 2. 전체 단위 테스트 (커밋 전)
+make test-unit
+
+# 3. 전체 테스트 (PR 전)
+make test
+```
+
+### CI/CD에서의 테스트
+
+```bash
+# 린트 + 테스트 + 커버리지
+make ci
+
+# 자동 수정 + 테스트
+make ci-fix
+```
+
+## 수동 테스트 (Manual Testing)
 
 ### prepare
 
@@ -113,19 +221,3 @@ pytest tests/test_template.py -v
 ### deploy
 
 pytest tests/test_deploy.py -v
-
-______________________________________________________________________
-
---namespace, --include-crds, --kube-version 등 Helm 추가 인자 지원
-
---stdout 옵션으로 제어
-
---dry-run, --debug 연동
-
---dry-run, --wait, --timeout 지원
-
-Helm 로그와 stdout을 파일로 저장 옵션
-
-kubectl apply -f 방식도 선택 가능하게 (--method=kubectl|helm)
-
-test_deploy.py 혹은 sbkube init

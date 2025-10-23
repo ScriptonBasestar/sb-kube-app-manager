@@ -5,21 +5,18 @@ Tests for all app types and the main SBKubeConfig model.
 """
 
 import pytest
-from pydantic import ValidationError
 
 from sbkube.exceptions import ConfigValidationError
 from sbkube.models.config_model import (
-    HelmApp,
-    YamlApp,
     ActionApp,
     ExecApp,
     GitApp,
-    KustomizeApp,
+    HelmApp,
     HttpApp,
-    AppConfig,
+    KustomizeApp,
     SBKubeConfig,
+    YamlApp,
 )
-
 
 # ============================================================================
 # HelmApp Tests
@@ -597,7 +594,7 @@ class TestSBKubeConfig:
 
     def test_sbkube_config_invalid_app_name(self):
         """Test that invalid Kubernetes app names raise validation error."""
-        with pytest.raises(ConfigValidationError) as exc_info:
+        with pytest.raises(ConfigValidationError):
             SBKubeConfig(
                 namespace="default",
                 apps={
@@ -608,7 +605,7 @@ class TestSBKubeConfig:
 
     def test_sbkube_config_invalid_namespace(self):
         """Test that invalid Kubernetes namespace raises validation error."""
-        with pytest.raises(ConfigValidationError) as exc_info:
+        with pytest.raises(ConfigValidationError):
             SBKubeConfig(
                 namespace="Invalid_Namespace",
                 apps={

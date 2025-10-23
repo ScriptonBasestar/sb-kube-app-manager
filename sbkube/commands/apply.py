@@ -108,7 +108,7 @@ def cmd(
 
     # 배포 순서 출력
     deployment_order = config.get_deployment_order()
-    console.print(f"\n[cyan]📋 Deployment order (based on dependencies):[/cyan]")
+    console.print("\n[cyan]📋 Deployment order (based on dependencies):[/cyan]")
     for idx, app in enumerate(deployment_order, 1):
         app_config = config.apps[app]
         deps = getattr(app_config, "depends_on", [])

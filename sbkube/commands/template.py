@@ -77,7 +77,7 @@ def template_helm_app(
 
     if not chart_path or not chart_path.exists():
         console.print(f"[red]❌ Chart not found for app: {app_name}[/red]")
-        console.print(f"[yellow]💡 Run 'sbkube prepare' and 'sbkube build' first[/yellow]")
+        console.print("[yellow]💡 Run 'sbkube prepare' and 'sbkube build' first[/yellow]")
         return False
 
     # 2. helm template 명령어 구성
@@ -161,7 +161,7 @@ def template_yaml_app(
     build_path = build_dir / app_name
 
     if not build_path.exists():
-        console.print(f"[yellow]⚠️ Build directory not found, using original files[/yellow]")
+        console.print("[yellow]⚠️ Build directory not found, using original files[/yellow]")
         # build 없으면 원본 파일 사용
         combined_content = ""
         for file_rel_path in app.files:
@@ -195,7 +195,7 @@ def template_yaml_app(
         console.print(f"[green]✅ Rendered YAML saved: {output_file}[/green]")
         return True
 
-    console.print(f"[red]❌ No content to render[/red]")
+    console.print("[red]❌ No content to render[/red]")
     return False
 
 
@@ -239,7 +239,7 @@ def template_http_app(
                 shutil.copy2(source_file, dest_file)
                 console.print(f"  ✓ {source_file.name} → {dest_file.name}")
 
-        console.print(f"[green]✅ HTTP app files copied[/green]")
+        console.print("[green]✅ HTTP app files copied[/green]")
         return True
     else:
         # build 없으면 원본 다운로드 파일 사용
@@ -247,7 +247,7 @@ def template_http_app(
 
         if not source_file.exists():
             console.print(f"[red]❌ Downloaded file not found: {source_file}[/red]")
-            console.print(f"[yellow]💡 Run 'sbkube prepare' first[/yellow]")
+            console.print("[yellow]💡 Run 'sbkube prepare' first[/yellow]")
             return False
 
         dest_file = rendered_dir / f"{app_name}-{source_file.name}"

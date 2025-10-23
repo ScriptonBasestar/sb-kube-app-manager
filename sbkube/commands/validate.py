@@ -126,7 +126,7 @@ class ValidateCommand(BaseCommand):
         elif schema_path.name == "sources.schema.json":
             try:
                 logger.info("Pydantic 모델 검증 중 (SourceScheme)...")
-                sources = SourceScheme(**data)
+                _sources = SourceScheme(**data)
                 logger.success("데이터 모델 유효성 검사 통과 (SourceScheme)")
             except PydanticValidationError as e:
                 logger.error("Pydantic 모델 검증 실패:")

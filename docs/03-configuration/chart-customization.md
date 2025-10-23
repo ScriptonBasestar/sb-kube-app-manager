@@ -51,17 +51,18 @@ project/
 ### 처리 과정
 
 1. **prepare 단계**: 원본 차트를 `charts/redis/redis/`로 다운로드
-2. **build 단계**:
+1. **build 단계**:
    - `charts/redis/redis/` → `build/redis/` 복사
    - `overrides/redis/values.yaml` → `build/redis/values.yaml` 교체
    - `overrides/redis/templates/service.yaml` → `build/redis/templates/service.yaml` 교체
-3. **deploy 단계**: `build/redis/` 디렉토리의 차트로 배포
+1. **deploy 단계**: `build/redis/` 디렉토리의 차트로 배포
 
 ### 사용 사례
 
 #### 1. values.yaml 커스터마이징
 
 **원본** (`charts/redis/redis/values.yaml`):
+
 ```yaml
 replicaCount: 1
 resources:
@@ -70,6 +71,7 @@ resources:
 ```
 
 **오버라이드** (`overrides/redis/values.yaml`):
+
 ```yaml
 replicaCount: 3
 resources:
@@ -78,6 +80,7 @@ resources:
 ```
 
 **결과** (`build/redis/values.yaml`):
+
 ```yaml
 replicaCount: 3
 resources:
@@ -88,6 +91,7 @@ resources:
 #### 2. Service 타입 변경
 
 **원본** (`charts/myapp/myapp/templates/service.yaml`):
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -100,6 +104,7 @@ spec:
 ```
 
 **오버라이드** (`overrides/myapp/templates/service.yaml`):
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -189,9 +194,10 @@ apps:
 ```
 
 **처리 순서**:
+
 1. 차트 복사: `charts/redis/redis/` → `build/redis/`
-2. Overrides 적용: 파일 교체
-3. Removes 적용: 파일 삭제
+1. Overrides 적용: 파일 교체
+1. Removes 적용: 파일 삭제
 
 ## 로컬 차트 커스터마이징
 
@@ -209,11 +215,12 @@ apps:
 ```
 
 **처리 과정**:
+
 1. **build 단계**:
    - `./charts/my-app/` → `build/my-app/` 복사
    - Overrides 적용
    - Removes 적용
-2. **deploy 단계**: `build/my-app/` 디렉토리로 배포
+1. **deploy 단계**: `build/my-app/` 디렉토리로 배포
 
 ## 명령어 사용법
 
@@ -269,6 +276,7 @@ sbkube deploy --app-dir my-project --dry-run
 ### 1. 환경별 커스터마이징
 
 **Production 환경**:
+
 ```yaml
 # config-prod.yaml
 apps:
@@ -282,6 +290,7 @@ apps:
 ```
 
 **Staging 환경**:
+
 ```yaml
 # config-staging.yaml
 apps:
@@ -328,11 +337,13 @@ apps:
 - 차트 내 경로와 동일한 구조 유지
 
 **올바른 예**:
+
 ```
 overrides/redis/templates/service.yaml  # ✅
 ```
 
 **잘못된 예**:
+
 ```
 overrides/service.yaml  # ❌ (앱 이름 디렉토리 없음)
 overrides/redis/service.yaml  # ❌ (templates 디렉토리 누락)
@@ -375,6 +386,7 @@ tree overrides/redis/
 ```
 
 **해결**:
+
 - 파일 경로 확인: `overrides/<app-name>/<file-path>`
 - 앱 이름이 config.yaml의 키와 일치하는지 확인
 

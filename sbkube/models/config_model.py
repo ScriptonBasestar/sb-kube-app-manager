@@ -7,12 +7,11 @@ SBKube Configuration Models
 - 의존성: depends_on 필드
 """
 
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from .base_model import ConfigBaseModel
-
 
 # ============================================================================
 # App Type Models (Discriminated Union)
@@ -298,7 +297,7 @@ class HttpApp(ConfigBaseModel):
 # ============================================================================
 
 AppConfig = Annotated[
-    Union[HelmApp, YamlApp, ActionApp, ExecApp, GitApp, KustomizeApp, HttpApp],
+    HelmApp | YamlApp | ActionApp | ExecApp | GitApp | KustomizeApp | HttpApp,
     Field(discriminator="type"),
 ]
 
@@ -361,7 +360,7 @@ class SBKubeConfig(ConfigBaseModel):
         return v
 
     @model_validator(mode="after")
-    def apply_namespace_inheritance(self) -> "SBKubeConfigV3":
+    def apply_namespace_inheritance(self) -> "SBKubeConfig":
         """
         네임스페이스 상속 및 글로벌 레이블/어노테이션 적용.
 
@@ -378,7 +377,7 @@ class SBKubeConfig(ConfigBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_dependencies(self) -> "SBKubeConfigV3":
+    def validate_dependencies(self) -> "SBKubeConfig":
         """
         의존성 검증:
         1. 존재하지 않는 앱에 대한 의존성 체크
@@ -432,7 +431,7 @@ class SBKubeConfig(ConfigBaseModel):
             배포할 앱 이름 리스트 (순서대로)
         """
         enabled_apps = self.get_enabled_apps()
-        in_degree = {name: 0 for name in enabled_apps}
+        in_degree = dict.fromkeys(enabled_apps, 0)
         graph = {name: [] for name in enabled_apps}
 
         # 그래프 구성

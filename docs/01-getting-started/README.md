@@ -124,6 +124,7 @@ apps:
 ```
 
 **SBKube의 주요 개선사항**:
+
 - `helm` + `helm` → 단일 `helm` 타입
 - `yaml` → `yaml` 타입 (간소화)
 - `action` → `action` 타입
@@ -133,12 +134,14 @@ apps:
 ### Step 4: 워크플로우 실행
 
 **권장 방법** - 통합 실행:
+
 ```bash
 # 모든 단계 자동 실행 (prepare → build → deploy)
 sbkube apply --app-dir config --namespace default
 ```
 
 **또는 단계별 실행**:
+
 ```bash
 # 1. 외부 소스 준비 (Helm 차트 다운로드)
 sbkube prepare --app-dir config
@@ -154,6 +157,7 @@ sbkube deploy --app-dir config --namespace default
 ```
 
 **빠른 배포** (커스터마이징 없는 경우):
+
 ```bash
 # build 단계 건너뛰기
 sbkube apply --app-dir config --namespace default --skip-build
@@ -239,7 +243,7 @@ apps:
     path: charts/app
 ```
 
-### 패턴 5: 차트 커스터마이징 
+### 패턴 5: 차트 커스터마이징
 
 ```yaml
 apps:

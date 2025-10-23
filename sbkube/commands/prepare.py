@@ -6,7 +6,6 @@ SBKube prepare 명령어.
 - git 타입: 리포지토리 clone
 """
 
-import shutil
 from pathlib import Path
 
 import click
@@ -232,7 +231,7 @@ def prepare_git_app(
         console.print(f"[yellow]⚠️ Failed to clone (might already exist): {stderr}[/yellow]")
         # 이미 존재하면 pull
         if dest_dir.exists() and (dest_dir / ".git").exists():
-            console.print(f"  Pulling latest changes...")
+            console.print("  Pulling latest changes...")
             cmd = ["git", "-C", str(dest_dir), "pull"]
             return_code, stdout, stderr = run_command(cmd)
             if return_code != 0:

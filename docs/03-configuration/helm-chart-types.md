@@ -2,7 +2,7 @@
 
 SBKube은 다양한 형태의 Helm 차트를 지원합니다.
 
----
+______________________________________________________________________
 
 ## 📦 지원하는 Chart 형식
 
@@ -21,16 +21,18 @@ apps:
 ```
 
 **동작 방식**:
+
 1. `sbkube prepare`: `bitnami/redis` 차트를 `charts/redis/` 디렉토리에 pull
-2. `sbkube deploy`: `charts/redis/redis/` 경로의 차트로 install
+1. `sbkube deploy`: `charts/redis/redis/` 경로의 차트로 install
 
 **sources.yaml 예시**:
+
 ```yaml
 helm:
   bitnami: https://charts.bitnami.com/bitnami
 ```
 
----
+______________________________________________________________________
 
 ### 2. Local Chart (로컬 차트)
 
@@ -46,15 +48,17 @@ apps:
 ```
 
 **동작 방식**:
+
 1. `sbkube prepare`: 로컬 차트이므로 **건너뜀** (prepare 불필요)
-2. `sbkube deploy`: `<app-dir>/charts/my-app/` 경로의 차트로 직접 install
+1. `sbkube deploy`: `<app-dir>/charts/my-app/` 경로의 차트로 직접 install
 
 **사용 사례**:
+
 - 커스텀 Helm 차트 개발 중
 - Git에서 클론한 차트를 수동으로 수정한 경우
 - 로컬에서 작성한 차트
 
----
+______________________________________________________________________
 
 ### 3. Absolute Path Chart (절대 경로 차트)
 
@@ -70,10 +74,11 @@ apps:
 ```
 
 **동작 방식**:
-1. `sbkube prepare`: 절대 경로이므로 **건너뜀**
-2. `sbkube deploy`: `/opt/helm-charts/system-chart/` 경로의 차트로 install
 
----
+1. `sbkube prepare`: 절대 경로이므로 **건너뜀**
+1. `sbkube deploy`: `/opt/helm-charts/system-chart/` 경로의 차트로 install
+
+______________________________________________________________________
 
 ## 🔀 워크플로우 비교
 
@@ -108,7 +113,7 @@ sbkube deploy --app-dir myapp
 sbkube apply --app-dir myapp
 ```
 
----
+______________________________________________________________________
 
 ## 🎯 실전 예제
 
@@ -145,6 +150,7 @@ apps:
 ```
 
 **디렉토리 구조**:
+
 ```
 myapp/
 ├── config.yaml
@@ -162,6 +168,7 @@ myapp/
 ```
 
 **실행**:
+
 ```bash
 # prepare: redis만 pull (backend, monitoring은 건너뜀)
 sbkube prepare --app-dir myapp
@@ -170,7 +177,7 @@ sbkube prepare --app-dir myapp
 sbkube deploy --app-dir myapp
 ```
 
----
+______________________________________________________________________
 
 ### 예제 2: Pull 후 커스터마이징
 
@@ -186,6 +193,7 @@ apps:
 ```
 
 **워크플로우**:
+
 ```bash
 # 1. Chart pull
 sbkube prepare --app-dir myapp
@@ -206,7 +214,7 @@ EOF
 sbkube deploy --app-dir myapp
 ```
 
----
+______________________________________________________________________
 
 ### 예제 3: 로컬 차트 개발
 
@@ -221,6 +229,7 @@ apps:
 ```
 
 **차트 생성**:
+
 ```bash
 # Helm 차트 스캐폴딩
 cd myapp/
@@ -234,20 +243,18 @@ vim myapp-chart/templates/deployment.yaml
 sbkube deploy --app-dir .
 ```
 
----
+______________________________________________________________________
 
 ## 🔍 Chart 타입 판단 로직
 
 SBKube는 다음 규칙으로 chart 타입을 자동 판단합니다:
 
-| chart 값 | 타입 | 예시 |
-|----------|------|------|
-| `repo/chart` | Remote | `bitnami/redis` |
-| `./path` | Local (상대) | `./charts/my-app` |
-| `/path` | Local (절대) | `/opt/charts/app` |
-| `chart-name` | Local (상대) | `my-chart` (=`./my-chart`) |
+| chart 값 | 타입 | 예시 | |----------|------|------| | `repo/chart` | Remote | `bitnami/redis` | | `./path` | Local (상대) |
+`./charts/my-app` | | `/path` | Local (절대) | `/opt/charts/app` | | `chart-name` | Local (상대) | `my-chart`
+(=`./my-chart`) |
 
 **구현 코드**:
+
 ```python
 def is_remote_chart(self) -> bool:
     # 로컬 경로 패턴
@@ -260,7 +267,7 @@ def is_remote_chart(self) -> bool:
     return False
 ```
 
----
+______________________________________________________________________
 
 ## ⚙️ 고급 사용법
 
@@ -294,7 +301,7 @@ sbkube deploy --app-dir myapp --app backend
 sbkube deploy --app-dir myapp --dry-run
 ```
 
----
+______________________________________________________________________
 
 ## 🚨 주의 사항
 
@@ -310,7 +317,7 @@ sbkube deploy --app-dir myapp --dry-run
 - **Chart.yaml 필수**: 유효한 Helm 차트 구조여야 함
 - **prepare 불필요**: 로컬 차트는 prepare 단계 건너뜀
 
----
+______________________________________________________________________
 
 ## 💡 Best Practices
 
@@ -360,7 +367,7 @@ apps:
       - postgres  # 명시적 의존성
 ```
 
----
+______________________________________________________________________
 
 ## 🔗 참고 문서
 

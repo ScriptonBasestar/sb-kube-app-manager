@@ -129,7 +129,7 @@ lint-check:
 	@echo "Running bandit security check..."
 	uv run bandit -r $(LINT_DIRS_SECURITY) --skip B101,B404,B603,B607,B602 --severity-level medium --quiet --exclude "*/tests/*,*/scripts/*,*/debug/*,*/examples/*" || echo "✅ Security check completed"
 	@echo "Running mdformat check..."
-	uv run mdformat --check --diff *.md docs/**/*.md --wrap 120 || echo "✅ Markdown format check completed"
+	uv run mdformat --check *.md docs/**/*.md --wrap 120 || echo "✅ Markdown format check completed"
 
 lint: lint-check
 

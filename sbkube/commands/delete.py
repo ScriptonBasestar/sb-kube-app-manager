@@ -4,7 +4,7 @@ import click
 from pydantic import ValidationError as PydanticValidationError
 from rich.console import Console
 
-from sbkube.models.config_model import SBKubeConfig, YamlApp, ActionApp
+from sbkube.models.config_model import ActionApp, SBKubeConfig, YamlApp
 from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,

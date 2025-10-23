@@ -22,7 +22,10 @@ from sbkube.models.config_model import (
     SBKubeConfig,
     YamlApp,
 )
-from sbkube.utils.cli_check import check_helm_installed_or_exit, check_kubectl_installed_or_exit
+from sbkube.utils.cli_check import (
+    check_helm_installed_or_exit,
+    check_kubectl_installed_or_exit,
+)
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 
@@ -75,7 +78,7 @@ def deploy_helm_app(
 
             if not source_path.exists():
                 console.print(f"[red]❌ Chart not found: {source_path}[/red]")
-                console.print(f"[yellow]💡 Run 'sbkube prepare' first[/yellow]")
+                console.print("[yellow]💡 Run 'sbkube prepare' first[/yellow]")
                 return False
             chart_path = source_path
         else:
@@ -129,7 +132,7 @@ def deploy_helm_app(
 
     if dry_run:
         cmd.append("--dry-run")
-        console.print(f"[yellow]🔍 Dry-run mode enabled[/yellow]")
+        console.print("[yellow]🔍 Dry-run mode enabled[/yellow]")
 
     # 명령어 출력
     console.print(f"  Command: {' '.join(cmd)}")
@@ -225,7 +228,7 @@ def deploy_action_app(
         action_namespace = action.get("namespace", namespace)
 
         if not action_path:
-            console.print(f"[red]❌ Action path not specified[/red]")
+            console.print("[red]❌ Action path not specified[/red]")
             return False
 
         # 경로 해석 (URL 또는 로컬 파일)

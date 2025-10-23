@@ -1,26 +1,32 @@
 # SBKube 모듈 아키텍처
 
 ## 개요
-이 문서는 SBKube 모듈의 상세한 아키텍처 설계를 다룹니다. 사용자용 개요는 [docs/02-features/architecture.md](../../02-features/architecture.md)를 참조하세요.
+
+이 문서는 SBKube 모듈의 상세한 아키텍처 설계를 다룹니다. 사용자용 개요는 [docs/02-features/architecture.md](../../02-features/architecture.md)를
+참조하세요.
 
 ## 아키텍처 원칙
 
 ### 1. 단순성 (Simplicity)
+
 - 모놀리식 구조로 복잡성 최소화
 - 명확한 계층 분리
 - 직관적인 명령어 체계
 
 ### 2. 확장성 (Extensibility)
+
 - 플러그인 패턴 (BaseCommand)
 - 새로운 앱 타입 쉽게 추가
 - 새로운 명령어 독립적 구현
 
 ### 3. 안정성 (Reliability)
+
 - 강타입 검증 (Pydantic)
 - 명확한 에러 메시지
 - 상태 관리 및 롤백
 
 ### 4. 사용자 경험 (User Experience)
+
 - Rich 콘솔 UI
 - 실시간 진행 상태 표시
 - Dry-run 모드 지원
@@ -75,6 +81,7 @@
 ### 1. CLI 엔트리포인트 (cli.py)
 
 #### SbkubeGroup 클래스
+
 ```python
 class SbkubeGroup(click.Group):
     """사용자 정의 Click Group"""
@@ -90,6 +97,7 @@ class SbkubeGroup(click.Group):
 ```
 
 **책임**:
+
 - 전역 옵션 파싱 (--kubeconfig, --context, --namespace, --verbose)
 - 명령어별 필수 도구 검증 (kubectl, helm, git)
 - 컨텍스트 전달 (ctx.obj)
@@ -98,6 +106,7 @@ class SbkubeGroup(click.Group):
 ### 2. Command Layer (commands/)
 
 #### BaseCommand 패턴
+
 ```python
 class BaseCommand(ABC):
     """모든 명령어의 기본 클래스"""
@@ -128,12 +137,14 @@ class BaseCommand(ABC):
 ```
 
 **책임**:
+
 - 설정 파일 로딩 및 검증
 - 앱 필터링 로직 (--app 옵션)
 - 공통 전처리 (execute_pre_hook)
 - 에러 처리 템플릿
 
 #### 명령어별 구현 예시 (PrepareCommand)
+
 ```python
 class PrepareCommand(BaseCommand):
     def execute(self):
@@ -162,6 +173,7 @@ class PrepareCommand(BaseCommand):
 ### 3. Model Layer (models/)
 
 #### 타입 계층 구조
+
 ```
 BaseModel (Pydantic)
   ├─ SBKubeConfig
@@ -190,15 +202,17 @@ BaseModel (Pydantic)
 ```
 
 **검증 흐름**:
+
 1. YAML 파일 파싱 (PyYAML)
-2. Pydantic 모델로 변환 (`model_validate()`)
-3. 필드 타입 검증 (자동)
-4. 커스텀 검증 로직 (`@field_validator`)
-5. 검증 실패 시 명확한 오류 메시지
+1. Pydantic 모델로 변환 (`model_validate()`)
+1. 필드 타입 검증 (자동)
+1. 커스텀 검증 로직 (`@field_validator`)
+1. 검증 실패 시 명확한 오류 메시지
 
 ### 4. State Management (state/)
 
 #### 데이터베이스 스키마
+
 ```sql
 CREATE TABLE deployment_states (
     id TEXT PRIMARY KEY,
@@ -217,6 +231,7 @@ CREATE INDEX idx_created_at ON deployment_states(created_at DESC);
 ```
 
 #### 상태 추적 흐름
+
 ```python
 # 1. 배포 시작 전
 state_tracker.begin_deployment(app_name, cluster, namespace)
@@ -242,6 +257,7 @@ history = state_tracker.get_history(
 ### 5. Validation System (validators/)
 
 #### 검증 계층
+
 ```
 ┌─────────────────────────────────────────┐
 │     Pre-Deployment Validation           │
@@ -323,6 +339,7 @@ history = state_tracker.get_history(
 ```
 
 ### 설정 파일 처리 흐름
+
 ```
 config.yaml (YAML)
     │
@@ -357,6 +374,7 @@ config.yaml (YAML)
 ### 1. 새 앱 타입 추가 가이드
 
 **단계 1: Spec 모델 정의**
+
 ```python
 # models/config_model.py
 class AppMyNewTypeSpec(AppSpecBase):
@@ -373,6 +391,7 @@ class AppMyNewTypeSpec(AppSpecBase):
 ```
 
 **단계 2: AppInfoScheme 업데이트**
+
 ```python
 class AppInfoScheme(BaseModel):
     type: Literal[
@@ -383,6 +402,7 @@ class AppInfoScheme(BaseModel):
 ```
 
 **단계 3: get_spec_model 매핑 추가**
+
 ```python
 def get_spec_model(app_type: str):
     mapping = {
@@ -393,6 +413,7 @@ def get_spec_model(app_type: str):
 ```
 
 **단계 4: 각 명령어에서 처리 로직 구현**
+
 ```python
 # commands/prepare.py
 class PrepareCommand(BaseCommand):
@@ -410,6 +431,7 @@ class PrepareCommand(BaseCommand):
 ### 2. 새 명령어 추가 가이드
 
 **단계 1: 명령어 클래스 작성**
+
 ```python
 # commands/my_command.py
 from sbkube.utils.base_command import BaseCommand
@@ -430,6 +452,7 @@ class MyCommand(BaseCommand):
 ```
 
 **단계 2: Click 명령어 정의**
+
 ```python
 @click.command(name="my-command")
 @click.option('--app-dir', default='config', help='설정 디렉토리')
@@ -448,6 +471,7 @@ def cmd(ctx, app_dir, app, my_option):
 ```
 
 **단계 3: cli.py에 등록**
+
 ```python
 # cli.py
 from sbkube.commands import my_command
@@ -458,6 +482,7 @@ main.add_command(my_command.cmd)
 ## 성능 고려사항
 
 ### 병렬 처리 전략 (향후 구현)
+
 ```python
 from concurrent.futures import ThreadPoolExecutor
 
@@ -474,27 +499,32 @@ def prepare_apps_parallel(apps: List[AppInfoScheme]):
 ```
 
 ### 캐싱 전략
+
 - **Helm 차트**: `charts/` 디렉토리에 버전별 캐시
 - **Git 리포지토리**: `repos/` 디렉토리에 클론 유지
 - **설정 파일**: 파싱 결과 메모리 캐시 (동일 파일 재로딩 방지)
 
 ### 메모리 관리
+
 - 대규모 YAML 파일: 스트리밍 파싱 (향후)
 - Helm 템플릿 출력: 파일로 바로 저장 (메모리 적재 최소화)
 
 ## 보안 고려사항
 
 ### 1. Secrets 관리
+
 - Kubernetes Secrets는 kubectl/Helm에 위임
 - 설정 파일에 민감 정보 직접 저장 금지
 - 환경변수 또는 외부 Secrets 관리 도구 사용 권장
 
 ### 2. 권한 최소화
+
 - kubeconfig 파일 권한 확인 (600)
 - 대상 네임스페이스에만 접근
 - RBAC 권한 사전 검증
 
 ### 3. 입력 검증
+
 - 모든 외부 입력 Pydantic으로 검증
 - Shell injection 방지 (subprocess 안전 사용)
 - 경로 탐색 공격 방지 (Path().resolve() 사용)
@@ -502,6 +532,7 @@ def prepare_apps_parallel(apps: List[AppInfoScheme]):
 ## 에러 복구 전략
 
 ### 1. 부분 배포 실패 처리
+
 ```python
 deployed_apps = []
 try:
@@ -515,11 +546,13 @@ except Exception as e:
 ```
 
 ### 2. 롤백 메커니즘
+
 - 배포 전 현재 상태 스냅샷
 - 실패 시 이전 Helm 릴리스로 자동 롤백 (옵션)
 - 상태 DB에 롤백 이벤트 기록
 
 ### 3. 재시도 로직 (utils/retry.py)
+
 ```python
 @retry(max_attempts=3, backoff_seconds=5)
 def download_helm_chart(repo, chart, version):
@@ -530,16 +563,19 @@ def download_helm_chart(repo, chart, version):
 ## 테스트 전략
 
 ### 1. 단위 테스트
+
 - 각 명령어 클래스별 테스트
 - Pydantic 모델 검증 테스트
 - 유틸리티 함수 테스트 (helm_util, file_loader)
 
 ### 2. 통합 테스트
+
 - 전체 워크플로우 테스트 (prepare → deploy)
 - Helm/kubectl 연동 테스트 (mock 사용)
 - 상태 관리 시스템 테스트 (SQLite in-memory)
 
 ### 3. E2E 테스트
+
 - testcontainers[k3s]를 사용한 실제 클러스터 테스트
 - 실제 Helm 차트 배포 시나리오
 - 롤백 및 상태 조회 테스트
@@ -547,25 +583,27 @@ def download_helm_chart(repo, chart, version):
 ## 향후 개선 계획
 
 ### 단기 (v0.3.x)
+
 - 병렬 처리 구현
 - 플러그인 시스템 베타
 - 웹 UI 프로토타입
 
 ### 중기 (v0.4.x - v0.6.x)
+
 - 멀티 클러스터 지원
 - 분산 잠금 (동시 배포 방지)
 - GitOps 통합 (Flux, ArgoCD)
 
 ### 장기 (v1.0.x)
+
 - Kubernetes Operator 개발
 - API 서버 모드
 - 엔터프라이즈 기능 (HA, Multi-tenancy)
 
----
+______________________________________________________________________
 
-**문서 버전**: 1.0
-**마지막 업데이트**: 2025-10-20
-**관련 문서**:
+**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
+
 - [MODULE.md](MODULE.md) - 모듈 정의 및 경계
 - [API_CONTRACT.md](API_CONTRACT.md) - API 계약 명세
 - [docs/02-features/architecture.md](../../02-features/architecture.md) - 사용자용 아키텍처 개요

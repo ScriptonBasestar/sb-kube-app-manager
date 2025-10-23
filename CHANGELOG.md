@@ -11,6 +11,7 @@ SBKube v0.3.0은 사용성을 대폭 개선한 메이저 업데이트입니다. 
 #### 1. 간결한 설정 구조
 
 **Before (v0.2.x)**:
+
 ```yaml
 apps:
   - name: redis-pull
@@ -29,6 +30,7 @@ apps:
 ```
 
 **After (v0.3.0)**:
+
 ```yaml
 apps:
   redis:
@@ -39,6 +41,7 @@ apps:
 ```
 
 **개선 사항**:
+
 - Apps를 list → dict로 변경 (앱 이름이 키)
 - `pull-helm` + `install-helm` → 단일 `helm` 타입으로 통합
 - `specs` 제거 (모든 필드를 앱 레벨로 평탄화)
@@ -64,6 +67,7 @@ apps:
 ```
 
 **개선 사항**:
+
 - Remote vs Local 차트를 자동으로 구분
 - 별도의 타입 지정 불필요
 - 더 직관적인 설정
@@ -98,6 +102,7 @@ apps:
 ```
 
 **개선 사항**:
+
 - `overrides`: 차트 파일을 커스텀 버전으로 교체
 - `removes`: 불필요한 파일/디렉토리 제거
 - `labels`, `annotations`: Kubernetes 메타데이터 추가
@@ -122,6 +127,7 @@ sbkube apply    # prepare → build → deploy 자동 실행
 ```
 
 **개선 사항**:
+
 - `build` 단계에서 overrides/removes 자동 적용
 - `template` 명령어로 배포 전 YAML 미리보기
 - `apply`가 build 단계 포함
@@ -163,6 +169,7 @@ apps:
 ```
 
 **기능**:
+
 - 위상 정렬 (Topological Sort)로 자동 순서 결정
 - 순환 의존성 검출 및 오류 발생
 - 존재하지 않는 앱 참조 검출
@@ -181,6 +188,7 @@ sbkube migrate config.yaml -o config.yaml --force
 ```
 
 **기능**:
+
 - 자동 타입 변환
 - pull-helm + install-helm 통합
 - overrides, removes, labels, annotations 보존
@@ -190,14 +198,10 @@ sbkube migrate config.yaml -o config.yaml --force
 
 #### 명령어 변경
 
-| 기능 | v0.2.x | v0.3.0 | 상태 |
-|------|--------|--------|------|
-| 차트 다운로드 | `sbkube prepare` | `sbkube prepare` | ✅ 동일 |
-| 차트 커스터마이징 | `sbkube build` | `sbkube build` | ✅ 강화 |
-| YAML 렌더링 | `sbkube template` | `sbkube template` | ✅ 개선 |
-| 클러스터 배포 | `sbkube deploy` | `sbkube deploy` | ✅ 강화 |
-| 통합 실행 | `sbkube apply` | `sbkube apply` | ✅ build 단계 추가 |
-| 마이그레이션 | - | `sbkube migrate` | 🆕 신규 |
+| 기능 | v0.2.x | v0.3.0 | 상태 | |------|--------|--------|------| | 차트 다운로드 | `sbkube prepare` | `sbkube prepare` | ✅ 동일 |
+| 차트 커스터마이징 | `sbkube build` | `sbkube build` | ✅ 강화 | | YAML 렌더링 | `sbkube template` | `sbkube template` | ✅ 개선 | |
+클러스터 배포 | `sbkube deploy` | `sbkube deploy` | ✅ 강화 | | 통합 실행 | `sbkube apply` | `sbkube apply` | ✅ build 단계 추가 | |
+마이그레이션 | - | `sbkube migrate` | 🆕 신규 |
 
 #### 레거시 명령어
 
@@ -223,15 +227,10 @@ sbkube legacy-apply
 
 ### 📦 지원 앱 타입
 
-| 타입 | v0.2.x | v0.3.0 | 설명 |
-|------|--------|--------|------|
-| Helm | `pull-helm` + `install-helm` | `helm` | Helm 차트 (통합) |
-| YAML | `install-yaml` | `yaml` | YAML 매니페스트 |
-| Action | `install-action` | `action` | 커스텀 액션 |
-| Kustomize | `install-kustomize` | `kustomize` | Kustomize |
-| Git | `pull-git` | `git` | Git 리포지토리 |
-| Exec | `exec` | `exec` | 커스텀 명령어 |
-| HTTP | - | `http` | HTTP 다운로드 🆕 |
+| 타입 | v0.2.x | v0.3.0 | 설명 | |------|--------|--------|------| | Helm | `pull-helm` + `install-helm` | `helm` | Helm 차트
+(통합) | | YAML | `install-yaml` | `yaml` | YAML 매니페스트 | | Action | `install-action` | `action` | 커스텀 액션 | | Kustomize |
+`install-kustomize` | `kustomize` | Kustomize | | Git | `pull-git` | `git` | Git 리포지토리 | | Exec | `exec` | `exec` | 커스텀
+명령어 | | HTTP | - | `http` | HTTP 다운로드 🆕 |
 
 ### 🔄 마이그레이션 가이드
 
@@ -244,12 +243,14 @@ sbkube migrate config.yaml -o config-migrated.yaml
 #### 2. 수동 변환 체크리스트
 
 **필수 변경**:
+
 - [ ] `apps` list → dict 변환
 - [ ] `pull-helm` + `install-helm` → `helm` 통합
 - [ ] `specs` 제거 (필드 평탄화)
 - [ ] 앱 이름을 딕셔너리 키로 이동
 
 **선택적 개선**:
+
 - [ ] `depends_on` 추가하여 의존성 명시
 - [ ] `overrides`, `removes` 활용하여 차트 커스터마이징
 - [ ] `labels`, `annotations` 추가
@@ -298,12 +299,14 @@ project/
 ### 📊 통계
 
 **코드 변경**:
+
 - 신규 파일: 9개
 - 수정 파일: 5개
 - 삭제 라인: 0
 - 추가 라인: ~3,000
 
 **설정 간소화**:
+
 - 평균 설정 파일 길이: 50% 감소
 - 필수 설정 항목: 30% 감소
 - 중첩 레벨: 3 → 2
@@ -319,6 +322,6 @@ project/
 - [Examples](examples/)
 - [Issue Tracker](https://github.com/archmagece/sb-kube-app-manager/issues)
 
----
+______________________________________________________________________
 
 **Full Changelog**: https://github.com/archmagece/sb-kube-app-manager/compare/v0.2.1...v0.3.0

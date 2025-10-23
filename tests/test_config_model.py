@@ -3,7 +3,6 @@ SBKube v0.3.0 설정 모델 테스트.
 """
 
 import pytest
-from pydantic import ValidationError
 
 from sbkube.models.config_model import HelmApp, SBKubeConfig, YamlApp
 

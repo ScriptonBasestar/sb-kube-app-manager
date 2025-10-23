@@ -3,6 +3,7 @@
 SBKube의 메인 설정 파일인 `config.yaml`의 완전한 스키마 문서입니다.
 
 > **주요 기능**:
+>
 > - Apps는 이름을 key로 사용하는 dict 구조 (list → dict)
 > - `specs` 필드 제거 (필드 평탄화)
 > - `helm` + `helm` → 단일 `helm` 타입
@@ -26,6 +27,7 @@ apps:                          # 애플리케이션 딕셔너리 (필수)
 ```
 
 **이전 버전과의 차이점**:
+
 - `apps`가 list가 아닌 dict
 - `name` 필드 제거 (key가 이름)
 - `specs` 필드 제거 (평탄화)
@@ -49,6 +51,7 @@ namespace: production
 ```
 
 **규칙**:
+
 - Kubernetes 네임스페이스 명명 규칙 준수
 - 소문자와 하이픈만 사용 (`[a-z0-9-]+`)
 - 앱별 `namespace` 필드로 재정의 가능
@@ -75,15 +78,9 @@ apps:
 
 앱 타입을 지정합니다. 현재 버전에서는 **7가지 타입**을 지원합니다.
 
-| 타입 | 설명 | 이전 버전 타입 |
-|------|------|------------------|
-| `helm` | Helm 차트 (원격/로컬) | helm + helm |
-| `yaml` | YAML 매니페스트 | yaml |
-| `git` | Git 리포지토리 | pull-git |
-| `http` | HTTP 파일 다운로드 | pull-http |
-| `action` | 커스텀 액션 | action |
-| `exec` | 커스텀 명령어 | exec |
-| `noop` | No Operation | (신규) |
+| 타입 | 설명 | 이전 버전 타입 | |------|------|------------------| | `helm` | Helm 차트 (원격/로컬) | helm + helm | | `yaml` | YAML
+매니페스트 | yaml | | `git` | Git 리포지토리 | pull-git | | `http` | HTTP 파일 다운로드 | pull-http | | `action` | 커스텀 액션 | action | |
+`exec` | 커스텀 명령어 | exec | | `noop` | No Operation | (신규) |
 
 ### 선택적 필드
 
@@ -122,6 +119,7 @@ apps:
 ```
 
 **의존성 규칙**:
+
 - 순환 의존성은 자동으로 감지되어 오류 발생
 - 의존성 순서대로 배포 실행
 - 의존성이 실패하면 의존하는 앱도 건너뜀
@@ -206,17 +204,20 @@ apps:
 ```
 
 **chart 필드 형식**:
+
 - 원격: `<repo>/<chart>` (예: `bitnami/redis`)
 - 로컬 (상대): `./charts/app`
 - 로컬 (절대): `/absolute/path/to/chart`
 - 이름만: `chart-name` (로컬 차트로 간주)
 
 **overrides**:
+
 - Key: 차트 내 파일 경로
 - Value: 교체할 로컬 파일 경로
 - `build` 단계에서 적용
 
 **removes**:
+
 - 차트에서 제거할 파일/디렉토리 목록
 - 와일드카드 지원 (예: `templates/tests/`)
 - `build` 단계에서 적용
@@ -277,6 +278,7 @@ apps:
 ```
 
 **sources.yaml 예제**:
+
 ```yaml
 git_repos:
   my-app:
@@ -285,6 +287,7 @@ git_repos:
 ```
 
 **사용 패턴**:
+
 ```yaml
 apps:
   # 1. Git 클론
@@ -331,6 +334,7 @@ apps:
 ```
 
 **사용 패턴**:
+
 ```yaml
 apps:
   # 1. 파일 다운로드
@@ -383,6 +387,7 @@ apps:
 ```
 
 **액션 타입**:
+
 - `apply`: `kubectl apply -f <path>` 실행
 - `delete`: `kubectl delete -f <path>` 실행
 
@@ -516,7 +521,6 @@ apps:
 ```
 
 ______________________________________________________________________
-
 
 ## ⚠️ 주의사항
 

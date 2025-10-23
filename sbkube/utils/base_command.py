@@ -223,7 +223,7 @@ class EnhancedBaseCommand:
             app_name: Specific app name (None for all apps)
 
         Returns:
-            Filtered list of 
+            Filtered list of apps
         """
         if not self.app_group:
             logger.error("Configuration not loaded")

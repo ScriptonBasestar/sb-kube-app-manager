@@ -3,12 +3,13 @@
 ## 기능 개요
 
 ### 핵심 기능 분류
+
 1. **배포 워크플로우 자동화** (prepare-build-template-deploy)
-2. **다중 소스 통합** (Helm, YAML, Git)
-3. **설정 관리 시스템** (Pydantic 검증)
-4. **상태 관리 시스템** (SQLAlchemy 기반)
-5. **검증 시스템** (사전/사후 배포 검증)
-6. **사용자 인터페이스** (Rich 콘솔)
+1. **다중 소스 통합** (Helm, YAML, Git)
+1. **설정 관리 시스템** (Pydantic 검증)
+1. **상태 관리 시스템** (SQLAlchemy 기반)
+1. **검증 시스템** (사전/사후 배포 검증)
+1. **사용자 인터페이스** (Rich 콘솔)
 
 ## 1. 배포 워크플로우 자동화
 
@@ -17,12 +18,14 @@
 **목적**: 외부 소스(Helm 차트, Git 리포지토리, HTTP URL)를 로컬로 다운로드 및 준비
 
 **지원 애플리케이션 타입**:
+
 - `helm`: Helm 차트 배포 (remote repository 또는 local path)
 - `git`: Git 리포지토리 클론
 - `http`: HTTP(S) URL에서 파일 다운로드
 - `kustomize`: Kustomize 디렉토리 처리
 
 **사용자 시나리오**:
+
 ```
 개발자 Alice는 Bitnami Redis 차트를 사용하려고 합니다.
 1. sources.yaml에 Bitnami Helm 저장소 추가
@@ -32,15 +35,18 @@
 ```
 
 **입력**:
+
 - `--app-dir`: 설정 파일 디렉토리 (기본: ./config)
 - `--base-dir`: 작업 디렉토리 (기본: .)
 - `--app`: 특정 앱만 처리 (선택)
 
 **출력**:
+
 - `charts/`: Helm 차트 디렉토리
 - `repos/`: Git 리포지토리 클론 디렉토리
 
 **비기능 요구사항**:
+
 - 네트워크 장애 시 재시도 (최대 3회)
 - 진행 상태 실시간 표시
 - 다운로드 캐시 지원 (중복 다운로드 방지)
@@ -50,12 +56,14 @@
 **목적**: 준비된 소스를 배포 가능한 형태로 변환 및 패키징
 
 **지원 애플리케이션 타입**:
+
 - `helm`: Helm 차트 커스터마이징 (overrides, removes 적용)
 - `git`: Git 리포지토리 특정 경로 추출
 - `http`: 다운로드된 파일 정리
 - `kustomize`: Kustomize 빌드 실행
 
 **사용자 시나리오**:
+
 ```
 개발자 Bob은 Helm 차트에 커스텀 values를 적용하려 합니다.
 1. config.yaml에 helm 타입 앱 정의 및 values 파일 지정
@@ -64,12 +72,15 @@
 ```
 
 **입력**:
+
 - `--app-dir`, `--base-dir`, `--app` (prepare와 동일)
 
 **출력**:
+
 - `build/`: 빌드된 애플리케이션 아티팩트
 
 **비기능 요구사항**:
+
 - 파일 권한 보존
 - 심볼릭 링크 처리
 - 대용량 파일 스트리밍 복사
@@ -79,10 +90,12 @@
 **목적**: Helm 차트 및 YAML 파일에 환경별 설정 적용 및 최종 매니페스트 생성
 
 **지원 애플리케이션 타입**:
+
 - `helm`: Helm 차트 렌더링
 - `yaml`: YAML 파일 템플릿화 (Jinja2)
 
 **사용자 시나리오**:
+
 ```
 운영자 Carol은 프로덕션 환경에 맞는 매니페스트를 생성하려 합니다.
 1. values/production.yaml 준비
@@ -92,14 +105,17 @@
 ```
 
 **입력**:
+
 - `--output-dir`: 렌더링된 매니페스트 출력 디렉토리
 - `--namespace`: 대상 네임스페이스
 - `--app-dir`, `--app` (공통)
 
 **출력**:
+
 - `rendered/`: 렌더링된 YAML 매니페스트 파일
 
 **비기능 요구사항**:
+
 - Helm 템플릿 엔진 호환성
 - Jinja2 템플릿 확장 지원
 - 렌더링 오류 명확한 위치 표시
@@ -109,12 +125,14 @@
 **목적**: Kubernetes 클러스터에 렌더링된 매니페스트 또는 Helm 릴리스 배포
 
 **지원 애플리케이션 타입**:
+
 - `helm`: Helm 릴리스 설치/업그레이드
 - `yaml`: YAML 매니페스트 적용 (kubectl apply)
 - `action`: 사용자 정의 스크립트 실행
 - `exec`: 임의 명령어 실행
 
 **사용자 시나리오**:
+
 ```
 DevOps 엔지니어 Dave는 전체 스택을 배포하려 합니다.
 1. sbkube prepare && sbkube build && sbkube template
@@ -123,16 +141,19 @@ DevOps 엔지니어 Dave는 전체 스택을 배포하려 합니다.
 ```
 
 **입력**:
+
 - `--namespace`: 배포 대상 네임스페이스
 - `--dry-run`: 실제 배포 없이 시뮬레이션
 - `--app`, `--app-dir` (공통)
 - `--kubeconfig`, `--context`: Kubernetes 클러스터 지정
 
 **출력**:
+
 - Kubernetes 리소스 생성/업데이트
 - 배포 상태 DB 기록
 
 **비기능 요구사항**:
+
 - 배포 순서 보장 (의존성 그래프)
 - 배포 실패 시 롤백 옵션
 - Dry-run 모드 정확성
@@ -147,6 +168,7 @@ DevOps 엔지니어 Dave는 전체 스택을 배포하려 합니다.
 **설정 예시**:
 
 **지원 기능**:
+
 - Helm 저장소 자동 추가 (`helm repo add`)
 - 차트 버전 고정 및 업데이트
 - Remote 및 Local 차트 모두 지원
@@ -157,6 +179,7 @@ DevOps 엔지니어 Dave는 전체 스택을 배포하려 합니다.
 **기능**: Git 리포지토리를 클론하여 YAML 매니페스트 또는 Helm 차트 사용
 
 **설정 예시**:
+
 ```yaml
 # sources.yaml
 git_repos:
@@ -174,6 +197,7 @@ apps:
 ```
 
 **지원 기능**:
+
 - 브랜치, 태그, 커밋 해시 지정
 - Private 리포지토리 (SSH 키, 토큰 인증)
 - 서브디렉토리 추출
@@ -183,6 +207,7 @@ apps:
 **기능**: 로컬 YAML 파일을 직접 배포
 
 **설정 예시**:
+
 ```yaml
 apps:
   custom-resources:
@@ -194,6 +219,7 @@ apps:
 ```
 
 **지원 기능**:
+
 - 여러 YAML 파일 순차 적용
 - kubectl apply를 통한 배포
 - 네임스페이스 오버라이드
@@ -203,6 +229,7 @@ apps:
 ### 3.1 config.yaml 스키마
 
 **기본 구조**:
+
 ```yaml
 namespace: <string>  # 기본 네임스페이스
 
@@ -217,6 +244,7 @@ apps:  # 앱 정의 (dict 형식, key = 앱 이름)
 **앱 타입별 필드**:
 
 **`helm` 타입**:
+
 ```yaml
 apps:
   redis:
@@ -231,6 +259,7 @@ apps:
 ```
 
 **`yaml` 타입**:
+
 ```yaml
 apps:
   manifests:
@@ -240,6 +269,7 @@ apps:
 ```
 
 **`action` 타입**:
+
 ```yaml
 apps:
   setup:
@@ -250,6 +280,7 @@ apps:
 ```
 
 **`exec` 타입**:
+
 ```yaml
 apps:
   post-install:
@@ -258,6 +289,7 @@ apps:
 ```
 
 **`git` 타입**:
+
 ```yaml
 apps:
   manifests-repo:
@@ -269,6 +301,7 @@ apps:
 ```
 
 **`http` 타입**:
+
 ```yaml
 apps:
   external-manifest:
@@ -279,6 +312,7 @@ apps:
 ```
 
 **`kustomize` 타입**:
+
 ```yaml
 apps:
   kustomize-app:
@@ -306,12 +340,14 @@ git:
 ### 3.3 Pydantic 검증
 
 **검증 항목**:
+
 - 필수 필드 누락 검사
 - 타입 불일치 검사 (예: namespace는 문자열)
 - 값 범위 검사 (예: enabled는 true/false만)
 - 커스텀 검증 (예: Helm 차트 버전 형식)
 
 **오류 메시지 예시**:
+
 ```
 ValidationError: config.yaml
   apps.redis.chart: field required
@@ -324,6 +360,7 @@ ValidationError: config.yaml
 ### 4.1 배포 상태 추적
 
 **저장 정보**:
+
 - 배포 시각 (타임스탬프)
 - 클러스터 정보 (컨텍스트, 네임스페이스)
 - 앱 이름 및 릴리스 이름
@@ -332,6 +369,7 @@ ValidationError: config.yaml
 - 설정 파일 해시 (변경 추적)
 
 **데이터베이스 스키마**:
+
 ```sql
 CREATE TABLE deployment_history (
   id INTEGER PRIMARY KEY,
@@ -350,12 +388,14 @@ CREATE TABLE deployment_history (
 **명령어**: `sbkube state history`
 
 **필터링 옵션**:
+
 - `--cluster <context>`: 특정 클러스터
 - `--namespace <name>`: 특정 네임스페이스
 - `--app <name>`: 특정 앱
 - `--limit <N>`: 최근 N개
 
 **출력 형식**:
+
 ```
 ┌─────────────────────┬──────────────┬───────────┬────────┐
 │ Timestamp           │ App          │ Namespace │ Status │
@@ -370,22 +410,25 @@ CREATE TABLE deployment_history (
 **명령어**: `sbkube state rollback --deployment-id <ID>`
 
 **롤백 프로세스**:
+
 1. 이전 배포 상태 조회 (설정 해시)
-2. 해당 시점의 설정 파일 복원 (선택)
-3. Helm 릴리스 롤백 또는 YAML 재적용
-4. 새로운 배포 기록 생성 (타입: rollback)
+1. 해당 시점의 설정 파일 복원 (선택)
+1. Helm 릴리스 롤백 또는 YAML 재적용
+1. 새로운 배포 기록 생성 (타입: rollback)
 
 ## 5. 검증 시스템
 
 ### 5.1 설정 파일 검증 (validate 명령어)
 
 **검증 항목**:
+
 - **구문 검증**: YAML 파싱 오류
 - **스키마 검증**: Pydantic 모델 일치성
 - **논리 검증**: 앱 이름 중복, 순환 의존성
 - **리소스 검증**: Helm 저장소/차트 존재 여부 (선택)
 
 **사용자 시나리오**:
+
 ```
 개발자 Eve는 설정 파일을 수정한 후 배포 전 검증하려 합니다.
 1. sbkube validate --app-dir config
@@ -399,6 +442,7 @@ CREATE TABLE deployment_history (
 **자동 실행**: deploy 명령어 실행 시 자동
 
 **검증 항목**:
+
 - Kubernetes 클러스터 연결 확인
 - 대상 네임스페이스 존재 여부
 - RBAC 권한 확인 (가능 시)
@@ -412,6 +456,7 @@ CREATE TABLE deployment_history (
 **자동 실행**: deploy 성공 후 (선택적)
 
 **검증 항목**:
+
 - Pod 상태 확인 (Running)
 - Service 엔드포인트 확인
 - Helm 릴리스 상태 (deployed)
@@ -422,6 +467,7 @@ CREATE TABLE deployment_history (
 ### 6.1 Rich 콘솔 출력
 
 **로그 레벨별 색상**:
+
 - 🔵 INFO: 일반 정보 (파란색)
 - 🟡 WARNING: 경고 (노란색)
 - 🔴 ERROR: 오류 (빨간색)
@@ -429,11 +475,13 @@ CREATE TABLE deployment_history (
 - 🟣 DEBUG: 디버깅 정보 (보라색, --verbose 시)
 
 **테이블 형태 출력**:
+
 - 배포 상태 목록
 - 앱 목록 및 타입
 - 히스토리 조회 결과
 
 **진행 상태 표시**:
+
 ```
 [prepare] Processing apps... ━━━━━━━━━━━━━━━━━━━━━━ 3/5 (60%)
   ✅ redis-pull
@@ -444,6 +492,7 @@ CREATE TABLE deployment_history (
 ### 6.2 명령어 옵션
 
 **전역 옵션** (모든 명령어에 적용):
+
 ```bash
 sbkube [전역옵션] <명령어> [명령어옵션]
 
@@ -455,6 +504,7 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 ```
 
 **명령어별 옵션**:
+
 - prepare/build/template/deploy:
   - `--app-dir <경로>`: 설정 디렉토리
   - `--base-dir <경로>`: 작업 디렉토리
@@ -467,21 +517,25 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 ## 7. 비기능 요구사항
 
 ### 7.1 성능
+
 - 앱 100개 기준 전체 워크플로우 10분 이내 (네트워크 속도 의존)
 - 설정 파일 검증 1초 이내
 - 상태 조회 쿼리 100ms 이내
 
 ### 7.2 안정성
+
 - 네트워크 장애 시 자동 재시도
 - 부분 배포 실패 시 명확한 오류 보고
 - 상태 DB 손상 시 복구 메커니즘
 
 ### 7.3 사용성
+
 - 명확한 오류 메시지 (원인 및 해결 방법 포함)
 - 진행 상태 실시간 피드백
 - 도움말 및 예제 제공
 
 ### 7.4 확장성
+
 - 새로운 앱 타입 추가 용이
 - 플러그인 시스템 (향후 지원)
 - 커스텀 검증 로직 추가 가능
@@ -489,54 +543,53 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 ## 8. 사용자 스토리
 
 ### 스토리 1: 빠른 Helm 차트 배포
-**As a** DevOps 엔지니어,
-**I want to** Helm 차트를 설정 파일로 정의하고 한 번에 배포
-**So that** 수동 helm install 명령어 반복을 피할 수 있다.
+
+**As a** DevOps 엔지니어, **I want to** Helm 차트를 설정 파일로 정의하고 한 번에 배포 **So that** 수동 helm install 명령어 반복을 피할 수 있다.
 
 **Acceptance Criteria**:
+
 - [ ] sources.yaml에 Helm 저장소 추가
 - [ ] config.yaml에 helm 및 helm 정의
 - [ ] sbkube prepare && sbkube deploy 실행으로 배포 완료
 - [ ] Helm 릴리스가 클러스터에 생성됨
 
 ### 스토리 2: Git 리포지토리 기반 배포
-**As a** 개발자,
-**I want to** Git 리포지토리의 YAML 매니페스트를 자동으로 배포
-**So that** 수동 git clone 및 kubectl apply를 반복하지 않는다.
+
+**As a** 개발자, **I want to** Git 리포지토리의 YAML 매니페스트를 자동으로 배포 **So that** 수동 git clone 및 kubectl apply를 반복하지 않는다.
 
 **Acceptance Criteria**:
+
 - [ ] sources.yaml에 Git 리포지토리 추가
 - [ ] config.yaml에 pull-git 및 yaml 정의
 - [ ] 특정 브랜치/태그 지정 가능
 - [ ] sbkube 워크플로우로 자동 배포
 
 ### 스토리 3: 환경별 설정 관리
-**As a** SRE,
-**I want to** 동일한 설정 파일로 개발/스테이징/프로덕션 환경 배포
-**So that** 환경별 일관성을 보장할 수 있다.
+
+**As a** SRE, **I want to** 동일한 설정 파일로 개발/스테이징/프로덕션 환경 배포 **So that** 환경별 일관성을 보장할 수 있다.
 
 **Acceptance Criteria**:
+
 - [ ] 환경별 values 파일 작성 (values/dev.yaml, values/prod.yaml)
 - [ ] config.yaml에서 values 파일 참조
 - [ ] --namespace 옵션으로 환경 구분
 - [ ] 배포 히스토리에서 환경별 조회 가능
 
 ### 스토리 4: 배포 히스토리 및 롤백
-**As a** 운영자,
-**I want to** 배포 히스토리를 조회하고 이전 버전으로 롤백
-**So that** 배포 실패 시 빠르게 복구할 수 있다.
+
+**As a** 운영자, **I want to** 배포 히스토리를 조회하고 이전 버전으로 롤백 **So that** 배포 실패 시 빠르게 복구할 수 있다.
 
 **Acceptance Criteria**:
+
 - [ ] sbkube state history로 배포 기록 조회
 - [ ] 클러스터, 네임스페이스, 앱별 필터링
 - [ ] sbkube state rollback으로 이전 배포로 복원
 - [ ] 롤백도 히스토리에 기록됨
 
----
+______________________________________________________________________
 
-**문서 버전**: 1.0
-**마지막 업데이트**: 2025-10-20
-**관련 문서**:
+**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
+
 - [제품 정의서](product-definition.md)
 - [아키텍처 문서](../10-modules/sbkube/ARCHITECTURE.md)
 - [명령어 참조](../02-features/commands.md)

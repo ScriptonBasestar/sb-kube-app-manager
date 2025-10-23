@@ -1,11 +1,13 @@
 # SBKube API 계약 명세
 
 ## 개요
+
 이 문서는 SBKube 모듈의 내부 API 인터페이스 계약을 정의합니다. 새로운 명령어나 앱 타입을 추가할 때 이 계약을 준수해야 합니다.
 
 ## BaseCommand 인터페이스
 
 ### 클래스 시그니처
+
 ```python
 class BaseCommand(ABC):
     """모든 명령어의 기본 클래스
@@ -32,6 +34,7 @@ class BaseCommand(ABC):
 ### 필수 구현 메서드
 
 #### execute()
+
 ```python
 @abstractmethod
 def execute(self) -> None:
@@ -48,6 +51,7 @@ def execute(self) -> None:
 ### 제공되는 유틸리티 메서드
 
 #### load_config()
+
 ```python
 def load_config(self) -> SBKubeConfig:
     """config.yaml 로딩 및 검증
@@ -62,6 +66,7 @@ def load_config(self) -> SBKubeConfig:
 ```
 
 #### load_sources()
+
 ```python
 def load_sources(self) -> SourcesConfig:
     """sources.yaml 로딩 및 검증
@@ -75,6 +80,7 @@ def load_sources(self) -> SourcesConfig:
 ```
 
 #### should_process_app()
+
 ```python
 def should_process_app(self, app: AppInfoScheme) -> bool:
     """앱 처리 여부 판단
@@ -92,6 +98,7 @@ def should_process_app(self, app: AppInfoScheme) -> bool:
 ```
 
 ### 사용 예시
+
 ```python
 # commands/my_command.py
 from sbkube.utils.base_command import BaseCommand
@@ -120,6 +127,7 @@ class MyCommand(BaseCommand):
 ## Pydantic 모델 계약
 
 ### SBKubeConfig
+
 ```python
 class SBKubeConfig(ConfigBaseModel):
     """config.yaml 루트 모델
@@ -145,6 +153,7 @@ class SBKubeConfig(ConfigBaseModel):
 ```
 
 ### AppConfig (Discriminated Union)
+
 ```python
 # 타입별 App 모델 (Discriminated Union)
 AppConfig = Annotated[
@@ -156,6 +165,7 @@ AppConfig = Annotated[
 ### 타입별 App 모델
 
 #### HelmApp
+
 ```python
 class HelmApp(ConfigBaseModel):
     """Helm 차트 배포 앱
@@ -185,6 +195,7 @@ class HelmApp(ConfigBaseModel):
 ```
 
 #### YamlApp
+
 ```python
 class YamlApp(ConfigBaseModel):
     """YAML 매니페스트 직접 배포 앱"""
@@ -197,6 +208,7 @@ class YamlApp(ConfigBaseModel):
 ```
 
 #### ActionApp
+
 ```python
 class ActionApp(ConfigBaseModel):
     """커스텀 액션 실행 앱 (apply/create/delete)"""
@@ -209,6 +221,7 @@ class ActionApp(ConfigBaseModel):
 ```
 
 #### ExecApp
+
 ```python
 class ExecApp(ConfigBaseModel):
     """커스텀 명령어 실행 앱"""
@@ -220,6 +233,7 @@ class ExecApp(ConfigBaseModel):
 ```
 
 #### GitApp
+
 ```python
 class GitApp(ConfigBaseModel):
     """Git 리포지토리에서 매니페스트 가져오기"""
@@ -235,6 +249,7 @@ class GitApp(ConfigBaseModel):
 ```
 
 #### HttpApp
+
 ```python
 class HttpApp(ConfigBaseModel):
     """HTTP URL에서 파일 다운로드"""
@@ -248,6 +263,7 @@ class HttpApp(ConfigBaseModel):
 ```
 
 #### KustomizeApp
+
 ```python
 class KustomizeApp(ConfigBaseModel):
     """Kustomize 기반 배포"""
@@ -262,6 +278,7 @@ class KustomizeApp(ConfigBaseModel):
 ## 새 앱 타입 추가 계약
 
 ### 1단계: App 모델 정의 (Discriminated Union 패턴)
+
 ```python
 # sbkube/models/config_model.py에 추가
 
@@ -293,6 +310,7 @@ class MyNewApp(ConfigBaseModel):
 ```
 
 ### 2단계: AppConfig Union 업데이트
+
 ```python
 # sbkube/models/config_model.py
 
@@ -307,6 +325,7 @@ AppConfig = Annotated[
 ```
 
 ### 3단계: BaseCommand에서 타입 처리
+
 ```python
 # commands/prepare.py
 
@@ -334,6 +353,7 @@ class PrepareCommand(BaseCommand):
 ```
 
 ### 4단계: 모든 명령어에서 처리 로직 구현
+
 ```python
 # commands/build.py
 def build_my_new_type(app_name: str, app: MyNewApp):
@@ -352,6 +372,7 @@ def deploy_my_new_type(app_name: str, app: MyNewApp):
 ```
 
 ### 새 타입 추가 체크리스트
+
 - [ ] `ConfigBaseModel` 상속한 `<NewType>App` 클래스 정의
 - [ ] `type: Literal["new-type"]` 필드 필수
 - [ ] `AppConfig` Union에 추가
@@ -363,6 +384,7 @@ def deploy_my_new_type(app_name: str, app: MyNewApp):
 ## 로깅 인터페이스
 
 ### logger 모듈 사용
+
 ```python
 from sbkube.utils.logger import logger
 
@@ -375,15 +397,17 @@ logger.verbose("🔍 디버그 정보")  # 디버깅 (--verbose 시만)
 ```
 
 ### 로깅 규칙
+
 1. **heading()**: 명령어 시작 시 한 번만
-2. **info()**: 주요 진행 상황 표시
-3. **warning()**: 문제는 아니지만 주의 필요한 경우
-4. **error()**: 오류 발생 시 (배포는 계속)
-5. **verbose()**: 디버깅 정보 (기본은 숨김)
+1. **info()**: 주요 진행 상황 표시
+1. **warning()**: 문제는 아니지만 주의 필요한 경우
+1. **error()**: 오류 발생 시 (배포는 계속)
+1. **verbose()**: 디버깅 정보 (기본은 숨김)
 
 ## 에러 처리 계약
 
 ### 예외 클래스 계층
+
 ```python
 class SbkubeError(Exception):
     """SBKube 기본 예외
@@ -408,6 +432,7 @@ class DeploymentError(SbkubeError):
 ```
 
 ### 에러 처리 가이드라인
+
 ```python
 def execute(self):
     try:
@@ -428,6 +453,7 @@ def execute(self):
 ## 상태 관리 인터페이스
 
 ### DeploymentState 모델
+
 ```python
 class DeploymentState(Base):
     """배포 상태 ORM 모델"""
@@ -445,6 +471,7 @@ class DeploymentState(Base):
 ```
 
 ### StateTracker 인터페이스
+
 ```python
 class StateTracker:
     """배포 상태 추적 클래스"""
@@ -488,6 +515,7 @@ class StateTracker:
 ## Click 명령어 계약
 
 ### 명령어 데코레이터 패턴
+
 ```python
 @click.command(name="my-command")
 @click.option('--base-dir', default='.', help='작업 디렉토리')
@@ -505,6 +533,7 @@ def cmd(ctx, base_dir, app_dir, app, my_option):
 ```
 
 ### 전역 컨텍스트 접근
+
 ```python
 @click.pass_context
 def cmd(ctx, ...):
@@ -518,20 +547,21 @@ def cmd(ctx, ...):
 ## 버전 호환성
 
 ### API 변경 정책
+
 - **Major 버전 변경**: 호환 불가능한 API 변경
 - **Minor 버전 변경**: 하위 호환 API 추가
 - **Patch 버전 변경**: 버그 수정 (API 변경 없음)
 
 ### 현재 버전 (v0.3.0)
+
 - BaseCommand 인터페이스: 안정
 - Pydantic 모델: 실험적 (v2 마이그레이션 중)
 - 상태 관리 API: 베타
 
----
+______________________________________________________________________
 
-**문서 버전**: 1.0
-**마지막 업데이트**: 2025-10-20
-**관련 문서**:
+**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
+
 - [MODULE.md](MODULE.md) - 모듈 정의
 - [ARCHITECTURE.md](ARCHITECTURE.md) - 아키텍처
 - [DEPENDENCIES.md](DEPENDENCIES.md) - 의존성 명세

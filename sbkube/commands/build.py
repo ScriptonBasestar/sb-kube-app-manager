@@ -52,7 +52,7 @@ def build_helm_app(
 
         if not source_path.exists():
             console.print(f"[red]❌ Remote chart not found: {source_path}[/red]")
-            console.print(f"[yellow]💡 Run 'sbkube prepare' first[/yellow]")
+            console.print("[yellow]💡 Run 'sbkube prepare' first[/yellow]")
             return False
     else:
         # Local chart: app_config_dir 기준
@@ -145,7 +145,7 @@ def build_http_app(
 
     if not source_file.exists():
         console.print(f"[red]❌ Downloaded file not found: {source_file}[/red]")
-        console.print(f"[yellow]💡 Run 'sbkube prepare' first[/yellow]")
+        console.print("[yellow]💡 Run 'sbkube prepare' first[/yellow]")
         return False
 
     # build/ 디렉토리로 복사

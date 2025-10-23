@@ -292,13 +292,28 @@ def skip_if_helm_unavailable(request, helm_available):
             pytest.skip("Helm is not installed or not in PATH. Install helm to run this test.")
 
 
+def is_k8s_cluster_reachable():
+    """Check if a Kubernetes cluster is reachable."""
+    try:
+        result = subprocess.run(
+            ["kubectl", "cluster-info"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
 @pytest.fixture(autouse=True, scope="function")
 def skip_if_k8s_unavailable(request, kubectl_available):
     """
-    Auto-skip tests marked with requires_k8s if kubectl is not available.
+    Auto-skip tests marked with requires_k8s if kubectl is not available or cluster is unreachable.
 
     This fixture runs automatically for all E2E tests and checks if the test
-    requires kubectl. If kubectl is not available, the test is skipped with a clear message.
+    requires kubectl and a reachable cluster. If either is not available, the test is skipped.
 
     Args:
         request: pytest request object
@@ -307,3 +322,5 @@ def skip_if_k8s_unavailable(request, kubectl_available):
     if request.node.get_closest_marker("requires_k8s"):
         if not kubectl_available:
             pytest.skip("kubectl is not installed or not in PATH. Install kubectl to run this test.")
+        if not is_k8s_cluster_reachable():
+            pytest.skip("Kubernetes cluster is not reachable. Ensure a cluster is running and kubeconfig is valid.")

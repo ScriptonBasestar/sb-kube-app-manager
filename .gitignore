@@ -110,3 +110,4 @@ results/
 data/
 lint-output.txt
 *-output.txt
+tmp/

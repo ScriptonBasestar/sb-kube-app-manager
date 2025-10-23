@@ -12,7 +12,7 @@ from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.logger import logger, setup_logging_from_context
 
 
-def load_json_schema(path: Path):
+def load_json_schema(path: Path) -> dict:
     """JSON 스키마 파일을 로드합니다."""
     try:
         with open(path, encoding="utf-8") as f:

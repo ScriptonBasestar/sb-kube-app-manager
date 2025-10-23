@@ -6,6 +6,7 @@ SBKube prepare 명령어.
 - git 타입: 리포지토리 clone
 """
 
+import shutil
 from pathlib import Path
 
 import click
@@ -82,7 +83,16 @@ def prepare_helm_app(
         console.print(f"[red]❌ Helm repo '{repo_name}' not found in sources.yaml[/red]")
         return False
 
-    repo_url = helm_sources[repo_name]
+    # helm_repos는 dict 형태: {url: ..., username: ..., password: ...} 또는 단순 URL string
+    repo_config = helm_sources[repo_name]
+    if isinstance(repo_config, dict):
+        repo_url = repo_config.get("url")
+        if not repo_url:
+            console.print(f"[red]❌ Missing 'url' for Helm repo: {repo_name}[/red]")
+            return False
+    else:
+        # 구버전 호환: 단순 URL string
+        repo_url = repo_config
 
     # Helm repo 추가
     console.print(f"  Adding Helm repo: {repo_name} ({repo_url})")
@@ -106,7 +116,6 @@ def prepare_helm_app(
 
     # If force flag is set, remove existing chart directory
     if force and dest_dir.exists():
-        import shutil
         console.print(f"[yellow]⚠️  Removing existing chart (--force): {dest_dir}[/yellow]")
         shutil.rmtree(dest_dir)
 
@@ -186,6 +195,7 @@ def prepare_git_app(
     base_dir: Path,
     repos_dir: Path,
     sources_file: Path,
+    force: bool = False,
 ) -> bool:
     """
     Git 앱 준비 (repo clone).
@@ -196,6 +206,7 @@ def prepare_git_app(
         base_dir: 프로젝트 루트
         repos_dir: repos 디렉토리
         sources_file: sources.yaml 파일 경로
+        force: 기존 리포지토리를 덮어쓰기
 
     Returns:
         성공 여부
@@ -224,6 +235,9 @@ def prepare_git_app(
         # repo_config는 dict 형태: {url: ..., branch: ...}
         if isinstance(repo_config, dict):
             repo_url = repo_config.get("url")
+            if not repo_url:
+                console.print(f"[red]❌ Missing 'url' for Git repo: {app.repo}[/red]")
+                return False
             branch = app.branch or app.ref or repo_config.get("branch", "main")
         else:
             # 구버전 호환: 단순 URL string
@@ -232,6 +246,12 @@ def prepare_git_app(
         repo_alias = app.repo
 
     dest_dir = repos_dir / repo_alias
+
+    # If force flag is set, remove existing repository
+    if force and dest_dir.exists():
+        console.print(f"[yellow]⚠️  Removing existing repository (--force): {dest_dir}[/yellow]")
+        shutil.rmtree(dest_dir)
+
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     # Git clone
@@ -371,7 +391,7 @@ def cmd(
         if isinstance(app, HelmApp):
             success = prepare_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, sources_file_path, force)
         elif isinstance(app, GitApp):
-            success = prepare_git_app(app_name, app, BASE_DIR, REPOS_DIR, sources_file_path)
+            success = prepare_git_app(app_name, app, BASE_DIR, REPOS_DIR, sources_file_path, force)
         elif isinstance(app, HttpApp):
             success = prepare_http_app(app_name, app, BASE_DIR, APP_CONFIG_DIR)
         else:

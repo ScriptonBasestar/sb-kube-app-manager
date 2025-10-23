@@ -140,6 +140,7 @@ sbkube template [옵션]
 
 - **`helm`** - Helm 차트 템플릿
 - **`yaml`** - YAML 매니페스트 템플릿
+- **`http`** - HTTP 소스 매니페스트 템플릿
 
 ### 💡 사용 예제
 

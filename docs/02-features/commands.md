@@ -94,7 +94,6 @@ sbkube build [옵션]
 ### 🎯 지원 앱 타입
 
 - **`helm`** - Helm 차트 준비
-- **`helm-oci`** - OCI 차트 준비
 - **`git`** - Git 소스 준비
 - **`http`** - 로컬 파일 복사
 - **`yaml`** - YAML 매니페스트 준비

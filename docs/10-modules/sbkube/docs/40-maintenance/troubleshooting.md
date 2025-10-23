@@ -419,7 +419,7 @@ kubectl logs <pod-name> -n my-app
 
 ### 이슈 템플릿
 ```markdown
-**SBKube 버전**: v0.2.1
+**SBKube 버전**: v0.3.0
 **OS**: Ubuntu 22.04
 **Python**: 3.12.1
 **Helm**: v3.13.0

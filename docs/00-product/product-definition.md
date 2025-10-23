@@ -6,7 +6,7 @@
 **SBKube** - Kubernetes Deployment Automation CLI for k3s
 
 ### 버전 정보
-- **현재 버전**: 0.2.1
+- **현재 버전**: 0.3.0
 - **타겟 플랫폼**: Kubernetes (k3s 최적화)
 - **런타임**: Python 3.12+
 
@@ -81,7 +81,7 @@ prepare → build → template → deploy
 - ✅ Helm 릴리스 설치/업그레이드/삭제
 - ✅ YAML 매니페스트 적용/삭제
 - ✅ 배포 전/후 검증 (설정, 환경, 의존성)
-- ✅ 사용자 정의 스크립트 실행 (exec, install-action)
+- ✅ 사용자 정의 스크립트 실행 (exec, action)
 
 ### 제품이 하지 않는 것 (Out of Scope)
 - ❌ Kubernetes 클러스터 프로비저닝 및 관리
@@ -160,7 +160,7 @@ prepare → build → template → deploy
 | **다중 소스 통합** | ✅ Helm+YAML+Git | ❌ Helm만 | ❌ YAML만 | ⚠️ Helm 중심 |
 | **상태 관리** | ✅ SQLAlchemy DB | ⚠️ Helm secrets | ❌ 없음 | ⚠️ Helm 의존 |
 | **설정 검증** | ✅ Pydantic | ❌ 없음 | ❌ 없음 | ⚠️ 기본 검증 |
-| **사용자 정의 스크립트** | ✅ exec, install-action | ❌ 없음 | ✅ 가능 | ⚠️ hooks |
+| **사용자 정의 스크립트** | ✅ exec, action | ❌ 없음 | ✅ 가능 | ⚠️ hooks |
 | **k3s 최적화** | ✅ 최적화됨 | ⚠️ 일반 K8s | ⚠️ 일반 K8s | ⚠️ 일반 K8s |
 | **학습 곡선** | 🟢 낮음 (선언적 설정) | 🟡 중간 | 🟡 중간 | 🔴 높음 |
 

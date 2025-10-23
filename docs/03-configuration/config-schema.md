@@ -25,7 +25,7 @@ apps:                          # 애플리케이션 딕셔너리 (필수)
     # ... 타입별 필드
 ```
 
-**v0.2.x와의 차이점**:
+**이전 버전과의 차이점**:
 - `apps`가 list가 아닌 dict
 - `name` 필드 제거 (key가 이름)
 - `specs` 필드 제거 (평탄화)
@@ -75,13 +75,13 @@ apps:
 
 앱 타입을 지정합니다. 현재 버전에서는 **7가지 타입**을 지원합니다.
 
-| 타입 | 설명 | v0.2.x 동등 타입 |
+| 타입 | 설명 | 이전 버전 타입 |
 |------|------|------------------|
 | `helm` | Helm 차트 (원격/로컬) | helm + helm |
 | `yaml` | YAML 매니페스트 | yaml |
 | `git` | Git 리포지토리 | pull-git |
 | `http` | HTTP 파일 다운로드 | pull-http |
-| `action` | 커스텀 액션 | install-action |
+| `action` | 커스텀 액션 | action |
 | `exec` | 커스텀 명령어 | exec |
 | `noop` | No Operation | (신규) |
 

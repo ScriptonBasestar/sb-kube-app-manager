@@ -155,7 +155,7 @@ class PrepareCommand(BaseCommand):
                 self.prepare_helm_chart(app, sources)
             elif app.type == 'pull-git':
                 self.prepare_git_repo(app, sources)
-            elif app.type == 'helm-oci':
+            # Legacy type removed
                 self.prepare_oci_chart(app)
 ```
 
@@ -377,7 +377,7 @@ class AppMyNewTypeSpec(AppSpecBase):
 class AppInfoScheme(BaseModel):
     type: Literal[
         'exec', 'helm', 'yaml',
-        'helm', 'pull-git', 'copy-app',
+        'helm', 'git', 'http', 'kustomize',
         'my-new-type'  # 추가
     ]
 ```

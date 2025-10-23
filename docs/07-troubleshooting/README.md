@@ -191,8 +191,8 @@ sbkube validate
 sbkube --help
 
 # 올바른 타입으로 수정
-# 지원 타입: helm, helm-oci, pull-git, pull-http, copy-app
-#           helm, yaml, install-action, install-kustomize, exec
+# 지원 타입: helm, git, http, kustomize
+#           helm, yaml, action, exec, noop
 ```
 
 ______________________________________________________________________

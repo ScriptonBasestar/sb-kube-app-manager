@@ -81,8 +81,8 @@ class AppInfoScheme(BaseModel):
     """애플리케이션 정의 모델"""
     name: str
     type: Literal[
-        'exec', 'helm', 'install-action', 'install-kustomize', 'yaml',
-        'helm', 'helm-oci', 'pull-git', 'pull-http', 'copy-app'
+        'exec', 'helm', 'action', 'yaml',
+        'helm', 'git', 'http', 'kustomize', 'noop'
     ]
     path: Optional[str] = None
     enabled: bool = True

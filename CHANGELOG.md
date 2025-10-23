@@ -170,8 +170,8 @@ apps:
 #### 3. 설정 마이그레이션 도구
 
 ```bash
-# v0.2.x 설정을 v0.3.0으로 변환
-sbkube migrate config.yaml -o config-v3.yaml
+# v0.2.x 설정을 현재 버전으로 변환
+sbkube migrate config.yaml -o config-migrated.yaml
 
 # 미리보기
 sbkube migrate config.yaml
@@ -238,7 +238,7 @@ sbkube legacy-apply
 #### 1. 설정 파일 변환
 
 ```bash
-sbkube migrate config.yaml -o config-v3.yaml
+sbkube migrate config.yaml -o config-migrated.yaml
 ```
 
 #### 2. 수동 변환 체크리스트

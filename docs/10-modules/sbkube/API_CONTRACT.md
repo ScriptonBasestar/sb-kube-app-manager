@@ -121,12 +121,16 @@ class MyCommand(BaseCommand):
 
 ### SBKubeConfig
 ```python
-class SBKubeConfig(BaseModel):
-    """config.yaml 루트 모델"""
+class SBKubeConfig(ConfigBaseModel):
+    """config.yaml 루트 모델
+
+    Breaking Changes:
+    - apps: List → Dict[str, AppConfig] (apps는 dict, key = app name)
+    - 평탄화된 구조 (specs 래퍼 제거)
+    """
 
     namespace: str  # 기본 네임스페이스
-    deps: List[str] = Field(default_factory=list)  # 전역 의존성 (향후 사용)
-    apps: List[AppInfoScheme]  # 앱 정의 목록
+    apps: Dict[str, AppConfig]  # 앱 정의 (dict, key = 앱 이름)
 
     @field_validator('namespace')
     def validate_namespace(cls, v: str) -> str:
@@ -134,127 +138,227 @@ class SBKubeConfig(BaseModel):
         if not v or not v.strip():
             raise ValueError('namespace must not be empty')
         return v
+
+    def get_deployment_order(self) -> List[str]:
+        """의존성 기반 배포 순서 계산 (위상 정렬)"""
+        # ... 구현 생략
 ```
 
-### AppInfoScheme
+### AppConfig (Discriminated Union)
 ```python
-class AppInfoScheme(BaseModel):
-    """개별 앱 정의 모델"""
-
-    name: str  # 앱 이름 (고유해야 함)
-    type: Literal[
-        'exec', 'helm', 'install-action', 'yaml',
-        'helm', 'helm-oci', 'pull-git', 'copy-app'
-    ]  # 앱 타입
-    path: Optional[str] = None  # 경로 (타입별 의미 다름)
-    enabled: bool = True  # 활성화 여부
-    namespace: Optional[str] = None  # 앱별 네임스페이스 (전역 오버라이드)
-    release_name: Optional[str] = None  # Helm 릴리스 이름
-    specs: Union[AppSpecBase, Dict[str, Any]] = Field(default_factory=dict)
-
-    @field_validator('name')
-    def validate_name(cls, v: str) -> str:
-        """앱 이름 검증 (공백 금지, 특수문자 제한)"""
-        if not v or not v.strip():
-            raise ValueError('app name must not be empty')
-        return v
+# 타입별 App 모델 (Discriminated Union)
+AppConfig = Annotated[
+    Union[HelmApp, YamlApp, ActionApp, ExecApp, GitApp, KustomizeApp, HttpApp],
+    Field(discriminator="type"),
+]
 ```
 
-### AppSpecBase 및 서브클래스
+### 타입별 App 모델
+
+#### HelmApp
 ```python
-class AppSpecBase(BaseModel):
-    """모든 Spec의 기본 클래스"""
-    pass
+class HelmApp(ConfigBaseModel):
+    """Helm 차트 배포 앱
 
-class AppPullHelmSpec(AppSpecBase):
-    """helm 타입 Spec"""
-    repo: str  # Helm 저장소 이름
-    chart: str  # 차트 이름
-    version: str  # 차트 버전
-    dest: str  # 저장 경로
+    통합 타입: remote chart 및 local chart 모두 지원
+    - "repo/chart" 형식 → remote (자동 pull + install)
+    - "./path" or "/path" → local (install only)
+    """
 
-class AppInstallHelmSpec(AppSpecBase):
-    """helm 타입 Spec"""
-    path: str  # 차트 경로
-    values: List[str] = Field(default_factory=list)  # values 파일 목록
+    type: Literal["helm"] = "helm"
+    chart: str  # "repo/chart", "./path", "/path"
+    version: str | None = None  # 차트 버전 (remote chart만)
+    values: list[str] = Field(default_factory=list)  # values 파일 목록
+    overrides: list[str] = Field(default_factory=list)  # 덮어쓸 파일
+    removes: list[str] = Field(default_factory=list)  # 제거할 파일 패턴
 
-class AppInstallYamlSpec(AppSpecBase):
-    """yaml 타입 Spec"""
-    actions: List[Dict[str, Any]]  # apply/delete 액션 목록
+    # Helm 옵션
+    release_name: str | None = None
+    namespace: str | None = None
+    create_namespace: bool = False
+    wait: bool = True
+    timeout: str = "5m"
 
-class AppCopyAppSpec(AppSpecBase):
-    """copy-app 타입 Spec"""
-    paths: List[Dict[str, str]]  # src-dest 매핑
+    # 공통 필드
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+```
 
-class AppExecSpec(AppSpecBase):
-    """exec 타입 Spec"""
-    commands: List[str]  # 실행할 명령어 목록
+#### YamlApp
+```python
+class YamlApp(ConfigBaseModel):
+    """YAML 매니페스트 직접 배포 앱"""
+
+    type: Literal["yaml"] = "yaml"
+    files: list[str]  # YAML 파일 목록
+    namespace: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+```
+
+#### ActionApp
+```python
+class ActionApp(ConfigBaseModel):
+    """커스텀 액션 실행 앱 (apply/create/delete)"""
+
+    type: Literal["action"] = "action"
+    actions: list[dict[str, Any]]  # kubectl 액션 목록
+    namespace: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+```
+
+#### ExecApp
+```python
+class ExecApp(ConfigBaseModel):
+    """커스텀 명령어 실행 앱"""
+
+    type: Literal["exec"] = "exec"
+    commands: list[str]  # 실행할 명령어 목록
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+```
+
+#### GitApp
+```python
+class GitApp(ConfigBaseModel):
+    """Git 리포지토리에서 매니페스트 가져오기"""
+
+    type: Literal["git"] = "git"
+    repo: str  # Git repository URL
+    path: str | None = None  # 리포지토리 내 경로
+    branch: str = "main"
+    ref: str | None = None  # 특정 commit/tag
+    namespace: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+```
+
+#### HttpApp
+```python
+class HttpApp(ConfigBaseModel):
+    """HTTP URL에서 파일 다운로드"""
+
+    type: Literal["http"] = "http"
+    url: str  # HTTP(S) URL
+    dest: str  # 저장할 파일 경로
+    headers: dict[str, str] = Field(default_factory=dict)
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+```
+
+#### KustomizeApp
+```python
+class KustomizeApp(ConfigBaseModel):
+    """Kustomize 기반 배포"""
+
+    type: Literal["kustomize"] = "kustomize"
+    path: str  # kustomization.yaml 경로
+    namespace: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
 ```
 
 ## 새 앱 타입 추가 계약
 
-### 1단계: Spec 모델 정의
+### 1단계: App 모델 정의 (Discriminated Union 패턴)
 ```python
 # sbkube/models/config_model.py에 추가
-class AppMyNewTypeSpec(AppSpecBase):
-    """my-new-type 앱 타입 Spec
 
-    새 앱 타입을 추가할 때 AppSpecBase를 상속합니다.
+class MyNewApp(ConfigBaseModel):
+    """새 앱 타입 모델
+
+    ConfigBaseModel을 상속하여 새 앱 타입을 정의합니다.
     """
-    # 필수 필드
-    source_url: str = Field(..., description="소스 URL")
 
-    # 선택 필드
-    target_path: Optional[str] = Field(None, description="저장 경로")
-    options: Dict[str, Any] = Field(default_factory=dict)
+    type: Literal["my-new-type"] = "my-new-type"  # 필수: type 필드
 
+    # 앱 타입별 필수 필드
+    source_url: str  # 예: S3 URL
+    target_path: str | None = None
+
+    # 공통 필드 (옵션)
+    namespace: str | None = None
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+
+    # 검증 로직
     @field_validator('source_url')
+    @classmethod
     def validate_url(cls, v: str) -> str:
-        """URL 검증 로직"""
-        if not v.startswith(('http://', 'https://')):
-            raise ValueError('source_url must be HTTP(S) URL')
+        """URL 검증"""
+        if not v.startswith(('s3://', 'gs://')):
+            raise ValueError('source_url must be S3 or GCS URL')
         return v
 ```
 
-### 2단계: AppInfoScheme 업데이트
+### 2단계: AppConfig Union 업데이트
 ```python
-class AppInfoScheme(BaseModel):
-    type: Literal[
-        'exec', 'helm', 'yaml',
-        'helm', 'pull-git', 'copy-app',
-        'my-new-type'  # 추가
-    ]
+# sbkube/models/config_model.py
+
+AppConfig = Annotated[
+    Union[
+        HelmApp, YamlApp, ActionApp, ExecApp,
+        GitApp, KustomizeApp, HttpApp,
+        MyNewApp,  # 새 타입 추가
+    ],
+    Field(discriminator="type"),  # type 필드로 자동 구분
+]
 ```
 
-### 3단계: get_spec_model() 매핑
-```python
-def get_spec_model(app_type: str):
-    """앱 타입별 Spec 모델 반환"""
-    spec_model_mapping = {
-        'helm': AppPullHelmSpec,
-        'helm': AppInstallHelmSpec,
-        # ... 기존 매핑
-        'my-new-type': AppMyNewTypeSpec,  # 추가
-    }
-    return spec_model_mapping.get(app_type, dict)
-```
-
-### 4단계: 명령어별 처리 로직 구현
-각 명령어(prepare, build, template, deploy)에서 새 타입 처리:
-
+### 3단계: BaseCommand에서 타입 처리
 ```python
 # commands/prepare.py
+
+from sbkube.models.config_model import MyNewApp
+
 class PrepareCommand(BaseCommand):
     def execute(self):
-        for app in config.apps:
-            if app.type == 'my-new-type':
-                self.prepare_my_new_type(app)
+        config = self.load_config()
 
-    def prepare_my_new_type(self, app: AppInfoScheme):
-        spec = cast(AppMyNewTypeSpec, app.specs)
-        # 새 타입 처리 로직
-        download_from_url(spec.source_url, spec.target_path)
+        for app_name, app in config.apps.items():  # Dict 순회
+            if not self.should_process_app(app):
+                continue
+
+            # 타입별 분기 (isinstance 사용)
+            if isinstance(app, MyNewApp):
+                self.prepare_my_new_type(app_name, app)
+            elif isinstance(app, HelmApp):
+                self.prepare_helm(app_name, app)
+            # ...
+
+    def prepare_my_new_type(self, app_name: str, app: MyNewApp):
+        """MyNewApp 타입 처리"""
+        console.print(f"[cyan]Downloading from {app.source_url}...[/cyan]")
+        download_from_cloud(app.source_url, app.target_path)
 ```
+
+### 4단계: 모든 명령어에서 처리 로직 구현
+```python
+# commands/build.py
+def build_my_new_type(app_name: str, app: MyNewApp):
+    """Build 단계 처리"""
+    pass
+
+# commands/template.py
+def template_my_new_type(app_name: str, app: MyNewApp):
+    """Template 단계 처리"""
+    pass
+
+# commands/deploy.py
+def deploy_my_new_type(app_name: str, app: MyNewApp):
+    """Deploy 단계 처리"""
+    kubectl_apply(app.target_path)
+```
+
+### 새 타입 추가 체크리스트
+- [ ] `ConfigBaseModel` 상속한 `<NewType>App` 클래스 정의
+- [ ] `type: Literal["new-type"]` 필드 필수
+- [ ] `AppConfig` Union에 추가
+- [ ] `prepare`, `build`, `template`, `deploy` 명령어에서 처리 로직 구현
+- [ ] 테스트 케이스 작성 (`tests/test_<new_type>.py`)
+- [ ] 문서 업데이트 (`docs/02-features/application-types.md`)
+- [ ] 예제 추가 (`examples/deploy/<new-type>-example/`)
 
 ## 로깅 인터페이스
 

@@ -42,7 +42,7 @@ class TestK3scodeAIWorkflow:
                 str(ai_dir.relative_to(project_root)),
                 "--base-dir",
                 str(project_root),
-                "--sources-file",
+                "--sources",
                 str(sources_file.relative_to(project_root)),
             ],
             debug_info={
@@ -91,7 +91,7 @@ class TestK3scodeAIWorkflow:
                 str(ai_dir.relative_to(project_root)),
                 "--base-dir",
                 str(project_root),
-                "--sources-file",
+                "--sources",
                 str(sources_file.relative_to(project_root)),
             ],
         )
@@ -147,7 +147,7 @@ class TestK3scodeDevOpsWorkflow:
                 str(devops_dir.relative_to(project_root)),
                 "--base-dir",
                 str(project_root),
-                "--sources-file",
+                "--sources",
                 str(sources_file.relative_to(project_root)),
             ],
             debug_info={
@@ -184,7 +184,7 @@ class TestK3scodeDevOpsWorkflow:
                 str(devops_dir.relative_to(project_root)),
                 "--base-dir",
                 str(project_root),
-                "--sources-file",
+                "--sources",
                 str(sources_file.relative_to(project_root)),
             ],
         )
@@ -240,7 +240,7 @@ class TestK3scodeMemoryWorkflow:
                 str(memory_dir.relative_to(project_root)),
                 "--base-dir",
                 str(project_root),
-                "--sources-file",
+                "--sources",
                 str(sources_file.relative_to(project_root)),
             ],
         )
@@ -278,7 +278,7 @@ class TestK3scodeRDBWorkflow:
                 str(rdb_dir.relative_to(project_root)),
                 "--base-dir",
                 str(project_root),
-                "--sources-file",
+                "--sources",
                 str(sources_file.relative_to(project_root)),
             ],
         )

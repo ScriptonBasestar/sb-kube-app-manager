@@ -25,7 +25,7 @@ class TestDeployExamples:
         as specified in examples/deploy/yaml/config.yaml.
         """
         # Verify example files exist
-        example_dir = examples_dir / "deploy" / "yaml"
+        example_dir = examples_dir / "deploy" / "yaml-example"
         verify_example_exists(example_dir)
 
         # Get project root
@@ -59,7 +59,7 @@ class TestDeployExamples:
         as specified in examples/deploy/install-action/config.yaml.
         """
         # Verify example files exist
-        example_dir = examples_dir / "deploy" / "action"
+        example_dir = examples_dir / "deploy" / "action-example"
         verify_example_exists(example_dir)
 
         # Get project root

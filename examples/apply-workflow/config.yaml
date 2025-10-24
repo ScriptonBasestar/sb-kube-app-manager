@@ -1,0 +1,23 @@
+# SBKube Apply Workflow Example
+# Demonstrates the integrated 'sbkube apply' command
+
+namespace: apply-demo
+
+apps:
+  # Backend application with Redis cache
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: 17.13.2
+    values:
+      - redis.yaml
+
+  # Nginx web server (depends on Redis)
+  nginx:
+    type: helm
+    chart: bitnami/nginx
+    version: 15.0.0
+    values:
+      - nginx.yaml
+    depends_on:
+      - redis  # Deploy after Redis is ready

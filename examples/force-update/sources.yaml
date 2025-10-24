@@ -1,0 +1,5 @@
+cluster: force-demo-cluster
+kubeconfig: ~/.kube/config
+
+helm_repos:
+  bitnami: https://charts.bitnami.com/bitnami

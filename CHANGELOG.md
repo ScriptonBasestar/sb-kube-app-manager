@@ -1,5 +1,46 @@
 # Changelog - SBKube
 
+## [0.4.4] - 2025-10-24
+
+### 📦 Examples
+
+- **4개 신규 예제 디렉토리 추가** (Phase 2A 완료)
+  - `examples/apply-workflow/` - 통합 워크플로우 (`sbkube apply`) 사용법
+    - Redis + Nginx 스택 배포
+    - depends_on을 통한 의존성 관리
+    - apply vs 단계별 실행 비교
+  - `examples/force-update/` - `--force` 옵션 활용
+    - 차트/Git 리포지토리 강제 재다운로드
+    - 빌드 캐시 무시 및 재빌드
+    - 배포 충돌 해결 및 Pod 강제 재생성
+  - `examples/git-standalone/` - Git 타입 단독 사용
+    - Strimzi Kafka Operator Git 배포
+    - Public/Private 리포지토리 인증
+    - 로컬 수정 및 다중 차트 배포
+  - `examples/state-management/` - 배포 상태 관리
+    - state list/history 명령어
+    - rollback을 통한 이전 버전 복구
+    - SQLite 상태 데이터베이스 활용
+
+### 📊 Examples Coverage Improvement
+
+- **예제 디렉토리**: 16개 → 20개 (+25%)
+- **워크플로우 커버리지**: 14.3% → 71.4% (5배 향상)
+  - apply 통합 워크플로우: ✅
+  - --force 옵션: ✅
+  - Git 타입 단독: ✅
+  - 상태 관리 (history/rollback): ✅
+- **전체 예제 커버리지**: 72% → 85% (예상)
+- **총 라인 수**: 12,872줄 (문서 8,436줄 추가)
+
+### 🎯 Related
+
+- Phase 2A (예제 추가) 완료
+- Phase 2B (문서 보강) + Phase 2A 통합 완료
+- 남은 단계: kustomize 예제 (Phase 3 예정)
+
+---
+
 ## [0.4.3] - 2025-10-24
 
 ### 📚 Documentation

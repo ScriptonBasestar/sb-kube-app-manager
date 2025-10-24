@@ -1,0 +1,12 @@
+# SBKube Git Type Example
+# Demonstrates deploying Helm charts from Git repositories
+
+namespace: git-demo
+
+apps:
+  # Strimzi Kafka Operator from Git
+  strimzi-operator:
+    type: git
+    repo: strimzi
+    path: install/cluster-operator
+    # Note: SBKube git type supports single path only

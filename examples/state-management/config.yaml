@@ -1,0 +1,12 @@
+# SBKube State Management Example
+# Demonstrates using state, history, and rollback commands
+
+namespace: state-demo
+
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: 17.13.2
+    values:
+      - redis.yaml

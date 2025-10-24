@@ -108,3 +108,51 @@ jobs:
       run: |
         source .venv/bin/activate
         mypy sbkube
+
+  validate-examples:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Install sbkube
+      run: |
+        uv venv
+        uv pip install -e .
+
+    - name: Validate example configs
+      run: |
+        source .venv/bin/activate
+
+        # examples 디렉토리에서 config.yaml 찾기
+        for config in $(find examples -name "config.yaml" -o -name "config-*.yaml"); do
+          echo "Validating: $config"
+          sbkube validate "$config" || echo "⚠️ Validation warning for $config"
+        done
+
+    - name: Check example READMEs
+      run: |
+        # README.md 누락 확인
+        missing_readmes=0
+        for dir in examples/*/; do
+          if [ ! -f "${dir}README.md" ]; then
+            echo "❌ Missing README.md in: $dir"
+            missing_readmes=$((missing_readmes + 1))
+          fi
+        done
+
+        if [ $missing_readmes -gt 0 ]; then
+          echo "⚠️ Found $missing_readmes directories without README.md"
+        else
+          echo "✅ All example directories have README.md"
+        fi

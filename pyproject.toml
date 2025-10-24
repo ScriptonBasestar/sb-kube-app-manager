@@ -13,7 +13,6 @@ dependencies = [
   "gitpython",
   "jinja2",
   "rich",
-  "pytest>=8.3.5",
   "toml>=0.10.2",
   "jsonschema>=4.23.0",
   "pydantic>=2.7.1",

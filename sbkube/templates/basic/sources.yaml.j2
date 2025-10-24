@@ -1,11 +1,9 @@
 helm_repos:
-  {% if use_bitnami %}
-  - name: bitnami
-    url: https://charts.bitnami.com/bitnami
-  {% endif %}
-  {% if use_prometheus %}
-  - name: prometheus-community
-    url: https://prometheus-community.github.io/helm-charts
-  {% endif %}
+{%- if use_bitnami %}
+  bitnami: https://charts.bitnami.com/bitnami
+{%- endif %}
+{%- if use_prometheus %}
+  prometheus-community: https://prometheus-community.github.io/helm-charts
+{%- endif %}
 
-git_repos: []
+git_repos: {}

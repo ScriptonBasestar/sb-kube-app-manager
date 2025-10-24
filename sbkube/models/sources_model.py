@@ -146,6 +146,66 @@ class SourceScheme(InheritableConfigModel):
         """,
         ).strip()
 
+    @field_validator("helm_repos", mode="before")
+    @classmethod
+    def normalize_helm_repos(cls, v: Any) -> dict[str, Any]:
+        """Normalize helm_repos to support string shorthand format.
+
+        Converts: {"bitnami": "https://..."} -> {"bitnami": {"url": "https://..."}}
+        """
+        if not isinstance(v, dict):
+            return v
+
+        normalized = {}
+        for name, value in v.items():
+            if isinstance(value, str):
+                # String shorthand: convert to dict with url field
+                normalized[name] = {"url": value}
+            else:
+                # Already a dict or HelmRepoScheme instance
+                normalized[name] = value
+        return normalized
+
+    @field_validator("git_repos", mode="before")
+    @classmethod
+    def normalize_git_repos(cls, v: Any) -> dict[str, Any]:
+        """Normalize git_repos to support string shorthand format.
+
+        Converts: {"my-repo": "https://github.com/..."} -> {"my-repo": {"url": "https://github.com/..."}}
+        """
+        if not isinstance(v, dict):
+            return v
+
+        normalized = {}
+        for name, value in v.items():
+            if isinstance(value, str):
+                # String shorthand: convert to dict with url field
+                normalized[name] = {"url": value}
+            else:
+                # Already a dict or GitRepoScheme instance
+                normalized[name] = value
+        return normalized
+
+    @field_validator("oci_registries", mode="before")
+    @classmethod
+    def normalize_oci_registries(cls, v: Any) -> dict[str, Any]:
+        """Normalize oci_registries to support string shorthand format.
+
+        Converts: {"ghcr": "ghcr.io"} -> {"ghcr": {"registry": "ghcr.io"}}
+        """
+        if not isinstance(v, dict):
+            return v
+
+        normalized = {}
+        for name, value in v.items():
+            if isinstance(value, str):
+                # String shorthand: convert to dict with registry field
+                normalized[name] = {"registry": value}
+            else:
+                # Already a dict or OciRepoScheme instance
+                normalized[name] = value
+        return normalized
+
     @field_validator("cluster")
     @classmethod
     def validate_cluster_name(cls, v: str) -> str:

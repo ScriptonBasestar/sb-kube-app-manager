@@ -499,38 +499,49 @@ def format_error_with_suggestions(exc: SbkubeError) -> str:
     Returns:
         str: Formatted error message with suggestions
     """
+    from sbkube.utils.error_suggestions import format_suggestions
+
     message = str(exc)
 
-    if isinstance(exc, CliToolNotFoundError):
-        message += f"\n💡 Install {exc.tool_name}:"
-        if exc.suggested_install:
-            message += f"\n   {exc.suggested_install}"
-        else:
-            message += f"\n   Please check the official documentation for {exc.tool_name} installation"
+    # Try to get suggestions from ERROR_GUIDE database first
+    error_type = type(exc).__name__
+    suggestions = format_suggestions(error_type)
 
-    elif isinstance(exc, ConfigFileNotFoundError):
-        message += f"\n💡 Expected configuration file at: {exc.file_path}"
-        if exc.searched_paths:
-            message += f"\n   Searched paths: {', '.join(exc.searched_paths)}"
-        message += "\n   Create the configuration file or check the path"
+    if suggestions:
+        # Use comprehensive suggestions from ERROR_GUIDE
+        message += suggestions
+    else:
+        # Fallback to legacy inline suggestions for backward compatibility
+        if isinstance(exc, CliToolNotFoundError):
+            message += f"\n💡 Install {exc.tool_name}:"
+            if exc.suggested_install:
+                message += f"\n   {exc.suggested_install}"
+            else:
+                message += f"\n   Please check the official documentation for {exc.tool_name} installation"
 
-    elif isinstance(exc, KubernetesConnectionError):
-        message += "\n💡 Check your Kubernetes connection:"
-        message += "\n   kubectl config current-context"
-        message += "\n   kubectl cluster-info"
-        if exc.kubeconfig:
-            message += f"\n   Verify kubeconfig file: {exc.kubeconfig}"
+        elif isinstance(exc, ConfigFileNotFoundError):
+            message += f"\n💡 Expected configuration file at: {exc.file_path}"
+            if exc.searched_paths:
+                message += f"\n   Searched paths: {', '.join(exc.searched_paths)}"
+            message += "\n   Create the configuration file or check the path"
 
-    elif isinstance(exc, HelmChartNotFoundError):
-        message += "\n💡 Check chart availability:"
-        message += "\n   helm search repo <chart_name>"
-        message += "\n   helm repo update"
-        if exc.repo:
-            message += f"\n   helm repo list (verify {exc.repo} is added)"
+        elif isinstance(exc, KubernetesConnectionError):
+            message += "\n💡 Check your Kubernetes connection:"
+            message += "\n   kubectl config current-context"
+            message += "\n   kubectl cluster-info"
+            if exc.kubeconfig:
+                message += f"\n   Verify kubeconfig file: {exc.kubeconfig}"
 
-    elif isinstance(exc, GitRepositoryError):
-        message += "\n💡 Check repository access:"
-        message += f"\n   git ls-remote {exc.repository_url}"
-        message += "\n   Verify repository URL and credentials"
+        elif isinstance(exc, HelmChartNotFoundError):
+            message += "\n💡 Check chart availability:"
+            message += "\n   helm search repo <chart_name>"
+            message += "\n   helm repo update"
+            if exc.repo:
+                message += f"\n   helm repo list (verify {exc.repo} is added)"
+
+        elif isinstance(exc, GitRepositoryError):
+            message += "\n💡 Check repository access:"
+            message += f"\n   git ls-remote {exc.repository_url}"
+            message += "\n   Verify repository URL and credentials"
 
     return message

@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)](<>)
 [![Repo](https://img.shields.io/badge/GitHub-kube--app--manaer-blue?logo=github)](https://github.com/ScriptonBasestar/kube-app-manaer)
-[![Version](https://img.shields.io/badge/version-0.4.1-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.4.5-blue)](CHANGELOG.md)
 
 **SBKube**는 `YAML`, `Helm`, `Git` 리소스를 로컬에서 정의하고 `k3s` 등 Kubernetes 환경에 일관되게 배포할 수 있는 CLI 도구입니다.
 
@@ -43,7 +43,7 @@ sbkube deploy --base-dir . --app-dir config --namespace <namespace>
 - 📖 [시작하기](docs/01-getting-started/) - 설치 및 빠른 시작
 - ⚙️ [기능 가이드](docs/02-features/) - 명령어 및 기능 설명
 - 🔧 [설정 가이드](docs/03-configuration/) - 설정 파일 작성법
-- 📖 [사용 예제](docs/06-examples/) - 다양한 배포 시나리오
+- 📖 [사용 예제](examples/) - 다양한 배포 시나리오
 - 🔍 [문제 해결](docs/07-troubleshooting/) - 일반적인 문제 및 해결책
 
 ### 개발자 리소스

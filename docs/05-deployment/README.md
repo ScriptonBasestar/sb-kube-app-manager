@@ -301,7 +301,7 @@ stages:
   - deploy-production
 
 variables:
-  SBKUBE_VERSION: "0.1.10"
+  SBKUBE_VERSION: "0.4.5"
 
 before_script:
   - pip install sbkube==$SBKUBE_VERSION

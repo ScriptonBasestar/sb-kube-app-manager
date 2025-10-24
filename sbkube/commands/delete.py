@@ -54,6 +54,11 @@ def check_resource_exists(
     help="삭제 대상 리소스가 없을 경우 오류 대신 건너뜁니다.",
 )
 @click.option(
+    "--dry-run",
+    is_flag=True,
+    help="실제로 삭제하지 않고 삭제될 리소스를 미리 확인합니다.",
+)
+@click.option(
     "--config-file",
     "config_file_name",
     default=None,
@@ -66,12 +71,18 @@ def cmd(
     base_dir: str,
     target_app_name: str | None,
     skip_not_found: bool,
+    dry_run: bool,
     config_file_name: str | None,
 ):
     """config.yaml/toml에 정의된 애플리케이션을 삭제합니다 (Helm 릴리스, Kubectl 리소스 등)."""
-    console.print(
-        f"[bold blue]✨ `delete` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]",
-    )
+    if dry_run:
+        console.print(
+            "[bold yellow]🔍 `delete` 작업 시작 (DRY-RUN 모드) - 실제 삭제는 수행되지 않습니다 ✨[/bold yellow]",
+        )
+    else:
+        console.print(
+            f"[bold blue]✨ `delete` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]",
+        )
 
     cli_namespace = ctx.obj.get("namespace")
 
@@ -218,6 +229,8 @@ def cmd(
             helm_cmd = ["helm", "uninstall", app_release_name]
             if current_namespace:
                 helm_cmd.extend(["--namespace", current_namespace])
+            if dry_run:
+                helm_cmd.append("--dry-run")
 
             console.print(f"    [cyan]$ {' '.join(helm_cmd)}[/cyan]")
             return_code, stdout, stderr = run_command(
@@ -226,9 +239,14 @@ def cmd(
                 timeout=300,
             )
             if return_code == 0:
-                console.print(
-                    f"[green]✅ Helm 릴리스 '{app_release_name}' 삭제 완료.[/green]",
-                )
+                if dry_run:
+                    console.print(
+                        f"[yellow]🔍 [DRY-RUN] Helm 릴리스 '{app_release_name}' 삭제 예정.[/yellow]",
+                    )
+                else:
+                    console.print(
+                        f"[green]✅ Helm 릴리스 '{app_release_name}' 삭제 완료.[/green]",
+                    )
                 if stdout:
                     console.print(f"    [grey]Helm STDOUT: {stdout.strip()}[/grey]")
                 delete_successful_for_app = True
@@ -284,6 +302,8 @@ def cmd(
                     kubectl_cmd.extend(["--namespace", current_namespace])
                 if skip_not_found:
                     kubectl_cmd.append("--ignore-not-found=true")
+                if dry_run:
+                    kubectl_cmd.append("--dry-run=client")
 
                 console.print(f"    [cyan]$ {' '.join(kubectl_cmd)}[/cyan]")
                 return_code, stdout, stderr = run_command(
@@ -292,9 +312,14 @@ def cmd(
                     timeout=120,
                 )
                 if return_code == 0:
-                    console.print(
-                        f"[green]    ✅ YAML '{abs_yaml_path.name}' 삭제 요청 성공.[/green]",
-                    )
+                    if dry_run:
+                        console.print(
+                            f"[yellow]    🔍 [DRY-RUN] YAML '{abs_yaml_path.name}' 삭제 예정.[/yellow]",
+                        )
+                    else:
+                        console.print(
+                            f"[green]    ✅ YAML '{abs_yaml_path.name}' 삭제 요청 성공.[/green]",
+                        )
                     if stdout:
                         console.print(
                             f"        [grey]Kubectl STDOUT: {stdout.strip()}[/grey]",
@@ -346,31 +371,41 @@ def cmd(
                 console.print("")
                 continue
 
-            for raw_cmd_str in app_config.uninstall.script:
-                console.print(f"    [cyan]$ {raw_cmd_str}[/cyan]")
-                return_code, stdout, stderr = run_command(
-                    raw_cmd_str,
-                    check=False,
-                    cwd=BASE_DIR,
+            if dry_run:
+                console.print(
+                    f"[yellow]⚠️ [DRY-RUN] 앱 '{app_name}' (타입: action): uninstall 스크립트는 dry-run에서 실행되지 않습니다.[/yellow]",
                 )
-                if return_code != 0:
-                    console.print(
-                        f"[red]❌ 앱 '{app_name}': uninstall 스크립트 실행 실패 ('{raw_cmd_str}'):[/red]",
+                console.print(
+                    f"    [grey]스크립트 내용: {app_config.uninstall.script}[/grey]",
+                )
+                delete_successful_for_app = True
+                delete_command_executed = True
+            else:
+                for raw_cmd_str in app_config.uninstall.script:
+                    console.print(f"    [cyan]$ {raw_cmd_str}[/cyan]")
+                    return_code, stdout, stderr = run_command(
+                        raw_cmd_str,
+                        check=False,
+                        cwd=BASE_DIR,
                     )
-                    if stdout:
-                        console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
-                    if stderr:
-                        console.print(f"    [red]STDERR:[/red] {stderr.strip()}")
-                    delete_successful_for_app = False
-                    break
-                else:
-                    if stdout:
-                        console.print(f"    [grey]STDOUT:[/grey] {stdout.strip()}")
-                    console.print(
-                        f"[green]✅ 앱 '{app_name}': uninstall 스크립트 실행 완료 ('{raw_cmd_str}')[/green]",
-                    )
-                    delete_successful_for_app = True
-            delete_command_executed = True
+                    if return_code != 0:
+                        console.print(
+                            f"[red]❌ 앱 '{app_name}': uninstall 스크립트 실행 실패 ('{raw_cmd_str}'):[/red]",
+                        )
+                        if stdout:
+                            console.print(f"    [blue]STDOUT:[/blue] {stdout.strip()}")
+                        if stderr:
+                            console.print(f"    [red]STDERR:[/red] {stderr.strip()}")
+                        delete_successful_for_app = False
+                        break
+                    else:
+                        if stdout:
+                            console.print(f"    [grey]STDOUT:[/grey] {stdout.strip()}")
+                        console.print(
+                            f"[green]✅ 앱 '{app_name}': uninstall 스크립트 실행 완료 ('{raw_cmd_str}')[/green]",
+                        )
+                        delete_successful_for_app = True
+                delete_command_executed = True
 
         else:
             console.print(

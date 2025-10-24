@@ -1,0 +1,23 @@
+# Monitoring Stack Configuration
+# Prometheus + Grafana 기반 완전한 모니터링 시스템
+
+namespace: monitoring
+
+apps:
+  # 1. Prometheus - 메트릭 수집 및 저장
+  prometheus:
+    type: helm
+    chart: prometheus-community/prometheus
+    version: "25.3.1"
+    values:
+      - prometheus-values.yaml
+
+  # 2. Grafana - 메트릭 시각화
+  grafana:
+    type: helm
+    chart: grafana/grafana
+    version: "7.0.6"
+    values:
+      - grafana-values.yaml
+    depends_on:
+      - prometheus

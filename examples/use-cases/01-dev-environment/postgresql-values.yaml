@@ -1,0 +1,22 @@
+auth:
+  username: postgres
+  password: "postgres-password"
+  database: dev_db
+
+primary:
+  persistence:
+    enabled: false  # 개발 환경용
+  resources:
+    limits:
+      memory: 512Mi
+      cpu: 500m
+    requests:
+      memory: 256Mi
+      cpu: 250m
+
+metrics:
+  enabled: true
+  resources:
+    limits:
+      memory: 64Mi
+      cpu: 50m

@@ -1,6 +1,0 @@
-# SBKube Sources Configuration - Basic Example
-# Defines Helm repositories and other external sources
-
-# Helm chart repositories
-helm:
-  bitnami: https://charts.bitnami.com/bitnami

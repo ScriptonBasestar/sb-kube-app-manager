@@ -1,0 +1,24 @@
+mode: standalone
+
+auth:
+  rootUser: minioadmin
+  rootPassword: minioadmin
+
+persistence:
+  enabled: false  # 개발 환경용
+
+resources:
+  limits:
+    memory: 512Mi
+    cpu: 500m
+  requests:
+    memory: 256Mi
+    cpu: 250m
+
+service:
+  type: ClusterIP
+  ports:
+    api: 9000
+    console: 9001
+
+defaultBuckets: "dev-bucket"

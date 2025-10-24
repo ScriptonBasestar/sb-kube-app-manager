@@ -1,0 +1,112 @@
+# Prometheus Configuration
+
+# AlertManager 설정
+alertmanager:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: "local-path"
+  resources:
+    limits:
+      memory: 256Mi
+      cpu: 200m
+    requests:
+      memory: 128Mi
+      cpu: 100m
+
+# Node Exporter 설정
+nodeExporter:
+  enabled: true
+  resources:
+    limits:
+      memory: 128Mi
+      cpu: 100m
+    requests:
+      memory: 64Mi
+      cpu: 50m
+
+# kube-state-metrics 설정
+kubeStateMetrics:
+  enabled: true
+  resources:
+    limits:
+      memory: 256Mi
+      cpu: 200m
+    requests:
+      memory: 128Mi
+      cpu: 100m
+
+# Pushgateway 설정
+pushgateway:
+  enabled: true
+  resources:
+    limits:
+      memory: 128Mi
+      cpu: 100m
+
+# Prometheus Server 설정
+server:
+  enabled: true
+
+  # 메트릭 보존 기간
+  retention: "15d"
+
+  # Persistence 설정
+  persistentVolume:
+    enabled: true
+    size: 20Gi
+    storageClass: "local-path"
+
+  # 리소스 제한
+  resources:
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+    requests:
+      memory: 1Gi
+      cpu: 500m
+
+  # 글로벌 설정
+  global:
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    evaluation_interval: 30s
+
+  # 서비스 타입
+  service:
+    type: ClusterIP
+    servicePort: 80
+
+# 서비스 모니터 설정
+serverFiles:
+  alerting_rules.yml:
+    groups:
+      - name: kubernetes-alerts
+        rules:
+          - alert: PodCrashLooping
+            expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+              summary: "Pod crash looping"
+
+          - alert: NodeNotReady
+            expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              description: "Node {{ $labels.node }} is not ready"
+              summary: "Node not ready"
+
+          - alert: HighMemoryUsage
+            expr: (sum(container_memory_usage_bytes) by (pod) / sum(container_spec_memory_limit_bytes) by (pod) * 100) > 90
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              description: "Pod {{ $labels.pod }} memory usage is above 90%"
+              summary: "High memory usage"

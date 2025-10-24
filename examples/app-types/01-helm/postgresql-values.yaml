@@ -1,0 +1,11 @@
+auth:
+  username: postgres
+  password: "demo-password"
+  database: demo_db
+primary:
+  persistence:
+    enabled: false
+  resources:
+    limits:
+      memory: 512Mi
+      cpu: 300m

@@ -1,0 +1,62 @@
+# MediaWiki Configuration
+
+mediawikiName: "My Company Wiki"
+mediawikiUser: admin
+mediawikiPassword: "admin-password-change-me"
+mediawikiEmail: admin@example.com
+
+# MySQL 연결 설정
+externalDatabase:
+  host: mysql.wiki-stack.svc.cluster.local
+  port: 3306
+  user: mediawiki
+  password: "wiki-password"
+  database: mediawiki
+
+# MariaDB는 사용하지 않음 (외부 MySQL 사용)
+mariadb:
+  enabled: false
+
+# 프로덕션 환경에서는 persistence를 반드시 활성화하세요
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: "local-path"
+
+resources:
+  limits:
+    memory: 1Gi
+    cpu: 1000m
+  requests:
+    memory: 512Mi
+    cpu: 500m
+
+# 서비스 타입 (Ingress를 사용하므로 ClusterIP)
+service:
+  type: ClusterIP
+  port: 80
+
+# Ingress 비활성화 (별도 YAML로 관리)
+ingress:
+  enabled: false
+
+# PHP 설정
+php:
+  memoryLimit: 512M
+  uploadMaxFilesize: 20M
+  postMaxSize: 20M
+
+# 스케일링 설정 (프로덕션 환경)
+replicaCount: 2
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+# Pod 배포 전략
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0

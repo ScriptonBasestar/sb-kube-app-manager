@@ -1,0 +1,23 @@
+architecture: standalone
+
+auth:
+  enabled: true
+  password: "dev-password"
+
+master:
+  persistence:
+    enabled: false  # 개발 환경용
+  resources:
+    limits:
+      memory: 256Mi
+      cpu: 200m
+    requests:
+      memory: 128Mi
+      cpu: 100m
+
+metrics:
+  enabled: true
+  resources:
+    limits:
+      memory: 64Mi
+      cpu: 50m

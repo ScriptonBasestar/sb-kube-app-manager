@@ -1,0 +1,4 @@
+git_repos:
+  example-charts:
+    url: https://github.com/example/helm-charts.git
+    branch: main

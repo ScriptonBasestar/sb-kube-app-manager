@@ -1,0 +1,37 @@
+# Development Environment Configuration
+# k3s 클러스터에 완전한 개발 환경 구축
+
+namespace: dev-env
+
+apps:
+  # 1. Redis - 세션 스토어 & 캐시
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: "17.13.2"
+    values:
+      - redis-values.yaml
+
+  # 2. PostgreSQL - 메인 데이터베이스
+  postgresql:
+    type: helm
+    chart: bitnami/postgresql
+    version: "12.12.10"
+    values:
+      - postgresql-values.yaml
+
+  # 3. Mailhog - 이메일 테스트 서버
+  mailhog:
+    type: helm
+    chart: codecentric/mailhog
+    version: "5.2.3"
+    values:
+      - mailhog-values.yaml
+
+  # 4. MinIO - S3 호환 객체 스토리지
+  minio:
+    type: helm
+    chart: bitnami/minio
+    version: "12.8.16"
+    values:
+      - minio-values.yaml

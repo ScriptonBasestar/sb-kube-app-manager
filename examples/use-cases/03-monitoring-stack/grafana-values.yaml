@@ -1,0 +1,93 @@
+# Grafana Configuration
+
+# 관리자 계정
+adminUser: admin
+adminPassword: "admin-password"  # 프로덕션 환경에서 변경 필수!
+
+# Persistence 설정
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: "local-path"
+
+# 리소스 제한
+resources:
+  limits:
+    memory: 512Mi
+    cpu: 500m
+  requests:
+    memory: 256Mi
+    cpu: 250m
+
+# 서비스 설정
+service:
+  type: ClusterIP
+  port: 80
+
+# Ingress 설정 (필요시 활성화)
+ingress:
+  enabled: false
+  # enabled: true
+  # annotations:
+  #   traefik.ingress.kubernetes.io/router.entrypoints: web
+  # hosts:
+  #   - grafana.local
+  # path: /
+
+# Prometheus 데이터 소스 자동 설정
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server.monitoring.svc.cluster.local
+        access: proxy
+        isDefault: true
+        editable: true
+
+# 대시보드 자동 프로비저닝
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+# 사전 설정 대시보드 (ID로 가져오기)
+dashboards:
+  default:
+    kubernetes-cluster:
+      gnetId: 6417
+      revision: 1
+      datasource: Prometheus
+    node-exporter:
+      gnetId: 1860
+      revision: 27
+      datasource: Prometheus
+    prometheus-stats:
+      gnetId: 3662
+      revision: 2
+      datasource: Prometheus
+
+# 플러그인 설치
+plugins:
+  - grafana-clock-panel
+  - grafana-piechart-panel
+
+# Grafana 설정
+grafana.ini:
+  server:
+    root_url: "http://localhost:3000"
+  analytics:
+    check_for_updates: true
+  log:
+    mode: console
+  grafana_net:
+    url: https://grafana.net

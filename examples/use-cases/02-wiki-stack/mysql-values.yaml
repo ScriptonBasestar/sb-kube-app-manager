@@ -1,0 +1,37 @@
+# MySQL Configuration for MediaWiki
+
+architecture: standalone
+
+auth:
+  rootPassword: "root-password-change-me"
+  database: mediawiki
+  username: mediawiki
+  password: "wiki-password"
+
+primary:
+  # 프로덕션 환경에서는 persistence를 반드시 활성화하세요
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "local-path"  # k3s 기본 스토리지 클래스
+
+  resources:
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+    requests:
+      memory: 512Mi
+      cpu: 500m
+
+  # 초기화 스크립트 (선택사항)
+  initdb:
+    scripts:
+      init-charset.sql: |
+        ALTER DATABASE mediawiki CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+metrics:
+  enabled: true
+  resources:
+    limits:
+      memory: 128Mi
+      cpu: 100m

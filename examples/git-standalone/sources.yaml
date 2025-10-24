@@ -1,7 +1,0 @@
-cluster: git-demo-cluster
-kubeconfig: ~/.kube/config
-
-git_repos:
-  strimzi:
-    url: "https://github.com/strimzi/strimzi-kafka-operator.git"
-    branch: "release-0.44.x"

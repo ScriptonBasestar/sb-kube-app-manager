@@ -1,0 +1,22 @@
+namespace: helm-demo
+
+apps:
+  # 원격 Helm 차트 예제
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: "17.13.2"
+    values:
+      - redis-values.yaml
+
+  # 차트 커스터마이징 예제
+  postgresql:
+    type: helm
+    chart: bitnami/postgresql
+    version: "12.12.10"
+    values:
+      - postgresql-values.yaml
+    overrides:
+      templates/secrets.yaml: custom-secrets.yaml
+    removes:
+      - templates/tests/

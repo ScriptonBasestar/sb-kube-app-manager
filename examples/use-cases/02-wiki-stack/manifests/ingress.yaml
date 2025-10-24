@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wiki-ingress
+  namespace: wiki-stack
+  annotations:
+    # Traefik 설정
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    # HTTPS 리다이렉트 (프로덕션 환경)
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # traefik.ingress.kubernetes.io/router.tls: "true"
+
+    # 요청 크기 제한 (파일 업로드 지원)
+    traefik.ingress.kubernetes.io/router.middlewares: wiki-stack-request-size@kubernetescrd
+
+    # 타임아웃 설정
+    traefik.ingress.kubernetes.io/router.timeout.request: "30s"
+spec:
+  rules:
+  - host: wiki.local  # 프로덕션 환경에서는 실제 도메인으로 변경
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: mediawiki
+            port:
+              number: 80
+  # HTTPS 설정 (cert-manager 사용 시)
+  # tls:
+  # - hosts:
+  #   - wiki.yourdomain.com
+  #   secretName: wiki-tls
+---
+# Request Size Middleware (파일 업로드 지원)
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: request-size
+  namespace: wiki-stack
+spec:
+  buffering:
+    maxRequestBodyBytes: 20971520  # 20MB
+    memRequestBodyBytes: 2097152   # 2MB

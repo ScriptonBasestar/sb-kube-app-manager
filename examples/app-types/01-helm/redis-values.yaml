@@ -1,0 +1,11 @@
+architecture: standalone
+auth:
+  enabled: true
+  password: "demo-password"
+master:
+  persistence:
+    enabled: false
+  resources:
+    limits:
+      memory: 256Mi
+      cpu: 200m

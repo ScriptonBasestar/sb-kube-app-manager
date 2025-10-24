@@ -1,0 +1,20 @@
+# Promtail Log Shipper
+
+config:
+  clients:
+    - url: http://loki:3100/loki/api/v1/push
+
+# DaemonSet (모든 노드에 배포)
+daemonset:
+  enabled: true
+
+serviceMonitor:
+  enabled: false
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 50m
+  limits:
+    memory: 256Mi
+    cpu: 100m

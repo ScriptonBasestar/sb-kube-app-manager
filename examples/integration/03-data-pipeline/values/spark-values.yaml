@@ -1,0 +1,5 @@
+master:
+  resources: {limits: {memory: 512Mi, cpu: 500m}}
+worker:
+  replicaCount: 2
+  resources: {limits: {memory: 512Mi, cpu: 500m}}

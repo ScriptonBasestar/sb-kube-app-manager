@@ -1,0 +1,22 @@
+namespace: data-pipeline
+
+apps:
+  kafka:
+    type: helm
+    chart: bitnami/kafka
+    values: [values/kafka-values.yaml]
+
+  minio:
+    type: yaml
+    files: [manifests/minio.yaml]
+
+  spark:
+    type: helm
+    chart: bitnami/spark
+    values: [values/spark-values.yaml]
+    depends_on: [kafka, minio]
+
+  demo-pipeline:
+    type: yaml
+    files: [manifests/pipeline.yaml]
+    depends_on: [spark]

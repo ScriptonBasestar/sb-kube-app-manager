@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: minio, namespace: data-pipeline}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: minio}}
+  template:
+    metadata: {labels: {app: minio}}
+    spec:
+      containers:
+      - {name: minio, image: minio/minio:latest, args: [server, /data], ports: [{containerPort: 9000}], resources: {limits: {memory: 256Mi, cpu: 200m}}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: minio, namespace: data-pipeline}
+spec: {selector: {app: minio}, ports: [{port: 9000}]}

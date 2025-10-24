@@ -1,0 +1,47 @@
+# GitLab Runner Configuration
+
+# GitLab Runner 등록 토큰 (필수 변경!)
+# GitLab 프로젝트 → Settings → CI/CD → Runners → Registration token
+runnerRegistrationToken: "YOUR_GITLAB_REGISTRATION_TOKEN"
+
+# GitLab URL
+gitlabUrl: https://gitlab.com/  # Self-hosted GitLab 사용 시 변경
+
+# 동시 실행 작업 수
+concurrent: 10
+
+# Kubernetes RBAC
+rbac:
+  create: true
+
+runners:
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        namespace = "cicd"
+        image = "alpine:latest"
+        privileged = true  # Docker-in-Docker 지원
+
+        # CPU/Memory 제한
+        cpu_request = "100m"
+        memory_request = "128Mi"
+        cpu_limit = "1000m"
+        memory_limit = "1Gi"
+
+        # Helper 리소스
+        helper_cpu_request = "5m"
+        helper_memory_request = "32Mi"
+
+        # Docker-in-Docker 볼륨
+        [[runners.kubernetes.volumes.empty_dir]]
+          name = "docker-certs"
+          mount_path = "/certs/client"
+          medium = "Memory"
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 100m
+  limits:
+    memory: 256Mi
+    cpu: 200m

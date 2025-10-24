@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: message-consumer
+  namespace: mq-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: consumer
+  template:
+    metadata:
+      labels:
+        app: consumer
+    spec:
+      containers:
+      - name: consumer
+        image: python:3.11-slim
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          pip install pika --quiet
+          python3 <<EOF
+          import pika
+          import time
+          import os
+
+          # RabbitMQ 연결
+          connection = pika.BlockingConnection(
+              pika.ConnectionParameters(
+                  host='rabbitmq.mq-demo.svc.cluster.local',
+                  credentials=pika.PlainCredentials('user', 'password123')
+              )
+          )
+          channel = connection.channel()
+
+          # Durable Queue 선언
+          channel.queue_declare(queue='task_queue', durable=True)
+
+          def callback(ch, method, properties, body):
+              print(f"[✓] Received: {body.decode()}")
+
+              # 작업 시뮬레이션 (2초 소요)
+              time.sleep(2)
+
+              print(f"[✓] Processed: {body.decode()}")
+
+              # ACK (메시지 처리 완료)
+              ch.basic_ack(delivery_tag=method.delivery_tag)
+
+          # Prefetch: 한 번에 1개 메시지만 처리
+          channel.basic_qos(prefetch_count=1)
+
+          # Consumer 시작
+          channel.basic_consume(queue='task_queue', on_message_callback=callback)
+
+          print(f"[*] Consumer started. Waiting for messages (Pod: {os.getenv('HOSTNAME')})")
+          channel.start_consuming()
+          EOF
+        env:
+        - name: RABBITMQ_HOST
+          value: "rabbitmq.mq-demo.svc.cluster.local"
+        - name: RABBITMQ_USER
+          value: "user"
+        - name: RABBITMQ_PASS
+          value: "password123"
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 200m

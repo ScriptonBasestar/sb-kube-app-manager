@@ -1,0 +1,4 @@
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami
+    description: Bitnami Helm Charts

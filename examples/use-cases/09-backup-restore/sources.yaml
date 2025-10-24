@@ -1,0 +1,4 @@
+helm_repos:
+  vmware-tanzu:
+    url: https://vmware-tanzu.github.io/helm-charts
+    description: VMware Tanzu Helm Charts (Velero)

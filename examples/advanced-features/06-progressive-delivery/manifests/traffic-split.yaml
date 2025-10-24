@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: canary-config, namespace: canary-demo}
+data:
+  strategy: |
+    # Canary Strategy
+    # v1 (stable): 9 replicas (90%)
+    # v2 (canary): 1 replica (10%)
+    # Gradually increase v2 replicas to shift traffic.

@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users
+  namespace: microservices
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: users
+  template:
+    metadata:
+      labels:
+        app: users
+    spec:
+      containers:
+      - name: app
+        image: hashicorp/http-echo:latest
+        args: ["-text=Users Service", "-listen=:8080"]
+        ports: [containerPort: 8080]
+        resources:
+          limits: {memory: 64Mi, cpu: 50m}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users
+  namespace: microservices
+spec:
+  selector:
+    app: users
+  ports:
+  - port: 80
+    targetPort: 8080

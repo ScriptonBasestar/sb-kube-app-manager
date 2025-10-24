@@ -1,0 +1,16 @@
+namespace: canary-demo
+
+apps:
+  app-stable:
+    type: yaml
+    files: [manifests/app-v1.yaml]
+
+  app-canary:
+    type: yaml
+    files: [manifests/app-v2.yaml]
+    depends_on: [app-stable]
+
+  traffic-split:
+    type: yaml
+    files: [manifests/traffic-split.yaml]
+    depends_on: [app-canary]

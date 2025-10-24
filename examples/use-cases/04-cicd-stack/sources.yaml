@@ -1,0 +1,9 @@
+helm_repos:
+  - name: bitnami
+    url: https://charts.bitnami.com/bitnami
+
+  - name: twuni
+    url: https://helm.twun.io
+
+  - name: gitlab
+    url: https://charts.gitlab.io

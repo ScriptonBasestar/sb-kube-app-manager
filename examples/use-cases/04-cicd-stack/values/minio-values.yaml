@@ -1,0 +1,28 @@
+# MinIO S3 Compatible Storage
+
+mode: standalone
+
+auth:
+  rootUser: admin
+  rootPassword: minio-secret-password  # 프로덕션에서는 Sealed Secrets 사용
+
+defaultBuckets: "registry"  # Docker Registry용 버킷 자동 생성
+
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: "local-path"  # k3s 기본 스토리지
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 250m
+
+service:
+  type: ClusterIP
+  ports:
+    api: 9000
+    console: 9001

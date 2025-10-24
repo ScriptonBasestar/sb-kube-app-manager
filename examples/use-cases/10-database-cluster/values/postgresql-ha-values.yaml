@@ -1,0 +1,63 @@
+# PostgreSQL HA 설정
+
+# PostgreSQL 버전
+image:
+  tag: 15.4.0
+
+# 고가용성 설정
+postgresql:
+  replicaCount: 3  # Primary 1 + Standby 2
+
+  # 복제 모드 (비동기: 성능 우선, 동기: 안전성 우선)
+  synchronousCommit: "off"
+  numSynchronousReplicas: 0
+
+  # 리소스
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # 데이터 영속성
+  persistence:
+    enabled: true
+    size: 8Gi
+
+# Pgpool-II (Connection Pooling & Load Balancing)
+pgpool:
+  replicaCount: 1
+
+  # 리소스
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+  # Admin 사용자
+  adminUsername: admin
+  adminPassword: adminpassword
+
+# 인증
+auth:
+  postgresPassword: postgres123
+  replicationPassword: replication123
+  username: appuser
+  password: apppassword
+  database: appdb
+
+# 메트릭 (Prometheus)
+metrics:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi

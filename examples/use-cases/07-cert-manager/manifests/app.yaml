@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app
+  namespace: cert-manager-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-app
+  template:
+    metadata:
+      labels:
+        app: demo-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            memory: 128Mi
+            cpu: 100m
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html
+        configMap:
+          name: demo-app-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-app-html
+  namespace: cert-manager-demo
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Cert-Manager Demo</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          max-width: 800px;
+          margin: 50px auto;
+          padding: 20px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+        .container {
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 40px;
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 { margin: 0 0 20px 0; }
+        .status {
+          background: rgba(255, 255, 255, 0.2);
+          padding: 15px;
+          border-radius: 10px;
+          margin: 20px 0;
+        }
+        .check { color: #4ade80; font-size: 24px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>🔒 cert-manager Demo</h1>
+        <p>이 페이지는 자동으로 발급된 TLS 인증서로 보호됩니다.</p>
+
+        <div class="status">
+          <div class="check">✓</div>
+          <strong>인증서 정보:</strong>
+          <ul>
+            <li>발급자: Let's Encrypt (ACME)</li>
+            <li>자동 갱신: 30일 전 자동</li>
+            <li>cert-manager: Kubernetes 네이티브 인증서 관리</li>
+          </ul>
+        </div>
+
+        <h2>브라우저 주소창을 확인하세요:</h2>
+        <ul>
+          <li>🔒 자물쇠 아이콘 (HTTPS)</li>
+          <li>✅ 유효한 인증서</li>
+          <li>🌐 공인된 CA (Let's Encrypt)</li>
+        </ul>
+
+        <h2>cert-manager가 자동으로 처리하는 것들:</h2>
+        <ul>
+          <li>ACME Challenge (HTTP-01 또는 DNS-01)</li>
+          <li>인증서 발급 요청</li>
+          <li>Kubernetes Secret 자동 생성</li>
+          <li>만료 전 자동 갱신</li>
+        </ul>
+      </div>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app
+  namespace: cert-manager-demo
+spec:
+  selector:
+    app: demo-app
+  ports:
+  - port: 80
+    targetPort: 80

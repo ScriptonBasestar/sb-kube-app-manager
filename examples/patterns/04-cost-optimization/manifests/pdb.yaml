@@ -1,0 +1,6 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: app-pdb, namespace: cost-opt-demo}
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: demo}}

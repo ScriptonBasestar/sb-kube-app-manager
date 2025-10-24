@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: federated-app, namespace: multi-cluster-demo}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: federated}}
+  template:
+    metadata: {labels: {app: federated}}
+    spec:
+      containers:
+      - {name: app, image: nginx:alpine, ports: [{containerPort: 80}]}

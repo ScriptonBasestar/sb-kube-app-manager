@@ -1,0 +1,12 @@
+namespace: argocd
+
+apps:
+  argocd:
+    type: helm
+    chart: argo/argo-cd
+    namespace: argocd
+
+  demo-app:
+    type: yaml
+    files: [manifests/argocd-app.yaml]
+    depends_on: [argocd]

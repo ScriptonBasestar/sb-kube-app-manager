@@ -1,0 +1,12 @@
+apiVersion: batch/v1
+kind: Job
+metadata: {name: demo-pipeline, namespace: data-pipeline}
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: pipeline
+        image: busybox:latest
+        command: ["/bin/sh", "-c", "echo 'Data Pipeline: Kafka → Spark → MinIO' && sleep 10"]
+        resources: {limits: {memory: 64Mi, cpu: 50m}}

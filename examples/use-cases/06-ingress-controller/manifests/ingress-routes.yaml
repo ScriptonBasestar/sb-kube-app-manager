@@ -1,0 +1,36 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: app1-route
+  namespace: ingress-demo
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: PathPrefix(`/app1`)
+    kind: Rule
+    services:
+    - name: app1
+      port: 80
+    middlewares:
+    - name: compress
+    - name: strip-prefix-app1
+    - name: rate-limit
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: app2-route
+  namespace: ingress-demo
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: PathPrefix(`/app2`)
+    kind: Rule
+    services:
+    - name: app2
+      port: 80
+    middlewares:
+    - name: compress
+    - name: strip-prefix-app2

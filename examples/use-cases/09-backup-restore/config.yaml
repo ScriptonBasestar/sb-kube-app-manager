@@ -1,0 +1,38 @@
+namespace: velero-demo
+
+apps:
+  # MinIO (S3 호환 백업 스토리지)
+  minio:
+    type: yaml
+    files:
+      - manifests/minio.yaml
+    namespace: velero
+    enabled: true
+
+  # Velero (백업/복구 도구)
+  velero:
+    type: helm
+    chart: vmware-tanzu/velero
+    namespace: velero
+    values:
+      - values/velero-values.yaml
+    depends_on:
+      - minio
+    enabled: true
+
+  # 데모 애플리케이션 (백업 대상)
+  demo-app:
+    type: yaml
+    files:
+      - manifests/demo-app.yaml
+    enabled: true
+
+  # Velero Schedule (자동 백업)
+  backup-schedule:
+    type: yaml
+    files:
+      - manifests/backup-schedule.yaml
+    depends_on:
+      - velero
+      - demo-app
+    enabled: true

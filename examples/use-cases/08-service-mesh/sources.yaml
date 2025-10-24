@@ -1,0 +1,4 @@
+helm_repos:
+  linkerd:
+    url: https://helm.linkerd.io/stable
+    description: Linkerd Service Mesh official Helm repository

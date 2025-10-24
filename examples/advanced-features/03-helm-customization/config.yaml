@@ -1,0 +1,43 @@
+namespace: helm-custom
+
+apps:
+  # 1. Release Name + Set Values (Dev)
+  redis-dev:
+    type: helm
+    chart: bitnami/redis
+    version: 17.13.2
+    release_name: redis-dev  # Helm 릴리스 이름 커스터마이징
+    values:
+      - values/base-values.yaml
+      - values/dev-values.yaml
+    set_values:
+      # CLI 값 오버라이드 (values 파일보다 우선)
+      image.tag: "7.0.11-debian-11-r0"
+      master.resources.limits.memory: "256Mi"
+
+  # 2. 다른 릴리스 (Staging)
+  redis-staging:
+    type: helm
+    chart: bitnami/redis
+    version: 17.13.2
+    release_name: redis-staging
+    values:
+      - values/base-values.yaml
+      - values/staging-values.yaml
+    set_values:
+      image.tag: "7.0.11-debian-11-r0"
+      replica.replicaCount: "2"
+
+  # 3. Production 릴리스 (Cluster Mode)
+  redis-prod:
+    type: helm
+    chart: bitnami/redis
+    version: 17.13.2
+    release_name: redis-prod
+    values:
+      - values/base-values.yaml
+      - values/prod-values.yaml
+    set_values:
+      image.tag: "7.0.11-debian-11-r0"
+      cluster.enabled: "true"
+      cluster.nodes: "6"

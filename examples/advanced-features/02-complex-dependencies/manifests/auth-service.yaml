@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: complex-deps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - name: auth
+        image: busybox:latest
+        command: ["/bin/sh", "-c", "echo 'Auth Service' && sleep 3600"]
+        resources:
+          limits:
+            memory: 64Mi
+            cpu: 50m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: complex-deps
+spec:
+  ports:
+  - port: 8080
+  selector:
+    app: auth-service

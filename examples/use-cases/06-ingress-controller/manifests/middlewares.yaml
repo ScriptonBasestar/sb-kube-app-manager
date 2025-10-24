@@ -1,0 +1,37 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+  namespace: ingress-demo
+spec:
+  compress: {}
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-prefix-app1
+  namespace: ingress-demo
+spec:
+  stripPrefix:
+    prefixes:
+    - /app1
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-prefix-app2
+  namespace: ingress-demo
+spec:
+  stripPrefix:
+    prefixes:
+    - /app2
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: rate-limit
+  namespace: ingress-demo
+spec:
+  rateLimit:
+    average: 100
+    burst: 50

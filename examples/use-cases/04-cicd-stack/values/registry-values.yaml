@@ -1,0 +1,39 @@
+# Docker Registry with S3 Backend
+
+replicaCount: 1
+
+image:
+  repository: registry
+  tag: 2.8.3
+
+# S3 (MinIO) Backend Storage
+storage: s3
+s3:
+  region: us-east-1
+  bucket: registry
+  encrypt: false
+  secure: false  # MinIO는 HTTP (클러스터 내부)
+  v4auth: true
+  regionEndpoint: http://minio:9000  # MinIO 서비스 이름
+  accessKey: admin
+  secretKey: minio-secret-password  # MinIO와 일치
+
+# 로컬 PV 불필요 (MinIO가 백엔드)
+persistence:
+  enabled: false
+
+service:
+  type: ClusterIP
+  port: 5000
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 50m
+  limits:
+    memory: 256Mi
+    cpu: 200m
+
+# 헬스 체크
+health:
+  enabled: true

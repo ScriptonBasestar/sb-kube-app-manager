@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: cluster-registry, namespace: multi-cluster-demo}
+data:
+  clusters: |
+    - name: cluster-east
+      context: east-k3s
+    - name: cluster-west
+      context: west-k3s

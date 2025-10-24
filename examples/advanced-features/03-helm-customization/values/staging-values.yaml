@@ -1,0 +1,19 @@
+# Staging 환경 전용 설정
+
+architecture: replication
+
+replica:
+  replicaCount: 1  # set_values로 2로 오버라이드됨
+
+master:
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 200m
+
+auth:
+  enabled: true
+  password: "staging-password"

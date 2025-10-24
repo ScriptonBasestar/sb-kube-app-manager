@@ -1,0 +1,9 @@
+namespace: kustomize-dev
+
+apps:
+  nginx-app:
+    type: kustomize
+    overlay_path: overlays/dev  # 환경별로 변경: overlays/dev 또는 overlays/prod
+    build_options:
+      enable_alpha_plugins: false
+      enable_helm: false

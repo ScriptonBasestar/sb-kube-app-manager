@@ -1,0 +1,15 @@
+auth:
+  username: postgres
+  password: "complex-demo-password"
+  database: complex_db
+
+primary:
+  persistence:
+    enabled: false
+  resources:
+    limits:
+      memory: 512Mi
+      cpu: 500m
+    requests:
+      memory: 256Mi
+      cpu: 250m

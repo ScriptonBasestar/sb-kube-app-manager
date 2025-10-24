@@ -1,0 +1,16 @@
+namespace: noop-demo
+
+apps:
+  # 1단계: 수동으로 설정되었다고 가정하는 작업
+  manual-setup:
+    type: noop
+    description: "수동으로 설정된 네트워크 정책 (이미 완료)"
+    enabled: true
+
+  # 2단계: manual-setup 완료 후 배포되는 앱
+  nginx:
+    type: yaml
+    files:
+      - manifests/nginx-deployment.yaml
+    depends_on:
+      - manual-setup

@@ -1,0 +1,41 @@
+# Velero 설정
+
+# 백업 스토리지 위치 (MinIO S3)
+configuration:
+  provider: aws
+  backupStorageLocation:
+    bucket: velero
+    config:
+      region: minio
+      s3ForcePathStyle: true
+      s3Url: http://minio.velero.svc:9000
+  volumeSnapshotLocation:
+    config:
+      region: minio
+
+# MinIO 인증 정보
+credentials:
+  useSecret: true
+  secretContents:
+    cloud: |
+      [default]
+      aws_access_key_id = minio
+      aws_secret_access_key = minio123
+
+# Restic (PV 백업) 활성화
+deployRestic: true
+initContainers:
+  - name: velero-plugin-for-aws
+    image: velero/velero-plugin-for-aws:v1.8.0
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+
+# 리소스 제한
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-client
+  namespace: db-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-client
+  template:
+    metadata:
+      labels:
+        app: demo-client
+    spec:
+      containers:
+      - name: postgresql-client
+        image: bitnami/postgresql:15
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          echo "PostgreSQL HA Demo Client"
+          echo "=========================="
+          echo ""
+          echo "연결 테스트 명령어:"
+          echo "  psql -h postgresql-ha-pgpool -U postgres -d postgres"
+          echo ""
+          echo "클러스터 상태 확인:"
+          echo "  kubectl exec -it postgresql-ha-postgresql-0 -n db-cluster -- repmgr cluster show"
+          echo ""
+          echo "Failover 테스트:"
+          echo "  kubectl delete pod postgresql-ha-postgresql-0 -n db-cluster"
+          echo ""
+          echo "비밀번호: postgres123"
+          echo ""
+          sleep infinity
+        env:
+        - name: PGPASSWORD
+          value: "postgres123"
+        resources:
+          limits:
+            memory: 128Mi
+            cpu: 100m
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-scripts
+  namespace: db-cluster
+data:
+  test-connection.sh: |
+    #!/bin/bash
+    echo "Testing PostgreSQL HA Connection..."
+    psql -h postgresql-ha-pgpool -U postgres -d postgres -c "SELECT version();"
+
+  test-replication.sh: |
+    #!/bin/bash
+    echo "Testing Replication Status..."
+    psql -h postgresql-ha-pgpool -U postgres -d postgres -c "SELECT * FROM pg_stat_replication;"
+
+  test-failover.sh: |
+    #!/bin/bash
+    echo "Simulating Failover..."
+    echo "Deleting Primary Pod..."
+    kubectl delete pod postgresql-ha-postgresql-0 -n db-cluster
+    echo "Wait 30 seconds for failover..."
+    sleep 30
+    echo "Checking new cluster status..."
+    kubectl exec -it postgresql-ha-postgresql-1 -n db-cluster -- repmgr cluster show

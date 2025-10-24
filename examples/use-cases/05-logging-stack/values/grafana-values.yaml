@@ -1,0 +1,33 @@
+# Grafana Visualization
+
+adminUser: admin
+adminPassword: admin-password
+
+# Loki 데이터 소스 자동 설정
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        url: http://loki:3100
+        access: proxy
+        isDefault: true
+        editable: true
+
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClass: "local-path"
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 250m
+
+service:
+  type: ClusterIP
+  port: 80

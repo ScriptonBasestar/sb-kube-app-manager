@@ -1,0 +1,18 @@
+namespace: netpol-demo
+
+apps:
+  # 1단계: 애플리케이션 배포
+  demo-apps:
+    type: yaml
+    files:
+      - manifests/frontend.yaml
+      - manifests/backend.yaml
+      - manifests/database.yaml
+
+  # 2단계: NetworkPolicy 적용
+  network-policies:
+    type: yaml
+    files:
+      - manifests/network-policies.yaml
+    depends_on:
+      - demo-apps

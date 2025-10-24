@@ -1,0 +1,16 @@
+# Development 환경 전용 설정
+
+architecture: standalone
+
+master:
+  resources:
+    requests:
+      memory: 64Mi
+      cpu: 50m
+    limits:
+      memory: 128Mi  # Dev: 낮은 리소스
+      cpu: 100m
+
+# Dev 환경에서는 인증 비활성화 (편의성)
+auth:
+  enabled: false

@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: complex-deps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order
+        image: busybox:latest
+        command: ["/bin/sh", "-c", "echo 'Order Service' && sleep 3600"]
+        resources:
+          limits:
+            memory: 64Mi
+            cpu: 50m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: complex-deps
+spec:
+  ports:
+  - port: 8080
+  selector:
+    app: order-service

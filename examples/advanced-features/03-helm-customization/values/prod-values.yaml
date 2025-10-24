@@ -1,0 +1,23 @@
+# Production 환경 전용 설정
+
+architecture: standalone  # set_values로 cluster로 오버라이드됨
+
+master:
+  persistence:
+    enabled: true  # 프로덕션에서는 PV 활성화
+    size: 8Gi
+    storageClass: "local-path"  # k3s 기본 스토리지
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 200m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+auth:
+  enabled: true
+  password: "production-password"  # 실제로는 Sealed Secrets 사용 권장
+
+metrics:
+  enabled: true  # 프로덕션에서는 메트릭 활성화

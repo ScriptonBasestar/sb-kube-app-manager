@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: fullstack
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            memory: 64Mi
+            cpu: 50m
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html
+        configMap:
+          name: frontend-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-html
+  namespace: fullstack
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html><head><title>Full-Stack App</title></head>
+    <body><h1>Full-Stack Application</h1>
+    <p>Frontend → Backend → PostgreSQL + Redis</p></body></html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: fullstack
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80

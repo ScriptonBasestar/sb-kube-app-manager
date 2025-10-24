@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: message-producer
+  namespace: mq-demo
+spec:
+  # 매 분마다 메시지 발행
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: producer
+            image: python:3.11-slim
+            command: ["/bin/bash"]
+            args:
+            - -c
+            - |
+              pip install pika --quiet
+              python3 <<EOF
+              import pika
+              import datetime
+
+              # RabbitMQ 연결
+              connection = pika.BlockingConnection(
+                  pika.ConnectionParameters(
+                      host='rabbitmq.mq-demo.svc.cluster.local',
+                      credentials=pika.PlainCredentials('user', 'password123')
+                  )
+              )
+              channel = connection.channel()
+
+              # Durable Queue 선언
+              channel.queue_declare(queue='task_queue', durable=True)
+
+              # 메시지 발행
+              message = f"Task created at {datetime.datetime.now()}"
+              channel.basic_publish(
+                  exchange='',
+                  routing_key='task_queue',
+                  body=message,
+                  properties=pika.BasicProperties(delivery_mode=2)  # Persistent
+              )
+
+              print(f"[✓] Sent: {message}")
+              connection.close()
+              EOF
+            env:
+            - name: RABBITMQ_HOST
+              value: "rabbitmq.mq-demo.svc.cluster.local"
+            - name: RABBITMQ_USER
+              value: "user"
+            - name: RABBITMQ_PASS
+              value: "password123"
+            resources:
+              limits:
+                memory: 256Mi
+                cpu: 200m

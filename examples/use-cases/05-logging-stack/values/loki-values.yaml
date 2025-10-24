@@ -1,0 +1,27 @@
+# Loki Log Aggregation
+
+loki:
+  auth_enabled: false
+
+  commonConfig:
+    replication_factor: 1
+
+  storage:
+    type: filesystem
+
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: "local-path"
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 250m
+
+service:
+  type: ClusterIP
+  port: 3100

@@ -1,0 +1,6 @@
+# 다운로드된 파일 제외
+downloaded/
+crds/
+configs/
+manifest.yaml
+*.downloaded.yaml

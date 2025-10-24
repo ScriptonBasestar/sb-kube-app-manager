@@ -1,0 +1,56 @@
+# RabbitMQ Cluster 설정
+
+# 클러스터 구성
+replicaCount: 3
+
+# 인증
+auth:
+  username: user
+  password: password123
+  erlangCookie: supersecretcookie
+
+# 영속성
+persistence:
+  enabled: true
+  size: 8Gi
+
+# 리소스
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Management UI
+service:
+  type: ClusterIP
+  ports:
+    amqp: 5672
+    manager: 15672
+
+# 메트릭 (Prometheus)
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+
+# 플러그인
+extraPlugins: "rabbitmq_management rabbitmq_prometheus"
+
+# Clustering
+clustering:
+  enabled: true
+  addressType: hostname
+  rebalance: true
+
+# 고가용성 정책 (자동 설정)
+extraConfiguration: |
+  default_vhost = /
+  default_user = user
+  default_pass = password123
+  cluster_formation.peer_discovery_backend = rabbit_peer_discovery_k8s
+  cluster_formation.k8s.host = kubernetes.default.svc.cluster.local
+  cluster_formation.k8s.address_type = hostname
+  queue_master_locator = min-masters

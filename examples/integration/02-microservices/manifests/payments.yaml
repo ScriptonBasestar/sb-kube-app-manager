@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: payments, namespace: microservices}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: payments}}
+  template:
+    metadata: {labels: {app: payments}}
+    spec:
+      containers:
+      - {name: app, image: hashicorp/http-echo:latest, args: ["-text=Payments Service", "-listen=:8080"], ports: [{containerPort: 8080}], resources: {limits: {memory: 64Mi, cpu: 50m}}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: payments, namespace: microservices}
+spec: {selector: {app: payments}, ports: [{port: 80, targetPort: 8080}]}

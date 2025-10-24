@@ -1,0 +1,28 @@
+namespace: mq-demo
+
+apps:
+  # RabbitMQ 클러스터
+  rabbitmq:
+    type: helm
+    chart: bitnami/rabbitmq
+    values:
+      - values/rabbitmq-values.yaml
+    enabled: true
+
+  # Producer (메시지 발행자)
+  producer:
+    type: yaml
+    files:
+      - manifests/producer.yaml
+    depends_on:
+      - rabbitmq
+    enabled: true
+
+  # Consumer (메시지 소비자)
+  consumer:
+    type: yaml
+    files:
+      - manifests/consumer.yaml
+    depends_on:
+      - rabbitmq
+    enabled: true

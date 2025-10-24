@@ -1,0 +1,45 @@
+namespace: fullstack
+
+apps:
+  # 데이터 레이어
+  postgresql:
+    type: helm
+    chart: bitnami/postgresql
+    values:
+      - values/postgresql-values.yaml
+    enabled: true
+
+  redis:
+    type: helm
+    chart: bitnami/redis
+    values:
+      - values/redis-values.yaml
+    enabled: true
+
+  # API 레이어
+  backend:
+    type: yaml
+    files:
+      - manifests/backend.yaml
+    depends_on:
+      - postgresql
+      - redis
+    enabled: true
+
+  # UI 레이어
+  frontend:
+    type: yaml
+    files:
+      - manifests/frontend.yaml
+    depends_on:
+      - backend
+    enabled: true
+
+  # 라우팅 레이어
+  ingress:
+    type: yaml
+    files:
+      - manifests/ingress.yaml
+    depends_on:
+      - frontend
+    enabled: true

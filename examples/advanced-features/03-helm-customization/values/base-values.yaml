@@ -1,0 +1,18 @@
+# 모든 환경에서 공통으로 사용하는 기본 설정
+
+architecture: standalone  # 기본 아키텍처 (환경별로 오버라이드 가능)
+
+auth:
+  enabled: true
+  password: "default-password"  # 프로덕션에서는 반드시 변경
+
+master:
+  persistence:
+    enabled: false  # 테스트 환경에서는 PV 비활성화
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi  # set_values로 오버라이드 가능
+      cpu: 250m

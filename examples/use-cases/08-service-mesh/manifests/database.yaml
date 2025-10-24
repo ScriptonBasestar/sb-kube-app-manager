@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database
+  namespace: linkerd-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      containers:
+      - name: app
+        image: hashicorp/http-echo:latest
+        args:
+        - "-text=Database Response: Query result from PostgreSQL (mocked, mTLS encrypted)"
+        - "-listen=:5432"
+        ports:
+        - containerPort: 5432
+        resources:
+          limits:
+            memory: 64Mi
+            cpu: 50m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: database
+  namespace: linkerd-demo
+spec:
+  selector:
+    app: database
+  ports:
+  - port: 5432
+    targetPort: 5432

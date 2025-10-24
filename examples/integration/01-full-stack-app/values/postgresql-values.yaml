@@ -1,0 +1,13 @@
+auth:
+  username: appuser
+  password: apppassword
+  database: appdb
+
+primary:
+  persistence:
+    enabled: true
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi

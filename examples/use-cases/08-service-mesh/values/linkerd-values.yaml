@@ -1,0 +1,23 @@
+# Linkerd Control Plane 설정
+
+# Identity (mTLS 인증서 관리)
+identity:
+  issuer:
+    scheme: kubernetes.io/tls
+
+# Proxy (Sidecar)
+proxy:
+  resources:
+    cpu:
+      request: 100m
+      limit: 1
+    memory:
+      request: 20Mi
+      limit: 250Mi
+
+# 고가용성 설정 (프로덕션 권장)
+enablePodAntiAffinity: true
+
+# Dashboard 접근 제어
+dashboard:
+  enforcedHostRegexp: ".*"

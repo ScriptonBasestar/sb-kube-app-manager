@@ -1,0 +1,63 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-app-ingress
+  namespace: cert-manager-demo
+  annotations:
+    # cert-manager 인증서 자동 발급 (핵심 어노테이션)
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+
+    # Traefik 설정 (k3s 기본 Ingress Controller)
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+
+    # 옵션: HTTP → HTTPS 리다이렉트
+    traefik.ingress.kubernetes.io/redirect-entry-point: https
+    traefik.ingress.kubernetes.io/redirect-permanent: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - demo.example.com
+    secretName: demo-app-tls  # cert-manager가 자동으로 이 Secret 생성
+  rules:
+  - host: demo.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: demo-app
+            port:
+              number: 80
+---
+# 프로덕션용 Ingress (참고용 - 테스트 후 활성화)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-app-ingress-prod
+  namespace: cert-manager-demo
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # 프로덕션 발급자
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/redirect-entry-point: https
+    traefik.ingress.kubernetes.io/redirect-permanent: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - app.yourdomain.com  # 실제 도메인으로 변경
+    secretName: demo-app-tls-prod
+  rules:
+  - host: app.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: demo-app
+            port:
+              number: 80

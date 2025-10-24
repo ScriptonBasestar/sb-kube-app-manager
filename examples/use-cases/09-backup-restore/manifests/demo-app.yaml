@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app
+  namespace: velero-demo
+  labels:
+    app: demo-app
+    backup: enabled
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-app
+  template:
+    metadata:
+      labels:
+        app: demo-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            memory: 128Mi
+            cpu: 100m
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: html
+        configMap:
+          name: demo-app-html
+      - name: data
+        persistentVolumeClaim:
+          claimName: demo-app-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: demo-app-pvc
+  namespace: velero-demo
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-app-html
+  namespace: velero-demo
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Velero Backup Demo</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          max-width: 800px;
+          margin: 50px auto;
+          padding: 20px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+        .container {
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 40px;
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 { margin: 0 0 20px 0; }
+        .important {
+          background: rgba(255, 255, 255, 0.2);
+          padding: 15px;
+          border-radius: 10px;
+          margin: 20px 0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>💾 Velero Backup & Restore Demo</h1>
+        <p><strong>This application is backed up by Velero.</strong></p>
+
+        <div class="important">
+          <h2>✅ 백업 대상:</h2>
+          <ul>
+            <li>Deployment (이 앱)</li>
+            <li>Service</li>
+            <li>ConfigMap (이 HTML)</li>
+            <li>PersistentVolumeClaim (1Gi)</li>
+          </ul>
+        </div>
+
+        <h2>테스트 시나리오:</h2>
+        <ol>
+          <li>현재 상태 확인: <code>kubectl get all -n velero-demo</code></li>
+          <li>백업 생성: <code>velero backup create demo-backup --include-namespaces velero-demo</code></li>
+          <li>네임스페이스 삭제: <code>kubectl delete ns velero-demo</code></li>
+          <li>복구: <code>velero restore create --from-backup demo-backup</code></li>
+          <li>복구 확인: 이 페이지가 다시 나타나면 성공!</li>
+        </ol>
+
+        <p style="font-size: 12px; opacity: 0.8;">
+          백업 위치: MinIO S3 (minio.velero.svc:9000/velero)<br>
+          자동 백업: Schedule 활성화됨 (매일 02:00 AM)
+        </p>
+      </div>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app
+  namespace: velero-demo
+spec:
+  selector:
+    app: demo-app
+  ports:
+  - port: 80
+    targetPort: 80

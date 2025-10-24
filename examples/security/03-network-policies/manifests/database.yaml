@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database
+  namespace: netpol-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+      tier: database
+  template:
+    metadata:
+      labels:
+        app: database
+        tier: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:14-alpine
+        env:
+        - name: POSTGRES_PASSWORD
+          value: demo-password
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 200m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: database
+  namespace: netpol-demo
+spec:
+  selector:
+    app: database
+  ports:
+  - port: 5432

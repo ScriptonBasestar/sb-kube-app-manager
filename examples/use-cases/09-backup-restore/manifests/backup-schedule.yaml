@@ -1,0 +1,28 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: daily-backup
+  namespace: velero
+spec:
+  # 매일 02:00 AM 백업 (Cron 형식)
+  schedule: "0 2 * * *"
+
+  # 백업 템플릿
+  template:
+    # 백업 대상 네임스페이스
+    includedNamespaces:
+    - velero-demo
+
+    # 백업 보관 기간 (30일)
+    ttl: 720h0m0s
+
+    # 스냅샷 볼륨 포함
+    snapshotVolumes: true
+
+    # Persistent Volume 백업 (Restic)
+    defaultVolumesToRestic: true
+
+    # 백업 라벨
+    labels:
+      schedule: daily
+      environment: demo

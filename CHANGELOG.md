@@ -1,5 +1,60 @@
 # Changelog - SBKube
 
+## [0.4.7] - 2025-10-24
+
+### ✨ Features
+
+- **sources.yaml 자동 탐색 기능** (Developer Experience 개선)
+  - **문제**: `cd app1 && sbkube apply` 실행 시 sources.yaml을 찾지 못함
+  - **해결**: sources.yaml을 다음 순서로 자동 탐색
+    1. 현재 디렉토리 (`.`)
+    2. 상위 디렉토리 (`..`)
+    3. base-dir (프로젝트 루트)
+  - **영향**: 두 가지 실행 방법 모두 동일하게 동작
+    - `sbkube apply --app-dir app1` (base-dir에서 실행)
+    - `cd app1 && sbkube apply` (app-dir에서 실행)
+
+### 🔧 Improvements
+
+- **find_sources_file() 유틸리티 함수 추가**
+  - `sbkube/utils/common.py`에 sources.yaml 탐색 로직 구현
+  - 상세한 에러 메시지 (찾은 경로 목록 표시)
+  - charts/repos 디렉토리를 sources.yaml 위치 기준으로 생성
+
+### 📝 Technical Details
+
+**Before (v0.4.6)**:
+```bash
+# base-dir에서 실행 (성공)
+$ sbkube apply --app-dir app1
+✅ Works
+
+# app-dir에서 실행 (실패)
+$ cd app1 && sbkube apply
+❌ Error: sources.yaml not found
+```
+
+**After (v0.4.7)**:
+```bash
+# base-dir에서 실행 (성공)
+$ sbkube apply --app-dir app1
+📄 Using sources file: /project/sources.yaml
+✅ Works
+
+# app-dir에서 실행 (성공)
+$ cd app1 && sbkube apply
+📄 Using sources file: /project/sources.yaml  # 상위에서 발견
+✅ Works
+```
+
+### 🎯 Impact
+
+- ✅ 유연한 실행 위치 (app-dir 내부에서도 실행 가능)
+- ✅ monorepo 구조 지원 개선
+- ✅ 하위 호환성 유지 (기존 동작 그대로)
+
+---
+
 ## [0.4.6] - 2025-10-24
 
 ### 🐛 Bug Fixes

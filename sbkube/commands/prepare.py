@@ -14,7 +14,7 @@ from rich.console import Console
 
 from sbkube.models.config_model import GitApp, HelmApp, HttpApp, SBKubeConfig
 from sbkube.utils.cli_check import check_helm_installed_or_exit
-from sbkube.utils.common import run_command
+from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 
 console = Console()
@@ -346,10 +346,23 @@ def cmd(
     BASE_DIR = Path(base_dir).resolve()
     APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
     config_file_path = APP_CONFIG_DIR / config_file_name
-    sources_file_path = BASE_DIR / sources_file_name
 
-    CHARTS_DIR = BASE_DIR / "charts"
-    REPOS_DIR = BASE_DIR / "repos"
+    # sources.yaml 찾기 (., .., base-dir 순서로 검색)
+    sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
+
+    if not sources_file_path:
+        console.print(f"[red]❌ sources.yaml not found in:[/red]")
+        console.print(f"  - {APP_CONFIG_DIR / sources_file_name}")
+        console.print(f"  - {APP_CONFIG_DIR.parent / sources_file_name}")
+        console.print(f"  - {BASE_DIR / sources_file_name}")
+        raise click.Abort()
+
+    console.print(f"[cyan]📄 Using sources file: {sources_file_path}[/cyan]")
+
+    # charts/repos 디렉토리는 sources.yaml이 있는 위치 기준
+    SOURCES_BASE_DIR = sources_file_path.parent
+    CHARTS_DIR = SOURCES_BASE_DIR / "charts"
+    REPOS_DIR = SOURCES_BASE_DIR / "repos"
 
     # 디렉토리 생성
     CHARTS_DIR.mkdir(parents=True, exist_ok=True)

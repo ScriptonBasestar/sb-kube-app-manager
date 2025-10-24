@@ -259,3 +259,58 @@ def check_resource_exists(
 
     return_code, _, _ = run_command(cmd, env=env)
     return return_code == 0
+
+
+def find_sources_file(
+    base_dir: Path,
+    app_config_dir: Path,
+    sources_file_name: str = "sources.yaml",
+) -> Path | None:
+    """
+    sources.yaml 파일을 찾습니다.
+
+    다음 순서로 검색합니다:
+    1. app_config_dir (현재 작업 디렉토리, .)
+    2. app_config_dir 상위 디렉토리 (..)
+    3. base_dir (프로젝트 루트)
+
+    이 로직을 통해 다음 두 가지 실행 방법을 모두 지원합니다:
+    - `sbkube apply --app-dir app1` (base-dir에서 실행)
+    - `cd app1 && sbkube apply` (app-dir에서 실행)
+
+    Args:
+        base_dir: 프로젝트 루트 디렉토리
+        app_config_dir: 앱 설정 디렉토리 (config.yaml 위치)
+        sources_file_name: sources 파일 이름 (기본값: "sources.yaml")
+
+    Returns:
+        Path | None: 찾은 sources 파일 경로, 없으면 None
+
+    Example:
+        >>> # Case 1: base-dir에서 실행
+        >>> # sbkube apply --app-dir app1
+        >>> find_sources_file(Path("/project"), Path("/project/app1"))
+        Path("/project/sources.yaml")
+
+        >>> # Case 2: app-dir에서 실행
+        >>> # cd app1 && sbkube apply
+        >>> find_sources_file(Path("/project/app1"), Path("/project/app1"))
+        Path("/project/sources.yaml")  # 상위 디렉토리에서 발견
+    """
+    # 1. app_config_dir에서 sources.yaml 찾기 (현재 디렉토리)
+    sources_path = app_config_dir / sources_file_name
+    if sources_path.exists():
+        return sources_path
+
+    # 2. app_config_dir 상위 디렉토리에서 sources.yaml 찾기 (..)
+    parent_sources_path = app_config_dir.parent / sources_file_name
+    if parent_sources_path.exists():
+        return parent_sources_path
+
+    # 3. base_dir에서 sources.yaml 찾기 (프로젝트 루트)
+    base_sources_path = base_dir / sources_file_name
+    if base_sources_path.exists():
+        return base_sources_path
+
+    # 찾지 못함
+    return None

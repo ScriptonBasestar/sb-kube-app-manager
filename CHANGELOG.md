@@ -1,5 +1,37 @@
 # Changelog - SBKube
 
+## [0.4.1] - 2025-10-24
+
+### ✨ Features
+
+- **helm_repos dict 포맷 통일**
+  - init 템플릿이 list 대신 dict 포맷으로 sources.yaml 생성
+  - 예제 및 모델과 일관성 확보
+  - 중복 방지 자동화 (dict key uniqueness)
+  - O(1) 조회 성능 개선
+
+### 🔧 Improvements
+
+- **Pydantic shorthand 지원 추가**
+  - `helm_repos`, `git_repos`, `oci_registries`에 string shorthand 지원
+  - `{"bitnami": "https://..."}` → 자동으로 `{"bitnami": {"url": "https://..."}}`로 변환
+  - 간결한 설정과 복잡한 설정 모두 지원
+  - 하위 호환성 유지 (기존 포맷 모두 작동)
+
+### 📊 Examples Coverage
+
+- **예제 커버리지 분석 문서 추가** (`EXAMPLES_COVERAGE_ANALYSIS.md`)
+  - 현재 커버리지: 60% (⭐⭐⭐ 보통)
+  - 앱 타입: 7/8 (87.5%) - kustomize 예제 누락
+  - 워크플로우: 1/7 (14.3%)
+  - 개선 계획 4단계 제시
+
+### 🔗 Related Commits
+
+- `3e44209` - helm_repos dict 포맷 통일 및 shorthand validator 추가
+
+---
+
 ## [0.4.0] - 2025-10-23
 
 ### ✨ Features

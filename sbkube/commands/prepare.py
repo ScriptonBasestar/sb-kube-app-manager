@@ -113,6 +113,13 @@ def prepare_helm_app(
 
     # Chart pull
     dest_dir = charts_dir / chart_name
+    chart_yaml = dest_dir / chart_name / "Chart.yaml"
+
+    # Check if chart already exists (skip if not --force)
+    if chart_yaml.exists() and not force:
+        console.print(f"[yellow]⏭️  Chart already exists, skipping: {chart_name}[/yellow]")
+        console.print(f"    Use --force to re-download")
+        return True
 
     # If force flag is set, remove existing chart directory
     if force and dest_dir.exists():
@@ -246,6 +253,13 @@ def prepare_git_app(
         repo_alias = app.repo
 
     dest_dir = repos_dir / repo_alias
+    git_dir = dest_dir / ".git"
+
+    # Check if repository already exists (skip if not --force)
+    if git_dir.exists() and not force:
+        console.print(f"[yellow]⏭️  Repository already exists, skipping: {repo_alias}[/yellow]")
+        console.print(f"    Use --force to re-clone")
+        return True
 
     # If force flag is set, remove existing repository
     if force and dest_dir.exists():
@@ -264,15 +278,8 @@ def prepare_git_app(
     return_code, stdout, stderr = run_command(cmd)
 
     if return_code != 0:
-        console.print(f"[yellow]⚠️ Failed to clone (might already exist): {stderr}[/yellow]")
-        # 이미 존재하면 pull
-        if dest_dir.exists() and (dest_dir / ".git").exists():
-            console.print("  Pulling latest changes...")
-            cmd = ["git", "-C", str(dest_dir), "pull"]
-            return_code, stdout, stderr = run_command(cmd)
-            if return_code != 0:
-                console.print(f"[red]❌ Failed to pull: {stderr}[/red]")
-                return False
+        console.print(f"[red]❌ Failed to clone repository: {stderr}[/red]")
+        return False
 
     console.print(f"[green]✅ Git app prepared: {app_name}[/green]")
     return True

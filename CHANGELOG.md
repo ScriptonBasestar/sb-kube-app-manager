@@ -1,5 +1,65 @@
 # Changelog - SBKube
 
+## [0.4.6] - 2025-10-24
+
+### 🐛 Bug Fixes
+
+- **prepare 명령어 멱등성 개선** (Critical Fix)
+  - **문제**: 차트/리포지토리가 이미 존재할 때 `prepare` 실패
+  - **해결**: 기본 동작을 skip으로 변경 (실패 → 성공)
+  - **영향**: `sbkube apply` 재실행 시 오류 없이 성공
+
+### ✨ Features
+
+- **prepare 명령어 개선**
+  - **기본 동작**: 차트/리포지토리 존재 시 자동 skip
+    - Helm 차트: `charts/{chart_name}/{chart_name}/Chart.yaml` 존재 확인
+    - Git 리포지토리: `repos/{repo_alias}/.git` 존재 확인
+    - HTTP 파일: 이미 구현됨 (변경 없음)
+  - **--force 옵션**: 기존 리소스 삭제 후 재다운로드
+  - **재실행 안전성**: `sbkube apply` 여러 번 실행해도 안전
+
+### 🔄 Behavior Changes
+
+**Before (v0.4.5)**:
+```bash
+$ sbkube prepare
+✅ Helm app prepared: redis
+
+$ sbkube prepare  # 재실행 시 실패
+❌ Failed to pull chart: destination path exists
+```
+
+**After (v0.4.6)**:
+```bash
+$ sbkube prepare
+✅ Helm app prepared: redis
+
+$ sbkube prepare  # 재실행 시 성공 (skip)
+⏭️  Chart already exists, skipping: redis
+    Use --force to re-download
+✅ Helm app prepared: redis
+
+$ sbkube prepare --force  # 강제 재다운로드
+⚠️  Removing existing chart (--force): charts/redis
+✅ Helm app prepared: redis
+```
+
+### 📝 Documentation
+
+- `docs/02-features/commands.md` 업데이트
+  - prepare 명령어 멱등성 섹션 추가
+  - --force 옵션 사용 예제 추가
+  - 동작 방식 상세 설명
+
+### 🎯 Impact
+
+- ✅ `sbkube apply` 재실행 안전성 확보
+- ✅ 개발 워크플로우 개선 (불필요한 재다운로드 방지)
+- ✅ 하위 호환성 유지 (Breaking change 없음)
+
+---
+
 ## [0.4.5] - 2025-10-24
 
 ### 📦 Examples

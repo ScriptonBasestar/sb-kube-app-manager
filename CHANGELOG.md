@@ -1,5 +1,35 @@
 # Changelog - SBKube
 
+## [0.4.3] - 2025-10-24
+
+### 📚 Documentation
+
+- **8개 예제 디렉토리 README.md 추가**
+  - HIGH 우선순위 (4개):
+    - `examples/k3scode/README.md` - k3s 통합 배포 프로젝트 개요
+    - `examples/deploy/action-example/README.md` - kubectl 액션 실행 가이드
+    - `examples/deploy/exec/README.md` - 커스텀 명령어 실행 가이드
+    - `examples/deploy/yaml-example/README.md` - 원시 YAML 매니페스트 배포 가이드
+  - MEDIUM 우선순위 (4개):
+    - `examples/k3scode/memory/README.md` - Redis/Memcached 배포 가이드
+    - `examples/k3scode/rdb/README.md` - PostgreSQL/MariaDB 배포 가이드
+    - `examples/k3scode/ai/README.md` - Toolhive Operator 배포 가이드 (Git 타입)
+    - `examples/overrides/README.md` - Helm 차트 커스터마이징 가이드
+
+### 📊 Examples Coverage Improvement
+
+- **README 커버리지**: 50% → 100% (8/16 → 16/16)
+- **전체 예제 커버리지**: 60% → 72% 예상
+  - 문서 완성도 크게 향상
+  - 사용자가 각 앱 타입 및 기능을 쉽게 이해 가능
+
+### 🎯 Related
+
+- Phase 2B (문서 보강) 완료
+- 다음 단계: Phase 2A (예제 추가) - apply-workflow, force-update, git-standalone, state-management
+
+---
+
 ## [0.4.1] - 2025-10-24
 
 ### ✨ Features

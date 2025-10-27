@@ -19,6 +19,7 @@ from sbkube.models.config_model import (
     ExecApp,
     HelmApp,
     KustomizeApp,
+    NoopApp,
     SBKubeConfig,
     YamlApp,
 )
@@ -346,6 +347,38 @@ def deploy_kustomize_app(
     return True
 
 
+def deploy_noop_app(
+    app_name: str,
+    app: NoopApp,
+    base_dir: Path,
+    app_config_dir: Path,
+    dry_run: bool = False,
+) -> bool:
+    """
+    Noop 앱 배포 (실제로는 아무것도 하지 않음).
+
+    Args:
+        app_name: 앱 이름
+        app: NoopApp 설정
+        base_dir: 프로젝트 루트
+        app_config_dir: 앱 설정 디렉토리
+        dry_run: dry-run 모드
+
+    Returns:
+        항상 True (성공)
+    """
+    console.print(f"[cyan]🚀 Processing Noop app: {app_name}[/cyan]")
+
+    if app.description:
+        console.print(f"  Description: {app.description}")
+
+    if dry_run:
+        console.print("  [yellow]Dry-run mode: No actual deployment[/yellow]")
+
+    console.print(f"[green]✅ Noop app processed: {app_name} (no-op)[/green]")
+    return True
+
+
 @click.command(name="deploy")
 @click.option(
     "--app-dir",
@@ -458,6 +491,8 @@ def cmd(
             success = deploy_exec_app(app_name, app, BASE_DIR, dry_run)
         elif isinstance(app, KustomizeApp):
             success = deploy_kustomize_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+        elif isinstance(app, NoopApp):
+            success = deploy_noop_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
         else:
             console.print(f"[yellow]⏭️  Unsupported app type '{app.type}': {app_name}[/yellow]")
             continue

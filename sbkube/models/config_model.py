@@ -292,12 +292,36 @@ class HttpApp(ConfigBaseModel):
         return v.strip()
 
 
+class NoopApp(ConfigBaseModel):
+    """
+    No-operation 앱 (수동 작업 또는 외부 의존성 표현).
+
+    실제로 아무것도 배포하지 않지만 의존성 체인에서 수동 작업이나
+    외부에서 관리되는 리소스를 표현하는 데 사용됩니다.
+
+    Examples:
+        manual-setup:
+          type: noop
+          description: "수동으로 설정된 네트워크 정책 (이미 완료)"
+          enabled: true
+
+        external-database:
+          type: noop
+          description: "외부 RDS 인스턴스 (AWS 콘솔에서 관리)"
+    """
+
+    type: Literal["noop"] = "noop"
+    description: str | None = None  # 수동 작업 설명
+    depends_on: list[str] = Field(default_factory=list)
+    enabled: bool = True
+
+
 # ============================================================================
 # Discriminated Union
 # ============================================================================
 
 AppConfig = Annotated[
-    HelmApp | YamlApp | ActionApp | ExecApp | GitApp | KustomizeApp | HttpApp,
+    HelmApp | YamlApp | ActionApp | ExecApp | GitApp | KustomizeApp | HttpApp | NoopApp,
     Field(discriminator="type"),
 ]
 

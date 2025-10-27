@@ -12,20 +12,16 @@ apps:
   # === Layer 2: Data Stores ===
 
   postgresql:
-    type: helm
-    chart: bitnami/postgresql
-    version: "12.12.10"
-    values:
-      - postgresql-values.yaml
+    type: yaml
+    files:
+      - manifests/postgresql.yaml
     depends_on:
       - infra-setup
 
   redis:
-    type: helm
-    chart: bitnami/redis
-    version: "17.13.2"
-    values:
-      - redis-values.yaml
+    type: yaml
+    files:
+      - manifests/redis.yaml
     depends_on:
       - infra-setup
 

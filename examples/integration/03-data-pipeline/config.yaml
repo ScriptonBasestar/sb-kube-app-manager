@@ -3,18 +3,20 @@ namespace: data-pipeline
 apps:
   kafka:
     type: helm
-    chart: bitnami/kafka
+    chart: strimzi/strimzi-kafka-operator
+    version: "0.45.0"
     values: [values/kafka-values.yaml]
 
-  minio:
+  storage:
     type: yaml
-    files: [manifests/minio.yaml]
+    files: [manifests/storage-pv.yaml]
 
   spark:
     type: helm
-    chart: bitnami/spark
+    chart: apache-spark/spark
+    version: "2.0.0"
     values: [values/spark-values.yaml]
-    depends_on: [kafka, minio]
+    depends_on: [kafka, storage]
 
   demo-pipeline:
     type: yaml

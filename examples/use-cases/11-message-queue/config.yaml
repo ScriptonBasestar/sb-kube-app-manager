@@ -4,7 +4,8 @@ apps:
   # RabbitMQ 클러스터
   rabbitmq:
     type: helm
-    chart: bitnami/rabbitmq
+    chart: rabbitmq/cluster-operator
+    version: "4.5.2"
     values:
       - values/rabbitmq-values.yaml
     enabled: true

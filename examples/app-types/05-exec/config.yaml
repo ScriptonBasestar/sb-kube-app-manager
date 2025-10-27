@@ -11,13 +11,12 @@ apps:
       - kubectl get nodes
       - echo "✅ Cluster is ready for deployment"
 
-  # 2. Nginx 배포
+  # 2. Nginx 배포 (YAML 매니페스트)
   nginx:
-    type: helm
-    chart: bitnami/nginx
-    version: "15.4.4"
-    values:
-      - nginx-values.yaml
+    type: yaml
+    files:
+      - manifests/nginx-deployment.yaml
+      - manifests/nginx-service.yaml
     depends_on:
       - pre-deployment-check
 

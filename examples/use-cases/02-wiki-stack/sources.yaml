@@ -1,3 +1,2 @@
-helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+# No helm repositories required (all apps use YAML manifests)
+helm_repos: []

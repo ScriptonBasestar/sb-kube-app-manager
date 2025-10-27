@@ -6,19 +6,15 @@ namespace: wiki-stack
 apps:
   # 1. MySQL Database - MediaWiki 백엔드
   mysql:
-    type: helm
-    chart: bitnami/mysql
-    version: "9.12.5"
-    values:
-      - mysql-values.yaml
+    type: yaml
+    files:
+      - manifests/mysql.yaml
 
   # 2. MediaWiki Application
   mediawiki:
-    type: helm
-    chart: bitnami/mediawiki
-    version: "18.4.8"
-    values:
-      - mediawiki-values.yaml
+    type: yaml
+    files:
+      - manifests/mediawiki.yaml
     depends_on:
       - mysql
 

@@ -1,15 +1,15 @@
 namespace: velero-demo
 
 apps:
-  # MinIO (S3 호환 백업 스토리지)
-  minio:
+  # NFS 백업 스토리지
+  backup-storage:
     type: yaml
     files:
-      - manifests/minio.yaml
+      - manifests/nfs-storage.yaml
     namespace: velero
     enabled: true
 
-  # Velero (백업/복구 도구)
+  # Velero (백업/복구 도구 - NFS 사용)
   velero:
     type: helm
     chart: vmware-tanzu/velero
@@ -17,7 +17,7 @@ apps:
     values:
       - values/velero-values.yaml
     depends_on:
-      - minio
+      - backup-storage
     enabled: true
 
   # 데모 애플리케이션 (백업 대상)

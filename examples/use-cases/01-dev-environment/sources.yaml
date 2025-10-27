@@ -1,5 +1,3 @@
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
   codecentric:
     url: https://codecentric.github.io/helm-charts

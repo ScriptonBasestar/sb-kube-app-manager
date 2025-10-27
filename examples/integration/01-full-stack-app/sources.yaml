@@ -1,4 +1,2 @@
-helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
-    description: Bitnami Helm Charts
+# No helm repositories required (all apps use YAML manifests)
+helm_repos: []

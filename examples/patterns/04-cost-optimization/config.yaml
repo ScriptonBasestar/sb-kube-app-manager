@@ -3,7 +3,8 @@ namespace: cost-opt-demo
 apps:
   metrics-server:
     type: helm
-    chart: bitnami/metrics-server
+    chart: metrics-server/metrics-server
+    version: "3.12.2"
 
   demo-app:
     type: yaml

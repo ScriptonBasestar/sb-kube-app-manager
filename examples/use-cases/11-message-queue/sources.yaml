@@ -1,4 +1,4 @@
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
-    description: Bitnami Helm Charts
+  rabbitmq:
+    url: https://charts.rabbitmq.com/
+    description: RabbitMQ Cluster Operator

@@ -3,28 +3,23 @@ namespace: enabled-demo
 apps:
   # 활성화된 앱 (배포됨)
   redis:
-    type: helm
-    chart: bitnami/redis
-    version: "17.13.2"
+    type: yaml
+    files:
+      - manifests/redis.yaml
     enabled: true
-    values:
-      - redis-values.yaml
 
   # 비활성화된 앱 (건너뜀)
   memcached:
-    type: helm
-    chart: bitnami/memcached
+    type: yaml
+    files:
+      - manifests/memcached.yaml
     enabled: false
-    values:
-      - memcached-values.yaml
 
   # enabled 생략 (기본값 true, 배포됨)
   postgresql:
-    type: helm
-    chart: bitnami/postgresql
-    version: "12.12.10"
-    values:
-      - postgresql-values.yaml
+    type: yaml
+    files:
+      - manifests/postgresql.yaml
 
   # 조건부 기능 (현재 비활성화)
   monitoring:

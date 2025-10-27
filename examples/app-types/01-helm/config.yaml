@@ -1,22 +1,18 @@
 namespace: helm-demo
 
 apps:
-  # 원격 Helm 차트 예제
-  redis:
+  # 원격 Helm 차트 예제 - Grafana (공식)
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: "17.13.2"
+    chart: grafana/grafana
+    version: "10.1.2"
     values:
-      - redis-values.yaml
+      - grafana-values.yaml
 
-  # 차트 커스터마이징 예제
-  postgresql:
+  # 차트 커스터마이징 예제 - Prometheus (공식)
+  prometheus:
     type: helm
-    chart: bitnami/postgresql
-    version: "12.12.10"
+    chart: prometheus-community/prometheus
+    version: "25.28.0"
     values:
-      - postgresql-values.yaml
-    overrides:
-      templates/secrets.yaml: custom-secrets.yaml
-    removes:
-      - templates/tests/
+      - prometheus-values.yaml

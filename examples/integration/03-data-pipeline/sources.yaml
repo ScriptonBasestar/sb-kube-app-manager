@@ -1,3 +1,5 @@
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  strimzi:
+    url: https://strimzi.io/charts/
+  apache-spark:
+    url: https://apache.github.io/spark-kubernetes-operator/

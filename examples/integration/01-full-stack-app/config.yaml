@@ -3,17 +3,15 @@ namespace: fullstack
 apps:
   # 데이터 레이어
   postgresql:
-    type: helm
-    chart: bitnami/postgresql
-    values:
-      - values/postgresql-values.yaml
+    type: yaml
+    files:
+      - manifests/postgresql.yaml
     enabled: true
 
   redis:
-    type: helm
-    chart: bitnami/redis
-    values:
-      - values/redis-values.yaml
+    type: yaml
+    files:
+      - manifests/redis.yaml
     enabled: true
 
   # API 레이어

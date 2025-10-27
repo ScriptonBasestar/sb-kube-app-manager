@@ -1,0 +1,34 @@
+# MinIO Configuration
+# Development/Demo settings - adjust for production
+
+# Mode: standalone for demo (distributed for production)
+mode: standalone
+
+# Credentials (change in production!)
+rootUser: minioadmin
+rootPassword: minioadmin123
+
+# Persistence
+persistence:
+  enabled: false  # Disable for demo (enable in production)
+
+# Resources
+resources:
+  requests:
+    memory: 256Mi
+
+# Service
+service:
+  type: ClusterIP
+  port: 9000
+
+# Console (MinIO UI)
+consoleService:
+  type: ClusterIP
+  port: 9001
+
+# Replicas (for standalone mode)
+replicas: 1
+
+# Buckets to create on startup
+buckets: []

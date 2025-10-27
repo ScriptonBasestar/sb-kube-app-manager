@@ -1,22 +1,21 @@
 namespace: cicd
 
 apps:
-  # 1단계: MinIO (S3 Compatible Storage)
-  minio:
-    type: helm
-    chart: bitnami/minio
-    values:
-      - values/minio-values.yaml
+  # 1단계: PersistentVolume (Registry 스토리지)
+  storage-setup:
+    type: yaml
+    files:
+      - manifests/storage-pv.yaml
     enabled: true
 
-  # 2단계: Docker Registry (MinIO 의존)
+  # 2단계: Docker Registry (로컬 스토리지 사용)
   docker-registry:
     type: helm
     chart: twuni/docker-registry
     values:
       - values/registry-values.yaml
     depends_on:
-      - minio
+      - storage-setup
 
   # 3단계: GitLab Runner (Registry 의존)
   gitlab-runner:

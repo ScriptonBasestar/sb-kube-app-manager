@@ -1,0 +1,28 @@
+# Grafana Configuration
+# Development/Demo settings - adjust for production
+
+persistence:
+  enabled: false  # Disable for demo (enable in production)
+
+# Admin credentials (change in production!)
+adminUser: admin
+adminPassword: admin123
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 80
+
+# Resource limits (adjust based on needs)
+resources:
+  limits:
+    memory: 256Mi
+  requests:
+    memory: 128Mi
+
+# Datasources (optional - can add Prometheus later)
+datasources: {}
+
+# Dashboards
+dashboardProviders: {}
+dashboards: {}

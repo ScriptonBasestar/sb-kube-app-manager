@@ -4,7 +4,8 @@ apps:
   # PostgreSQL HA (Primary + Standby)
   postgresql-ha:
     type: helm
-    chart: bitnami/postgresql-ha
+    chart: cnpg/cloudnative-pg
+    version: "0.22.1"
     values:
       - values/postgresql-ha-values.yaml
     enabled: true

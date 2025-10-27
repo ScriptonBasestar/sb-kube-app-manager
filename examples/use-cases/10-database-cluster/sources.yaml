@@ -1,4 +1,4 @@
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
-    description: Bitnami Helm Charts
+  cnpg:
+    url: https://cloudnative-pg.github.io/charts
+    description: CloudNativePG Operator

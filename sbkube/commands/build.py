@@ -119,22 +119,53 @@ def build_helm_app(
 
     # 3.2. Apply overrides if configured
     if app.overrides:
-        console.print(f"  Applying {len(app.overrides)} overrides...")
+        console.print(f"  Processing {len(app.overrides)} override patterns...")
 
         if not overrides_base.exists():
             console.print(f"[yellow]⚠️ Overrides directory not found: {overrides_base}[/yellow]")
         else:
-            for override_rel_path in app.overrides:
-                src_file = overrides_base / override_rel_path
-                dst_file = dest_path / override_rel_path
+            total_files_copied = 0
 
-                if src_file.exists() and src_file.is_file():
-                    # 대상 디렉토리 생성
-                    dst_file.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(src_file, dst_file)
-                    console.print(f"    ✓ Override: {override_rel_path}")
+            for override_pattern in app.overrides:
+                # Check if pattern contains glob wildcards
+                if "*" in override_pattern or "?" in override_pattern:
+                    # Glob pattern - match multiple files
+                    matched_files = list(overrides_base.glob(override_pattern))
+
+                    if not matched_files:
+                        console.print(f"[yellow]    ⚠️ No files matched pattern: {override_pattern}[/yellow]")
+                        continue
+
+                    console.print(f"    Pattern '{override_pattern}' matched {len(matched_files)} files")
+
+                    for src_file in matched_files:
+                        if src_file.is_file():
+                            # Calculate relative path from overrides_base
+                            override_rel_path = src_file.relative_to(overrides_base)
+                            dst_file = dest_path / override_rel_path
+
+                            # Create destination directory
+                            dst_file.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copy2(src_file, dst_file)
+                            console.print(f"      ✓ {override_rel_path}")
+                            total_files_copied += 1
+
                 else:
-                    console.print(f"[yellow]    ⚠️ Override file not found: {src_file}[/yellow]")
+                    # Exact file path - existing behavior
+                    src_file = overrides_base / override_pattern
+                    dst_file = dest_path / override_pattern
+
+                    if src_file.exists() and src_file.is_file():
+                        # 대상 디렉토리 생성
+                        dst_file.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(src_file, dst_file)
+                        console.print(f"    ✓ Override: {override_pattern}")
+                        total_files_copied += 1
+                    else:
+                        console.print(f"[yellow]    ⚠️ Override file not found: {src_file}[/yellow]")
+
+            if total_files_copied > 0:
+                console.print(f"  Total files copied: {total_files_copied}")
 
     # 4. Removes 적용
     if app.removes:

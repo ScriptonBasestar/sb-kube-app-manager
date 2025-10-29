@@ -1,5 +1,56 @@
 # Changelog - SBKube
 
+## [0.4.9] - 2025-10-29
+
+### ✨ Features
+
+- **Glob 패턴 지원** (`sbkube/commands/build.py`)
+  - Override 파일 지정 시 와일드카드 패턴 사용 가능
+  - `*` (0개 이상 문자), `?` (정확히 1개 문자), `**` (재귀적 디렉토리) 지원
+  - 명시적 파일 경로와 glob 패턴 혼합 사용 가능
+
+### 🔧 Improvements
+
+- **build 명령어 Glob 패턴 처리**
+  - 패턴 매칭 파일 개수 표시
+  - 매칭되는 파일이 없으면 경고 메시지
+  - 개별 파일 복사 진행 상황 표시
+
+- **문서 업데이트**
+  - `docs/02-features/commands.md` - Glob 패턴 사용 예제 추가
+  - `docs/03-configuration/config-schema.md` - Glob 패턴 지원 문서화
+  - `examples/override-with-files/` - Glob 패턴 사용 예제 추가
+
+- **테스트 추가**
+  - `tests/test_build.py` - Glob 패턴 테스트 케이스 2개
+    - `test_helm_app_with_glob_patterns` - 기본 glob 패턴 테스트
+    - `test_helm_app_with_mixed_patterns` - 명시적 파일 + glob 혼합 테스트
+
+### 📝 Usage Examples
+
+**기본 사용**:
+```yaml
+overrides:
+  - templates/*.yaml        # templates/의 모든 .yaml 파일
+  - files/*                 # files/의 모든 파일
+```
+
+**혼합 사용**:
+```yaml
+overrides:
+  - Chart.yaml              # 명시적 파일
+  - templates/*.yaml        # Glob 패턴
+  - files/config.toml       # 명시적 파일
+```
+
+**재귀적 패턴**:
+```yaml
+overrides:
+  - templates/**/*.yaml     # templates/ 하위 모든 .yaml (서브디렉토리 포함)
+```
+
+---
+
 ## [0.4.8] - 2025-10-29
 
 ### ✨ Features

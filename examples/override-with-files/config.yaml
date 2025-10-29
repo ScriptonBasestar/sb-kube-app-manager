@@ -1,28 +1,38 @@
-apps:
-  nginx:
-    type: helm
-    chart: bitnami/nginx
-    version: "15.0.0"
-    values:
-      - values/nginx.yaml
+apps: nginx: type: helm chart: bitnami/nginx version: "15.0.0" values: - values/nginx.yaml
 
-    # ⚠️ 중요: Override 파일을 명시적으로 나열해야 적용됩니다
-    #
-    # 경로 규칙:
-    #   - 실제 파일 위치: overrides/nginx/[경로]
-    #   - config.yaml에 작성: [경로]  (앱 이름 제외)
-    #   - 빌드 후 위치: build/nginx/[경로]
-    #
-    # 예시:
-    #   파일: overrides/nginx/templates/custom-configmap.yaml
-    #   설정: templates/custom-configmap.yaml
-    #   결과: build/nginx/templates/custom-configmap.yaml
-    #
-    overrides:
-      - templates/custom-configmap.yaml  # 새 템플릿 추가
-                                         # → build/nginx/templates/custom-configmap.yaml
+```
+# ⚠️ 중요: Override 파일을 명시적으로 나열해야 적용됩니다
+#
+# 경로 규칙:
+#   - 실제 파일 위치: overrides/nginx/[경로]
+#   - config.yaml에 작성: [경로]  (앱 이름 제외)
+#   - 빌드 후 위치: build/nginx/[경로]
+#
+# 예시:
+#   파일: overrides/nginx/templates/custom-configmap.yaml
+#   설정: templates/custom-configmap.yaml
+#   결과: build/nginx/templates/custom-configmap.yaml
+#
+# 방법 1: 명시적 파일 나열 (기존 방식)
+overrides:
+  - templates/custom-configmap.yaml  # 새 템플릿 추가
+                                     # → build/nginx/templates/custom-configmap.yaml
 
-      - files/index.html                 # 새 파일 추가 (.Files.Get에서 사용)
-                                         # → build/nginx/files/index.html
+  - files/index.html                 # 새 파일 추가 (.Files.Get에서 사용)
+                                     # → build/nginx/files/index.html
 
-    namespace: default
+# 방법 2: Glob 패턴 사용 (v0.4.9+)
+#
+# overrides:
+#   - templates/*.yaml               # templates/의 모든 .yaml 파일
+#   - files/*                        # files/의 모든 파일
+#
+# 방법 3: 혼합 사용 (명시적 + Glob)
+#
+# overrides:
+#   - Chart.yaml                     # 차트 메타데이터 교체
+#   - templates/*.yaml               # 모든 템플릿
+#   - files/index.html               # 특정 파일만
+
+namespace: default
+```

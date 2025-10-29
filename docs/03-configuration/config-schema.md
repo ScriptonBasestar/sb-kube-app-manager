@@ -223,6 +223,23 @@ overrides:
   - files/config.toml               # files 디렉토리 파일 추가
 ```
 
+**v0.4.9+ Glob 패턴 지원**:
+
+```yaml
+overrides:
+  - templates/*.yaml                # 모든 YAML 템플릿 (와일드카드)
+  - files/*                         # files 디렉토리의 모든 파일
+  - Chart.yaml                      # 명시적 파일과 혼합 가능
+  - templates/**/*.yaml             # 재귀적 패턴 (서브디렉토리 포함)
+```
+
+**지원되는 Glob 패턴**:
+
+- `*` - 0개 이상의 문자 매칭
+- `?` - 정확히 1개 문자 매칭
+- `**` - 재귀적 디렉토리 매칭
+- 패턴과 명시적 경로를 혼합하여 사용 가능
+
 **디렉토리 구조**:
 
 ```

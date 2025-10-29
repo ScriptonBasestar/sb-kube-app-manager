@@ -635,6 +635,78 @@ sbkube는 `overrides/` 디렉토리를 **자동으로 감지하지 않습니다*
 - **경고 메시지**: v0.4.8+에서는 override 디렉토리가 있지만 설정되지 않으면 경고 표시
 - **설계 철학**: Explicit over Implicit (명시적 > 암묵적)
 
+#### 🎯 Glob 패턴 지원 (v0.4.9+)
+
+여러 파일을 한 번에 지정할 때 **Glob 패턴**을 사용할 수 있습니다.
+
+**지원되는 와일드카드:**
+
+- `*` - 0개 이상의 문자 매칭
+- `?` - 정확히 1개 문자 매칭
+- `**` - 재귀적 디렉토리 매칭
+
+**예제 1: templates 디렉토리의 모든 YAML 파일**
+
+```yaml
+# config.yaml
+apps:
+  myapp:
+    type: helm
+    chart: bitnami/nginx
+    overrides:
+      - templates/*.yaml        # templates/의 모든 .yaml 파일
+      - files/*                 # files/의 모든 파일
+```
+
+**빌드 출력:**
+
+```
+🔨 Building Helm app: myapp
+  Copying chart: charts/nginx/nginx → build/myapp
+  Processing 2 override patterns...
+    Pattern 'templates/*.yaml' matched 3 files
+      ✓ templates/configmap.yaml
+      ✓ templates/deployment.yaml
+      ✓ templates/service.yaml
+    Pattern 'files/*' matched 2 files
+      ✓ files/index.html
+      ✓ files/config.toml
+  Total files copied: 5
+✅ Helm app built: myapp
+```
+
+**예제 2: Glob 패턴과 명시적 파일 혼합**
+
+```yaml
+# config.yaml
+apps:
+  myapp:
+    type: helm
+    chart: my-chart
+    overrides:
+      - Chart.yaml              # 명시적 파일 (차트 메타데이터 교체)
+      - templates/*.yaml        # Glob 패턴 (모든 템플릿)
+      - files/config.toml       # 명시적 파일 (특정 설정)
+      - files/*.txt             # Glob 패턴 (모든 텍스트 파일)
+```
+
+**예제 3: 재귀적 패턴**
+
+```yaml
+overrides:
+  - templates/**/*.yaml         # templates/ 하위 모든 .yaml (서브디렉토리 포함)
+  - "**/*.json"                 # 모든 디렉토리의 .json 파일
+```
+
+**주의사항:**
+
+- **매칭되는 파일 없음**: Glob 패턴이 파일을 찾지 못하면 경고 표시
+  ```
+  ⚠️ No files matched pattern: templates/*.json
+  ```
+- **명시적 파일 우선**: 정확한 파일명을 아는 경우 명시적 경로 권장
+- **경로 규칙 동일**: Glob 패턴도 `overrides/[앱이름]/` 제외한 상대 경로 사용
+
 #### 📚 관련 문서
 
 - [config-schema.md](../03-configuration/config-schema.md) - overrides 필드 상세

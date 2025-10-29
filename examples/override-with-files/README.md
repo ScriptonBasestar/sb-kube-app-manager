@@ -5,9 +5,10 @@
 ## 📋 시나리오
 
 Bitnami Nginx 차트에:
+
 1. 새 ConfigMap 템플릿 추가 (`templates/custom-configmap.yaml`)
-2. 커스텀 index.html 파일 추가 (`files/index.html`)
-3. ConfigMap에서 `.Files.Get`으로 파일 참조
+1. 커스텀 index.html 파일 추가 (`files/index.html`)
+1. ConfigMap에서 `.Files.Get`으로 파일 참조
 
 ## 📁 파일 구조
 
@@ -81,15 +82,15 @@ Override 파일이 어떻게 복사되는지 시각적으로 이해하기:
 
 ### 경로 매핑 예시
 
-| 소스 파일 | config.yaml | 빌드 결과 |
-|-----------|-------------|-----------|
-| `overrides/nginx/templates/custom-configmap.yaml` | `templates/custom-configmap.yaml` | `build/nginx/templates/custom-configmap.yaml` |
-| `overrides/nginx/files/index.html` | `files/index.html` | `build/nginx/files/index.html` |
-| `overrides/nginx/templates/subdir/secret.yaml` | `templates/subdir/secret.yaml` | `build/nginx/templates/subdir/secret.yaml` |
+| 소스 파일 | config.yaml | 빌드 결과 | |-----------|-------------|-----------| |
+`overrides/nginx/templates/custom-configmap.yaml` | `templates/custom-configmap.yaml` |
+`build/nginx/templates/custom-configmap.yaml` | | `overrides/nginx/files/index.html` | `files/index.html` |
+`build/nginx/files/index.html` | | `overrides/nginx/templates/subdir/secret.yaml` | `templates/subdir/secret.yaml` |
+`build/nginx/templates/subdir/secret.yaml` |
 
 **핵심**: `overrides/[앱이름]/`을 제외한 나머지 경로가 그대로 유지됩니다.
 
----
+______________________________________________________________________
 
 ## 📄 파일 설명
 
@@ -112,6 +113,7 @@ apps:
 ```
 
 **핵심 포인트**:
+
 - `templates/custom-configmap.yaml` - 차트에 없던 새 템플릿
 - `files/index.html` - `.Files.Get`에서 참조할 파일
 
@@ -133,6 +135,7 @@ data:
 ```
 
 **핵심 기능**:
+
 - `{{ .Files.Get "files/index.html" }}` - files 디렉토리의 파일 내용을 가져옴
 - 경로는 차트 루트 기준 (build/nginx/)
 
@@ -214,6 +217,7 @@ sbkube prepare --app-dir examples/override-with-files
 ```
 
 **결과**:
+
 ```
 ✨ SBKube `prepare` 시작 ✨
 📄 Loading config: examples/override-with-files/config.yaml
@@ -231,6 +235,7 @@ sbkube build --app-dir examples/override-with-files
 ```
 
 **결과**:
+
 ```
 ✨ SBKube `build` 시작 ✨
 📄 Loading config: examples/override-with-files/config.yaml
@@ -258,6 +263,7 @@ cat /tmp/rendered/nginx/custom-configmap.yaml
 ```
 
 **예상 출력** (`custom-configmap.yaml`):
+
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -308,12 +314,14 @@ kubectl get pods -n default -l app.kubernetes.io/name=nginx
 ### ✅ Override의 두 가지 역할
 
 1. **기존 파일 덮어쓰기**
+
    ```yaml
    overrides:
      - templates/deployment.yaml  # 차트의 기본 템플릿 교체
    ```
 
-2. **새 파일 추가**
+1. **새 파일 추가**
+
    ```yaml
    overrides:
      - templates/custom-configmap.yaml  # 차트에 없던 새 템플릿
@@ -386,16 +394,18 @@ EOF
 이 예제를 통해 다음을 학습할 수 있습니다:
 
 1. ✅ Helm 차트에 **새 파일 추가** 방법
-2. ✅ `.Files.Get`을 사용하는 템플릿 작성 방법
-3. ✅ `files/` 디렉토리와 `templates/` 디렉토리의 관계
-4. ✅ Override 메커니즘의 **명시적 설정** 철학
-5. ✅ 빌드 → 템플릿 → 배포 워크플로우
+1. ✅ `.Files.Get`을 사용하는 템플릿 작성 방법
+1. ✅ `files/` 디렉토리와 `templates/` 디렉토리의 관계
+1. ✅ Override 메커니즘의 **명시적 설정** 철학
+1. ✅ 빌드 → 템플릿 → 배포 워크플로우
 
 ## 🔗 관련 문서
 
-- [commands.md](../../docs/02-features/commands.md#-override-디렉토리-사용-시-주의사항) - Override 사용법 상세
+- [commands.md](../../docs/02-features/commands.md#-override-%EB%94%94%EB%A0%89%ED%86%A0%EB%A6%AC-%EC%82%AC%EC%9A%A9-%EC%8B%9C-%EC%A3%BC%EC%9D%98%EC%82%AC%ED%95%AD)
+  \- Override 사용법 상세
 - [config-schema.md](../../docs/03-configuration/config-schema.md) - overrides 필드 스키마
-- [troubleshooting.md](../../docs/07-troubleshooting/README.md#-빌드-및-override-문제) - Override 문제 해결
+- [troubleshooting.md](../../docs/07-troubleshooting/README.md#-%EB%B9%8C%EB%93%9C-%EB%B0%8F-override-%EB%AC%B8%EC%A0%9C)
+  \- Override 문제 해결
 
 ## ❓ FAQ
 
@@ -409,11 +419,16 @@ A: `config.yaml`의 `overrides` 필드에 명시해야 적용됩니다. v0.4.8+�
 
 **Q: .Files.Get이 빈 문자열을 반환해요.**
 
-A: `files/` 디렉토리의 파일도 `overrides` 필드에 명시해야 합니다. 자세한 내용은 [troubleshooting.md](../../docs/07-troubleshooting/README.md#-filesget-파일을-찾을-수-없음)를 참조하세요.
+A: `files/` 디렉토리의 파일도 `overrides` 필드에 명시해야 합니다. 자세한 내용은
+[troubleshooting.md](../../docs/07-troubleshooting/README.md#-filesget-%ED%8C%8C%EC%9D%BC%EC%9D%84-%EC%B0%BE%EC%9D%84-%EC%88%98-%EC%97%86%EC%9D%8C)를
+참조하세요.
 
 **Q: 여러 개의 files를 한 번에 추가할 수 있나요?**
 
-A: 네, 모든 파일을 overrides 리스트에 추가하면 됩니다:
+A: 네, 두 가지 방법이 있습니다:
+
+방법 1: 명시적 나열
+
 ```yaml
 overrides:
   - templates/configmap.yaml
@@ -422,6 +437,27 @@ overrides:
   - files/scripts/init.sh
 ```
 
----
+방법 2: Glob 패턴 사용 (v0.4.9+)
+
+```yaml
+overrides:
+  - templates/*.yaml        # templates/의 모든 .yaml
+  - files/*                 # files/의 모든 파일
+  - files/scripts/*         # files/scripts/의 모든 파일
+```
+
+**Q: Glob 패턴과 명시적 파일을 같이 쓸 수 있나요?**
+
+A: 네, 혼합해서 사용할 수 있습니다:
+
+```yaml
+overrides:
+  - Chart.yaml              # 차트 메타데이터 교체
+  - templates/*.yaml        # 모든 템플릿 추가
+  - files/important.txt     # 특정 파일만
+  - files/scripts/*         # 스크립트 디렉토리 전체
+```
+
+______________________________________________________________________
 
 **이 예제를 실행해보고 sbkube의 override 메커니즘을 이해해보세요!** 🚀

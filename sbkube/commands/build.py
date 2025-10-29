@@ -78,10 +78,48 @@ def build_helm_app(
     console.print(f"  Copying chart: {source_path} → {dest_path}")
     shutil.copytree(source_path, dest_path)
 
-    # 3. Overrides 적용
+    # 3. Check for override directory and warn if not configured
+    overrides_base = app_config_dir / "overrides" / app_name
+
+    # 3.1. Warn if override directory exists but not configured
+    if overrides_base.exists() and overrides_base.is_dir() and not app.overrides:
+        console.print()
+        console.print(f"[yellow]⚠️  Override directory found but not configured: {app_name}[/yellow]")
+
+        try:
+            rel_path = overrides_base.relative_to(Path.cwd())
+        except ValueError:
+            rel_path = overrides_base
+
+        console.print(f"[yellow]    Location: {rel_path}[/yellow]")
+        console.print("[yellow]    Files:[/yellow]")
+
+        # Show first few files
+        override_files = [f for f in overrides_base.rglob("*") if f.is_file()]
+        for f in override_files[:5]:
+            rel_file_path = f.relative_to(overrides_base)
+            console.print(f"[yellow]      - {rel_file_path}[/yellow]")
+
+        if len(override_files) > 5:
+            console.print(f"[yellow]      ... and {len(override_files) - 5} more files[/yellow]")
+
+        console.print("[yellow]    💡 To apply these overrides, add to config.yaml:[/yellow]")
+        console.print(f"[yellow]       {app_name}:[/yellow]")
+        console.print("[yellow]         overrides:[/yellow]")
+        if override_files:
+            # Show up to 3 files with full path mapping explanation
+            for i, f in enumerate(override_files[:3]):
+                rel_file_path = f.relative_to(overrides_base)
+                console.print(f"[yellow]           - {rel_file_path}[/yellow]")
+                if i == 0:
+                    console.print(f"[dim yellow]             # → build/{app_name}/{rel_file_path}[/dim yellow]")
+            if len(override_files) > 3:
+                console.print(f"[yellow]           # ... and {len(override_files) - 3} more[/yellow]")
+        console.print()
+
+    # 3.2. Apply overrides if configured
     if app.overrides:
         console.print(f"  Applying {len(app.overrides)} overrides...")
-        overrides_base = app_config_dir / "overrides" / app_name
 
         if not overrides_base.exists():
             console.print(f"[yellow]⚠️ Overrides directory not found: {overrides_base}[/yellow]")

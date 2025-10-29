@@ -1,5 +1,101 @@
 # Changelog - SBKube
 
+## [0.4.8] - 2025-10-29
+
+### ✨ Features
+
+- **Override 디렉토리 감지 경고 시스템**
+  - **문제**: `overrides/` 디렉토리가 있지만 `config.yaml`에 명시하지 않으면 무시됨
+  - **해결**: Override 디렉토리가 있지만 설정되지 않은 경우 상세한 경고 메시지 표시
+  - **영향**: 사용자가 override 설정 누락을 즉시 알 수 있음
+
+### 🔧 Improvements
+
+- **build 명령어 경고 메시지 추가** (`sbkube/commands/build.py`)
+  - Override 디렉토리 존재 확인
+  - 설정되지 않은 경우 파일 목록 표시 (최대 5개 + 더 있으면 개수 표시)
+  - 예제 config.yaml 설정 방법 제안
+
+- **문서 대폭 개선**
+  - `docs/02-features/commands.md` - Override 사용법 상세 설명 추가 (150+ 줄)
+  - `docs/03-configuration/config-schema.md` - overrides 필드 스키마 확장
+  - `docs/07-troubleshooting/README.md` - 빌드 및 Override 문제 해결 섹션 추가 (280+ 줄)
+
+- **실전 예제 추가**
+  - `examples/override-with-files/` - files 디렉토리와 .Files.Get 사용 예제
+  - 완전한 작동 예제 (Nginx + ConfigMap + .Files.Get)
+  - 상세한 README 및 사용 가이드
+
+### 📝 Technical Details
+
+**Before (v0.4.7)**:
+```bash
+# overrides 디렉토리가 있지만 설정 안 함
+$ tree
+overrides/
+  myapp/
+    templates/
+      configmap.yaml
+
+$ cat config.yaml
+apps:
+  myapp:
+    type: helm
+    chart: bitnami/nginx
+    # overrides 필드 없음!
+
+$ sbkube build
+🔨 Building Helm app: myapp
+  Copying chart: charts/nginx/nginx → build/myapp
+✅ Helm app built: myapp
+
+# 결과: Override 무시됨 (경고 없음)
+$ ls build/myapp/templates/
+deployment.yaml service.yaml  # ❌ configmap.yaml 없음
+```
+
+**After (v0.4.8)**:
+```bash
+$ sbkube build
+🔨 Building Helm app: myapp
+  Copying chart: charts/nginx/nginx → build/myapp
+
+⚠️  Override directory found but not configured: myapp
+    Location: overrides/myapp
+    Files:
+      - templates/configmap.yaml
+    💡 To apply these overrides, add to config.yaml:
+       myapp:
+         overrides:
+           - templates/configmap.yaml
+
+✅ Helm app built: myapp
+
+# 경고 메시지로 사용자에게 알림
+```
+
+### 🎯 Impact
+
+- **문제 발견 시간**: 배포 실패 시점 → **빌드 시점**으로 조기 감지
+- **디버깅 시간**: 30분+ → **1분 이내** (명확한 경고 및 해결 방법 제시)
+- **사용자 경험**: 혼란 → 명확한 가이드
+- **문서 품질**: 기본 설명 → 실전 예제 및 트러블슈팅 포함
+
+### 📚 Documentation
+
+- Override 메커니즘의 "새 파일 추가" 기능 명시
+- .Files.Get 사용 시 주의사항 추가
+- 명시적 설정 (Explicit over Implicit) 철학 설명
+- 실제 프로젝트 사례 기반 트러블슈팅 가이드
+
+### 🙏 Acknowledgments
+
+이 개선은 실제 프로젝트에서 발생한 문제 리포트를 기반으로 만들어졌습니다.
+- 문제 제기: a000_infra_network 프로젝트 배포 중 override 미적용 이슈
+- 근본 원인 분석 및 설계 철학 재확인
+
+---
+
 ## [0.4.7] - 2025-10-24
 
 ### ✨ Features

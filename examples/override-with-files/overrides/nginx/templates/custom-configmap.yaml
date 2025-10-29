@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nginx.fullname" . }}-custom
+  labels:
+    {{- include "nginx.labels" . | nindent 4 }}
+data:
+  # .Files.Get을 사용하여 files/index.html 내용 삽입
+  # 경로는 차트 루트 (build/nginx/) 기준입니다
+  index.html: |-
+{{ .Files.Get "files/index.html" | indent 4}}

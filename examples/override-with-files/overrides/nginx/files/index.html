@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Nginx Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+        }
+        code {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        hr {
+            border: none;
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 Hello from Override!</h1>
+        <p>This page is served from a ConfigMap created by sbkube override mechanism.</p>
+        <p>The HTML content was added to the Helm chart using the <code>files/</code> directory feature.</p>
+        <hr>
+        <p><strong>Powered by</strong>: SBKube + Bitnami Nginx Chart</p>
+        <p><strong>Example</strong>: override-with-files</p>
+    </div>
+</body>
+</html>

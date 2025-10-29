@@ -494,6 +494,295 @@ cat sources.yaml
 
 ______________________________________________________________________
 
+## 🔧 빌드 및 Override 문제
+
+### ❌ Override 파일이 적용되지 않음
+
+#### 증상
+- `overrides/` 디렉토리에 파일을 넣었지만 빌드 결과에 반영되지 않음
+- `build/` 디렉토리에 override 파일이 없음
+- 경고 메시지 표시:
+  ```
+  ⚠️  Override directory found but not configured: myapp
+  ```
+
+#### 원인
+`config.yaml`에 `overrides` 필드를 명시하지 않음
+
+#### 해결 방법
+
+**1. config.yaml 확인**
+
+```yaml
+# ❌ 잘못된 설정 (overrides 필드 없음)
+apps:
+  myapp:
+    type: helm
+    chart: bitnami/nginx
+    # overrides 필드가 없음!
+```
+
+**2. overrides 필드 추가**
+
+```yaml
+# ✅ 올바른 설정
+apps:
+  myapp:
+    type: helm
+    chart: bitnami/nginx
+    overrides:
+      - templates/configmap.yaml
+      - files/config.txt
+```
+
+**3. 빌드 재실행**
+
+```bash
+sbkube build --app-dir .
+
+# 성공 메시지 확인:
+# 🔨 Building Helm app: myapp
+#   Copying chart: charts/nginx/nginx → build/myapp
+#   Applying 2 overrides...
+#     ✓ Override: templates/configmap.yaml
+#     ✓ Override: files/config.txt
+# ✅ Helm app built: myapp
+```
+
+**4. 결과 검증**
+
+```bash
+# Override 파일들이 build/ 디렉토리에 복사되었는지 확인
+ls -la build/myapp/templates/configmap.yaml
+ls -la build/myapp/files/config.txt
+```
+
+#### 예방
+- **v0.4.8+**: override 디렉토리가 있지만 설정되지 않은 경우 경고 메시지 자동 표시
+- **체크리스트**:
+  1. `overrides/[앱이름]/` 디렉토리 존재 확인
+  2. `config.yaml`의 해당 앱에 `overrides:` 필드 추가
+  3. 모든 override 파일을 리스트로 명시
+
+### ❌ build 디렉토리가 비어있음
+
+#### 증상
+- `sbkube build` 실행 후 `build/` 디렉토리가 비어있거나 일부 앱만 생성됨
+- 메시지: `⏭️ Skipping Helm app (no customization): myapp`
+
+#### 원인
+sbkube는 다음 조건일 때 **빌드를 건너뜁니다** (의도된 최적화):
+- 로컬 차트 (`chart: ./charts/myapp`)
+- `overrides` 없음
+- `removes` 없음
+
+이는 불필요한 파일 복사를 방지하기 위한 **정상 동작**입니다.
+
+#### 해결 방법
+
+**방법 1: Override 또는 Remove 추가** (커스터마이징 필요 시)
+
+```yaml
+myapp:
+  type: helm
+  chart: ./charts/myapp
+  overrides:
+    - templates/configmap.yaml  # 커스터마이징 추가
+```
+
+**방법 2: 원격 차트 사용**
+
+```yaml
+myapp:
+  type: helm
+  chart: bitnami/nginx  # 원격 차트는 항상 빌드됨
+  version: "15.0.0"
+```
+
+**방법 3: 빌드 없이 배포** (로컬 차트 + 커스터마이징 없음)
+
+```bash
+# build 건너뛰고 바로 template/deploy
+sbkube template --app-dir .
+sbkube deploy --app-dir .
+```
+
+#### 확인
+```bash
+sbkube build --app-dir . --verbose
+
+# 출력 예시:
+# ⏭️ Skipping Helm app (no customization): myapp
+# 또는
+# 🔨 Building Helm app: myapp
+```
+
+### ❌ .Files.Get 파일을 찾을 수 없음
+
+#### 증상
+- Helm 템플릿에서 `{{ .Files.Get "files/config.toml" }}` 사용 시 빈 문자열 반환
+- ConfigMap이나 Secret의 data가 비어있음
+- 로그: `Error: template: ... error calling Get: file not found`
+
+#### 원인
+`files/` 디렉토리가 build/ 디렉토리에 복사되지 않음
+
+#### 해결 방법
+
+**1. files 디렉토리를 overrides에 추가**
+
+```yaml
+# overrides/myapp/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+data:
+  config.toml: |-
+{{ .Files.Get "files/config.toml" | indent 4 }}  # ← files/ 참조
+```
+
+```yaml
+# config.yaml
+apps:
+  myapp:
+    type: helm
+    chart: my-chart
+    overrides:
+      - templates/configmap.yaml
+      - files/config.toml          # ← 필수! files도 명시
+```
+
+**2. 디렉토리 구조 확인**
+
+```
+overrides/
+  myapp/
+    ├── templates/
+    │   └── configmap.yaml
+    └── files/
+        └── config.toml       # ← 파일 존재 확인
+```
+
+**3. 빌드 후 검증**
+
+```bash
+sbkube build --app-dir .
+
+# build 디렉토리 확인
+ls -la build/myapp/files/config.toml
+
+# 템플릿 렌더링 테스트
+sbkube template --app-dir . --output-dir /tmp/rendered
+cat /tmp/rendered/myapp/configmap.yaml
+```
+
+#### 참고
+- `.Files.Get`의 경로는 **차트 루트 기준** 상대 경로입니다
+- `files/` 디렉토리는 자동으로 복사되지 않으므로 명시적으로 override에 포함해야 합니다
+
+### ❌ Override 파일을 찾을 수 없음
+
+#### 증상
+- 빌드 중 경고 메시지:
+  ```
+  ⚠️ Override file not found: overrides/myapp/templates/configmap.yaml
+  ```
+
+#### 원인
+1. config.yaml에 명시된 파일이 실제로 존재하지 않음
+2. 파일 경로가 잘못됨
+3. 파일명 오타
+
+#### 해결 방법
+
+**1. 파일 존재 확인**
+
+```bash
+# config.yaml에 명시된 경로로 확인
+ls -la overrides/myapp/templates/configmap.yaml
+```
+
+**2. 경로 확인**
+
+```yaml
+# ❌ 잘못된 경로 (절대 경로 또는 ../ 사용)
+overrides:
+  - /absolute/path/configmap.yaml          # 잘못됨
+  - ../other-app/templates/configmap.yaml  # 잘못됨
+
+# ✅ 올바른 경로 (overrides/[앱이름]/ 기준 상대 경로)
+overrides:
+  - templates/configmap.yaml               # 올바름
+  - files/config.txt                       # 올바름
+```
+
+**3. 파일 생성 또는 경로 수정**
+
+```bash
+# 파일 생성
+mkdir -p overrides/myapp/templates
+cat > overrides/myapp/templates/configmap.yaml <<'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+data:
+  key: value
+EOF
+
+# 또는 config.yaml 경로 수정
+```
+
+**4. 재빌드**
+
+```bash
+sbkube build --app-dir .
+```
+
+### 🔍 빌드 문제 진단 체크리스트
+
+빌드 관련 문제 발생 시 다음 순서로 확인하세요:
+
+**1. 디렉토리 구조 확인**
+```bash
+ls -la overrides/
+ls -la overrides/[앱이름]/
+ls -la build/
+```
+
+**2. config.yaml 검증**
+```bash
+cat config.yaml | grep -A 10 "앱이름:"
+# overrides 필드가 있는지 확인
+```
+
+**3. 빌드 실행 (verbose 모드)**
+```bash
+sbkube build --app-dir . --verbose
+```
+
+**4. 빌드 결과 확인**
+```bash
+# Override된 파일이 build/에 있는지 확인
+ls -la build/[앱이름]/templates/
+ls -la build/[앱이름]/files/
+```
+
+**5. 템플릿 렌더링 테스트**
+```bash
+sbkube template --app-dir . --output-dir /tmp/test
+cat /tmp/test/[앱이름]/*.yaml
+```
+
+### 📚 관련 문서
+
+- [commands.md - Override 사용법](../02-features/commands.md#-override-디렉토리-사용-시-주의사항)
+- [config-schema.md - overrides 필드](../03-configuration/config-schema.md)
+- [examples/override-with-files/](../../examples/override-with-files/) - 실전 예제
+
+______________________________________________________________________
+
 ## 📚 관련 문서
 
 - **[일반적인 문제들](common-issues.md)** - 구체적인 해결 사례

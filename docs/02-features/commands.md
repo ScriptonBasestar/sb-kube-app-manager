@@ -483,6 +483,160 @@ sbkube build --app database
 sbkube build --app-dir production --config-file prod-config.yaml
 ```
 
+### ⚠️ Override 디렉토리 사용 시 주의사항
+
+**중요**: Override 파일은 `config.yaml`에 **명시적으로** 나열해야 적용됩니다.
+
+#### ❌ 잘못된 사용법 (Override 무시됨)
+
+```yaml
+# config.yaml
+apps:
+  myapp:
+    type: helm
+    chart: bitnami/nginx
+    # overrides 필드 없음! ← 문제
+```
+
+```
+# 디렉토리 구조
+overrides/
+  myapp/
+    templates/
+      configmap.yaml  # ❌ config.yaml에 명시 안 되어 무시됨
+```
+
+**빌드 결과**: overrides/ 디렉토리가 있어도 경고 메시지만 표시되고 적용되지 않음
+
+```
+⚠️  Override directory found but not configured: myapp
+    Location: overrides/myapp
+    Files:
+      - templates/configmap.yaml
+    💡 To apply these overrides, add to config.yaml:
+       myapp:
+         overrides:
+           - templates/configmap.yaml
+```
+
+#### ✅ 올바른 사용법 (Override 적용됨)
+
+```yaml
+# config.yaml
+apps:
+  myapp:
+    type: helm
+    chart: bitnami/nginx
+    overrides:
+      - templates/configmap.yaml     # ✅ 명시적으로 나열
+      - files/custom-config.txt      # ✅ files 디렉토리도 포함
+```
+
+**빌드 결과**: overrides가 build/ 디렉토리에 적용됨
+
+```
+🔨 Building Helm app: myapp
+  Copying chart: charts/nginx/nginx → build/myapp
+  Applying 2 overrides...
+    ✓ Override: templates/configmap.yaml
+    ✓ Override: files/custom-config.txt
+✅ Helm app built: myapp
+```
+
+#### 📌 Override의 역할: 덮어쓰기 + 새 파일 추가
+
+Override는 두 가지 용도로 사용됩니다:
+
+**1. 기존 파일 덮어쓰기**
+```yaml
+overrides:
+  - templates/deployment.yaml    # 차트의 기존 파일 교체
+  - values.yaml                  # 기본 values.yaml 교체
+```
+
+**2. 새 파일 추가**
+```yaml
+overrides:
+  - templates/new-configmap.yaml      # 차트에 없던 새 템플릿
+  - templates/custom-service.yaml     # 차트에 없던 새 서비스
+  - files/additional-config.txt       # 차트에 없던 새 파일
+```
+
+#### 🔍 .Files.Get 사용 시 주의사항
+
+Helm 템플릿에서 `{{ .Files.Get "files/..." }}`를 사용하는 경우:
+
+**1. files 디렉토리도 override에 포함 필수**
+
+```yaml
+# overrides/myapp/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+data:
+  config.toml: |-
+{{ .Files.Get "files/config.toml" | indent 4 }}  # ← files/ 참조
+```
+
+```yaml
+# config.yaml에 files도 명시!
+apps:
+  myapp:
+    type: helm
+    chart: my-chart
+    overrides:
+      - templates/configmap.yaml
+      - files/config.toml          # ← 필수! 없으면 .Files.Get 실패
+```
+
+**2. 경로는 차트 루트 기준**
+
+```
+build/myapp/                    # 차트 루트
+  ├── Chart.yaml
+  ├── templates/
+  │   └── configmap.yaml        # .Files.Get을 사용하는 템플릿
+  └── files/
+      └── config.toml           # ← .Files.Get "files/config.toml"
+```
+
+#### 🎯 디렉토리 구조 예제
+
+```
+app-dir/
+├── config.yaml                 # overrides 필드에 명시
+├── overrides/
+│   └── myapp/                  # 앱 이름과 일치해야 함
+│       ├── templates/
+│       │   ├── deployment.yaml      # 기존 파일 덮어쓰기
+│       │   └── new-config.yaml      # 새 파일 추가
+│       └── files/
+│           └── custom-config.txt    # .Files.Get에서 참조
+└── build/                      # sbkube build 실행 후 생성
+    └── myapp/
+        ├── templates/
+        │   ├── deployment.yaml      # ✅ Override됨
+        │   ├── service.yaml         # (차트 원본 유지)
+        │   └── new-config.yaml      # ✅ 추가됨
+        └── files/
+            └── custom-config.txt    # ✅ 추가됨
+```
+
+#### 🚫 자동 발견 없음
+
+sbkube는 `overrides/` 디렉토리를 **자동으로 감지하지 않습니다**.
+
+- **명시적 설정 필요**: config.yaml의 `overrides` 필드에 모든 파일 나열
+- **경고 메시지**: v0.4.8+에서는 override 디렉토리가 있지만 설정되지 않으면 경고 표시
+- **설계 철학**: Explicit over Implicit (명시적 > 암묵적)
+
+#### 📚 관련 문서
+
+- [config-schema.md](../03-configuration/config-schema.md) - overrides 필드 상세
+- [troubleshooting.md](../07-troubleshooting/README.md) - Override 문제 해결
+- [examples/override-with-files/](../../examples/override-with-files/) - 실전 예제
+
 ______________________________________________________________________
 
 ## 📄 template - 템플릿 렌더링

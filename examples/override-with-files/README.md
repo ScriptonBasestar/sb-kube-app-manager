@@ -1,0 +1,427 @@
+# Override with Files Example
+
+이 예제는 Helm 차트에 **새 파일을 추가**하는 방법을 보여줍니다.
+
+## 📋 시나리오
+
+Bitnami Nginx 차트에:
+1. 새 ConfigMap 템플릿 추가 (`templates/custom-configmap.yaml`)
+2. 커스텀 index.html 파일 추가 (`files/index.html`)
+3. ConfigMap에서 `.Files.Get`으로 파일 참조
+
+## 📁 파일 구조
+
+```
+override-with-files/
+├── README.md                          # 이 문서
+├── config.yaml                        # SBKube 설정 (overrides 명시)
+├── values/
+│   └── nginx.yaml                     # Nginx values
+├── overrides/
+│   └── nginx/
+│       ├── templates/
+│       │   └── custom-configmap.yaml  # 새 템플릿 (차트에 없던 파일)
+│       └── files/
+│           └── index.html             # 커스텀 HTML (차트에 없던 파일)
+└── build/                             # sbkube build 실행 후 생성
+    └── nginx/
+        ├── templates/
+        │   ├── deployment.yaml        # (차트 원본)
+        │   ├── service.yaml           # (차트 원본)
+        │   └── custom-configmap.yaml  # ✅ 추가됨
+        └── files/
+            └── index.html             # ✅ 추가됨
+```
+
+## 🗺️ 경로 매핑 다이어그램
+
+Override 파일이 어떻게 복사되는지 시각적으로 이해하기:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. 소스 파일 (작성하는 곳)                                         │
+└─────────────────────────────────────────────────────────────────┘
+
+  overrides/
+    nginx/                           ← 앱 이름 (config.yaml의 apps.nginx)
+      ├── templates/
+      │   └── custom-configmap.yaml  ← 실제 파일 위치
+      └── files/
+          └── index.html             ← 실제 파일 위치
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. config.yaml (설정하는 곳)                                      │
+└─────────────────────────────────────────────────────────────────┘
+
+  nginx:
+    overrides:
+      - templates/custom-configmap.yaml  ← "overrides/nginx/" 제외
+      - files/index.html                 ← "overrides/nginx/" 제외
+
+  📍 핵심 규칙:
+     config.yaml 경로 = overrides/[앱이름]/ 이후 경로
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. 빌드 결과 (sbkube build 후)                                   │
+└─────────────────────────────────────────────────────────────────┘
+
+  build/
+    nginx/                           ← 앱 이름
+      ├── Chart.yaml                 ← (차트 원본)
+      ├── templates/
+      │   ├── deployment.yaml        ← (차트 원본)
+      │   ├── service.yaml           ← (차트 원본)
+      │   └── custom-configmap.yaml  ← ✅ 복사됨
+      └── files/
+          └── index.html             ← ✅ 복사됨
+
+  📍 결과 경로:
+     build/[앱이름]/[config.yaml의 경로]
+```
+
+### 경로 매핑 예시
+
+| 소스 파일 | config.yaml | 빌드 결과 |
+|-----------|-------------|-----------|
+| `overrides/nginx/templates/custom-configmap.yaml` | `templates/custom-configmap.yaml` | `build/nginx/templates/custom-configmap.yaml` |
+| `overrides/nginx/files/index.html` | `files/index.html` | `build/nginx/files/index.html` |
+| `overrides/nginx/templates/subdir/secret.yaml` | `templates/subdir/secret.yaml` | `build/nginx/templates/subdir/secret.yaml` |
+
+**핵심**: `overrides/[앱이름]/`을 제외한 나머지 경로가 그대로 유지됩니다.
+
+---
+
+## 📄 파일 설명
+
+### config.yaml
+
+메인 설정 파일입니다. **중요**: `overrides` 필드에 모든 override 파일을 명시해야 합니다.
+
+```yaml
+apps:
+  nginx:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/nginx.yaml
+    overrides:
+      - templates/custom-configmap.yaml  # 새 템플릿 추가
+      - files/index.html                 # 새 파일 추가
+    namespace: default
+```
+
+**핵심 포인트**:
+- `templates/custom-configmap.yaml` - 차트에 없던 새 템플릿
+- `files/index.html` - `.Files.Get`에서 참조할 파일
+
+### overrides/nginx/templates/custom-configmap.yaml
+
+차트에 **없던 새 리소스**를 추가하는 템플릿입니다.
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nginx.fullname" . }}-custom
+  labels:
+    {{- include "nginx.labels" . | nindent 4 }}
+data:
+  # .Files.Get을 사용하여 files/index.html 내용 삽입
+  index.html: |-
+{{ .Files.Get "files/index.html" | indent 4}}
+```
+
+**핵심 기능**:
+- `{{ .Files.Get "files/index.html" }}` - files 디렉토리의 파일 내용을 가져옴
+- 경로는 차트 루트 기준 (build/nginx/)
+
+### overrides/nginx/files/index.html
+
+ConfigMap에 포함될 커스텀 HTML 파일입니다.
+
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Nginx Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 Hello from Override!</h1>
+        <p>This page is served from a ConfigMap created by sbkube override mechanism.</p>
+        <p>The HTML content was added to the Helm chart using the <code>files/</code> directory feature.</p>
+        <hr>
+        <p><strong>Powered by</strong>: SBKube + Bitnami Nginx Chart</p>
+    </div>
+</body>
+</html>
+```
+
+### values/nginx.yaml
+
+Nginx 차트의 values 파일입니다.
+
+```yaml
+# Nginx 설정
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+```
+
+## 🚀 실행 방법
+
+### 1. 준비 (Helm 저장소 및 차트 다운로드)
+
+```bash
+sbkube prepare --app-dir examples/override-with-files
+```
+
+**결과**:
+```
+✨ SBKube `prepare` 시작 ✨
+📄 Loading config: examples/override-with-files/config.yaml
+📦 Preparing Helm app: nginx
+  Adding Helm repo: bitnami (https://charts.bitnami.com/bitnami)
+  Pulling chart: bitnami/nginx:15.0.0
+✅ Helm app prepared: nginx
+✅ Prepare completed: 1/1 apps
+```
+
+### 2. 빌드 (Override 적용)
+
+```bash
+sbkube build --app-dir examples/override-with-files
+```
+
+**결과**:
+```
+✨ SBKube `build` 시작 ✨
+📄 Loading config: examples/override-with-files/config.yaml
+🔨 Building Helm app: nginx
+  Copying chart: charts/nginx/nginx → build/nginx
+  Applying 2 overrides...
+    ✓ Override: templates/custom-configmap.yaml
+    ✓ Override: files/index.html
+✅ Helm app built: nginx
+✅ Build completed: 1/1 apps
+```
+
+### 3. 검증 (빌드 결과 확인)
+
+```bash
+# Override 파일들이 build/ 디렉토리에 복사되었는지 확인
+ls -la build/nginx/templates/custom-configmap.yaml
+ls -la build/nginx/files/index.html
+
+# 템플릿 렌더링 테스트
+sbkube template --app-dir examples/override-with-files --output-dir /tmp/rendered
+
+# ConfigMap 내용 확인 (.Files.Get이 제대로 작동하는지 확인)
+cat /tmp/rendered/nginx/custom-configmap.yaml
+```
+
+**예상 출력** (`custom-configmap.yaml`):
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-custom
+  labels:
+    app.kubernetes.io/name: nginx
+    ...
+data:
+  index.html: |-
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        ...
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎉 Hello from Override!</h1>
+            ...
+```
+
+### 4. 배포 (선택 사항)
+
+```bash
+# Dry-run으로 먼저 확인
+sbkube deploy --app-dir examples/override-with-files --dry-run
+
+# 실제 배포
+sbkube deploy --app-dir examples/override-with-files
+```
+
+### 5. 결과 확인 (배포 후)
+
+```bash
+# ConfigMap 생성 확인
+kubectl get configmap -n default | grep nginx-custom
+
+# ConfigMap 내용 확인
+kubectl describe configmap nginx-custom -n default
+
+# Pod 확인
+kubectl get pods -n default -l app.kubernetes.io/name=nginx
+```
+
+## 🎯 핵심 포인트
+
+### ✅ Override의 두 가지 역할
+
+1. **기존 파일 덮어쓰기**
+   ```yaml
+   overrides:
+     - templates/deployment.yaml  # 차트의 기본 템플릿 교체
+   ```
+
+2. **새 파일 추가**
+   ```yaml
+   overrides:
+     - templates/custom-configmap.yaml  # 차트에 없던 새 템플릿
+     - files/index.html                 # 차트에 없던 새 파일
+   ```
+
+### ⚠️ .Files.Get 사용 시 주의사항
+
+**1. files 디렉토리도 override에 포함 필수**
+
+```yaml
+# ❌ 잘못된 설정 (templates만 추가)
+overrides:
+  - templates/custom-configmap.yaml
+  # files/index.html 누락! → .Files.Get 실패
+
+# ✅ 올바른 설정 (files도 추가)
+overrides:
+  - templates/custom-configmap.yaml
+  - files/index.html             # 필수!
+```
+
+**2. 경로는 차트 루트 기준**
+
+```
+build/nginx/               # ← 차트 루트 (.Files.Get의 기준)
+  ├── Chart.yaml
+  ├── templates/
+  │   └── custom-configmap.yaml  # .Files.Get "files/index.html" 호출
+  └── files/
+      └── index.html       # ← .Files.Get이 찾는 위치
+```
+
+### 🚫 자동 발견 없음
+
+sbkube는 `overrides/` 디렉토리를 자동으로 감지하지 않습니다.
+
+```bash
+# ❌ 이렇게 해도 적용 안 됨
+mkdir -p overrides/nginx/templates
+cat > overrides/nginx/templates/configmap.yaml << EOF
+...
+EOF
+# config.yaml에 명시하지 않으면 무시됨!
+
+# ✅ config.yaml에 명시 필수
+# config.yaml:
+#   nginx:
+#     overrides:
+#       - templates/configmap.yaml
+```
+
+**v0.4.8+**: Override 디렉토리가 있지만 config.yaml에 설정되지 않은 경우 경고 메시지 표시:
+
+```
+⚠️  Override directory found but not configured: nginx
+    Location: overrides/nginx
+    Files:
+      - templates/custom-configmap.yaml
+      - files/index.html
+    💡 To apply these overrides, add to config.yaml:
+       nginx:
+         overrides:
+           - templates/custom-configmap.yaml
+           - files/index.html
+```
+
+## 📚 학습 목표
+
+이 예제를 통해 다음을 학습할 수 있습니다:
+
+1. ✅ Helm 차트에 **새 파일 추가** 방법
+2. ✅ `.Files.Get`을 사용하는 템플릿 작성 방법
+3. ✅ `files/` 디렉토리와 `templates/` 디렉토리의 관계
+4. ✅ Override 메커니즘의 **명시적 설정** 철학
+5. ✅ 빌드 → 템플릿 → 배포 워크플로우
+
+## 🔗 관련 문서
+
+- [commands.md](../../docs/02-features/commands.md#-override-디렉토리-사용-시-주의사항) - Override 사용법 상세
+- [config-schema.md](../../docs/03-configuration/config-schema.md) - overrides 필드 스키마
+- [troubleshooting.md](../../docs/07-troubleshooting/README.md#-빌드-및-override-문제) - Override 문제 해결
+
+## ❓ FAQ
+
+**Q: files 디렉토리를 자동으로 복사할 수 없나요?**
+
+A: 의도적으로 자동 복사를 지원하지 않습니다. **명시적 설정 (Explicit over Implicit)** 철학을 따르기 때문입니다. 사용자가 어떤 파일이 적용되는지 명확히 알 수 있어야 합니다.
+
+**Q: override 디렉토리가 있는데 왜 무시되나요?**
+
+A: `config.yaml`의 `overrides` 필드에 명시해야 적용됩니다. v0.4.8+에서는 경고 메시지를 통해 알려줍니다.
+
+**Q: .Files.Get이 빈 문자열을 반환해요.**
+
+A: `files/` 디렉토리의 파일도 `overrides` 필드에 명시해야 합니다. 자세한 내용은 [troubleshooting.md](../../docs/07-troubleshooting/README.md#-filesget-파일을-찾을-수-없음)를 참조하세요.
+
+**Q: 여러 개의 files를 한 번에 추가할 수 있나요?**
+
+A: 네, 모든 파일을 overrides 리스트에 추가하면 됩니다:
+```yaml
+overrides:
+  - templates/configmap.yaml
+  - files/config1.txt
+  - files/config2.toml
+  - files/scripts/init.sh
+```
+
+---
+
+**이 예제를 실행해보고 sbkube의 override 메커니즘을 이해해보세요!** 🚀

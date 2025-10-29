@@ -1,0 +1,7 @@
+# SBKube 빌드 디렉토리
+build/
+charts/
+rendered/
+
+# 상태 파일
+.sbkube/

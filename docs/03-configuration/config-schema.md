@@ -210,11 +210,66 @@ apps:
 - 로컬 (절대): `/absolute/path/to/chart`
 - 이름만: `chart-name` (로컬 차트로 간주)
 
-**overrides**:
+**overrides** (선택, 리스트):
 
-- Key: 차트 내 파일 경로
-- Value: 교체할 로컬 파일 경로
-- `build` 단계에서 적용
+차트 파일을 **교체하거나 새로 추가**할 파일 목록입니다.
+
+**v0.4.0+ 형식** (리스트):
+```yaml
+overrides:
+  - templates/deployment.yaml       # 기존 파일 교체
+  - templates/new-configmap.yaml    # 새 파일 추가
+  - files/config.toml               # files 디렉토리 파일 추가
+```
+
+**디렉토리 구조**:
+```
+app-dir/
+├── config.yaml
+└── overrides/
+    └── redis/              # 앱 이름과 일치해야 함
+        ├── templates/
+        │   ├── deployment.yaml      # 기존 파일 교체
+        │   └── new-configmap.yaml   # 새 파일 추가
+        └── files/
+            └── config.toml          # .Files.Get에서 사용
+```
+
+**동작 방식**:
+
+1. `sbkube build` 실행 시:
+   - 차트를 `build/redis/`로 복사
+   - `overrides` 리스트의 각 파일을 `overrides/redis/`에서 `build/redis/`로 복사
+   - 기존 파일이 있으면 **덮어쓰기**
+   - 기존 파일이 없으면 **새로 추가**
+
+2. 결과:
+   ```
+   build/redis/
+     ├── templates/
+     │   ├── deployment.yaml      # ✅ Override됨
+     │   ├── statefulset.yaml     # (차트 원본 유지)
+     │   └── new-configmap.yaml   # ✅ 추가됨
+     └── files/
+         └── config.toml          # ✅ 추가됨
+   ```
+
+**⚠️ 주의사항**:
+
+1. **명시적 나열 필수**: `overrides/` 디렉토리가 있어도 config.yaml에 명시하지 않으면 무시됨
+2. **files 디렉토리**: `.Files.Get`을 사용하는 템플릿의 경우 `files/` 경로도 명시 필요
+3. **경로 검증**: 명시된 파일이 `overrides/` 디렉토리에 없으면 빌드 실패
+
+**사용 사례**:
+
+- 차트의 기본 템플릿을 커스터마이징
+- 차트에 없는 새 리소스 추가 (ConfigMap, Secret 등)
+- `.Files.Get`을 사용하는 템플릿에 파일 제공
+
+**관련 문서**:
+
+- [commands.md - Override 사용법](../02-features/commands.md#-override-디렉토리-사용-시-주의사항)
+- [troubleshooting.md - Override 문제 해결](../07-troubleshooting/README.md)
 
 **removes**:
 

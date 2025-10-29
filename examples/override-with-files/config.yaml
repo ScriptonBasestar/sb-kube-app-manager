@@ -1,0 +1,28 @@
+apps:
+  nginx:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/nginx.yaml
+
+    # ⚠️ 중요: Override 파일을 명시적으로 나열해야 적용됩니다
+    #
+    # 경로 규칙:
+    #   - 실제 파일 위치: overrides/nginx/[경로]
+    #   - config.yaml에 작성: [경로]  (앱 이름 제외)
+    #   - 빌드 후 위치: build/nginx/[경로]
+    #
+    # 예시:
+    #   파일: overrides/nginx/templates/custom-configmap.yaml
+    #   설정: templates/custom-configmap.yaml
+    #   결과: build/nginx/templates/custom-configmap.yaml
+    #
+    overrides:
+      - templates/custom-configmap.yaml  # 새 템플릿 추가
+                                         # → build/nginx/templates/custom-configmap.yaml
+
+      - files/index.html                 # 새 파일 추가 (.Files.Get에서 사용)
+                                         # → build/nginx/files/index.html
+
+    namespace: default

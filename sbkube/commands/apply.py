@@ -156,6 +156,8 @@ def cmd(
             config_file_name=config_file_name,
             sources_file_name=sources_file_name,
             app_name=None,  # prepare all (의존성 때문에)
+            force=False,
+            dry_run=dry_run,
         )
     else:
         console.print("\n[yellow]⏭️  Skipping prepare step[/yellow]")
@@ -173,6 +175,7 @@ def cmd(
             base_dir=base_dir,
             config_file_name=config_file_name,
             app_name=None,  # build all
+            dry_run=dry_run,
         )
     else:
         console.print("\n[yellow]⏭️  Skipping build step[/yellow]")

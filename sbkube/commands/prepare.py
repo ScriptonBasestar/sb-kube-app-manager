@@ -43,6 +43,7 @@ def prepare_helm_app(
     charts_dir: Path,
     sources_file: Path,
     force: bool = False,
+    dry_run: bool = False,
 ) -> bool:
     """
     Helm 앱 준비 (chart pull).
@@ -56,6 +57,7 @@ def prepare_helm_app(
         charts_dir: charts 디렉토리
         sources_file: sources.yaml 파일 경로
         force: 기존 차트를 덮어쓰기
+        dry_run: dry-run 모드 (실제 다운로드하지 않음)
 
     Returns:
         성공 여부
@@ -94,22 +96,26 @@ def prepare_helm_app(
         # 구버전 호환: 단순 URL string
         repo_url = repo_config
 
-    # Helm repo 추가
-    console.print(f"  Adding Helm repo: {repo_name} ({repo_url})")
-    cmd = ["helm", "repo", "add", repo_name, repo_url]
-    return_code, stdout, stderr = run_command(cmd)
+    if dry_run:
+        console.print(f"[yellow]🔍 [DRY-RUN] Would add Helm repo: {repo_name} ({repo_url})[/yellow]")
+        console.print(f"[yellow]🔍 [DRY-RUN] Would update Helm repo: {repo_name}[/yellow]")
+    else:
+        # Helm repo 추가
+        console.print(f"  Adding Helm repo: {repo_name} ({repo_url})")
+        cmd = ["helm", "repo", "add", repo_name, repo_url]
+        return_code, stdout, stderr = run_command(cmd)
 
-    if return_code != 0:
-        console.print(f"[yellow]⚠️ Failed to add repo (might already exist): {stderr}[/yellow]")
+        if return_code != 0:
+            console.print(f"[yellow]⚠️ Failed to add repo (might already exist): {stderr}[/yellow]")
 
-    # Helm repo 업데이트
-    console.print(f"  Updating Helm repo: {repo_name}")
-    cmd = ["helm", "repo", "update", repo_name]
-    return_code, stdout, stderr = run_command(cmd)
+        # Helm repo 업데이트
+        console.print(f"  Updating Helm repo: {repo_name}")
+        cmd = ["helm", "repo", "update", repo_name]
+        return_code, stdout, stderr = run_command(cmd)
 
-    if return_code != 0:
-        console.print(f"[red]❌ Failed to update repo: {stderr}[/red]")
-        return False
+        if return_code != 0:
+            console.print(f"[red]❌ Failed to update repo: {stderr}[/red]")
+            return False
 
     # Chart pull
     dest_dir = charts_dir / chart_name
@@ -121,24 +127,31 @@ def prepare_helm_app(
         console.print("    Use --force to re-download")
         return True
 
-    # If force flag is set, remove existing chart directory
-    if force and dest_dir.exists():
-        console.print(f"[yellow]⚠️  Removing existing chart (--force): {dest_dir}[/yellow]")
-        shutil.rmtree(dest_dir)
+    if dry_run:
+        console.print(f"[yellow]🔍 [DRY-RUN] Would pull chart: {app.chart} → {dest_dir}[/yellow]")
+        if app.version:
+            console.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]")
+        if force:
+            console.print(f"[yellow]🔍 [DRY-RUN] Would remove existing chart (--force)[/yellow]")
+    else:
+        # If force flag is set, remove existing chart directory
+        if force and dest_dir.exists():
+            console.print(f"[yellow]⚠️  Removing existing chart (--force): {dest_dir}[/yellow]")
+            shutil.rmtree(dest_dir)
 
-    dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_dir.mkdir(parents=True, exist_ok=True)
 
-    console.print(f"  Pulling chart: {app.chart} → {dest_dir}")
-    cmd = ["helm", "pull", f"{repo_name}/{chart_name}", "--untar", "--untardir", str(dest_dir)]
+        console.print(f"  Pulling chart: {app.chart} → {dest_dir}")
+        cmd = ["helm", "pull", f"{repo_name}/{chart_name}", "--untar", "--untardir", str(dest_dir)]
 
-    if app.version:
-        cmd.extend(["--version", app.version])
+        if app.version:
+            cmd.extend(["--version", app.version])
 
-    return_code, stdout, stderr = run_command(cmd)
+        return_code, stdout, stderr = run_command(cmd)
 
-    if return_code != 0:
-        console.print(f"[red]❌ Failed to pull chart: {stderr}[/red]")
-        return False
+        if return_code != 0:
+            console.print(f"[red]❌ Failed to pull chart: {stderr}[/red]")
+            return False
 
     console.print(f"[green]✅ Helm app prepared: {app_name}[/green]")
     return True
@@ -149,6 +162,7 @@ def prepare_http_app(
     app: HttpApp,
     base_dir: Path,
     app_config_dir: Path,
+    dry_run: bool = False,
 ) -> bool:
     """
     HTTP 앱 준비 (파일 다운로드).
@@ -158,6 +172,7 @@ def prepare_http_app(
         app: HttpApp 설정
         base_dir: 프로젝트 루트
         app_config_dir: 앱 설정 디렉토리
+        dry_run: dry-run 모드 (실제 다운로드하지 않음)
 
     Returns:
         성공 여부
@@ -172,25 +187,30 @@ def prepare_http_app(
         console.print(f"[yellow]⏭️  File already exists, skipping download: {dest_path}[/yellow]")
         return True
 
-    # 디렉토리 생성
-    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    if dry_run:
+        console.print(f"[yellow]🔍 [DRY-RUN] Would download: {app.url} → {dest_path}[/yellow]")
+        if app.headers:
+            console.print(f"[yellow]🔍 [DRY-RUN] Headers: {app.headers}[/yellow]")
+    else:
+        # 디렉토리 생성
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # HTTP 다운로드 (curl 사용)
-    console.print(f"  Downloading: {app.url} → {dest_path}")
-    cmd = ["curl", "-L", "-o", str(dest_path), app.url]
+        # HTTP 다운로드 (curl 사용)
+        console.print(f"  Downloading: {app.url} → {dest_path}")
+        cmd = ["curl", "-L", "-o", str(dest_path), app.url]
 
-    # Headers 추가
-    for key, value in app.headers.items():
-        cmd.extend(["-H", f"{key}: {value}"])
+        # Headers 추가
+        for key, value in app.headers.items():
+            cmd.extend(["-H", f"{key}: {value}"])
 
-    return_code, stdout, stderr = run_command(cmd, timeout=300)
+        return_code, stdout, stderr = run_command(cmd, timeout=300)
 
-    if return_code != 0:
-        console.print(f"[red]❌ Failed to download: {stderr}[/red]")
-        # 실패 시 파일 삭제
-        if dest_path.exists():
-            dest_path.unlink()
-        return False
+        if return_code != 0:
+            console.print(f"[red]❌ Failed to download: {stderr}[/red]")
+            # 실패 시 파일 삭제
+            if dest_path.exists():
+                dest_path.unlink()
+            return False
 
     console.print(f"[green]✅ HTTP app prepared: {app_name}[/green]")
     return True
@@ -203,6 +223,7 @@ def prepare_git_app(
     repos_dir: Path,
     sources_file: Path,
     force: bool = False,
+    dry_run: bool = False,
 ) -> bool:
     """
     Git 앱 준비 (repo clone).
@@ -214,6 +235,7 @@ def prepare_git_app(
         repos_dir: repos 디렉토리
         sources_file: sources.yaml 파일 경로
         force: 기존 리포지토리를 덮어쓰기
+        dry_run: dry-run 모드 (실제 클론하지 않음)
 
     Returns:
         성공 여부
@@ -261,25 +283,30 @@ def prepare_git_app(
         console.print("    Use --force to re-clone")
         return True
 
-    # If force flag is set, remove existing repository
-    if force and dest_dir.exists():
-        console.print(f"[yellow]⚠️  Removing existing repository (--force): {dest_dir}[/yellow]")
-        shutil.rmtree(dest_dir)
+    if dry_run:
+        console.print(f"[yellow]🔍 [DRY-RUN] Would clone: {repo_url} (branch: {branch}) → {dest_dir}[/yellow]")
+        if force and dest_dir.exists():
+            console.print(f"[yellow]🔍 [DRY-RUN] Would remove existing repository (--force)[/yellow]")
+    else:
+        # If force flag is set, remove existing repository
+        if force and dest_dir.exists():
+            console.print(f"[yellow]⚠️  Removing existing repository (--force): {dest_dir}[/yellow]")
+            shutil.rmtree(dest_dir)
 
-    dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_dir.mkdir(parents=True, exist_ok=True)
 
-    # Git clone
-    console.print(f"  Cloning: {repo_url} (branch: {branch}) → {dest_dir}")
-    cmd = ["git", "clone", repo_url, str(dest_dir)]
+        # Git clone
+        console.print(f"  Cloning: {repo_url} (branch: {branch}) → {dest_dir}")
+        cmd = ["git", "clone", repo_url, str(dest_dir)]
 
-    if branch:
-        cmd.extend(["--branch", branch])
+        if branch:
+            cmd.extend(["--branch", branch])
 
-    return_code, stdout, stderr = run_command(cmd)
+        return_code, stdout, stderr = run_command(cmd)
 
-    if return_code != 0:
-        console.print(f"[red]❌ Failed to clone repository: {stderr}[/red]")
-        return False
+        if return_code != 0:
+            console.print(f"[red]❌ Failed to clone repository: {stderr}[/red]")
+            return False
 
     console.print(f"[green]✅ Git app prepared: {app_name}[/green]")
     return True
@@ -322,6 +349,12 @@ def prepare_git_app(
     default=False,
     help="기존 리소스를 덮어쓰기 (Helm chart pull --force)",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Dry-run 모드 (실제 리소스를 다운로드하지 않음)",
+)
 def cmd(
     app_config_dir_name: str,
     base_dir: str,
@@ -329,6 +362,7 @@ def cmd(
     sources_file_name: str,
     app_name: str | None,
     force: bool,
+    dry_run: bool,
 ):
     """
     SBKube prepare 명령어.
@@ -409,11 +443,11 @@ def cmd(
         success = False
 
         if isinstance(app, HelmApp):
-            success = prepare_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, sources_file_path, force)
+            success = prepare_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, sources_file_path, force, dry_run)
         elif isinstance(app, GitApp):
-            success = prepare_git_app(app_name, app, BASE_DIR, REPOS_DIR, sources_file_path, force)
+            success = prepare_git_app(app_name, app, BASE_DIR, REPOS_DIR, sources_file_path, force, dry_run)
         elif isinstance(app, HttpApp):
-            success = prepare_http_app(app_name, app, BASE_DIR, APP_CONFIG_DIR)
+            success = prepare_http_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
         else:
             console.print(f"[yellow]⏭️  App type '{app.type}' does not require prepare: {app_name}[/yellow]")
             success = True  # 건너뛰어도 성공으로 간주

@@ -27,6 +27,7 @@ def build_helm_app(
     charts_dir: Path,
     build_dir: Path,
     app_config_dir: Path,
+    dry_run: bool = False,
 ) -> bool:
     """
     Helm 앱 빌드 + 커스터마이징.
@@ -38,6 +39,7 @@ def build_helm_app(
         charts_dir: charts 디렉토리
         build_dir: build 디렉토리
         app_config_dir: 앱 설정 디렉토리
+        dry_run: dry-run 모드 (실제 파일 복사/수정하지 않음)
 
     Returns:
         성공 여부
@@ -70,13 +72,18 @@ def build_helm_app(
     # 2. 빌드 디렉토리로 복사
     dest_path = build_dir / app_name
 
-    # 기존 디렉토리 삭제
-    if dest_path.exists():
-        console.print(f"  Removing existing build directory: {dest_path}")
-        shutil.rmtree(dest_path)
+    if dry_run:
+        console.print(f"[yellow]🔍 [DRY-RUN] Would copy chart: {source_path} → {dest_path}[/yellow]")
+        if dest_path.exists():
+            console.print(f"[yellow]🔍 [DRY-RUN] Would remove existing build directory[/yellow]")
+    else:
+        # 기존 디렉토리 삭제
+        if dest_path.exists():
+            console.print(f"  Removing existing build directory: {dest_path}")
+            shutil.rmtree(dest_path)
 
-    console.print(f"  Copying chart: {source_path} → {dest_path}")
-    shutil.copytree(source_path, dest_path)
+        console.print(f"  Copying chart: {source_path} → {dest_path}")
+        shutil.copytree(source_path, dest_path)
 
     # 3. Check for override directory and warn if not configured
     overrides_base = app_config_dir / "overrides" / app_name
@@ -145,22 +152,27 @@ def build_helm_app(
                             dst_file = dest_path / override_rel_path
 
                             # Create destination directory
-                            dst_file.parent.mkdir(parents=True, exist_ok=True)
-                            shutil.copy2(src_file, dst_file)
-                            console.print(f"      ✓ {override_rel_path}")
-                            total_files_copied += 1
-
+                            if dry_run:
+                                console.print(f"[yellow]      🔍 [DRY-RUN] Would override: {override_rel_path}[/yellow]")
+                            else:
+                                dst_file.parent.mkdir(parents=True, exist_ok=True)
+                                shutil.copy2(src_file, dst_file)
+                                console.print(f"      ✓ {override_rel_path}")
+                                total_files_copied += 1
                 else:
                     # Exact file path - existing behavior
                     src_file = overrides_base / override_pattern
                     dst_file = dest_path / override_pattern
 
                     if src_file.exists() and src_file.is_file():
-                        # 대상 디렉토리 생성
-                        dst_file.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(src_file, dst_file)
-                        console.print(f"    ✓ Override: {override_pattern}")
-                        total_files_copied += 1
+                        if dry_run:
+                            console.print(f"[yellow]    🔍 [DRY-RUN] Would override: {override_pattern}[/yellow]")
+                        else:
+                            # 대상 디렉토리 생성
+                            dst_file.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copy2(src_file, dst_file)
+                            console.print(f"    ✓ Override: {override_pattern}")
+                            total_files_copied += 1
                     else:
                         console.print(f"[yellow]    ⚠️ Override file not found: {src_file}[/yellow]")
 
@@ -173,15 +185,24 @@ def build_helm_app(
         for remove_pattern in app.removes:
             remove_target = dest_path / remove_pattern
 
-            if remove_target.exists():
-                if remove_target.is_dir():
-                    shutil.rmtree(remove_target)
-                    console.print(f"    ✓ Removed directory: {remove_pattern}")
-                elif remove_target.is_file():
-                    remove_target.unlink()
-                    console.print(f"    ✓ Removed file: {remove_pattern}")
+            if dry_run:
+                if remove_target.exists():
+                    if remove_target.is_dir():
+                        console.print(f"[yellow]    🔍 [DRY-RUN] Would remove directory: {remove_pattern}[/yellow]")
+                    elif remove_target.is_file():
+                        console.print(f"[yellow]    🔍 [DRY-RUN] Would remove file: {remove_pattern}[/yellow]")
+                else:
+                    console.print(f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]")
             else:
-                console.print(f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]")
+                if remove_target.exists():
+                    if remove_target.is_dir():
+                        shutil.rmtree(remove_target)
+                        console.print(f"    ✓ Removed directory: {remove_pattern}")
+                    elif remove_target.is_file():
+                        remove_target.unlink()
+                        console.print(f"    ✓ Removed file: {remove_pattern}")
+                else:
+                    console.print(f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]")
 
     console.print(f"[green]✅ Helm app built: {app_name}[/green]")
     return True
@@ -193,6 +214,7 @@ def build_http_app(
     base_dir: Path,
     build_dir: Path,
     app_config_dir: Path,
+    dry_run: bool = False,
 ) -> bool:
     """
     HTTP 앱 빌드 (다운로드된 파일을 build/로 복사).
@@ -203,6 +225,7 @@ def build_http_app(
         base_dir: 프로젝트 루트
         build_dir: build 디렉토리
         app_config_dir: 앱 설정 디렉토리
+        dry_run: dry-run 모드 (실제 파일 복사하지 않음)
 
     Returns:
         성공 여부
@@ -219,10 +242,13 @@ def build_http_app(
 
     # build/ 디렉토리로 복사
     dest_file = build_dir / app_name / source_file.name
-    dest_file.parent.mkdir(parents=True, exist_ok=True)
 
-    console.print(f"  Copying: {source_file} → {dest_file}")
-    shutil.copy2(source_file, dest_file)
+    if dry_run:
+        console.print(f"[yellow]🔍 [DRY-RUN] Would copy: {source_file} → {dest_file}[/yellow]")
+    else:
+        dest_file.parent.mkdir(parents=True, exist_ok=True)
+        console.print(f"  Copying: {source_file} → {dest_file}")
+        shutil.copy2(source_file, dest_file)
 
     console.print(f"[green]✅ HTTP app built: {app_name}[/green]")
     return True
@@ -253,11 +279,18 @@ def build_http_app(
     default=None,
     help="빌드할 특정 앱 이름 (지정하지 않으면 모든 앱 빌드)",
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Dry-run 모드 (실제 파일 복사/수정하지 않음)",
+)
 def cmd(
     app_config_dir_name: str,
     base_dir: str,
     config_file_name: str,
     app_name: str | None,
+    dry_run: bool,
 ):
     """
     SBKube build 명령어.
@@ -323,12 +356,12 @@ def cmd(
         if isinstance(app, HelmApp):
             # Helm 앱만 빌드 (커스터마이징 필요)
             if app.overrides or app.removes or app.is_remote_chart():
-                success = build_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR)
+                success = build_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR, dry_run)
             else:
                 console.print(f"[yellow]⏭️  Skipping Helm app (no customization): {app_name}[/yellow]")
                 success = True  # 건너뛰어도 성공으로 간주
         elif isinstance(app, HttpApp):
-            success = build_http_app(app_name, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR)
+            success = build_http_app(app_name, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, dry_run)
         else:
             console.print(f"[yellow]⏭️  App type '{app.type}' does not require build: {app_name}[/yellow]")
             success = True  # 건너뛰어도 성공으로 간주

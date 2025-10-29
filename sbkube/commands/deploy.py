@@ -14,6 +14,7 @@ from pathlib import Path
 import click
 from rich.console import Console
 
+from sbkube.exceptions import KubernetesConnectionError
 from sbkube.models.config_model import (
     ActionApp,
     ExecApp,
@@ -24,6 +25,7 @@ from sbkube.models.config_model import (
     YamlApp,
 )
 from sbkube.utils.cli_check import (
+    check_cluster_connectivity_or_exit,
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
 )
@@ -31,6 +33,39 @@ from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 
 console = Console()
+
+
+_CONNECTION_ERROR_KEYWORDS: tuple[str, ...] = (
+    "connection refused",
+    "kubernetes cluster unreachable",
+    "unable to connect to the server",
+    "the connection to the server",
+    "context deadline exceeded",
+    "i/o timeout",
+    "no such host",
+    "name or service not known",
+    "connection timed out",
+    "timeout expired",
+)
+
+
+def _get_connection_error_reason(stdout: str, stderr: str) -> str | None:
+    """
+    Detects common Kubernetes connection error patterns in command output.
+
+    Args:
+        stdout: 표준 출력
+        stderr: 표준 에러
+
+    Returns:
+        감지된 경우 오류 메시지, 없으면 None
+    """
+    combined = f"{stdout}\n{stderr}".lower()
+    for keyword in _CONNECTION_ERROR_KEYWORDS:
+        if keyword in combined:
+            message = stderr.strip() or stdout.strip()
+            return message or keyword
+    return None
 
 
 def deploy_helm_app(
@@ -105,6 +140,25 @@ def deploy_helm_app(
     cmd = ["helm", "upgrade", release_name, str(chart_path), "--install"]
 
     if namespace:
+        # Ensure namespace exists unless helm will create it
+        namespace_missing = False
+        check_cmd = ["kubectl", "get", "namespace", namespace]
+        check_return_code, _, _ = run_command(check_cmd)
+
+        if check_return_code != 0:
+            namespace_missing = True
+
+        if namespace_missing and not app.create_namespace:
+            if dry_run:
+                console.print(f"[yellow]⚠️ Namespace '{namespace}' is missing (dry-run: skipping creation)[/yellow]")
+            else:
+                console.print(f"[yellow]ℹ️  Namespace '{namespace}' not found. Creating...[/yellow]")
+                create_cmd = ["kubectl", "create", "namespace", namespace]
+                create_return_code, _, create_stderr = run_command(create_cmd)
+                if create_return_code != 0:
+                    console.print(f"[red]❌ Failed to create namespace '{namespace}': {create_stderr}[/red]")
+                    return False
+
         cmd.extend(["--namespace", namespace])
 
     if app.create_namespace:
@@ -142,6 +196,9 @@ def deploy_helm_app(
     return_code, stdout, stderr = run_command(cmd, timeout=300)
 
     if return_code != 0:
+        reason = _get_connection_error_reason(stdout, stderr)
+        if reason:
+            raise KubernetesConnectionError(reason=reason)
         console.print(f"[red]❌ Failed to deploy: {stderr}[/red]")
         return False
 
@@ -193,6 +250,9 @@ def deploy_yaml_app(
         return_code, stdout, stderr = run_command(cmd)
 
         if return_code != 0:
+            reason = _get_connection_error_reason(stdout, stderr)
+            if reason:
+                raise KubernetesConnectionError(reason=reason)
             console.print(f"[red]❌ Failed to apply: {stderr}[/red]")
             return False
 
@@ -252,6 +312,9 @@ def deploy_action_app(
         return_code, stdout, stderr = run_command(cmd)
 
         if return_code != 0:
+            reason = _get_connection_error_reason(stdout, stderr)
+            if reason:
+                raise KubernetesConnectionError(reason=reason)
             console.print(f"[red]❌ Failed to {action_type}: {stderr}[/red]")
             return False
 
@@ -288,6 +351,9 @@ def deploy_exec_app(
         return_code, stdout, stderr = run_command(command, shell=True, timeout=60)
 
         if return_code != 0:
+            reason = _get_connection_error_reason(stdout, stderr)
+            if reason:
+                raise KubernetesConnectionError(reason=reason)
             console.print(f"[red]❌ Command failed: {stderr}[/red]")
             return False
 
@@ -340,6 +406,9 @@ def deploy_kustomize_app(
     return_code, stdout, stderr = run_command(cmd)
 
     if return_code != 0:
+        reason = _get_connection_error_reason(stdout, stderr)
+        if reason:
+            raise KubernetesConnectionError(reason=reason)
         console.print(f"[red]❌ Failed to apply: {stderr}[/red]")
         return False
 
@@ -431,6 +500,7 @@ def cmd(
 
     # kubectl 설치 확인
     check_kubectl_installed_or_exit()
+    check_cluster_connectivity_or_exit()
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
@@ -480,22 +550,31 @@ def cmd(
 
         success = False
 
-        if isinstance(app, HelmApp):
-            check_helm_installed_or_exit()
-            success = deploy_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR, dry_run)
-        elif isinstance(app, YamlApp):
-            success = deploy_yaml_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
-        elif isinstance(app, ActionApp):
-            success = deploy_action_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
-        elif isinstance(app, ExecApp):
-            success = deploy_exec_app(app_name, app, BASE_DIR, dry_run)
-        elif isinstance(app, KustomizeApp):
-            success = deploy_kustomize_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
-        elif isinstance(app, NoopApp):
-            success = deploy_noop_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
-        else:
-            console.print(f"[yellow]⏭️  Unsupported app type '{app.type}': {app_name}[/yellow]")
-            continue
+        try:
+            if isinstance(app, HelmApp):
+                check_helm_installed_or_exit()
+                success = deploy_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR, dry_run)
+            elif isinstance(app, YamlApp):
+                success = deploy_yaml_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+            elif isinstance(app, ActionApp):
+                success = deploy_action_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+            elif isinstance(app, ExecApp):
+                success = deploy_exec_app(app_name, app, BASE_DIR, dry_run)
+            elif isinstance(app, KustomizeApp):
+                success = deploy_kustomize_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+            elif isinstance(app, NoopApp):
+                success = deploy_noop_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+            else:
+                console.print(f"[yellow]⏭️  Unsupported app type '{app.type}': {app_name}[/yellow]")
+                continue
+        except KubernetesConnectionError as exc:
+            console.print(
+                f"[red]❌ Kubernetes cluster connection error detected while processing app: {app_name}[/red]"
+            )
+            if exc.reason:
+                console.print(f"[red]   {exc.reason}[/red]")
+            console.print("[yellow]💡 Check your cluster connectivity and try again.[/yellow]")
+            raise click.Abort() from exc
 
         if success:
             success_count += 1

@@ -8,6 +8,7 @@ apps:
     version: "10.1.2"
     values:
       - grafana-values.yaml
+    wait: false          # Helm이 준비 완료를 기다리지 않도록 설정 (기본값은 true)
 
   # 차트 커스터마이징 예제 - Prometheus (공식)
   prometheus:

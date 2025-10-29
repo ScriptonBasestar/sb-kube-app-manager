@@ -118,7 +118,7 @@ def prepare_helm_app(
     # Check if chart already exists (skip if not --force)
     if chart_yaml.exists() and not force:
         console.print(f"[yellow]⏭️  Chart already exists, skipping: {chart_name}[/yellow]")
-        console.print(f"    Use --force to re-download")
+        console.print("    Use --force to re-download")
         return True
 
     # If force flag is set, remove existing chart directory
@@ -258,7 +258,7 @@ def prepare_git_app(
     # Check if repository already exists (skip if not --force)
     if git_dir.exists() and not force:
         console.print(f"[yellow]⏭️  Repository already exists, skipping: {repo_alias}[/yellow]")
-        console.print(f"    Use --force to re-clone")
+        console.print("    Use --force to re-clone")
         return True
 
     # If force flag is set, remove existing repository
@@ -351,7 +351,7 @@ def cmd(
     sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
 
     if not sources_file_path:
-        console.print(f"[red]❌ sources.yaml not found in:[/red]")
+        console.print("[red]❌ sources.yaml not found in:[/red]")
         console.print(f"  - {APP_CONFIG_DIR / sources_file_name}")
         console.print(f"  - {APP_CONFIG_DIR.parent / sources_file_name}")
         console.print(f"  - {BASE_DIR / sources_file_name}")

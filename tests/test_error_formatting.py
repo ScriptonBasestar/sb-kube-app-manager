@@ -1,6 +1,5 @@
 """Integration tests for error message formatting."""
 
-import pytest
 
 from sbkube.exceptions import (
     ConfigFileNotFoundError,

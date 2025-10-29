@@ -1,6 +1,5 @@
 """Tests for error suggestions module."""
 
-import pytest
 
 from sbkube.utils.error_suggestions import (
     ERROR_GUIDE,

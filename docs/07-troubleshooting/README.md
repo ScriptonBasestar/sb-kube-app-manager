@@ -499,6 +499,7 @@ ______________________________________________________________________
 ### ❌ Override 파일이 적용되지 않음
 
 #### 증상
+
 - `overrides/` 디렉토리에 파일을 넣었지만 빌드 결과에 반영되지 않음
 - `build/` 디렉토리에 override 파일이 없음
 - 경고 메시지 표시:
@@ -507,6 +508,7 @@ ______________________________________________________________________
   ```
 
 #### 원인
+
 `config.yaml`에 `overrides` 필드를 명시하지 않음
 
 #### 해결 방법
@@ -558,20 +560,24 @@ ls -la build/myapp/files/config.txt
 ```
 
 #### 예방
+
 - **v0.4.8+**: override 디렉토리가 있지만 설정되지 않은 경우 경고 메시지 자동 표시
 - **체크리스트**:
   1. `overrides/[앱이름]/` 디렉토리 존재 확인
-  2. `config.yaml`의 해당 앱에 `overrides:` 필드 추가
-  3. 모든 override 파일을 리스트로 명시
+  1. `config.yaml`의 해당 앱에 `overrides:` 필드 추가
+  1. 모든 override 파일을 리스트로 명시
 
 ### ❌ build 디렉토리가 비어있음
 
 #### 증상
+
 - `sbkube build` 실행 후 `build/` 디렉토리가 비어있거나 일부 앱만 생성됨
 - 메시지: `⏭️ Skipping Helm app (no customization): myapp`
 
 #### 원인
+
 sbkube는 다음 조건일 때 **빌드를 건너뜁니다** (의도된 최적화):
+
 - 로컬 차트 (`chart: ./charts/myapp`)
 - `overrides` 없음
 - `removes` 없음
@@ -608,6 +614,7 @@ sbkube deploy --app-dir .
 ```
 
 #### 확인
+
 ```bash
 sbkube build --app-dir . --verbose
 
@@ -620,11 +627,13 @@ sbkube build --app-dir . --verbose
 ### ❌ .Files.Get 파일을 찾을 수 없음
 
 #### 증상
+
 - Helm 템플릿에서 `{{ .Files.Get "files/config.toml" }}` 사용 시 빈 문자열 반환
 - ConfigMap이나 Secret의 data가 비어있음
 - 로그: `Error: template: ... error calling Get: file not found`
 
 #### 원인
+
 `files/` 디렉토리가 build/ 디렉토리에 복사되지 않음
 
 #### 해결 방법
@@ -678,21 +687,24 @@ cat /tmp/rendered/myapp/configmap.yaml
 ```
 
 #### 참고
+
 - `.Files.Get`의 경로는 **차트 루트 기준** 상대 경로입니다
 - `files/` 디렉토리는 자동으로 복사되지 않으므로 명시적으로 override에 포함해야 합니다
 
 ### ❌ Override 파일을 찾을 수 없음
 
 #### 증상
+
 - 빌드 중 경고 메시지:
   ```
   ⚠️ Override file not found: overrides/myapp/templates/configmap.yaml
   ```
 
 #### 원인
+
 1. config.yaml에 명시된 파일이 실제로 존재하지 않음
-2. 파일 경로가 잘못됨
-3. 파일명 오타
+1. 파일 경로가 잘못됨
+1. 파일명 오타
 
 #### 해결 방법
 
@@ -745,6 +757,7 @@ sbkube build --app-dir .
 빌드 관련 문제 발생 시 다음 순서로 확인하세요:
 
 **1. 디렉토리 구조 확인**
+
 ```bash
 ls -la overrides/
 ls -la overrides/[앱이름]/
@@ -752,17 +765,20 @@ ls -la build/
 ```
 
 **2. config.yaml 검증**
+
 ```bash
 cat config.yaml | grep -A 10 "앱이름:"
 # overrides 필드가 있는지 확인
 ```
 
 **3. 빌드 실행 (verbose 모드)**
+
 ```bash
 sbkube build --app-dir . --verbose
 ```
 
 **4. 빌드 결과 확인**
+
 ```bash
 # Override된 파일이 build/에 있는지 확인
 ls -la build/[앱이름]/templates/
@@ -770,6 +786,7 @@ ls -la build/[앱이름]/files/
 ```
 
 **5. 템플릿 렌더링 테스트**
+
 ```bash
 sbkube template --app-dir . --output-dir /tmp/test
 cat /tmp/test/[앱이름]/*.yaml
@@ -777,7 +794,7 @@ cat /tmp/test/[앱이름]/*.yaml
 
 ### 📚 관련 문서
 
-- [commands.md - Override 사용법](../02-features/commands.md#-override-디렉토리-사용-시-주의사항)
+- [commands.md - Override 사용법](../02-features/commands.md#-override-%EB%94%94%EB%A0%89%ED%86%A0%EB%A6%AC-%EC%82%AC%EC%9A%A9-%EC%8B%9C-%EC%A3%BC%EC%9D%98%EC%82%AC%ED%95%AD)
 - [config-schema.md - overrides 필드](../03-configuration/config-schema.md)
 - [examples/override-with-files/](../../examples/override-with-files/) - 실전 예제
 

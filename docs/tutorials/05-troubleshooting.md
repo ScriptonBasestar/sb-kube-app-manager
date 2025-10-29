@@ -1,28 +1,27 @@
 # 🔧 문제 해결 가이드
 
-> **난이도**: ⭐⭐ 중급
-> **소요 시간**: 참조용 (문제별 5-15분)
-> **사전 요구사항**: [01-getting-started.md](01-getting-started.md) 완료
+> **난이도**: ⭐⭐ 중급 **소요 시간**: 참조용 (문제별 5-15분) **사전 요구사항**: [01-getting-started.md](01-getting-started.md) 완료
 
----
+______________________________________________________________________
 
 ## 📋 목차
 
-1. [일반적인 문제](#일반적인-문제)
-2. [prepare 명령어 오류](#prepare-명령어-오류)
-3. [build 명령어 오류](#build-명령어-오류)
-4. [deploy 명령어 오류](#deploy-명령어-오류)
-5. [설정 파일 오류](#설정-파일-오류)
-6. [Kubernetes 리소스 오류](#kubernetes-리소스-오류)
-7. [디버깅 도구](#디버깅-도구)
+1. [일반적인 문제](#%EC%9D%BC%EB%B0%98%EC%A0%81%EC%9D%B8-%EB%AC%B8%EC%A0%9C)
+1. [prepare 명령어 오류](#prepare-%EB%AA%85%EB%A0%B9%EC%96%B4-%EC%98%A4%EB%A5%98)
+1. [build 명령어 오류](#build-%EB%AA%85%EB%A0%B9%EC%96%B4-%EC%98%A4%EB%A5%98)
+1. [deploy 명령어 오류](#deploy-%EB%AA%85%EB%A0%B9%EC%96%B4-%EC%98%A4%EB%A5%98)
+1. [설정 파일 오류](#%EC%84%A4%EC%A0%95-%ED%8C%8C%EC%9D%BC-%EC%98%A4%EB%A5%98)
+1. [Kubernetes 리소스 오류](#kubernetes-%EB%A6%AC%EC%86%8C%EC%8A%A4-%EC%98%A4%EB%A5%98)
+1. [디버깅 도구](#%EB%94%94%EB%B2%84%EA%B9%85-%EB%8F%84%EA%B5%AC)
 
----
+______________________________________________________________________
 
 ## 일반적인 문제
 
 ### 문제 1: 명령어를 찾을 수 없음
 
 **증상**:
+
 ```bash
 $ sbkube --version
 bash: sbkube: command not found
@@ -31,6 +30,7 @@ bash: sbkube: command not found
 **원인**: SBKube가 설치되지 않았거나 PATH에 없음
 
 **해결**:
+
 ```bash
 # 설치 확인
 pip show sbkube
@@ -49,6 +49,7 @@ which sbkube
 ### 문제 2: Permission Denied
 
 **증상**:
+
 ```bash
 $ sbkube apply
 Error: Permission denied: '/home/user/.sbkube/state.db'
@@ -57,6 +58,7 @@ Error: Permission denied: '/home/user/.sbkube/state.db'
 **원인**: SBKube 상태 디렉토리 권한 문제
 
 **해결**:
+
 ```bash
 # 권한 확인
 ls -la ~/.sbkube/
@@ -72,6 +74,7 @@ sbkube state list  # 자동으로 디렉토리 생성
 ### 문제 3: Kubernetes 클러스터 연결 실패
 
 **증상**:
+
 ```bash
 $ sbkube deploy
 Error: Unable to connect to Kubernetes cluster
@@ -80,6 +83,7 @@ Error: Unable to connect to Kubernetes cluster
 **원인**: kubeconfig 설정 문제
 
 **해결**:
+
 ```bash
 # kubeconfig 파일 확인
 echo $KUBECONFIG
@@ -99,13 +103,14 @@ kubectl config use-context <context-name>
 export KUBECONFIG=~/.kube/config
 ```
 
----
+______________________________________________________________________
 
 ## prepare 명령어 오류
 
 ### 문제 1: Helm 리포지토리 추가 실패
 
 **증상**:
+
 ```bash
 $ sbkube prepare
 Error: failed to add Helm repo 'bitnami': context deadline exceeded
@@ -114,6 +119,7 @@ Error: failed to add Helm repo 'bitnami': context deadline exceeded
 **원인**: 네트워크 문제 또는 잘못된 URL
 
 **해결**:
+
 ```bash
 # 네트워크 확인
 curl -I https://charts.bitnami.com/bitnami/index.yaml
@@ -135,6 +141,7 @@ sbkube prepare
 ### 문제 2: Chart Pull 실패
 
 **증상**:
+
 ```bash
 $ sbkube prepare
 Error: chart 'bitnami/redis' version '19.0.0' not found
@@ -143,6 +150,7 @@ Error: chart 'bitnami/redis' version '19.0.0' not found
 **원인**: 존재하지 않는 차트 버전
 
 **해결**:
+
 ```bash
 # 사용 가능한 버전 확인
 helm search repo bitnami/redis --versions | head -20
@@ -163,6 +171,7 @@ helm search repo bitnami/redis --versions | head -20
 ### 문제 3: Git Clone 실패
 
 **증상**:
+
 ```bash
 $ sbkube prepare
 Error: failed to clone repository 'https://github.com/user/repo.git': Authentication required
@@ -171,6 +180,7 @@ Error: failed to clone repository 'https://github.com/user/repo.git': Authentica
 **원인**: Private 리포지토리 인증 필요
 
 **해결**:
+
 ```bash
 # 1. SSH 키 사용
 # sources.yaml에 SSH URL 사용
@@ -195,6 +205,7 @@ git config --global credential.helper store
 ### 문제 4: 차트가 이미 존재함 (v0.4.6 이전)
 
 **증상**:
+
 ```bash
 $ sbkube prepare
 Error: destination path 'charts/redis' already exists and is not an empty directory
@@ -203,6 +214,7 @@ Error: destination path 'charts/redis' already exists and is not an empty direct
 **원인**: 이전에 다운로드한 차트가 남아있음
 
 **해결 (v0.4.6 이후)**:
+
 ```bash
 # 자동으로 스킵됨 (멱등성 지원)
 sbkube prepare
@@ -214,19 +226,21 @@ sbkube prepare --force
 ```
 
 **해결 (v0.4.5 이하)**:
+
 ```bash
 # 차트 디렉토리 삭제 후 재실행
 rm -rf charts/redis
 sbkube prepare
 ```
 
----
+______________________________________________________________________
 
 ## build 명령어 오류
 
 ### 문제 1: YAML 파일을 찾을 수 없음
 
 **증상**:
+
 ```bash
 $ sbkube build
 Error: No such file: 'charts/redis/redis/templates/deployment.yaml'
@@ -235,6 +249,7 @@ Error: No such file: 'charts/redis/redis/templates/deployment.yaml'
 **원인**: prepare 단계를 건너뜀
 
 **해결**:
+
 ```bash
 # prepare 먼저 실행
 sbkube prepare
@@ -246,6 +261,7 @@ sbkube apply
 ### 문제 2: Overrides 적용 실패
 
 **증상**:
+
 ```bash
 $ sbkube build
 Error: Invalid YAML in override for 'templates/servicemonitor.yaml'
@@ -254,6 +270,7 @@ Error: Invalid YAML in override for 'templates/servicemonitor.yaml'
 **원인**: Overrides 내용의 YAML 문법 오류
 
 **해결**:
+
 ```bash
 # YAML 문법 검증
 # config.yaml의 overrides 섹션을 별도 파일로 저장
@@ -280,6 +297,7 @@ yamllint /tmp/test.yaml
 ### 문제 3: Removes 경로 오류
 
 **증상**:
+
 ```bash
 $ sbkube build
 Warning: File to remove not found: 'templates/master/configmap.yaml'
@@ -288,6 +306,7 @@ Warning: File to remove not found: 'templates/master/configmap.yaml'
 **원인**: 존재하지 않는 파일 경로
 
 **해결**:
+
 ```bash
 # 차트의 실제 파일 목록 확인
 ls -R charts/redis/redis/templates/
@@ -297,13 +316,14 @@ ls -R charts/redis/redis/templates/
 #   - templates/configmap.yaml  # master/ 제거
 ```
 
----
+______________________________________________________________________
 
 ## deploy 명령어 오류
 
 ### 문제 1: Namespace가 없음
 
 **증상**:
+
 ```bash
 $ sbkube deploy
 Error: namespaces "test-namespace" not found
@@ -312,6 +332,7 @@ Error: namespaces "test-namespace" not found
 **원인**: 네임스페이스가 생성되지 않음
 
 **해결**:
+
 ```bash
 # 네임스페이스 생성
 kubectl create namespace test-namespace
@@ -331,6 +352,7 @@ kubectl get namespaces
 ### 문제 2: Helm 릴리스 충돌
 
 **증상**:
+
 ```bash
 $ sbkube deploy
 Error: cannot re-use a name that is still in use
@@ -339,6 +361,7 @@ Error: cannot re-use a name that is still in use
 **원인**: 동일한 이름의 Helm 릴리스가 이미 존재
 
 **해결**:
+
 ```bash
 # 기존 릴리스 확인
 helm list -n test-namespace
@@ -356,6 +379,7 @@ sbkube deploy
 ### 문제 3: Pod가 Pending 상태
 
 **증상**:
+
 ```bash
 $ kubectl get pods -n test-namespace
 NAME                     READY   STATUS    RESTARTS   AGE
@@ -365,6 +389,7 @@ redis-master-0           0/1     Pending   0          2m
 **원인**: 리소스 부족, PVC 마운트 실패, 노드 선택자 불일치
 
 **해결**:
+
 ```bash
 # Pod 이벤트 확인
 kubectl describe pod redis-master-0 -n test-namespace
@@ -393,6 +418,7 @@ kubectl get nodes --show-labels
 ### 문제 4: ImagePullBackOff
 
 **증상**:
+
 ```bash
 $ kubectl get pods -n test-namespace
 NAME                     READY   STATUS             RESTARTS   AGE
@@ -402,6 +428,7 @@ redis-master-0           0/1     ImagePullBackOff   0          1m
 **원인**: 이미지를 Pull할 수 없음 (레지스트리 인증, 이미지 없음)
 
 **해결**:
+
 ```bash
 # Pod 이벤트 확인
 kubectl describe pod redis-master-0 -n test-namespace
@@ -436,6 +463,7 @@ wget -O- https://docker.io
 ### 문제 5: CrashLoopBackOff
 
 **증상**:
+
 ```bash
 $ kubectl get pods -n test-namespace
 NAME                     READY   STATUS             RESTARTS   AGE
@@ -445,6 +473,7 @@ redis-master-0           0/1     CrashLoopBackOff   5          3m
 **원인**: 컨테이너 시작 실패 (잘못된 설정, 환경 변수 누락)
 
 **해결**:
+
 ```bash
 # 로그 확인
 kubectl logs redis-master-0 -n test-namespace
@@ -469,13 +498,14 @@ kubectl exec -it redis-master-0 -n test-namespace -- /bin/bash
 kubectl debug redis-master-0 -n test-namespace -it --image=busybox
 ```
 
----
+______________________________________________________________________
 
 ## 설정 파일 오류
 
 ### 문제 1: Pydantic 검증 오류
 
 **증상**:
+
 ```bash
 $ sbkube validate
 Error: 1 validation error for SBKubeConfig
@@ -486,6 +516,7 @@ apps -> redis -> type
 **원인**: 필수 필드 누락
 
 **해결**:
+
 ```yaml
 # config.yaml
 apps:
@@ -498,6 +529,7 @@ apps:
 ### 문제 2: sources.yaml을 찾을 수 없음
 
 **증상**:
+
 ```bash
 $ sbkube prepare
 Error: sources.yaml not found in: ./sources.yaml, ../sources.yaml, ./sources.yaml
@@ -506,6 +538,7 @@ Error: sources.yaml not found in: ./sources.yaml, ../sources.yaml, ./sources.yam
 **원인**: sources.yaml 파일이 없거나 잘못된 위치
 
 **해결 (v0.4.7 이후)**:
+
 ```bash
 # sources.yaml 검색 순서 (자동)
 # 1. 현재 디렉토리 (.)
@@ -532,6 +565,7 @@ cd app1
 ### 문제 3: 순환 의존성
 
 **증상**:
+
 ```bash
 $ sbkube apply
 Error: Circular dependency detected: app-a → app-b → app-a
@@ -540,6 +574,7 @@ Error: Circular dependency detected: app-a → app-b → app-a
 **원인**: depends_on 설정의 순환 참조
 
 **해결**:
+
 ```yaml
 # 잘못된 예
 apps:
@@ -559,13 +594,14 @@ apps:
       - app-a
 ```
 
----
+______________________________________________________________________
 
 ## Kubernetes 리소스 오류
 
 ### 문제 1: Service 연결 실패
 
 **증상**:
+
 ```bash
 $ kubectl get svc -n test-namespace
 NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
@@ -579,6 +615,7 @@ Could not connect to Redis at redis-master:6379: Name or service not known
 **원인**: DNS 문제, 잘못된 서비스 이름
 
 **해결**:
+
 ```bash
 # 1. 서비스 이름 확인
 kubectl get svc -n test-namespace
@@ -599,6 +636,7 @@ kubectl get endpoints redis-master -n test-namespace
 ### 문제 2: PVC Bound 실패
 
 **증상**:
+
 ```bash
 $ kubectl get pvc -n test-namespace
 NAME                  STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
@@ -608,6 +646,7 @@ data-redis-master-0   Pending                                      standard     
 **원인**: StorageClass 없음, 용량 부족
 
 **해결**:
+
 ```bash
 # StorageClass 확인
 kubectl get storageclass
@@ -636,6 +675,7 @@ kubectl describe pvc data-redis-master-0 -n test-namespace
 ### 문제 3: Ingress 404
 
 **증상**:
+
 ```bash
 $ curl http://app.example.com
 404 Not Found
@@ -644,6 +684,7 @@ $ curl http://app.example.com
 **원인**: Ingress 설정 오류, 백엔드 서비스 문제
 
 **해결**:
+
 ```bash
 # Ingress 확인
 kubectl get ingress -n test-namespace
@@ -665,7 +706,7 @@ kubectl logs -n ingress-nginx <ingress-controller-pod>
 echo "127.0.0.1 app.example.com" | sudo tee -a /etc/hosts
 ```
 
----
+______________________________________________________________________
 
 ## 디버깅 도구
 
@@ -741,7 +782,7 @@ kubectl debug <pod-name> -n test-namespace -it --image=busybox
 kubectl debug node/<node-name> -it --image=busybox
 ```
 
----
+______________________________________________________________________
 
 ## 일반적인 해결 순서
 
@@ -798,8 +839,6 @@ sbkube deploy --dry-run
 sbkube deploy
 ```
 
----
+______________________________________________________________________
 
-**작성자**: SBKube Documentation Team
-**버전**: v0.4.7
-**최종 업데이트**: 2025-10-24
+**작성자**: SBKube Documentation Team **버전**: v0.4.7 **최종 업데이트**: 2025-10-24

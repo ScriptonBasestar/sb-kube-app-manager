@@ -7,12 +7,12 @@ SBKube 주요 에러 시나리오 테스트.
 - 명령어 실행 에러
 """
 
+
 import pytest
 import yaml
-from pathlib import Path
 
-from sbkube.models.config_model import SBKubeConfig, HelmApp
 from sbkube.exceptions import ConfigValidationError
+from sbkube.models.config_model import HelmApp, SBKubeConfig
 
 
 class TestConfigValidationErrors:
@@ -215,7 +215,6 @@ class TestRuntimeErrors:
 # 에러 카운트 통계
 def test_error_test_count():
     """추가된 에러 테스트 개수 확인."""
-    import inspect
 
     # 모든 테스트 클래스 수집
     test_classes = [

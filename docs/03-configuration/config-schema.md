@@ -215,6 +215,7 @@ apps:
 차트 파일을 **교체하거나 새로 추가**할 파일 목록입니다.
 
 **v0.4.0+ 형식** (리스트):
+
 ```yaml
 overrides:
   - templates/deployment.yaml       # 기존 파일 교체
@@ -223,6 +224,7 @@ overrides:
 ```
 
 **디렉토리 구조**:
+
 ```
 app-dir/
 ├── config.yaml
@@ -238,12 +240,14 @@ app-dir/
 **동작 방식**:
 
 1. `sbkube build` 실행 시:
+
    - 차트를 `build/redis/`로 복사
    - `overrides` 리스트의 각 파일을 `overrides/redis/`에서 `build/redis/`로 복사
    - 기존 파일이 있으면 **덮어쓰기**
    - 기존 파일이 없으면 **새로 추가**
 
-2. 결과:
+1. 결과:
+
    ```
    build/redis/
      ├── templates/
@@ -257,8 +261,8 @@ app-dir/
 **⚠️ 주의사항**:
 
 1. **명시적 나열 필수**: `overrides/` 디렉토리가 있어도 config.yaml에 명시하지 않으면 무시됨
-2. **files 디렉토리**: `.Files.Get`을 사용하는 템플릿의 경우 `files/` 경로도 명시 필요
-3. **경로 검증**: 명시된 파일이 `overrides/` 디렉토리에 없으면 빌드 실패
+1. **files 디렉토리**: `.Files.Get`을 사용하는 템플릿의 경우 `files/` 경로도 명시 필요
+1. **경로 검증**: 명시된 파일이 `overrides/` 디렉토리에 없으면 빌드 실패
 
 **사용 사례**:
 
@@ -268,7 +272,7 @@ app-dir/
 
 **관련 문서**:
 
-- [commands.md - Override 사용법](../02-features/commands.md#-override-디렉토리-사용-시-주의사항)
+- [commands.md - Override 사용법](../02-features/commands.md#-override-%EB%94%94%EB%A0%89%ED%86%A0%EB%A6%AC-%EC%82%AC%EC%9A%A9-%EC%8B%9C-%EC%A3%BC%EC%9D%98%EC%82%AC%ED%95%AD)
 - [troubleshooting.md - Override 문제 해결](../07-troubleshooting/README.md)
 
 **removes**:

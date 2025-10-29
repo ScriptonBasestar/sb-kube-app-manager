@@ -343,6 +343,9 @@ class SBKubeConfig(ConfigBaseModel):
 
     Examples:
         namespace: production
+        deps:
+          - a000_infra_network
+          - a101_data_rdb
 
         apps:
           redis:
@@ -365,6 +368,10 @@ class SBKubeConfig(ConfigBaseModel):
     """
 
     namespace: str
+    deps: list[str] = Field(
+        default_factory=list,
+        description="App group dependencies (other app-dir names that must be deployed first)",
+    )
     apps: dict[str, AppConfig] = Field(default_factory=dict)
     global_labels: dict[str, str] = Field(default_factory=dict)
     global_annotations: dict[str, str] = Field(default_factory=dict)

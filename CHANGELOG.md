@@ -1,5 +1,80 @@
 # Changelog - SBKube
 
+## [0.4.10] - 2025-10-29
+
+### ✨ Features
+
+- **deps 필드 지원** (`sbkube/models/config_model.py`)
+  - 앱 그룹 레벨에서 다른 앱 그룹에 대한 의존성 선언 가능
+  - 설정 파일에서 의존성 정보를 명시적으로 문서화
+  - 현재는 파싱만 지원 (검증은 향후 버전에서 구현)
+
+### 🔧 Improvements
+
+- **SBKubeConfig 모델 확장**
+
+  - `deps: list[str]` 필드 추가
+  - 기본값: 빈 리스트 (후방 호환성 보장)
+  - Pydantic 모델 검증 통과
+
+- **문서 업데이트**
+
+  - `docs/03-configuration/config-schema.md` - deps 필드 스키마 추가
+  - 사용 사례 및 예제 포함
+  - 향후 기능 로드맵 명시
+
+- **테스트 추가**
+
+  - `tests/test_config_model.py` - deps 필드 테스트 3개
+    - `test_deps_field_parsing` - deps 필드 파싱 검증
+    - `test_deps_field_optional` - 후방 호환성 검증
+    - `test_deps_field_empty_list` - 빈 리스트 처리
+
+### 📝 Usage Example
+
+```yaml
+# a302_devops/config.yaml
+namespace: harbor
+deps:
+  - a000_infra_network    # Ingress and Storage
+  - a101_data_rdb         # PostgreSQL database
+  - a100_data_memory      # Redis cache
+
+apps:
+  harbor:
+    type: helm
+    chart: harbor/harbor
+    values:
+      - values/harbor.yaml
+```
+
+### 🎯 Purpose
+
+이 기능은 복잡한 Kubernetes 인프라 프로젝트에서:
+
+1. 앱 그룹 간 의존성을 config.yaml에 명시적으로 기록
+1. 배포 순서 정보를 기계 판독 가능한 형식으로 유지
+1. 향후 자동 검증 및 순서 결정 기능의 기반 제공
+
+**현재 버전 (v0.4.10)**:
+
+- ✅ 파싱 및 저장
+- ✅ 문서화 목적
+
+**향후 버전 (예정)**:
+
+- 배포 전 의존성 검증
+- 자동 배포 순서 결정 (`--recursive`)
+- 의존성 그래프 시각화
+
+### 🔗 Related
+
+- Feature Request: tmp/sbkube-deps-feature-request.md
+- Real-world usage: 11개 앱 그룹에서 deps 사용 중
+- Issue: Validation 에러 해결 (Extra inputs are not permitted)
+
+______________________________________________________________________
+
 ## [0.4.9] - 2025-10-29
 
 ### ✨ Features
@@ -12,16 +87,19 @@
 ### 🔧 Improvements
 
 - **build 명령어 Glob 패턴 처리**
+
   - 패턴 매칭 파일 개수 표시
   - 매칭되는 파일이 없으면 경고 메시지
   - 개별 파일 복사 진행 상황 표시
 
 - **문서 업데이트**
+
   - `docs/02-features/commands.md` - Glob 패턴 사용 예제 추가
   - `docs/03-configuration/config-schema.md` - Glob 패턴 지원 문서화
   - `examples/override-with-files/` - Glob 패턴 사용 예제 추가
 
 - **테스트 추가**
+
   - `tests/test_build.py` - Glob 패턴 테스트 케이스 2개
     - `test_helm_app_with_glob_patterns` - 기본 glob 패턴 테스트
     - `test_helm_app_with_mixed_patterns` - 명시적 파일 + glob 혼합 테스트
@@ -29,6 +107,7 @@
 ### 📝 Usage Examples
 
 **기본 사용**:
+
 ```yaml
 overrides:
   - templates/*.yaml        # templates/의 모든 .yaml 파일
@@ -36,6 +115,7 @@ overrides:
 ```
 
 **혼합 사용**:
+
 ```yaml
 overrides:
   - Chart.yaml              # 명시적 파일
@@ -44,12 +124,13 @@ overrides:
 ```
 
 **재귀적 패턴**:
+
 ```yaml
 overrides:
   - templates/**/*.yaml     # templates/ 하위 모든 .yaml (서브디렉토리 포함)
 ```
 
----
+______________________________________________________________________
 
 ## [0.4.8] - 2025-10-29
 

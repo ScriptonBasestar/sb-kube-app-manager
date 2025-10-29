@@ -16,12 +16,13 @@ ______________________________________________________________________
 ```yaml
 # config.yaml 기본 구조
 namespace: string              # 전역 기본 네임스페이스 (필수)
+deps: [string]                 # 앱 그룹 의존성 (선택, v0.4.10+)
 
 apps:                          # 애플리케이션 딕셔너리 (필수)
   app-name:                    # 앱 이름 (key)
     type: enum                 # 앱 타입 (필수)
     enabled: boolean           # 활성화 여부 (기본: true)
-    depends_on: [string]       # 의존성 목록 (선택)
+    depends_on: [string]       # 앱 간 의존성 (선택)
     namespace: string          # 앱별 네임스페이스 (선택)
     # ... 타입별 필드
 ```
@@ -55,6 +56,68 @@ namespace: production
 - Kubernetes 네임스페이스 명명 규칙 준수
 - 소문자와 하이픈만 사용 (`[a-z0-9-]+`)
 - 앱별 `namespace` 필드로 재정의 가능
+
+### deps (list[string], 선택, v0.4.10+)
+
+이 앱 그룹이 의존하는 다른 앱 그룹 목록입니다.
+
+```yaml
+namespace: harbor
+deps:
+  - a000_infra_network    # Ingress 및 Storage
+  - a101_data_rdb         # PostgreSQL 데이터베이스
+  - a100_data_memory      # Redis 캐시
+
+apps:
+  harbor:
+    type: helm
+    chart: harbor/harbor
+```
+
+**동작 방식** (v0.4.10):
+
+- **파싱**: 설정 파일에서 `deps` 필드를 읽어들임
+- **문서화**: 의존성 정보를 config.yaml에 명시적으로 기록
+- **검증**: 현재 버전에서는 검증 없음 (문서화 목적)
+
+**향후 기능** (예정):
+
+- 배포 전 의존성 검증
+- 자동 배포 순서 결정 (`--recursive`)
+- 의존성 그래프 시각화
+
+**사용 사례**:
+
+```yaml
+# 예제 1: 데이터베이스 의존성
+# a302_devops/config.yaml
+namespace: harbor
+deps:
+  - a101_data_rdb       # PostgreSQL 필요
+  - a100_data_memory    # Redis 필요
+apps:
+  harbor:
+    type: helm
+    chart: harbor/harbor
+
+# 예제 2: 전체 인프라 의존성
+# a400_airflow/config.yaml
+namespace: airflow
+deps:
+  - a000_infra_network  # NFS storage, Ingress
+  - a101_data_rdb       # Airflow metadata DB
+  - a100_data_memory    # Celery executor
+apps:
+  airflow:
+    type: helm
+    chart: apache-airflow/airflow
+```
+
+**주의사항**:
+
+- 앱 그룹 이름(디렉토리 이름)을 사용 (예: `a000_infra_network`)
+- 경로가 아닌 이름만 지정 (예: `../a000_infra_network` ❌)
+- 현재는 문서화 목적이며 실제 검증은 향후 버전에서 구현 예정
 
 ______________________________________________________________________
 

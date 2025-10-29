@@ -1,6 +1,6 @@
 [project]
 name = "sbkube"
-version = "0.4.9"
+version = "0.4.10"
 license = "MIT"
 description = "k3s용 헬름+yaml+git 배포 자동화 CLI 도구"
 authors = [{ name = "archmagece", email = "archmagece@users.noreply.github.com" }]

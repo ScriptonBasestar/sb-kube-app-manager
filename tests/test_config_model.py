@@ -211,3 +211,47 @@ class TestSBKubeConfig:
         yaml_apps = config.get_apps_by_type("yaml")
         assert len(yaml_apps) == 1
         assert "backend" in yaml_apps
+
+    def test_deps_field_parsing(self):
+        """deps 필드 파싱 검증 (v0.4.10+)."""
+        config = SBKubeConfig(
+            namespace="harbor",
+            deps=["a000_infra_network", "a101_data_rdb", "a100_data_memory"],
+            apps={
+                "harbor": {
+                    "type": "helm",
+                    "chart": "harbor/harbor",
+                },
+            },
+        )
+        assert len(config.deps) == 3
+        assert "a000_infra_network" in config.deps
+        assert "a101_data_rdb" in config.deps
+        assert "a100_data_memory" in config.deps
+
+    def test_deps_field_optional(self):
+        """deps 필드가 없어도 정상 동작 (후방 호환성)."""
+        config = SBKubeConfig(
+            namespace="production",
+            apps={
+                "redis": {
+                    "type": "helm",
+                    "chart": "bitnami/redis",
+                },
+            },
+        )
+        assert config.deps == []  # 기본값 빈 리스트
+
+    def test_deps_field_empty_list(self):
+        """deps가 빈 리스트인 경우."""
+        config = SBKubeConfig(
+            namespace="production",
+            deps=[],
+            apps={
+                "redis": {
+                    "type": "helm",
+                    "chart": "bitnami/redis",
+                },
+            },
+        )
+        assert config.deps == []

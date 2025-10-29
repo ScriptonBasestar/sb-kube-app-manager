@@ -3,7 +3,11 @@ import shutil
 import subprocess
 import sys
 
-from sbkube.exceptions import CliToolExecutionError, CliToolNotFoundError
+from sbkube.exceptions import (
+    CliToolExecutionError,
+    CliToolNotFoundError,
+    KubernetesConnectionError,
+)
 from sbkube.utils.logger import logger
 
 
@@ -147,6 +151,82 @@ def print_helm_connection_help():
         for f in repo_files:
             logger.info(f"  - {f}")
     logger.info("helm version, helm repo list 명령이 정상 동작하는지 확인하세요.")
+
+
+def check_cluster_connectivity(
+    timeout: int = 10,
+    kubeconfig: str | None = None,
+    kubecontext: str | None = None,
+) -> tuple[bool, str]:
+    """Kubernetes 클러스터 연결 확인
+
+    Args:
+        timeout: 연결 시도 타임아웃 (초)
+        kubeconfig: kubeconfig 파일 경로 (옵션)
+        kubecontext: kubectl context (옵션)
+
+    Returns:
+        (is_connected, error_message): 연결 성공 시 (True, ""), 실패 시 (False, 오류 메시지)
+    """
+    try:
+        cmd = ["kubectl", "cluster-info", f"--request-timeout={timeout}s"]
+        if kubeconfig:
+            cmd.extend(["--kubeconfig", kubeconfig])
+        if kubecontext:
+            cmd.extend(["--context", kubecontext])
+
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout + 5,
+        )
+
+        if result.returncode == 0:
+            return (True, "")
+
+        error_msg = result.stderr.strip()
+        return (False, error_msg)
+
+    except subprocess.TimeoutExpired:
+        return (False, "Connection timeout")
+    except Exception as e:
+        return (False, str(e))
+
+
+def check_cluster_connectivity_or_exit(
+    timeout: int = 10,
+    kubeconfig: str | None = None,
+    kubecontext: str | None = None,
+):
+    """Kubernetes 클러스터 연결 확인 (연결 실패 시 종료)
+
+    Args:
+        timeout: 연결 시도 타임아웃 (초)
+        kubeconfig: kubeconfig 파일 경로 (옵션)
+        kubecontext: kubectl context (옵션)
+
+    Raises:
+        KubernetesConnectionError: 클러스터 연결 실패 시
+    """
+    is_connected, error_msg = check_cluster_connectivity(
+        timeout=timeout,
+        kubeconfig=kubeconfig,
+        kubecontext=kubecontext,
+    )
+
+    if not is_connected:
+        logger.error("❌ Kubernetes 클러스터에 연결할 수 없습니다!")
+        logger.error(f"상세 오류: {error_msg}")
+        logger.info("")
+        print_kube_connection_help()
+        raise KubernetesConnectionError(
+            context=kubecontext,
+            kubeconfig=kubeconfig,
+            reason=error_msg,
+        )
+
+    logger.success("✅ 클러스터 연결 확인됨")
 
 
 def print_kube_contexts():

@@ -1,0 +1,13 @@
+namespace: data
+
+apps:
+  redis:
+    type: helm
+    enabled: true
+    chart: redis
+    repo: bitnami
+    version: "19.0.0"
+    values:
+      architecture: standalone
+      auth:
+        enabled: false

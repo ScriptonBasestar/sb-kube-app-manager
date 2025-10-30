@@ -130,12 +130,16 @@ class SourceScheme(InheritableConfigModel):
     - Kubeconfig validation
     - Repository authentication
     - Configuration inheritance
+    - Optional app directory specification (v0.5.0+)
     """
 
     # Cluster targeting (required for deployment)
     cluster: str | None = None  # Cluster identifier (documentation purpose, optional)
     kubeconfig: str  # Kubeconfig file path (required)
     kubeconfig_context: str  # Kubectl context name (required)
+
+    # App directory control (optional, v0.5.0+)
+    app_dirs: list[str] | None = None  # Explicit list of app directories to deploy
 
     # Repository configuration (optional)
     helm_repos: dict[str, HelmRepoScheme] = {}
@@ -248,6 +252,47 @@ class SourceScheme(InheritableConfigModel):
             )
         return v.strip()
 
+    @field_validator("app_dirs")
+    @classmethod
+    def validate_app_dirs(cls, v: list[str] | None) -> list[str] | None:
+        """Validate app_dirs list."""
+        if v is None:
+            return None
+
+        if not isinstance(v, list):
+            raise ValueError("app_dirs must be a list of directory names")
+
+        if len(v) == 0:
+            raise ValueError("app_dirs cannot be empty. Remove the field or provide directory names")
+
+        # Validate each directory name
+        validated = []
+        for dir_name in v:
+            if not isinstance(dir_name, str):
+                raise ValueError(f"app_dirs must contain strings, got: {type(dir_name).__name__}")
+
+            dir_name = dir_name.strip()
+            if not dir_name:
+                raise ValueError("app_dirs cannot contain empty directory names")
+
+            # Check for invalid characters or paths
+            if "/" in dir_name or "\\" in dir_name:
+                raise ValueError(
+                    f"app_dirs must contain directory names only, not paths: '{dir_name}'. "
+                    "Use simple names like 'redis', 'postgres', etc."
+                )
+
+            if dir_name.startswith("."):
+                raise ValueError(f"app_dirs cannot contain hidden directories: '{dir_name}'")
+
+            validated.append(dir_name)
+
+        # Check for duplicates
+        if len(validated) != len(set(validated)):
+            raise ValueError("app_dirs cannot contain duplicate directory names")
+
+        return validated
+
     def get_helm_repo(self, name: str) -> HelmRepoScheme | None:
         """Get Helm repository configuration by name."""
         return self.helm_repos.get(name)
@@ -259,6 +304,65 @@ class SourceScheme(InheritableConfigModel):
     def get_oci_registry(self, name: str) -> OciRepoScheme | None:
         """Get OCI registry configuration by name."""
         return self.oci_registries.get(name)
+
+    def get_app_dirs(self, base_dir, config_file_name: str = "config.yaml") -> list:
+        """
+        Get list of app directories to process.
+
+        This method supports two modes:
+        1. Explicit mode (app_dirs specified): Use the exact list from sources.yaml
+        2. Auto-discovery mode (app_dirs not specified): Find all directories with config.yaml
+
+        Args:
+            base_dir: Project root directory (Path object)
+            config_file_name: Configuration file name to look for (default: "config.yaml")
+
+        Returns:
+            list[Path]: List of app directory paths
+
+        Raises:
+            ValueError: If explicit app_dirs reference non-existent directories
+
+        Example:
+            # sources.yaml with explicit list
+            app_dirs: ["redis", "postgres", "nginx"]
+
+            # sources.yaml without app_dirs (auto-discovery)
+            # (field not specified)
+        """
+        from pathlib import Path
+
+        base_path = Path(base_dir).resolve()
+
+        # Mode 1: Explicit list from sources.yaml
+        if self.app_dirs is not None:
+            app_paths = []
+            missing = []
+
+            for dir_name in self.app_dirs:
+                dir_path = base_path / dir_name
+                config_path = dir_path / config_file_name
+
+                if not dir_path.exists():
+                    missing.append(f"Directory not found: {dir_name}")
+                elif not dir_path.is_dir():
+                    missing.append(f"Not a directory: {dir_name}")
+                elif not config_path.exists():
+                    missing.append(f"Config file not found: {dir_name}/{config_file_name}")
+                else:
+                    app_paths.append(dir_path)
+
+            if missing:
+                raise ValueError(
+                    f"Invalid app_dirs in sources.yaml:\n" + "\n".join(f"  - {msg}" for msg in missing)
+                )
+
+            return sorted(app_paths)
+
+        # Mode 2: Auto-discovery (app_dirs not specified)
+        from sbkube.utils.common import find_all_app_dirs
+
+        return find_all_app_dirs(base_path, config_file_name)
 
     def validate_repo_references(self, app_configs: list[dict[str, Any]]) -> list[str]:
         """

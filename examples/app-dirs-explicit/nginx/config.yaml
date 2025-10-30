@@ -1,0 +1,12 @@
+namespace: web
+
+apps:
+  nginx:
+    type: helm
+    enabled: true
+    chart: nginx
+    repo: bitnami
+    version: "15.0.0"
+    values:
+      service:
+        type: ClusterIP

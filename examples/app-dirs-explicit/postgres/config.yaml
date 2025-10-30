@@ -1,0 +1,13 @@
+namespace: data
+
+apps:
+  postgresql:
+    type: helm
+    enabled: true
+    chart: postgresql
+    repo: bitnami
+    version: "15.0.0"
+    values:
+      auth:
+        enablePostgresUser: true
+        postgresPassword: "testpassword"

@@ -210,13 +210,14 @@ sbkube fix
 sbkube fix --create-missing
 ```
 
-
 ## 📅 구현 계획 및 로드맵
 
 ### Phase 1: 기본 편의성 개선 ✅ (완료)
 
 **구현된 기능:**
+
 - [x] `sbkube apply` - 4단계 통합 실행 ✅ **변경 완료 (2025-01-20)**
+
   - prepare → build → template → deploy 자동 실행
   - 단계별 진행 상황 표시
   - 실패 시 즉시 중단
@@ -225,6 +226,7 @@ sbkube fix --create-missing
   - ✅ CLI 명령어: `sbkube apply`
 
 - [x] `sbkube init` - 프로젝트 초기화
+
   - 기본 템플릿 제공 (basic/)
   - config.yaml, sources.yaml 자동 생성
   - 디렉토리 구조 자동 구성
@@ -236,23 +238,28 @@ sbkube fix --create-missing
 ### Phase 2: 고급 편의성 개선 ⚠️ (부분 완료)
 
 **완전히 구현된 기능:**
+
 - [x] 환경별 프로파일 지원
+
   - `--profile development/staging/production`
   - 프로파일별 설정 파일 로딩
   - ProfileManager, ProfileLoader 구현
 
 - [x] 스마트 재시작 기능
+
   - `--continue-from <step>` - 특정 단계부터 실행
   - `--retry-failed` - 실패한 앱만 재시도
   - `--resume` - 마지막 실패 지점부터 재개
   - ExecutionTracker로 상태 추적 (`.sbkube/runs/`)
 
 - [x] 상태 관리 시스템
+
   - ExecutionTracker - 실행 상태 추적
   - 단계별 성공/실패 기록
   - JSON 파일로 영구 저장
 
 **부분 구현된 기능:**
+
 - [x] 향상된 로깅
   - Rich Console 기반 컬러 출력
   - 단계별 성공/실패 표시
@@ -264,23 +271,28 @@ sbkube fix --create-missing
 ### Phase 3: 인텔리전트 기능 ⚠️ (부분 완료)
 
 **완전히 구현된 기능:**
+
 - [x] `sbkube validate` - 설정 파일 검증
+
   - Pydantic 기반 config.yaml 검증
   - sources.yaml 검증
   - ValidationSystem 프레임워크
 
 - [x] `sbkube doctor` - 시스템 진단
+
   - Kubernetes 연결 확인
   - Helm 설치 확인
   - kubectl 설치 확인
   - 기본 환경 진단
 
 - [x] `sbkube fix` - 자동 문제 해결
+
   - 일반적인 설정 오류 자동 수정
   - 백업 생성 (`.sbkube/backups/`)
   - 수정 이력 저장 (`.sbkube/fix_history/`)
 
 **미구현 기능:**
+
 - [ ] 고급 성능 최적화
 - [ ] 병렬 처리 (여러 앱 동시 배포)
 - [ ] 캐시 시스템 고도화
@@ -290,6 +302,7 @@ sbkube fix --create-missing
 ### Phase 4: 고급 사용성 기능 📋 (계획 단계)
 
 **미구현 - 향후 개발 예정:**
+
 - [ ] 대화형 설정 마법사
 - [ ] 설정 템플릿 시스템 확장
 - [ ] 배포 시뮬레이션 및 미리보기 (Dry-run)
@@ -405,6 +418,6 @@ sbkube apply --profile development
 - 플러그인 시스템 고려
 - 외부 도구 연동 지원
 
-______________________________________________________________________
+---
 
 *이 문서는 SBKube의 사용성 개선을 위한 종합적인 방안을 제시합니다. 사용자 피드백과 실제 사용 패턴을 반영하여 지속적으로 업데이트될 예정입니다.*

@@ -9,6 +9,7 @@
 1. **설정 관리 시스템** (Pydantic 검증)
 1. **상태 관리 시스템** (SQLAlchemy 기반)
 1. **검증 시스템** (사전/사후 배포 검증)
+1. **Hooks 시스템** (배포 자동화 및 커스터마이징)
 1. **사용자 인터페이스** (Rich 콘솔)
 
 ## 1. 배포 워크플로우 자동화
@@ -468,9 +469,187 @@ CREATE TABLE deployment_history (
 - Helm 릴리스 상태 (deployed)
 - 커스텀 헬스체크 (사용자 정의 스크립트)
 
-## 6. 사용자 인터페이스
+## 6. Hooks 시스템
 
-### 6.1 Rich 콘솔 출력
+### 6.1 개요
+
+**목적**: 명령어 실행 전후 및 앱 배포 전후에 커스텀 스크립트를 실행하여 배포 워크플로우를 자동화하고 커스터마이징
+
+**핵심 가치**:
+- 배포 자동화 확장
+- 외부 시스템 통합
+- 검증 및 알림
+- 데이터베이스 백업 및 마이그레이션
+
+### 6.2 명령어 수준 Hooks (Command-level)
+
+**정의**: 전역 훅으로 모든 앱 배포에 적용
+
+**지원 명령어**:
+- `prepare`: 소스 준비 전후
+- `build`: 빌드 전후
+- `deploy`: 배포 전후
+
+**지원 단계**:
+- `pre`: 명령어 실행 전
+- `post`: 명령어 실행 후 (성공 시)
+- `on_failure`: 명령어 실패 시
+
+**설정 예시**:
+
+```yaml
+namespace: production
+
+hooks:
+  deploy:
+    pre:
+      - echo "=== Deployment started at $(date) ==="
+      - kubectl cluster-info
+    post:
+      - echo "=== Deployment completed at $(date) ==="
+      - ./scripts/notify-slack.sh "Deployment completed"
+    on_failure:
+      - echo "=== Deployment failed at $(date) ==="
+      - ./scripts/rollback.sh
+```
+
+**사용자 시나리오**:
+
+```
+DevOps 엔지니어 Frank는 모든 배포 전에 클러스터 상태를 확인하고,
+배포 완료 후 Slack으로 알림을 받고 싶습니다.
+
+1. config.yaml에 전역 hooks 설정
+2. sbkube deploy --app-dir production
+   → Pre-deploy hook: 클러스터 상태 확인
+   → 앱 배포 진행
+   → Post-deploy hook: Slack 알림 발송
+3. 팀원들이 Slack에서 배포 완료 확인
+```
+
+### 6.3 앱 수준 Hooks (App-level)
+
+**정의**: 개별 앱에 특화된 훅
+
+**지원 타입**:
+- `pre_prepare`: 앱 준비 전
+- `post_prepare`: 앱 준비 후
+- `pre_build`: 앱 빌드 전
+- `post_build`: 앱 빌드 후
+- `pre_deploy`: 앱 배포 전
+- `post_deploy`: 앱 배포 후 (성공 시)
+- `on_deploy_failure`: 앱 배포 실패 시
+
+**설정 예시**:
+
+```yaml
+apps:
+  database:
+    type: helm
+    chart: bitnami/postgresql
+    hooks:
+      pre_deploy:
+        - echo "Creating database backup..."
+        - ./scripts/backup-db.sh
+      post_deploy:
+        - echo "Waiting for database to be ready..."
+        - kubectl wait --for=condition=ready pod -l app=postgresql --timeout=300s
+        - echo "Running database migrations..."
+        - ./scripts/migrate.sh
+      on_deploy_failure:
+        - echo "Database deployment failed, restoring backup..."
+        - ./scripts/restore-backup.sh
+```
+
+**사용자 시나리오**:
+
+```
+개발자 Grace는 PostgreSQL 배포 시 자동으로 백업을 생성하고,
+배포 후 마이그레이션을 실행하고 싶습니다.
+
+1. database 앱에 hooks 설정
+2. sbkube deploy --app-dir production --app database
+   → Pre-deploy hook: DB 백업 생성
+   → PostgreSQL Helm 차트 배포
+   → Post-deploy hook: Pod 준비 대기 → 마이그레이션 실행
+3. 데이터베이스가 새 스키마로 업데이트됨
+```
+
+### 6.4 환경변수 주입
+
+**자동 주입 변수** (앱별 훅):
+- `SBKUBE_APP_NAME`: 현재 앱 이름
+- `SBKUBE_NAMESPACE`: 배포 네임스페이스
+- `SBKUBE_RELEASE_NAME`: Helm 릴리스 이름
+
+**사용 예시**:
+
+```yaml
+apps:
+  backend:
+    type: helm
+    chart: ./charts/backend
+    hooks:
+      post_deploy:
+        - echo "Deployed $SBKUBE_APP_NAME to $SBKUBE_NAMESPACE"
+        - kubectl get pods -l release=$SBKUBE_RELEASE_NAME
+```
+
+### 6.5 실행 순서
+
+**deploy 명령어 실행 시**:
+
+```
+1. 전역 pre-deploy 훅 실행
+2. 앱 A:
+   2.1. 앱 A pre_deploy 훅 실행
+   2.2. 앱 A 배포
+   2.3. 앱 A post_deploy 훅 실행 (성공) 또는 on_deploy_failure (실패)
+3. 앱 B:
+   3.1. 앱 B pre_deploy 훅 실행
+   3.2. 앱 B 배포
+   3.3. 앱 B post_deploy 훅 실행 (성공) 또는 on_deploy_failure (실패)
+4. 전역 post-deploy 훅 실행 (모두 성공) 또는 on_failure (하나라도 실패)
+```
+
+### 6.6 주요 기능
+
+**타임아웃 관리**:
+- 기본 타임아웃: 300초 (5분)
+- 훅이 타임아웃되면 실패로 처리
+
+**Dry-run 지원**:
+- `--dry-run` 모드에서는 훅 실행 명령어만 표시
+- 실제 실행하지 않음
+
+**에러 처리**:
+- 훅 실패 시 배포 중단
+- 명확한 오류 메시지 및 종료 코드 표시
+
+**Rich 콘솔 출력**:
+```
+🪝 Executing pre-deploy hook for app 'database'...
+  ▶ Running: ./scripts/backup-db.sh
+    Database backup created: /backups/db-20251030-143022.sql
+✅ pre-deploy hook for 'database' completed successfully
+```
+
+### 6.7 Helm Hooks와의 차이
+
+| 특성 | SBKube Hooks | Helm Hooks |
+|------|--------------|------------|
+| **실행 위치** | 로컬 머신 | Kubernetes 클러스터 |
+| **실행 주체** | SBKube CLI | Helm/Kubernetes |
+| **목적** | 배포 자동화, 외부 시스템 통합 | 클러스터 내 작업 |
+| **사용 예시** | 백업, 알림, GitOps 통합 | DB 마이그레이션 Job |
+
+**함께 사용하기**:
+- SBKube hooks: 로컬 작업 (백업, 알림)
+- Helm hooks: 클러스터 내 작업 (초기화 Job)
+
+## 7. 사용자 인터페이스
+
+### 7.1 Rich 콘솔 출력
 
 **로그 레벨별 색상**:
 
@@ -520,9 +699,9 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 - template:
   - `--output-dir <경로>`: 출력 디렉토리
 
-## 7. 비기능 요구사항
+## 8. 비기능 요구사항
 
-### 7.1 성능
+### 8.1 성능
 
 - 앱 100개 기준 전체 워크플로우 10분 이내 (네트워크 속도 의존)
 - 설정 파일 검증 1초 이내
@@ -546,7 +725,7 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 - 플러그인 시스템 (향후 지원)
 - 커스텀 검증 로직 추가 가능
 
-## 8. 사용자 스토리
+## 9. 사용자 스토리
 
 ### 스토리 1: 빠른 Helm 차트 배포
 

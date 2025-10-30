@@ -5,6 +5,69 @@
 
 ## [Unreleased] - 2025-10-30
 
+### ✨ New Features
+
+**Hooks System**
+
+SBKube에 강력한 hooks 기능이 추가되었습니다! 이제 명령어 실행 전후 및 앱 배포 전후에 커스텀 스크립트를 실행할 수 있습니다.
+
+- **명령어 수준 hooks (Command-level)**
+  - 전역 훅: 모든 앱 배포에 적용되는 pre/post/on_failure 훅
+  - 지원 명령어: `prepare`, `build`, `deploy`
+
+- **앱 수준 hooks (App-level)**
+  - 개별 앱에 특화된 훅
+  - 지원 타입: pre_prepare, post_prepare, pre_build, post_build, pre_deploy, post_deploy, on_deploy_failure
+
+- **주요 기능**
+  - 환경변수 자동 주입 (SBKUBE_APP_NAME, SBKUBE_NAMESPACE, SBKUBE_RELEASE_NAME)
+  - dry-run 모드 지원
+  - 타임아웃 관리 (기본 300초)
+  - 상세한 실행 로그
+
+```yaml
+# config.yaml 예시
+namespace: production
+
+# 전역 훅
+hooks:
+  deploy:
+    pre:
+      - echo "Starting deployment"
+      - kubectl cluster-info
+    post:
+      - echo "Deployment completed"
+    on_failure:
+      - ./scripts/rollback.sh
+
+# 앱별 훅
+apps:
+  database:
+    type: helm
+    chart: bitnami/postgresql
+    hooks:
+      pre_deploy:
+        - ./scripts/backup-db.sh
+      post_deploy:
+        - kubectl wait --for=condition=ready pod -l app=postgresql
+        - ./scripts/migrate.sh
+      on_deploy_failure:
+        - ./scripts/restore-backup.sh
+```
+
+**관련 파일**:
+- `sbkube/models/config_model.py`: CommandHooks, AppHooks 모델 추가
+- `sbkube/utils/hook_executor.py`: 훅 실행 엔진 (신규)
+- `sbkube/utils/base_command.py`: 훅 메서드 추가
+- `sbkube/commands/prepare.py`: prepare 훅 통합
+- `sbkube/commands/build.py`: build 훅 통합
+- `sbkube/commands/deploy.py`: deploy 훅 통합
+
+**문서 및 예제**:
+- `docs/02-features/hooks.md`: 상세 hooks 가이드
+- `examples/hooks/`: 기본 사용 예제
+- `examples/hooks/README.md`: 실전 사용 사례
+
 ### 🔥 Breaking Changes
 
 **CLI 옵션 이름 변경**

@@ -765,9 +765,43 @@ ______________________________________________________________________
    - 필요한 부분만 수정
    - 관련 없는 리팩토링 지양
 
+1. **예제 및 엣지 케이스 추가 (중요)**
+
+   - 버그가 발견된 시나리오를 `examples/` 디렉토리에 예제로 추가
+   - 엣지 케이스(edge case)에 대한 테스트 작성
+   - 동일한 문제가 재발하지 않도록 회귀 테스트(regression test) 구성
+
+   **예제 추가 위치**:
+   ```
+   examples/
+   ├── edge-cases/           # 엣지 케이스 예제
+   │   ├── oci-registry/     # OCI 레지스트리 관련
+   │   ├── deprecated-repo/  # Deprecated 저장소
+   │   └── typo-config/      # 설정 오타 케이스
+   └── prepare/              # 명령어별 예제
+       └── helm-oci/         # 실제 사용 예제
+   ```
+
+   **테스트 추가 위치**:
+   ```
+   tests/
+   ├── e2e/                  # E2E 테스트
+   │   └── test_edge_cases.py
+   ├── integration/          # 통합 테스트
+   └── unit/                 # 단위 테스트
+   ```
+
+   **실제 적용 예시** (2025-10-30):
+   - **버그**: OCI 레지스트리 미지원, Deprecated 저장소, 레포 이름 오타
+   - **추가된 예제**: `examples/prepare/helm-oci/`
+   - **추가된 테스트**: `tests/e2e/test_prepare_examples.py::test_prepare_pull_helm_oci`
+   - **문서화**: `docs/07-troubleshooting/README.md`에 3가지 케이스 추가
+
 1. **문서 업데이트**
 
    - [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md)에 해결 방법 추가 (필요 시)
+   - 버그 유형별로 구체적인 오류 메시지와 해결 방법 명시
+   - 실제 사용자가 마주칠 수 있는 시나리오 중심으로 작성
 
 ### 6.6 문서화 요구사항
 

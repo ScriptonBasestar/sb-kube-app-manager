@@ -36,11 +36,20 @@
   - sources.yaml 설정 샘플
   - README.md with 사용 가이드
 
+- **개발 가이드 개선** ([CLAUDE.md](CLAUDE.md))
+  - 버그 수정 시 예제 및 엣지 케이스 추가 정책 명시
+  - 회귀 테스트(regression test) 작성 가이드
+  - 실제 적용 예시 포함 (2025-10-30 OCI 지원)
+
 ### 🧪 Testing
 
 - **E2E 테스트 활성화**
   - `test_prepare_pull_helm_oci` 테스트 skip 해제
   - OCI 차트 pull 검증
+
+- **엣지 케이스 테스트 전략**
+  - 버그 발견 시 재발 방지를 위한 테스트 추가 정책
+  - examples/edge-cases/ 디렉토리 구조 정의
 
 ### 🐛 Bug Fixes
 
@@ -48,6 +57,15 @@
   - Helm repo가 sources.yaml에 없을 때 명확한 안내
   - OCI 레지스트리와 일반 Helm repo 구분
   - Deprecated 저장소 사용 시 가이드 제공
+
+### 🎯 Development Policy
+
+- **버그 수정 시 필수 작업**
+  1. 재현 테스트 작성
+  2. 예제 추가 (`examples/`)
+  3. 엣지 케이스 테스트 작성
+  4. 트러블슈팅 문서 업데이트
+  - 목적: 동일한 버그의 재발 방지
 
 ### 📝 Usage Example
 

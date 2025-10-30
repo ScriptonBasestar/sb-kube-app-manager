@@ -275,33 +275,15 @@ apps:
 
 **overrides** (선택, 리스트):
 
-차트 파일을 **교체하거나 새로 추가**할 파일 목록입니다.
-
-**v0.4.0+ 형식** (리스트):
+차트 파일을 교체하거나 새로 추가할 파일 목록 (v0.4.9+에서 Glob 패턴 지원)
 
 ```yaml
 overrides:
   - templates/deployment.yaml       # 기존 파일 교체
-  - templates/new-configmap.yaml    # 새 파일 추가
+  - templates/*.yaml                # Glob: 모든 YAML 템플릿
+  - templates/**/*.yaml             # Glob: 재귀적 (서브디렉토리 포함)
   - files/config.toml               # files 디렉토리 파일 추가
 ```
-
-**v0.4.9+ Glob 패턴 지원**:
-
-```yaml
-overrides:
-  - templates/*.yaml                # 모든 YAML 템플릿 (와일드카드)
-  - files/*                         # files 디렉토리의 모든 파일
-  - Chart.yaml                      # 명시적 파일과 혼합 가능
-  - templates/**/*.yaml             # 재귀적 패턴 (서브디렉토리 포함)
-```
-
-**지원되는 Glob 패턴**:
-
-- `*` - 0개 이상의 문자 매칭
-- `?` - 정확히 1개 문자 매칭
-- `**` - 재귀적 디렉토리 매칭
-- 패턴과 명시적 경로를 혼합하여 사용 가능
 
 **디렉토리 구조**:
 
@@ -310,45 +292,15 @@ app-dir/
 ├── config.yaml
 └── overrides/
     └── redis/              # 앱 이름과 일치해야 함
-        ├── templates/
-        │   ├── deployment.yaml      # 기존 파일 교체
-        │   └── new-configmap.yaml   # 새 파일 추가
-        └── files/
-            └── config.toml          # .Files.Get에서 사용
+        ├── templates/deployment.yaml      # 교체할 파일
+        └── files/config.toml              # 추가할 파일
 ```
 
-**동작 방식**:
+**동작**: `sbkube build` 시 차트를 `build/redis/`로 복사 후, 명시된 파일을 `overrides/redis/`에서 복사하여 덮어쓰기 또는 추가
 
-1. `sbkube build` 실행 시:
-
-   - 차트를 `build/redis/`로 복사
-   - `overrides` 리스트의 각 파일을 `overrides/redis/`에서 `build/redis/`로 복사
-   - 기존 파일이 있으면 **덮어쓰기**
-   - 기존 파일이 없으면 **새로 추가**
-
-1. 결과:
-
-   ```
-   build/redis/
-     ├── templates/
-     │   ├── deployment.yaml      # ✅ Override됨
-     │   ├── statefulset.yaml     # (차트 원본 유지)
-     │   └── new-configmap.yaml   # ✅ 추가됨
-     └── files/
-         └── config.toml          # ✅ 추가됨
-   ```
-
-**⚠️ 주의사항**:
-
-1. **명시적 나열 필수**: `overrides/` 디렉토리가 있어도 config.yaml에 명시하지 않으면 무시됨
-1. **files 디렉토리**: `.Files.Get`을 사용하는 템플릿의 경우 `files/` 경로도 명시 필요
-1. **경로 검증**: 명시된 파일이 `overrides/` 디렉토리에 없으면 빌드 실패
-
-**사용 사례**:
-
-- 차트의 기본 템플릿을 커스터마이징
-- 차트에 없는 새 리소스 추가 (ConfigMap, Secret 등)
-- `.Files.Get`을 사용하는 템플릿에 파일 제공
+**주의사항**:
+- `overrides/` 디렉토리가 있어도 config.yaml에 명시 필수
+- Glob 와일드카드: `*` (다중 문자), `?` (단일 문자), `**` (재귀)
 
 **관련 문서**:
 

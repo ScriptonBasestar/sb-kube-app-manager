@@ -92,6 +92,11 @@ repos/
 *.local.yaml
 *.override.yaml
 
+# ───────────────
+# 🔧 SBKube runtime data
+# ───────────────
+.sbkube/
+
 # sb-yesman-cli settings
 .claude/
 !.claude/commands/

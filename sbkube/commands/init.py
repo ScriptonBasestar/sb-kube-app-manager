@@ -44,6 +44,9 @@ class InitCommand(BaseCommand):
         # 5. README 파일 생성
         self._create_readme()
 
+        # 6. .gitignore에 .sbkube/ 추가
+        self._update_gitignore()
+
         logger.success("✅ 프로젝트 초기화가 완료되었습니다!")
         self._show_next_steps()
 
@@ -90,14 +93,103 @@ class InitCommand(BaseCommand):
                 "production",
             ]
 
+        # Kubeconfig 및 Context 자동 감지
+        self._collect_kubeconfig_info()
+
         if click.confirm("Grafana Helm 저장소를 추가하시겠습니까?", default=True):
             self.template_vars["use_grafana"] = True
 
         if click.confirm("Prometheus 모니터링을 설정하시겠습니까?", default=False):
             self.template_vars["use_prometheus"] = True
 
+    def _collect_kubeconfig_info(self):
+        """Kubeconfig 및 context 정보 수집 (대화형)"""
+        from sbkube.utils.cli_check import get_available_contexts
+
+        logger.info("\n🔧 Kubernetes 클러스터 설정:")
+
+        # 1. Kubeconfig 파일 자동 감지
+        default_kubeconfig = "~/.kube/config"
+        kubeconfig_candidates = [
+            Path.home() / ".kube" / "config",
+            Path.home() / ".kube" / "k3s.yaml",
+        ]
+
+        existing_kubeconfigs = [
+            str(kc.relative_to(Path.home()).as_posix()).replace(
+                str(Path.home().relative_to(Path.home())), "~"
+            )
+            for kc in kubeconfig_candidates
+            if kc.exists()
+        ]
+
+        if existing_kubeconfigs:
+            logger.info(f"발견된 kubeconfig 파일: {', '.join(existing_kubeconfigs)}")
+            default_kubeconfig = existing_kubeconfigs[0]
+
+        kubeconfig_path = click.prompt(
+            "Kubeconfig 파일 경로",
+            default=default_kubeconfig,
+            type=str,
+        )
+
+        # 2. 사용 가능한 contexts 자동 감지
+        expanded_path = str(Path(kubeconfig_path).expanduser())
+        contexts, error_msg = get_available_contexts(
+            expanded_path if Path(expanded_path).exists() else None
+        )
+
+        if error_msg:
+            logger.warning(f"Context 목록을 가져올 수 없습니다: {error_msg}")
+            logger.info("수동으로 context를 입력해주세요.")
+            context_name = click.prompt("Kubectl context 이름", type=str)
+        elif not contexts:
+            logger.warning("사용 가능한 context가 없습니다.")
+            context_name = click.prompt("Kubectl context 이름", type=str)
+        else:
+            logger.info(f"사용 가능한 contexts: {', '.join(contexts)}")
+
+            if len(contexts) == 1:
+                # Context가 하나만 있으면 자동 선택
+                context_name = contexts[0]
+                logger.info(f"자동 선택됨: {context_name}")
+            else:
+                # 여러 개 있으면 선택 UI 제공
+                context_name = click.prompt(
+                    "사용할 context 선택",
+                    type=click.Choice(contexts),
+                    default=contexts[0],
+                )
+
+        # 3. Cluster 이름 (선택사항)
+        cluster_name = click.prompt(
+            "클러스터 이름 (로깅용, 선택사항)",
+            default=f"{self.project_name}-cluster",
+            type=str,
+        )
+
+        # 4. 템플릿 변수에 저장
+        self.template_vars.update(
+            {
+                "kubeconfig": kubeconfig_path,
+                "kubeconfig_context": context_name,
+                "cluster": cluster_name,
+            }
+        )
+
     def _set_default_values(self):
         """기본값 설정"""
+        from sbkube.utils.cli_check import get_available_contexts
+
+        # 기본 kubeconfig 및 context 감지 시도
+        default_kubeconfig = "~/.kube/config"
+        expanded = str(Path(default_kubeconfig).expanduser())
+
+        contexts, _ = get_available_contexts(
+            expanded if Path(expanded).exists() else None
+        )
+        default_context = contexts[0] if contexts else "default"
+
         self.template_vars.update(
             {
                 "project_name": self.project_name or self.base_dir.name,
@@ -108,6 +200,10 @@ class InitCommand(BaseCommand):
                 "environments": ["development", "staging", "production"],
                 "use_grafana": True,
                 "use_prometheus": False,
+                # Kubeconfig 설정 추가
+                "kubeconfig": default_kubeconfig,
+                "kubeconfig_context": default_context,
+                "cluster": f"{self.project_name or self.base_dir.name}-cluster",
             }
         )
 
@@ -257,6 +353,45 @@ sbkube validate
             f.write(readme_content)
 
         logger.info("✅ README.md 생성됨")
+
+    def _update_gitignore(self):
+        """Add .sbkube/ to .gitignore file.
+
+        Creates .gitignore if it doesn't exist, or appends to existing file.
+        Checks for duplicates before adding.
+        """
+        gitignore_path = self.base_dir / ".gitignore"
+        sbkube_pattern = ".sbkube/"
+
+        try:
+            if gitignore_path.exists():
+                # Check if pattern already exists
+                existing_content = gitignore_path.read_text(encoding="utf-8")
+                if sbkube_pattern in existing_content:
+                    logger.verbose(f".gitignore already contains {sbkube_pattern}")
+                    return
+
+                # Append to existing file
+                with gitignore_path.open("a", encoding="utf-8") as f:
+                    # Add newline if file doesn't end with one
+                    if existing_content and not existing_content.endswith("\n"):
+                        f.write("\n")
+                    f.write("\n# SBKube cache directory\n")
+                    f.write(f"{sbkube_pattern}\n")
+                logger.info(f"✅ Added {sbkube_pattern} to .gitignore")
+            else:
+                # Create new .gitignore
+                gitignore_content = f"""# SBKube cache directory
+{sbkube_pattern}
+"""
+                gitignore_path.write_text(gitignore_content, encoding="utf-8")
+                logger.info("✅ Created .gitignore with .sbkube/ pattern")
+
+        except Exception as e:
+            logger.warning(f"Failed to update .gitignore: {e}")
+            logger.info(
+                "💡 Please manually add '.sbkube/' to your .gitignore file"
+            )
 
     def _get_template_dir(self) -> Path:
         """템플릿 디렉토리 경로 반환"""

@@ -114,7 +114,18 @@ class OciRepoScheme(ConfigBaseModel):
 
 class SourceScheme(InheritableConfigModel):
     """
-    Main sources configuration with enhanced validation and inheritance.
+    Main sources configuration with mandatory cluster targeting.
+
+    **Design Principle**:
+    - Explicit cluster configuration is REQUIRED
+    - No implicit defaults (KUBECONFIG env, ~/.kube/config)
+    - One sources.yaml = One cluster target
+
+    **For multi-cluster deployments**:
+    Use separate sources files:
+    - sources-dev.yaml
+    - sources-staging.yaml
+    - sources-prd.yaml
 
     Supports:
     - Multiple repository types (Helm, OCI, Git)
@@ -123,9 +134,12 @@ class SourceScheme(InheritableConfigModel):
     - Configuration inheritance
     """
 
-    cluster: str
-    kubeconfig: str | None = None
-    kubeconfig_context: str | None = None
+    # Cluster targeting (required for deployment)
+    cluster: str | None = None  # Cluster identifier (documentation purpose, optional)
+    kubeconfig: str  # Kubeconfig file path (required)
+    kubeconfig_context: str  # Kubectl context name (required)
+
+    # Repository configuration (optional)
     helm_repos: dict[str, HelmRepoScheme] = {}
     oci_registries: dict[str, OciRepoScheme] = {}
     git_repos: dict[str, GitRepoScheme] = {}
@@ -208,27 +222,33 @@ class SourceScheme(InheritableConfigModel):
 
     @field_validator("cluster")
     @classmethod
-    def validate_cluster_name(cls, v: str) -> str:
-        """Validate cluster name is not empty."""
-        if not v or not v.strip():
+    def validate_cluster_name(cls, v: str | None) -> str | None:
+        """Validate cluster name is not empty if specified."""
+        if v is not None and (not v or not v.strip()):
             raise ValueError("cluster name cannot be empty")
-        return v.strip()
+        return v.strip() if v else None
 
     @field_validator("kubeconfig")
     @classmethod
-    def validate_kubeconfig_path(cls, v: str | None) -> str | None:
-        """Validate kubeconfig path exists if specified."""
-        if v is None:
-            return v
+    def validate_kubeconfig_not_empty(cls, v: str) -> str:
+        """Validate kubeconfig is not empty."""
+        if not v or not v.strip():
+            raise ValueError(
+                "kubeconfig is required. "
+                "Specify the path to your kubeconfig file in sources.yaml",
+            )
+        return v.strip()
 
-        # Expand user home directory
-        v = os.path.expanduser(v)
-
-        # Check if file exists
-        if not Path(v).exists():
-            raise ValueError(f"kubeconfig file not found: {v}")
-
-        return v
+    @field_validator("kubeconfig_context")
+    @classmethod
+    def validate_context_not_empty(cls, v: str) -> str:
+        """Validate context is not empty."""
+        if not v or not v.strip():
+            raise ValueError(
+                "kubeconfig_context is required. "
+                "Specify the kubectl context name in sources.yaml",
+            )
+        return v.strip()
 
 
     def get_helm_repo(self, name: str) -> HelmRepoScheme | None:

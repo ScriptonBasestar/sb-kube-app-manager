@@ -65,7 +65,9 @@ console = Console()
     default=False,
     help="build 단계 건너뛰기 (overrides/removes가 없는 경우)",
 )
+@click.pass_context
 def cmd(
+    ctx: click.Context,
     app_config_dir_name: str,
     base_dir: str,
     config_file_name: str,
@@ -148,8 +150,10 @@ def cmd(
 
         from sbkube.commands.prepare import cmd as prepare_cmd
 
-        ctx = click.Context(prepare_cmd)
-        ctx.invoke(
+        # Create new context with parent's obj for kubeconfig/context/sources_file
+        prepare_ctx = click.Context(prepare_cmd, parent=ctx)
+        prepare_ctx.obj = ctx.obj  # Pass parent context object
+        prepare_ctx.invoke(
             prepare_cmd,
             app_config_dir_name=app_config_dir_name,
             base_dir=base_dir,
@@ -168,8 +172,10 @@ def cmd(
 
         from sbkube.commands.build import cmd as build_cmd
 
-        ctx = click.Context(build_cmd)
-        ctx.invoke(
+        # Create new context with parent's obj
+        build_ctx = click.Context(build_cmd, parent=ctx)
+        build_ctx.obj = ctx.obj  # Pass parent context object
+        build_ctx.invoke(
             build_cmd,
             app_config_dir_name=app_config_dir_name,
             base_dir=base_dir,
@@ -185,8 +191,10 @@ def cmd(
 
     from sbkube.commands.deploy import cmd as deploy_cmd
 
-    ctx = click.Context(deploy_cmd)
-    ctx.invoke(
+    # Create new context with parent's obj for kubeconfig/context/sources_file
+    deploy_ctx = click.Context(deploy_cmd, parent=ctx)
+    deploy_ctx.obj = ctx.obj  # Pass parent context object
+    deploy_ctx.invoke(
         deploy_cmd,
         app_config_dir_name=app_config_dir_name,
         base_dir=base_dir,

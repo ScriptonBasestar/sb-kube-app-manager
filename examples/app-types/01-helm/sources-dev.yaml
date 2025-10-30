@@ -1,0 +1,12 @@
+# sources-dev.yaml - Development Environment
+# 개발 환경 클러스터 설정
+
+cluster: dev-k3s
+kubeconfig: ~/.kube/dev-config
+kubeconfig_context: dev-cluster
+
+helm_repos:
+  grafana:
+    url: https://grafana.github.io/helm-charts
+  prometheus-community:
+    url: https://prometheus-community.github.io/helm-charts

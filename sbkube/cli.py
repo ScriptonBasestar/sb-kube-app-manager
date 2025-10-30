@@ -83,13 +83,24 @@ class SbkubeGroup(click.Group):
 @click.group(cls=SbkubeGroup)
 @click.option(
     "--kubeconfig",
-    envvar="KUBECONFIG",
     type=click.Path(exists=False, dir_okay=False, resolve_path=False),
-    help="Kubernetes 설정 파일 경로. KUBECONFIG 환경변수보다 우선 적용됩니다.",
+    help="Kubeconfig 파일 경로 (sources.yaml 오버라이드). --context와 함께 사용 필수.",
 )
 @click.option(
     "--context",
-    help="사용할 Kubernetes 컨텍스트 이름. KUBECONTEXT 환경변수 또는 현재 활성 컨텍스트를 따릅니다.",
+    type=str,
+    help="Kubectl context 이름 (sources.yaml 오버라이드). --kubeconfig와 함께 사용 필수.",
+)
+@click.option(
+    "--sources",
+    type=str,
+    default="sources.yaml",
+    help="Sources 파일 이름 (예: sources-dev.yaml). 기본값: sources.yaml",
+)
+@click.option(
+    "--env",
+    type=str,
+    help="환경 이름 (자동으로 sources-{env}.yaml 사용). 예: --env dev → sources-dev.yaml",
 )
 @click.option(
     "--namespace",
@@ -102,6 +113,8 @@ def main(
     ctx: click.Context,
     kubeconfig: str | None,
     context: str | None,
+    sources: str,
+    env: str | None,
     namespace: str | None,
     verbose: bool,
 ) -> None:
@@ -114,6 +127,12 @@ def main(
     ctx.obj["context"] = context
     ctx.obj["namespace"] = namespace
     ctx.obj["verbose"] = verbose
+
+    # --env 옵션으로 sources 파일명 자동 생성
+    if env:
+        ctx.obj["sources_file"] = f"sources-{env}.yaml"
+    else:
+        ctx.obj["sources_file"] = sources
 
     if verbose:
         logging.basicConfig(

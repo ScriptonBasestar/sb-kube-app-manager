@@ -1,9 +1,9 @@
-# sources.yaml - Default (Production) Environment
-# 기본(프로덕션) 환경 클러스터 설정
+# sources-prd.yaml - Production Environment
+# 프로덕션 환경 클러스터 설정
 
 cluster: production-k3s
-kubeconfig: ~/.kube/config
-kubeconfig_context: default
+kubeconfig: ~/.kube/prod-config
+kubeconfig_context: prod-cluster
 
 helm_repos:
   grafana:

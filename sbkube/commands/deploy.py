@@ -29,7 +29,12 @@ from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
 )
-from sbkube.utils.common import run_command
+from sbkube.utils.cluster_config import (
+    ClusterConfigError,
+    apply_cluster_config_to_command,
+    resolve_cluster_config,
+)
+from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 
 console = Console()
@@ -75,6 +80,8 @@ def deploy_helm_app(
     charts_dir: Path,
     build_dir: Path,
     app_config_dir: Path,
+    kubeconfig: str | None = None,
+    context: str | None = None,
     dry_run: bool = False,
 ) -> bool:
     """
@@ -87,6 +94,8 @@ def deploy_helm_app(
         charts_dir: charts 디렉토리
         build_dir: build 디렉토리
         app_config_dir: 앱 설정 디렉토리
+        kubeconfig: kubeconfig 파일 경로
+        context: kubectl context 이름
         dry_run: dry-run 모드
 
     Returns:
@@ -143,6 +152,7 @@ def deploy_helm_app(
         # Ensure namespace exists unless helm will create it
         namespace_missing = False
         check_cmd = ["kubectl", "get", "namespace", namespace]
+        check_cmd = apply_cluster_config_to_command(check_cmd, kubeconfig, context)
         check_return_code, _, _ = run_command(check_cmd)
 
         if check_return_code != 0:
@@ -154,6 +164,7 @@ def deploy_helm_app(
             else:
                 console.print(f"[yellow]ℹ️  Namespace '{namespace}' not found. Creating...[/yellow]")
                 create_cmd = ["kubectl", "create", "namespace", namespace]
+                create_cmd = apply_cluster_config_to_command(create_cmd, kubeconfig, context)
                 create_return_code, _, create_stderr = run_command(create_cmd)
                 if create_return_code != 0:
                     console.print(f"[red]❌ Failed to create namespace '{namespace}': {create_stderr}[/red]")
@@ -189,6 +200,9 @@ def deploy_helm_app(
         cmd.append("--dry-run")
         console.print("[yellow]🔍 Dry-run mode enabled[/yellow]")
 
+    # Apply cluster configuration
+    cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
+
     # 명령어 출력
     console.print(f"  Command: {' '.join(cmd)}")
 
@@ -211,6 +225,8 @@ def deploy_yaml_app(
     app: YamlApp,
     base_dir: Path,
     app_config_dir: Path,
+    kubeconfig: str | None = None,
+    context: str | None = None,
     dry_run: bool = False,
 ) -> bool:
     """
@@ -221,6 +237,8 @@ def deploy_yaml_app(
         app: YamlApp 설정
         base_dir: 프로젝트 루트
         app_config_dir: 앱 설정 디렉토리
+        kubeconfig: kubeconfig 파일 경로
+        context: kubectl context 이름
         dry_run: dry-run 모드
 
     Returns:
@@ -246,6 +264,9 @@ def deploy_yaml_app(
             cmd.append("--dry-run=client")
             cmd.append("--validate=false")
 
+        # Apply cluster configuration
+        cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
+
         console.print(f"  Applying: {yaml_file}")
         return_code, stdout, stderr = run_command(cmd)
 
@@ -265,6 +286,8 @@ def deploy_action_app(
     app: ActionApp,
     base_dir: Path,
     app_config_dir: Path,
+    kubeconfig: str | None = None,
+    context: str | None = None,
     dry_run: bool = False,
 ) -> bool:
     """
@@ -275,6 +298,8 @@ def deploy_action_app(
         app: ActionApp 설정
         base_dir: 프로젝트 루트
         app_config_dir: 앱 설정 디렉토리
+        kubeconfig: kubeconfig 파일 경로
+        context: kubectl context 이름
         dry_run: dry-run 모드
 
     Returns:
@@ -307,6 +332,9 @@ def deploy_action_app(
         if dry_run:
             cmd.append("--dry-run=client")
             cmd.append("--validate=false")
+
+        # Apply cluster configuration
+        cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
 
         console.print(f"  {action_type.capitalize()}: {action_path}")
         return_code, stdout, stderr = run_command(cmd)
@@ -369,6 +397,8 @@ def deploy_kustomize_app(
     app: KustomizeApp,
     base_dir: Path,
     app_config_dir: Path,
+    kubeconfig: str | None = None,
+    context: str | None = None,
     dry_run: bool = False,
 ) -> bool:
     """
@@ -379,6 +409,8 @@ def deploy_kustomize_app(
         app: KustomizeApp 설정
         base_dir: 프로젝트 루트
         app_config_dir: 앱 설정 디렉토리
+        kubeconfig: kubeconfig 파일 경로
+        context: kubectl context 이름
         dry_run: dry-run 모드
 
     Returns:
@@ -401,6 +433,9 @@ def deploy_kustomize_app(
     if dry_run:
         cmd.append("--dry-run=client")
         cmd.append("--validate=false")
+
+    # Apply cluster configuration
+    cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
 
     console.print(f"  Applying: {kustomize_path}")
     return_code, stdout, stderr = run_command(cmd)
@@ -479,7 +514,9 @@ def deploy_noop_app(
     default=False,
     help="Dry-run 모드 (실제 배포하지 않음)",
 )
+@click.pass_context
 def cmd(
+    ctx: click.Context,
     app_config_dir_name: str,
     base_dir: str,
     config_file_name: str,
@@ -498,10 +535,6 @@ def cmd(
     """
     console.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]")
 
-    # kubectl 설치 확인
-    check_kubectl_installed_or_exit()
-    check_cluster_connectivity_or_exit()
-
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
     APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
@@ -509,6 +542,36 @@ def cmd(
 
     CHARTS_DIR = BASE_DIR / "charts"
     BUILD_DIR = BASE_DIR / "build"
+
+    # Load sources and resolve cluster configuration
+    sources_file_name = ctx.obj.get("sources_file", "sources.yaml")
+    sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
+
+    sources = None
+    if sources_file_path and sources_file_path.exists():
+        console.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
+        try:
+            from sbkube.models.sources_model import SourceScheme
+            sources_data = load_config_file(sources_file_path)
+            sources = SourceScheme(**sources_data)
+        except Exception as e:
+            console.print(f"[red]❌ Invalid sources file: {e}[/red]")
+            raise click.Abort()
+
+    # Resolve cluster configuration
+    try:
+        kubeconfig, context = resolve_cluster_config(
+            cli_kubeconfig=ctx.obj.get("kubeconfig"),
+            cli_context=ctx.obj.get("context"),
+            sources=sources,
+        )
+    except ClusterConfigError as e:
+        console.print(f"[red]{e}[/red]")
+        raise click.Abort()
+
+    # kubectl 설치 확인
+    check_kubectl_installed_or_exit()
+    check_cluster_connectivity_or_exit()
 
     # 설정 파일 로드
     if not config_file_path.exists():
@@ -553,15 +616,27 @@ def cmd(
         try:
             if isinstance(app, HelmApp):
                 check_helm_installed_or_exit()
-                success = deploy_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR, dry_run)
+                success = deploy_helm_app(
+                    app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR,
+                    kubeconfig, context, dry_run
+                )
             elif isinstance(app, YamlApp):
-                success = deploy_yaml_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+                success = deploy_yaml_app(
+                    app_name, app, BASE_DIR, APP_CONFIG_DIR,
+                    kubeconfig, context, dry_run
+                )
             elif isinstance(app, ActionApp):
-                success = deploy_action_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+                success = deploy_action_app(
+                    app_name, app, BASE_DIR, APP_CONFIG_DIR,
+                    kubeconfig, context, dry_run
+                )
             elif isinstance(app, ExecApp):
                 success = deploy_exec_app(app_name, app, BASE_DIR, dry_run)
             elif isinstance(app, KustomizeApp):
-                success = deploy_kustomize_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+                success = deploy_kustomize_app(
+                    app_name, app, BASE_DIR, APP_CONFIG_DIR,
+                    kubeconfig, context, dry_run
+                )
             elif isinstance(app, NoopApp):
                 success = deploy_noop_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
             else:

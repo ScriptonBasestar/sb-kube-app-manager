@@ -13,7 +13,13 @@ import click
 from rich.console import Console
 
 from sbkube.models.config_model import GitApp, HelmApp, HttpApp, SBKubeConfig
+from sbkube.models.sources_model import SourceScheme
 from sbkube.utils.cli_check import check_helm_installed_or_exit
+from sbkube.utils.cluster_config import (
+    ClusterConfigError,
+    apply_cluster_config_to_command,
+    resolve_cluster_config,
+)
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 
@@ -42,6 +48,8 @@ def prepare_helm_app(
     base_dir: Path,
     charts_dir: Path,
     sources_file: Path,
+    kubeconfig: str | None = None,
+    context: str | None = None,
     force: bool = False,
     dry_run: bool = False,
 ) -> bool:
@@ -103,6 +111,7 @@ def prepare_helm_app(
         # Helm repo 추가
         console.print(f"  Adding Helm repo: {repo_name} ({repo_url})")
         cmd = ["helm", "repo", "add", repo_name, repo_url]
+        cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
         return_code, stdout, stderr = run_command(cmd)
 
         if return_code != 0:
@@ -111,6 +120,7 @@ def prepare_helm_app(
         # Helm repo 업데이트
         console.print(f"  Updating Helm repo: {repo_name}")
         cmd = ["helm", "repo", "update", repo_name]
+        cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
         return_code, stdout, stderr = run_command(cmd)
 
         if return_code != 0:
@@ -147,6 +157,7 @@ def prepare_helm_app(
         if app.version:
             cmd.extend(["--version", app.version])
 
+        cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
         return_code, stdout, stderr = run_command(cmd)
 
         if return_code != 0:
@@ -355,7 +366,9 @@ def prepare_git_app(
     default=False,
     help="Dry-run 모드 (실제 리소스를 다운로드하지 않음)",
 )
+@click.pass_context
 def cmd(
+    ctx: click.Context,
     app_config_dir_name: str,
     base_dir: str,
     config_file_name: str,
@@ -381,7 +394,8 @@ def cmd(
     APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
     config_file_path = APP_CONFIG_DIR / config_file_name
 
-    # sources.yaml 찾기 (., .., base-dir 순서로 검색)
+    # sources.yaml 찾기 (CLI --sources 옵션 또는 --env 우선)
+    sources_file_name = ctx.obj.get("sources_file", sources_file_name)
     sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
 
     if not sources_file_path:
@@ -392,6 +406,25 @@ def cmd(
         raise click.Abort()
 
     console.print(f"[cyan]📄 Using sources file: {sources_file_path}[/cyan]")
+
+    # sources.yaml 로드 및 클러스터 설정 해석
+    sources_data = load_config_file(sources_file_path)
+    try:
+        sources = SourceScheme(**sources_data)
+    except Exception as e:
+        console.print(f"[red]❌ Invalid sources file: {e}[/red]")
+        raise click.Abort()
+
+    # 클러스터 설정 해석
+    try:
+        kubeconfig, context = resolve_cluster_config(
+            cli_kubeconfig=ctx.obj.get("kubeconfig"),
+            cli_context=ctx.obj.get("context"),
+            sources=sources,
+        )
+    except ClusterConfigError as e:
+        console.print(f"[red]{e}[/red]")
+        raise click.Abort()
 
     # charts/repos 디렉토리는 sources.yaml이 있는 위치 기준
     SOURCES_BASE_DIR = sources_file_path.parent
@@ -443,7 +476,9 @@ def cmd(
         success = False
 
         if isinstance(app, HelmApp):
-            success = prepare_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, sources_file_path, force, dry_run)
+            success = prepare_helm_app(
+                app_name, app, BASE_DIR, CHARTS_DIR, sources_file_path, kubeconfig, context, force, dry_run
+            )
         elif isinstance(app, GitApp):
             success = prepare_git_app(app_name, app, BASE_DIR, REPOS_DIR, sources_file_path, force, dry_run)
         elif isinstance(app, HttpApp):

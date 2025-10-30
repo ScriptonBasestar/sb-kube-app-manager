@@ -95,15 +95,15 @@ class SbkubeGroup(click.Group):
     help="Kubectl context 이름 (sources.yaml 오버라이드). --kubeconfig와 함께 사용 필수.",
 )
 @click.option(
-    "--sources",
+    "--source",
     type=str,
     default="sources.yaml",
-    help="Sources 파일 이름 (예: sources-dev.yaml). 기본값: sources.yaml",
+    help="Source 파일 이름 (예: sources-dev.yaml). 기본값: sources.yaml",
 )
 @click.option(
-    "--env",
+    "--profile",
     type=str,
-    help="환경 이름 (자동으로 sources-{env}.yaml 사용). 예: --env dev → sources-dev.yaml",
+    help="환경 프로파일 (자동으로 sources-{profile}.yaml 사용). 예: --profile dev → sources-dev.yaml",
 )
 @click.option(
     "--namespace",
@@ -116,8 +116,8 @@ def main(
     ctx: click.Context,
     kubeconfig: str | None,
     context: str | None,
-    sources: str,
-    env: str | None,
+    source: str,
+    profile: str | None,
     namespace: str | None,
     verbose: bool,
 ) -> None:
@@ -131,11 +131,11 @@ def main(
     ctx.obj["namespace"] = namespace
     ctx.obj["verbose"] = verbose
 
-    # --env 옵션으로 sources 파일명 자동 생성
-    if env:
-        ctx.obj["sources_file"] = f"sources-{env}.yaml"
+    # --profile 옵션으로 sources 파일명 자동 생성
+    if profile:
+        ctx.obj["sources_file"] = f"sources-{profile}.yaml"
     else:
-        ctx.obj["sources_file"] = sources
+        ctx.obj["sources_file"] = source
 
     if verbose:
         logging.basicConfig(

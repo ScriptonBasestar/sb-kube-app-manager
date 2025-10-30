@@ -36,7 +36,7 @@ console = Console()
     help="설정 파일 이름 (app-dir 내부)",
 )
 @click.option(
-    "--sources",
+    "--source",
     "sources_file_name",
     default="sources.yaml",
     help="소스 설정 파일 (base-dir 기준)",

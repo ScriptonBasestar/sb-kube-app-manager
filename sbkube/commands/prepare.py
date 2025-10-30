@@ -155,6 +155,14 @@ def prepare_oci_chart(
 
         if return_code != 0:
             console.print(f"[red]❌ Failed to pull OCI chart: {stderr}[/red]")
+            console.print(f"[yellow]💡 Possible reasons:[/yellow]")
+            console.print(f"   1. OCI registry URL might be incorrect: {registry_url}")
+            console.print(f"   2. Chart '{chart_name}' does not exist in the registry")
+            console.print(f"   3. Authentication might be required (check username/password in sources.yaml)")
+            console.print(f"   4. Registry might not support OCI format")
+            console.print(f"[yellow]💡 Verify OCI registry:[/yellow]")
+            console.print(f"   • Test pull manually: [cyan]helm pull {oci_chart_url}[/cyan]")
+            console.print(f"   • Check registry documentation for correct OCI path")
             return False
 
     console.print(f"[green]✅ OCI chart prepared: {app_name}[/green]")
@@ -229,12 +237,16 @@ def prepare_helm_app(
 
     # 일반 Helm 레지스트리 체크
     if repo_name not in helm_sources:
-        console.print(
-            f"[red]❌ Helm repo '{repo_name}' not found in sources.yaml[/red]"
-        )
-        console.print(
-            f"[yellow]💡 Tip: Check if '{repo_name}' exists in either helm_repos or oci_registries[/yellow]"
-        )
+        console.print(f"[red]❌ Helm repo '{repo_name}' not found in sources.yaml[/red]")
+        console.print(f"[yellow]💡 Solutions:[/yellow]")
+        console.print(f"   1. Check for typos in sources.yaml (e.g., '{repo_name}' → similar name?)")
+        console.print(f"   2. Search for '{chart_name}' chart: https://artifacthub.io/packages/search?ts_query_web={chart_name}")
+        console.print(f"   3. Add repository to sources.yaml:")
+        console.print(f"      [cyan]helm_repos:[/cyan]")
+        console.print(f"      [cyan]  {repo_name}: https://example.com/helm-charts[/cyan]")
+        console.print(f"   4. Or check if it's an OCI registry:")
+        console.print(f"      [cyan]oci_registries:[/cyan]")
+        console.print(f"      [cyan]  {repo_name}: oci://registry.example.com/charts[/cyan]")
         return False
 
     # helm_repos는 dict 형태: {url: ..., username: ..., password: ...} 또는 단순 URL string
@@ -327,6 +339,13 @@ def prepare_helm_app(
 
         if return_code != 0:
             console.print(f"[red]❌ Failed to pull chart: {stderr}[/red]")
+            console.print(f"[yellow]💡 Possible reasons:[/yellow]")
+            console.print(f"   1. Chart '{chart_name}' does not exist in '{repo_name}' repository")
+            console.print(f"   2. Repository might be deprecated or moved")
+            console.print(f"   3. Chart name might be different (check exact name)")
+            console.print(f"[yellow]💡 Search for the chart:[/yellow]")
+            console.print(f"   • Artifact Hub: https://artifacthub.io/packages/search?ts_query_web={chart_name}")
+            console.print(f"   • List charts in repo: [cyan]helm search repo {repo_name}/[/cyan]")
             return False
 
     console.print(f"[green]✅ Helm app prepared: {app_name}[/green]")
@@ -526,7 +545,7 @@ def prepare_git_app(
     help="설정 파일 이름 (app-dir 내부)",
 )
 @click.option(
-    "--sources",
+    "--source",
     "sources_file_name",
     default="sources.yaml",
     help="소스 설정 파일 (base-dir 기준)",
@@ -577,7 +596,7 @@ def cmd(
     APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
     config_file_path = APP_CONFIG_DIR / config_file_name
 
-    # sources.yaml 찾기 (CLI --sources 옵션 또는 --profile 우선)
+    # sources.yaml 찾기 (CLI --source 옵션 또는 --profile 우선)
     sources_file_name = ctx.obj.get("sources_file", sources_file_name)
     sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
 

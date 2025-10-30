@@ -379,10 +379,9 @@ sbkube prepare [옵션]
 ### 🎛️ 옵션
 
 - `--app-dir <디렉토리>` - 앱 설정 디렉토리 (기본값: `.`)
-- `--sources <파일>` - 소스 설정 파일 (기본값: `sources.yaml`)
+- `--source <파일>` - 소스 설정 파일 (기본값: `sources.yaml`)
 - `--base-dir <경로>` - 프로젝트 루트 디렉토리 (기본값: `.`)
 - `--config-file <파일>` - 사용할 설정 파일 이름 (app-dir 내부)
-- `--sources-file <경로>` - 소스 설정 파일 경로 (--sources와 동일)
 - `--app <앱이름>` - 준비할 특정 앱 이름 (미지정시 모든 앱)
 - `--force` - 기존 리소스 덮어쓰기 (차트/리포지토리 재다운로드)
 
@@ -433,7 +432,7 @@ sbkube prepare
 sbkube prepare --app nginx-app
 
 # 커스텀 설정으로 준비
-sbkube prepare --app-dir my-config --sources my-sources.yaml
+sbkube prepare --app-dir my-config --source my-sources.yaml
 
 # 기존 차트/리포지토리 강제 재다운로드
 sbkube prepare --force

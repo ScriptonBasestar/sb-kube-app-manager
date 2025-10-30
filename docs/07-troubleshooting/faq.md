@@ -77,10 +77,26 @@ kubeconfig: ~/.kube/prod-config
 kubeconfig_context: production-cluster
 ```
 
-배포 시 선택:
+배포 시 선택 방법:
+
+**방법 1: --profile 단축 옵션 사용 (권장)**
 ```bash
-sbkube deploy --sources config/sources-prod.yaml
+# sources-dev.yaml 자동 사용
+sbkube deploy --profile dev
+
+# sources-prod.yaml 자동 사용
+sbkube deploy --profile prod
+
+# sources-staging.yaml 자동 사용
+sbkube deploy --profile staging
 ```
+
+**방법 2: --source 명시적 경로 지정**
+```bash
+sbkube deploy --source config/sources-prod.yaml
+```
+
+> 💡 **Tip**: `--profile` 옵션은 `sources-{profile}.yaml` 파일명 패턴을 따를 때 편리합니다.
 
 ---
 
@@ -178,7 +194,7 @@ sbkube deploy --verbose
 sbkube deploy \
   --base-dir /path/to/project \
   --app-dir custom-config \
-  --sources custom-config/sources.yaml
+  --source custom-config/sources.yaml
 ```
 
 ---

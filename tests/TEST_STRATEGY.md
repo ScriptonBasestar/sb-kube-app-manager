@@ -160,7 +160,7 @@ class TestK3scodeAIWorkflow:
                 str(ai_dir.relative_to(project_root)),
                 "--base-dir",
                 str(project_root),
-                "--sources-file",
+                "--source",
                 str(sources_file.relative_to(project_root)),
             ],
             debug_info={

@@ -179,7 +179,7 @@ class ContextAwareSuggestions:
                 {
                     "title": "소스 설정 생성",
                     "description": "애플리케이션 소스 설정이 없습니다.",
-                    "commands": ["sbkube init --sources"],
+                    "commands": ["sbkube init --source"],
                     "priority": "medium",
                 }
             )

@@ -190,7 +190,7 @@ class EnhancedBaseCommand:
         Determine environment name from config or CLI.
         Override in subclasses to implement custom logic.
         """
-        # Could be extended to support --env CLI option
+        # Could be extended to support --profile CLI option
         return None
 
     def validate_references(self):

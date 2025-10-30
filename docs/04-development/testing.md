@@ -19,7 +19,8 @@ kubectl config use-context kind-sbkube-test
 
 ## CMD
 
-sbkube prepare --apps config.yaml --sources sources.yaml sbkube build --apps config.yaml
+sbkube prepare --app-dir config --source sources.yaml
+sbkube build --app-dir config
 
 python -m sbkube.cli
 

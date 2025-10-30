@@ -41,7 +41,7 @@ class TestPrepareExamples:
                 str(example_dir.relative_to(project_root)),
                 "--base-dir",
                 str(project_root),
-                "--sources",
+                "--source",
                 str(sources_file.relative_to(project_root)),
             ],
             debug_info={

@@ -60,7 +60,7 @@ mkdir my-first-sbkube-project
 cd my-first-sbkube-project
 
 # 튜토리얼 파일 열기
-cat docs/tutorials/01-getting-started.md
+cat docs/08-tutorials/01-getting-started.md
 ```
 
 ---
@@ -438,4 +438,4 @@ my-sbkube-projects/
 
 ---
 
-**작성자**: SBKube Documentation Team **버전**: v0.4.7 **최종 업데이트**: 2025-10-24
+**작성자**: SBKube Documentation Team **버전**: v0.4.10 **최종 업데이트**: 2025-10-30

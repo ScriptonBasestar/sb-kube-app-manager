@@ -38,18 +38,19 @@
 - 로컬 개발 환경 설치
 - 프로덕션 배포 방법
 
-### 📖 [사용 예제](06-examples/)
-
-- 기본 워크플로우 예제
-- Helm 차트 배포 시나리오
-- YAML 매니페스트 배포
-- Git 저장소 통합 배포
-
 ### 🔍 [문제 해결](07-troubleshooting/)
 
 - 일반적인 문제 및 해결책
 - 자주 묻는 질문 (FAQ)
 - 디버깅 가이드
+
+### 📚 [튜토리얼](08-tutorials/)
+
+- [첫 번째 배포](08-tutorials/01-getting-started.md)
+- [다중 앱 배포](08-tutorials/02-multi-app-deployment.md)
+- [프로덕션 배포](08-tutorials/03-production-deployment.md)
+- [고급 커스터마이징](08-tutorials/04-customization.md)
+- [문제 해결 실습](08-tutorials/05-troubleshooting.md)
 
 ---
 
@@ -146,5 +147,5 @@ sbkube deploy --base-dir . --app-dir config --namespace <namespace>
 
 ---
 
-*📅 마지막 업데이트: 2025-07-10 | 📋 문서 버전: v1.0*\
-*🎯 SBKube v0.1.10 기준 | 🇰🇷 한국어 우선 지원*
+*📅 마지막 업데이트: 2025-10-30 | 📋 문서 버전: v1.1*
+*🎯 SBKube v0.4.10 기준 | 🇰🇷 한국어 우선 지원*

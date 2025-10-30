@@ -7,6 +7,7 @@ from sbkube.commands import (
     apply,
     assistant,
     build,
+    cluster,
     config,
     delete,
     deploy,
@@ -49,6 +50,7 @@ class SbkubeGroup(click.Group):
                 "delete",
                 "prepare",
                 "apply",
+                "cluster",
             ]
             commands_requiring_helm = [
                 "template",
@@ -58,6 +60,7 @@ class SbkubeGroup(click.Group):
                 "prepare",
                 "build",
                 "apply",
+                "cluster",
             ]
 
             try:
@@ -164,6 +167,7 @@ main.add_command(doctor.cmd)
 main.add_command(fix.cmd)
 main.add_command(assistant.cmd)
 main.add_command(assistant.history_cmd)
+main.add_command(cluster.cluster)
 
 
 def main_with_exception_handling() -> None:

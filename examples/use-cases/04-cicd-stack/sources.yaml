@@ -1,6 +1,11 @@
-helm_repos:
-  - name: twuni
-    url: https://helm.twun.io
+# 클러스터 설정 (필수, v0.4.10+)
+cluster: cicd-k3s
+kubeconfig: ~/.kube/config
+kubeconfig_context: default
 
-  - name: gitlab
+# Helm 리포지토리
+helm_repos:
+  twuni:
+    url: https://helm.twun.io
+  gitlab:
     url: https://charts.gitlab.io

@@ -175,7 +175,7 @@ apps:
     dest: downloaded-manifest.yaml
     headers:
       Authorization: "Bearer token"
-      User-Agent: "SBKube/0.3.0"
+      User-Agent: "SBKube/0.4.10"
 
   manifest-apply:
     type: yaml

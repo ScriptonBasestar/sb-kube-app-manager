@@ -1,2 +1,7 @@
+# 클러스터 설정 (필수, v0.4.10+)
+cluster: local-k3s
+kubeconfig: ~/.kube/config
+kubeconfig_context: default
+
 # No helm repositories required (all apps use YAML manifests)
 helm_repos: []

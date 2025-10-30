@@ -421,7 +421,7 @@ apps:
     dest: manifest.yaml                     # 필수: 저장 경로
     headers:                                # 선택: HTTP 헤더
       Authorization: "Bearer token"
-      User-Agent: "SBKube/0.3.0"
+      User-Agent: "SBKube/0.4.10"
 ```
 
 **사용 패턴**:

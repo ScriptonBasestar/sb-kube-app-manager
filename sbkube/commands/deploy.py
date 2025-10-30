@@ -36,6 +36,7 @@ from sbkube.utils.cluster_config import (
 )
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
 
@@ -258,7 +259,7 @@ def deploy_yaml_app(
 
     namespace = app.namespace
 
-    for yaml_file in app.files:
+    for yaml_file in app.manifests:
         yaml_path = app_config_dir / yaml_file
 
         if not yaml_path.exists():
@@ -611,9 +612,28 @@ def cmd(
         # 모든 앱 배포 (의존성 순서대로)
         apps_to_deploy = deployment_order
 
+    # Hook executor 초기화
+    hook_executor = HookExecutor(
+        base_dir=BASE_DIR,
+        work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
+        dry_run=dry_run,
+    )
+
+    # ========== 전역 pre-deploy 훅 실행 ==========
+    if config.hooks and "deploy" in config.hooks:
+        deploy_hooks = config.hooks["deploy"].model_dump()
+        if not hook_executor.execute_command_hooks(
+            hook_config=deploy_hooks,
+            hook_phase="pre",
+            command_name="deploy",
+        ):
+            console.print("[red]❌ Pre-deploy hook failed[/red]")
+            raise click.Abort()
+
     # 앱 배포
     success_count = 0
     total_count = len(apps_to_deploy)
+    deployment_failed = False
 
     for app_name in apps_to_deploy:
         app = config.apps[app_name]
@@ -621,6 +641,23 @@ def cmd(
         if not app.enabled:
             console.print(f"[yellow]⏭️  Skipping disabled app: {app_name}[/yellow]")
             continue
+
+        # ========== 앱별 pre-deploy 훅 실행 ==========
+        if hasattr(app, "hooks") and app.hooks:
+            app_hooks = app.hooks.model_dump()
+            context = {
+                "namespace": app.namespace if hasattr(app, "namespace") else config.namespace,
+                "release_name": getattr(app, "release_name", None) or app_name,
+            }
+            if not hook_executor.execute_app_hook(
+                app_name=app_name,
+                app_hooks=app_hooks,
+                hook_type="pre_deploy",
+                context=context,
+            ):
+                console.print(f"[red]❌ Pre-deploy hook failed for app: {app_name}[/red]")
+                deployment_failed = True
+                continue
 
         success = False
 
@@ -688,10 +725,58 @@ def cmd(
             console.print(
                 "[yellow]💡 Check your cluster connectivity and try again.[/yellow]"
             )
+            deployment_failed = True
             raise click.Abort() from exc
+
+        # ========== 앱별 post-deploy 또는 on_deploy_failure 훅 실행 ==========
+        if hasattr(app, "hooks") and app.hooks:
+            app_hooks = app.hooks.model_dump()
+            context = {
+                "namespace": app.namespace if hasattr(app, "namespace") else config.namespace,
+                "release_name": getattr(app, "release_name", None) or app_name,
+            }
+
+            if success:
+                # 배포 성공 시 post_deploy 훅 실행
+                hook_executor.execute_app_hook(
+                    app_name=app_name,
+                    app_hooks=app_hooks,
+                    hook_type="post_deploy",
+                    context=context,
+                )
+            else:
+                # 배포 실패 시 on_deploy_failure 훅 실행
+                hook_executor.execute_app_hook(
+                    app_name=app_name,
+                    app_hooks=app_hooks,
+                    hook_type="on_deploy_failure",
+                    context=context,
+                )
+                deployment_failed = True
 
         if success:
             success_count += 1
+        else:
+            deployment_failed = True
+
+    # ========== 전역 post-deploy 또는 on_failure 훅 실행 ==========
+    if config.hooks and "deploy" in config.hooks:
+        deploy_hooks = config.hooks["deploy"].model_dump()
+
+        if deployment_failed:
+            # 배포 실패 시 on_failure 훅 실행
+            hook_executor.execute_command_hooks(
+                hook_config=deploy_hooks,
+                hook_phase="on_failure",
+                command_name="deploy",
+            )
+        else:
+            # 모든 배포 성공 시 post 훅 실행
+            hook_executor.execute_command_hooks(
+                hook_config=deploy_hooks,
+                hook_phase="post",
+                command_name="deploy",
+            )
 
     # 결과 출력
     console.print(

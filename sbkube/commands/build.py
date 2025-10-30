@@ -16,6 +16,7 @@ from rich.console import Console
 
 from sbkube.models.config_model import HelmApp, HttpApp, SBKubeConfig
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
 
@@ -93,7 +94,7 @@ def build_helm_app(
     overrides_base = app_config_dir / "overrides" / app_name
 
     # 3.1. Warn if override directory exists but not configured
-    if overrides_base.exists() and overrides_base.is_dir() and not app.overrides:
+    if overrides_base.exists() and overrides_base.is_dir() and not app.chart_patches:
         console.print()
         console.print(
             f"[yellow]⚠️  Override directory found but not configured: {app_name}[/yellow]"
@@ -122,7 +123,7 @@ def build_helm_app(
             "[yellow]    💡 To apply these overrides, add to config.yaml:[/yellow]"
         )
         console.print(f"[yellow]       {app_name}:[/yellow]")
-        console.print("[yellow]         overrides:[/yellow]")
+        console.print("[yellow]         chart_patches:[/yellow]")
         if override_files:
             # Show up to 3 files with full path mapping explanation
             for i, f in enumerate(override_files[:3]):
@@ -138,9 +139,9 @@ def build_helm_app(
                 )
         console.print()
 
-    # 3.2. Apply overrides if configured
-    if app.overrides:
-        console.print(f"  Processing {len(app.overrides)} override patterns...")
+    # 3.2. Apply chart patches if configured
+    if app.chart_patches:
+        console.print(f"  Processing {len(app.chart_patches)} chart patch patterns...")
 
         if not overrides_base.exists():
             console.print(
@@ -149,7 +150,7 @@ def build_helm_app(
         else:
             total_files_copied = 0
 
-            for override_pattern in app.overrides:
+            for override_pattern in app.chart_patches:
                 # Check if pattern contains glob wildcards
                 if "*" in override_pattern or "?" in override_pattern:
                     # Glob pattern - match multiple files
@@ -376,9 +377,28 @@ def cmd(
         # 모든 앱 빌드 (의존성 순서대로)
         apps_to_build = deployment_order
 
+    # Hook executor 초기화
+    hook_executor = HookExecutor(
+        base_dir=BASE_DIR,
+        work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
+        dry_run=dry_run,
+    )
+
+    # ========== 전역 pre-build 훅 실행 ==========
+    if config.hooks and "build" in config.hooks:
+        build_hooks = config.hooks["build"].model_dump()
+        if not hook_executor.execute_command_hooks(
+            hook_config=build_hooks,
+            hook_phase="pre",
+            command_name="build",
+        ):
+            console.print("[red]❌ Pre-build hook failed[/red]")
+            raise click.Abort()
+
     # 앱 빌드
     success_count = 0
     total_count = len(apps_to_build)
+    build_failed = False
 
     for app_name in apps_to_build:
         app = config.apps[app_name]
@@ -387,11 +407,24 @@ def cmd(
             console.print(f"[yellow]⏭️  Skipping disabled app: {app_name}[/yellow]")
             continue
 
+        # ========== 앱별 pre-build 훅 실행 ==========
+        if hasattr(app, "hooks") and app.hooks:
+            app_hooks = app.hooks.model_dump()
+            if not hook_executor.execute_app_hook(
+                app_name=app_name,
+                app_hooks=app_hooks,
+                hook_type="pre_build",
+                context={},
+            ):
+                console.print(f"[red]❌ Pre-build hook failed for app: {app_name}[/red]")
+                build_failed = True
+                continue
+
         success = False
 
         if isinstance(app, HelmApp):
             # Helm 앱만 빌드 (커스터마이징 필요)
-            if app.overrides or app.removes or app.is_remote_chart():
+            if app.chart_patches or app.removes or app.is_remote_chart():
                 success = build_helm_app(
                     app_name,
                     app,
@@ -416,8 +449,43 @@ def cmd(
             )
             success = True  # 건너뛰어도 성공으로 간주
 
+        # ========== 앱별 post-build 훅 실행 ==========
+        if hasattr(app, "hooks") and app.hooks:
+            app_hooks = app.hooks.model_dump()
+            if success:
+                # 빌드 성공 시 post_build 훅 실행
+                hook_executor.execute_app_hook(
+                    app_name=app_name,
+                    app_hooks=app_hooks,
+                    hook_type="post_build",
+                    context={},
+                )
+            else:
+                build_failed = True
+
         if success:
             success_count += 1
+        else:
+            build_failed = True
+
+    # ========== 전역 post-build 훅 실행 ==========
+    if config.hooks and "build" in config.hooks:
+        build_hooks = config.hooks["build"].model_dump()
+
+        if build_failed:
+            # 빌드 실패 시 on_failure 훅 실행
+            hook_executor.execute_command_hooks(
+                hook_config=build_hooks,
+                hook_phase="on_failure",
+                command_name="build",
+            )
+        else:
+            # 모든 빌드 성공 시 post 훅 실행
+            hook_executor.execute_command_hooks(
+                hook_config=build_hooks,
+                hook_phase="post",
+                command_name="build",
+            )
 
     # 결과 출력
     console.print(

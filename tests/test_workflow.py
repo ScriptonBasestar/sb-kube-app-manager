@@ -13,17 +13,17 @@ from sbkube.models.config_model import HelmApp, SBKubeConfig
 class TestWorkflowV3:
     """v0.3.0 워크플로우 통합 테스트."""
 
-    def test_full_workflow_with_overrides(self, tmp_path):
+    def test_full_workflow_with_chart_patches(self, tmp_path):
         """
         전체 워크플로우 테스트: prepare → build → (deploy 제외).
 
-        overrides가 올바르게 적용되는지 검증합니다.
+        chart_patches가 올바르게 적용되는지 검증합니다.
         """
         # 1. 디렉토리 구조 생성
         charts_dir = tmp_path / "charts"
         build_dir = tmp_path / "build"
         app_config_dir = tmp_path / "config"
-        overrides_dir = app_config_dir / "overrides" / "redis"
+        overrides_dir = app_config_dir / "overrides" / "grafana"
 
         charts_dir.mkdir(parents=True, exist_ok=True)
         app_config_dir.mkdir(parents=True, exist_ok=True)
@@ -64,11 +64,11 @@ class TestWorkflowV3:
         app = HelmApp(
             chart="grafana/grafana",
             version="6.50.0",
-            overrides=["values.yaml"],
+            chart_patches=["values.yaml"],
             removes=["README.md"],
         )
 
-        # 6. Build 실행 (overrides/removes 적용)
+        # 6. Build 실행 (chart_patches/removes 적용)
         success = build_helm_app(
             app_name="grafana",
             app=app,
@@ -84,7 +84,7 @@ class TestWorkflowV3:
         assert (build_dir / "grafana").exists()
         assert (build_dir / "grafana" / "Chart.yaml").exists()
 
-        # 8. 검증: overrides 적용됨
+        # 8. 검증: chart_patches 적용됨
         values_content = (build_dir / "grafana" / "values.yaml").read_text()
         assert "replicaCount: 3" in values_content
         assert "tag: 9.3.0" in values_content
@@ -144,7 +144,7 @@ class TestWorkflowV3:
         """
         로컬 차트 워크플로우 테스트.
 
-        로컬 차트도 overrides/removes가 올바르게 적용되는지 검증합니다.
+        로컬 차트도 chart_patches/removes가 올바르게 적용되는지 검증합니다.
         """
         # 1. 로컬 차트 생성
         local_chart_dir = tmp_path / "my-chart"
@@ -165,7 +165,7 @@ class TestWorkflowV3:
         # 3. HelmApp 설정 (로컬 차트)
         app = HelmApp(
             chart="./my-chart",
-            overrides=["values.yaml"],
+            chart_patches=["values.yaml"],
             removes=["LICENSE"],
         )
 
@@ -182,7 +182,7 @@ class TestWorkflowV3:
 
         assert success, "Build should succeed"
 
-        # 5. 검증: overrides 적용
+        # 5. 검증: chart_patches 적용
         values_content = (build_dir / "my-app" / "values.yaml").read_text()
         assert "enabled: false" in values_content
         assert "port: 9000" in values_content

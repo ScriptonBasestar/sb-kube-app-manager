@@ -14,6 +14,7 @@ from sbkube.models.config_manager import ConfigManager
 from sbkube.models.config_model import SBKubeConfig
 from sbkube.models.sources_model import SourceScheme
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.logger import LogLevel, logger
 
 
@@ -53,7 +54,6 @@ class EnhancedBaseCommand:
         # Common directories
         self.build_dir = self.app_config_dir / "build"
         self.values_dir = self.app_config_dir / "values"
-        self.overrides_dir = self.app_config_dir / "overrides"
         self.charts_dir = self.base_dir / "charts"
         self.repos_dir = self.base_dir / "repos"
         self.schema_dir = self.base_dir / "schemas"
@@ -72,6 +72,18 @@ class EnhancedBaseCommand:
 
         # Validation errors tracking
         self.validation_errors: list[str] = []
+
+        # Hook executor (initialized after config load)
+        self.hook_executor: HookExecutor | None = None
+
+    def _init_hook_executor(self, dry_run: bool = False):
+        """Initialize hook executor after configuration is loaded."""
+        if not self.hook_executor:
+            self.hook_executor = HookExecutor(
+                base_dir=self.base_dir,
+                working_dir=self.app_config_dir,
+                dry_run=dry_run,
+            )
 
     def execute_pre_hook(self):
         """Execute common preprocessing before each command."""
@@ -422,6 +434,80 @@ class EnhancedBaseCommand:
         except Exception as e:
             logger.error(f"Failed to export config: {e}")
             raise click.Abort()
+
+    def execute_command_hook(
+        self,
+        hook_phase: str,  # "pre" or "post" or "on_failure"
+        command_name: str,  # "prepare", "deploy" 등
+        dry_run: bool = False,
+    ) -> bool:
+        """
+        명령어 수준 전역 훅 실행.
+
+        Args:
+            hook_phase: "pre", "post", "on_failure"
+            command_name: 명령어 이름
+            dry_run: dry-run 모드
+
+        Returns:
+            성공 여부
+        """
+        if not self.app_group or not self.app_group.hooks:
+            return True
+
+        command_hooks = self.app_group.hooks.get(command_name)
+        if not command_hooks:
+            return True
+
+        # Hook executor 초기화
+        self._init_hook_executor(dry_run=dry_run)
+
+        # CommandHooks 객체를 dict로 변환
+        hook_config = command_hooks.model_dump()
+
+        return self.hook_executor.execute_command_hooks(
+            hook_config=hook_config,
+            hook_phase=hook_phase,
+            command_name=command_name,
+        )
+
+    def execute_app_hook(
+        self,
+        app_info,
+        hook_type: str,  # "pre_deploy", "post_deploy" 등
+        context: dict | None = None,
+        dry_run: bool = False,
+    ) -> bool:
+        """
+        앱별 훅 실행.
+
+        Args:
+            app_info: 앱 정보 객체 (AppConfig)
+            hook_type: "pre_deploy", "post_deploy" 등
+            context: 추가 컨텍스트 (namespace, release_name 등)
+            dry_run: dry-run 모드
+
+        Returns:
+            성공 여부
+        """
+        if not hasattr(app_info, "hooks") or not app_info.hooks:
+            return True
+
+        # Hook executor 초기화
+        self._init_hook_executor(dry_run=dry_run)
+
+        # AppHooks 객체를 dict로 변환
+        app_hooks = app_info.hooks.model_dump()
+
+        # app_info에서 이름 추출 (dict인 경우 대비)
+        app_name = getattr(app_info, "name", str(app_info))
+
+        return self.hook_executor.execute_app_hook(
+            app_name=app_name,
+            app_hooks=app_hooks,
+            hook_type=hook_type,
+            context=context,
+        )
 
 
 # Backward compatibility alias

@@ -39,18 +39,18 @@ class TestYamlApp:
     def test_valid_yaml_app(self):
         """정상적인 YAML 앱 검증."""
         app = YamlApp(
-            files=["deployment.yaml", "service.yaml"],
+            manifests=["deployment.yaml", "service.yaml"],
             namespace="production",
         )
-        assert len(app.files) == 2
+        assert len(app.manifests) == 2
         assert app.namespace == "production"
 
-    def test_empty_files_list(self):
-        """빈 files 리스트 검증."""
+    def test_empty_manifests_list(self):
+        """빈 manifests 리스트 검증."""
         from sbkube.exceptions import ConfigValidationError
 
-        with pytest.raises(ConfigValidationError, match="files cannot be empty"):
-            YamlApp(files=[])
+        with pytest.raises(ConfigValidationError, match="manifests cannot be empty"):
+            YamlApp(manifests=[])
 
 
 class TestSBKubeConfig:
@@ -68,7 +68,7 @@ class TestSBKubeConfig:
                 },
                 "backend": {
                     "type": "yaml",
-                    "files": ["deployment.yaml"],
+                    "manifests": ["deployment.yaml"],
                 },
             },
         )
@@ -204,7 +204,7 @@ class TestSBKubeConfig:
             namespace="test",
             apps={
                 "grafana": {"type": "helm", "chart": "grafana/grafana"},
-                "backend": {"type": "yaml", "files": ["deployment.yaml"]},
+                "backend": {"type": "yaml", "manifests": ["deployment.yaml"]},
                 "postgres": {"type": "helm", "chart": "cloudnative-pg/cloudnative-pg"},
             },
         )

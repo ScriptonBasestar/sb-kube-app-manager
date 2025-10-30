@@ -79,15 +79,15 @@ class TestHelmApp:
         assert app.is_remote_chart() is False
         assert app.get_chart_name() == "backend"
 
-    def test_helm_app_with_overrides(self):
-        """Test HelmApp with overrides and removes (backward compatibility)."""
+    def test_helm_app_with_chart_patches(self):
+        """Test HelmApp with chart_patches and removes."""
         app = HelmApp(
             type="helm",
             chart="grafana/grafana",
-            overrides=["configmap.yaml", "secret.yaml"],
+            chart_patches=["configmap.yaml", "secret.yaml"],
             removes=["tests/*", "docs/*"],
         )
-        assert app.overrides == ["configmap.yaml", "secret.yaml"]
+        assert app.chart_patches == ["configmap.yaml", "secret.yaml"]
         assert app.removes == ["tests/*", "docs/*"]
 
     def test_helm_app_with_namespace_override(self):
@@ -151,16 +151,16 @@ class TestYamlApp:
         """Test YamlApp with minimal configuration."""
         app = YamlApp(
             type="yaml",
-            files=["deployment.yaml", "service.yaml"],
+            manifests=["deployment.yaml", "service.yaml"],
         )
         assert app.type == "yaml"
-        assert app.files == ["deployment.yaml", "service.yaml"]
+        assert app.manifests == ["deployment.yaml", "service.yaml"]
 
     def test_yaml_app_with_namespace(self):
         """Test YamlApp with custom namespace."""
         app = YamlApp(
             type="yaml",
-            files=["manifest.yaml"],
+            manifests=["manifest.yaml"],
             namespace="custom-ns",
         )
         assert app.namespace == "custom-ns"
@@ -169,7 +169,7 @@ class TestYamlApp:
         """Test YamlApp with labels and annotations."""
         app = YamlApp(
             type="yaml",
-            files=["manifest.yaml"],
+            manifests=["manifest.yaml"],
             labels={"app": "frontend"},
             annotations={"owner": "team-a"},
         )
@@ -180,16 +180,16 @@ class TestYamlApp:
         """Test YamlApp with dependencies."""
         app = YamlApp(
             type="yaml",
-            files=["manifest.yaml"],
+            manifests=["manifest.yaml"],
             depends_on=["backend"],
         )
         assert app.depends_on == ["backend"]
 
-    def test_yaml_app_empty_files_validation(self):
-        """Test that empty files list raises validation error."""
+    def test_yaml_app_empty_manifests_validation(self):
+        """Test that empty manifests list raises validation error."""
         with pytest.raises(ConfigValidationError) as exc_info:
-            YamlApp(type="yaml", files=[])
-        assert "files cannot be empty" in str(exc_info.value)
+            YamlApp(type="yaml", manifests=[])
+        assert "manifests cannot be empty" in str(exc_info.value)
 
 
 # ============================================================================
@@ -460,7 +460,7 @@ class TestSBKubeConfig:
             namespace="default",
             apps={
                 "grafana": HelmApp(type="helm", chart="grafana/grafana"),
-                "backend": YamlApp(type="yaml", files=["deployment.yaml"]),
+                "backend": YamlApp(type="yaml", manifests=["deployment.yaml"]),
                 "init": ExecApp(type="exec", commands=["echo 'Starting'"]),
             },
         )
@@ -475,7 +475,7 @@ class TestSBKubeConfig:
             namespace="production",
             apps={
                 "app1": HelmApp(type="helm", chart="grafana/grafana"),
-                "app2": YamlApp(type="yaml", files=["manifest.yaml"]),
+                "app2": YamlApp(type="yaml", manifests=["manifest.yaml"]),
             },
         )
         # After validation, namespace should be inherited
@@ -515,7 +515,7 @@ class TestSBKubeConfig:
             apps={
                 "app1": HelmApp(type="helm", chart="grafana/grafana", enabled=True),
                 "app2": HelmApp(type="helm", chart="ingress-nginx/ingress-nginx", enabled=False),
-                "app3": YamlApp(type="yaml", files=["manifest.yaml"], enabled=True),
+                "app3": YamlApp(type="yaml", manifests=["manifest.yaml"], enabled=True),
             },
         )
         enabled_apps = config.get_enabled_apps()
@@ -531,7 +531,7 @@ class TestSBKubeConfig:
             apps={
                 "grafana": HelmApp(type="helm", chart="grafana/grafana"),
                 "ingress": HelmApp(type="helm", chart="ingress-nginx/ingress-nginx"),
-                "backend": YamlApp(type="yaml", files=["deployment.yaml"]),
+                "backend": YamlApp(type="yaml", manifests=["deployment.yaml"]),
             },
         )
         helm_apps = config.get_apps_by_type("helm")

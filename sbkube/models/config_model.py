@@ -14,6 +14,82 @@ from pydantic import Field, field_validator, model_validator
 from .base_model import ConfigBaseModel
 
 # ============================================================================
+# Hook Models
+# ============================================================================
+
+
+class CommandHooks(ConfigBaseModel):
+    """
+    명령어별 훅 설정.
+
+    Examples:
+        hooks:
+          deploy:
+            pre:
+              - echo "Starting deployment"
+              - ./scripts/pre-deploy.sh
+            post:
+              - echo "Deployment completed"
+            on_failure:
+              - ./scripts/rollback.sh
+    """
+
+    pre: list[str] = Field(default_factory=list, description="명령어 실행 전 훅")
+    post: list[str] = Field(default_factory=list, description="명령어 실행 후 훅")
+    on_failure: list[str] = Field(
+        default_factory=list, description="명령어 실패 시 훅"
+    )
+
+
+class AppHooks(ConfigBaseModel):
+    """
+    앱별 훅 설정.
+
+    Examples:
+        database:
+          type: helm
+          chart: bitnami/postgresql
+          hooks:
+            pre_prepare:
+              - echo "Preparing database chart"
+            post_prepare:
+              - echo "Chart ready"
+            pre_deploy:
+              - ./scripts/backup-db.sh
+            post_deploy:
+              - kubectl wait --for=condition=ready pod -l app=postgresql
+            on_deploy_failure:
+              - ./scripts/restore-backup.sh
+    """
+
+    pre_prepare: list[str] = Field(
+        default_factory=list, description="prepare 실행 전 훅"
+    )
+    post_prepare: list[str] = Field(
+        default_factory=list, description="prepare 실행 후 훅"
+    )
+    pre_build: list[str] = Field(default_factory=list, description="build 실행 전 훅")
+    post_build: list[str] = Field(
+        default_factory=list, description="build 실행 후 훅"
+    )
+    pre_template: list[str] = Field(
+        default_factory=list, description="template 실행 전 훅"
+    )
+    post_template: list[str] = Field(
+        default_factory=list, description="template 실행 후 훅"
+    )
+    pre_deploy: list[str] = Field(
+        default_factory=list, description="deploy 실행 전 훅"
+    )
+    post_deploy: list[str] = Field(
+        default_factory=list, description="deploy 실행 후 훅"
+    )
+    on_deploy_failure: list[str] = Field(
+        default_factory=list, description="deploy 실패 시 훅"
+    )
+
+
+# ============================================================================
 # App Type Models (Discriminated Union)
 # ============================================================================
 
@@ -52,13 +128,15 @@ class HelmApp(ConfigBaseModel):
     version: str | None = None  # chart version (remote chart만 해당)
     values: list[str] = Field(default_factory=list)  # values 파일 목록
 
-    # 커스터마이징 (호환성 유지)
-    overrides: list[str] = Field(
-        default_factory=list
-    )  # overrides/ 디렉토리의 파일로 교체
+    # 커스터마이징
+    chart_patches: list[str] = Field(
+        default_factory=list,
+        description="Chart customization files from overrides/ directory"
+    )
     removes: list[str] = Field(
-        default_factory=list
-    )  # 빌드 시 제거할 파일/디렉토리 패턴
+        default_factory=list,
+        description="File/directory patterns to remove during build"
+    )
 
     # Helm 옵션
     set_values: dict[str, Any] = Field(default_factory=dict)  # --set 옵션
@@ -76,6 +154,9 @@ class HelmApp(ConfigBaseModel):
     # 제어
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
+
+    # 훅
+    hooks: AppHooks | None = None
 
     @field_validator("chart")
     @classmethod
@@ -155,25 +236,29 @@ class YamlApp(ConfigBaseModel):
     Examples:
         my-app:
           type: yaml
-          files:
+          manifests:
             - deployment.yaml
             - service.yaml
           namespace: custom-ns
     """
 
     type: Literal["yaml"] = "yaml"
-    files: list[str]  # YAML 파일 목록
+    manifests: list[str] = Field(
+        ...,
+        description="YAML manifest files to deploy with kubectl apply"
+    )
     namespace: str | None = None
     labels: dict[str, str] = Field(default_factory=dict)
     annotations: dict[str, str] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
+    hooks: AppHooks | None = None
 
-    @field_validator("files")
+    @field_validator("manifests")
     @classmethod
-    def validate_files(cls, v: list[str]) -> list[str]:
+    def validate_manifests(cls, v: list[str]) -> list[str]:
         """파일 목록이 비어있지 않은지 확인."""
-        return cls.validate_non_empty_list(v, "files")
+        return cls.validate_non_empty_list(v, "manifests")
 
 
 class ActionApp(ConfigBaseModel):
@@ -195,6 +280,7 @@ class ActionApp(ConfigBaseModel):
     namespace: str | None = None
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
+    hooks: AppHooks | None = None
 
     @field_validator("actions")
     @classmethod
@@ -219,6 +305,7 @@ class ExecApp(ConfigBaseModel):
     commands: list[str]
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
+    hooks: AppHooks | None = None
 
     @field_validator("commands")
     @classmethod
@@ -247,6 +334,7 @@ class GitApp(ConfigBaseModel):
     namespace: str | None = None
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
+    hooks: AppHooks | None = None
 
     @field_validator("repo")
     @classmethod
@@ -273,6 +361,7 @@ class KustomizeApp(ConfigBaseModel):
     namespace: str | None = None
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
+    hooks: AppHooks | None = None
 
     @field_validator("path")
     @classmethod
@@ -298,6 +387,7 @@ class HttpApp(ConfigBaseModel):
     headers: dict[str, str] = Field(default_factory=dict)  # HTTP 헤더
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
+    hooks: AppHooks | None = None
 
     @field_validator("url")
     @classmethod
@@ -332,6 +422,7 @@ class NoopApp(ConfigBaseModel):
     description: str | None = None  # 수동 작업 설명
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
+    hooks: AppHooks | None = None
 
 
 # ============================================================================
@@ -389,6 +480,10 @@ class SBKubeConfig(ConfigBaseModel):
     deps: list[str] = Field(
         default_factory=list,
         description="App group dependencies (other app-dir names that must be deployed first)",
+    )
+    hooks: dict[str, CommandHooks] | None = Field(
+        default=None,
+        description="명령어별 전역 훅 (예: hooks.prepare.pre, hooks.deploy.post)",
     )
     apps: dict[str, AppConfig] = Field(default_factory=dict)
     global_labels: dict[str, str] = Field(default_factory=dict)

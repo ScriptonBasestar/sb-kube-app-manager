@@ -8,8 +8,8 @@ from sbkube.models.config_model import HelmApp
 class TestBuildV3:
     """build_v3.py 테스트."""
 
-    def test_helm_app_with_overrides(self, tmp_path):
-        """Overrides가 있는 Helm 앱 빌드 검증."""
+    def test_helm_app_with_chart_patches(self, tmp_path):
+        """chart_patches가 있는 Helm 앱 빌드 검증."""
         # 테스트 디렉토리 구조 생성
         charts_dir = tmp_path / "charts" / "grafana" / "grafana"
         charts_dir.mkdir(parents=True)
@@ -21,13 +21,13 @@ class TestBuildV3:
         # Overrides 디렉토리
         overrides_dir = tmp_path / "overrides" / "grafana"
         overrides_dir.mkdir(parents=True)
-        (overrides_dir / "values.yaml").write_text("replicaCount: 3")  # 오버라이드
+        (overrides_dir / "values.yaml").write_text("replicaCount: 3")  # 패치
 
         # HelmApp 설정
         app = HelmApp(
             chart="grafana/grafana",
             version="6.50.0",
-            overrides=["values.yaml"],
+            chart_patches=["values.yaml"],
         )
 
         # build 디렉토리
@@ -96,7 +96,7 @@ class TestBuildV3:
         # HelmApp 설정 (로컬 차트)
         app = HelmApp(
             chart="./my-chart",
-            overrides=["values.yaml"],
+            chart_patches=["values.yaml"],
         )
 
         # Overrides 디렉토리
@@ -124,9 +124,9 @@ class TestBuildV3:
         assert (build_dir / "my-app" / "values.yaml").read_text() == "enabled: false"
 
     def test_helm_app_with_glob_patterns(self, tmp_path):
-        """Glob 패턴을 사용한 Overrides 테스트."""
+        """Glob 패턴을 사용한 chart_patches 테스트."""
         # 테스트 차트 생성
-        chart_dir = tmp_path / "charts" / "ingress" / "ingress-nginx"
+        chart_dir = tmp_path / "charts" / "ingress-nginx" / "ingress-nginx"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: ingress-nginx\nversion: 4.0.0")
         (chart_dir / "templates").mkdir()
@@ -146,7 +146,7 @@ class TestBuildV3:
         app = HelmApp(
             chart="ingress-nginx/ingress-nginx",
             version="4.0.0",
-            overrides=[
+            chart_patches=[
                 "templates/*.yaml",  # 모든 YAML 템플릿
                 "files/*",  # 모든 파일
             ],
@@ -201,7 +201,7 @@ class TestBuildV3:
         # HelmApp 설정 - 혼합 사용
         app = HelmApp(
             chart="my/app",
-            overrides=[
+            chart_patches=[
                 "Chart.yaml",  # 명시적 파일
                 "templates/*.yaml",  # Glob 패턴
             ],

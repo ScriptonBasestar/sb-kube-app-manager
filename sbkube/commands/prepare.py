@@ -22,6 +22,7 @@ from sbkube.utils.cluster_config import (
 )
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
 
@@ -664,9 +665,28 @@ def cmd(
         # 모든 앱 준비 (의존성 순서대로)
         apps_to_prepare = deployment_order
 
+    # Hook executor 초기화
+    hook_executor = HookExecutor(
+        base_dir=BASE_DIR,
+        work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
+        dry_run=dry_run,
+    )
+
+    # ========== 전역 pre-prepare 훅 실행 ==========
+    if config.hooks and "prepare" in config.hooks:
+        prepare_hooks = config.hooks["prepare"].model_dump()
+        if not hook_executor.execute_command_hooks(
+            hook_config=prepare_hooks,
+            hook_phase="pre",
+            command_name="prepare",
+        ):
+            console.print("[red]❌ Pre-prepare hook failed[/red]")
+            raise click.Abort()
+
     # 앱 준비
     success_count = 0
     total_count = len(apps_to_prepare)
+    preparation_failed = False
 
     for app_name in apps_to_prepare:
         app = config.apps[app_name]
@@ -674,6 +694,19 @@ def cmd(
         if not app.enabled:
             console.print(f"[yellow]⏭️  Skipping disabled app: {app_name}[/yellow]")
             continue
+
+        # ========== 앱별 pre-prepare 훅 실행 ==========
+        if hasattr(app, "hooks") and app.hooks:
+            app_hooks = app.hooks.model_dump()
+            if not hook_executor.execute_app_hook(
+                app_name=app_name,
+                app_hooks=app_hooks,
+                hook_type="pre_prepare",
+                context={},
+            ):
+                console.print(f"[red]❌ Pre-prepare hook failed for app: {app_name}[/red]")
+                preparation_failed = True
+                continue
 
         success = False
 
@@ -701,8 +734,43 @@ def cmd(
             )
             success = True  # 건너뛰어도 성공으로 간주
 
+        # ========== 앱별 post-prepare 훅 실행 ==========
+        if hasattr(app, "hooks") and app.hooks:
+            app_hooks = app.hooks.model_dump()
+            if success:
+                # 준비 성공 시 post_prepare 훅 실행
+                hook_executor.execute_app_hook(
+                    app_name=app_name,
+                    app_hooks=app_hooks,
+                    hook_type="post_prepare",
+                    context={},
+                )
+            else:
+                preparation_failed = True
+
         if success:
             success_count += 1
+        else:
+            preparation_failed = True
+
+    # ========== 전역 post-prepare 훅 실행 ==========
+    if config.hooks and "prepare" in config.hooks:
+        prepare_hooks = config.hooks["prepare"].model_dump()
+
+        if preparation_failed:
+            # 준비 실패 시 on_failure 훅 실행
+            hook_executor.execute_command_hooks(
+                hook_config=prepare_hooks,
+                hook_phase="on_failure",
+                command_name="prepare",
+            )
+        else:
+            # 모든 준비 성공 시 post 훅 실행
+            hook_executor.execute_command_hooks(
+                hook_config=prepare_hooks,
+                hook_phase="post",
+                command_name="prepare",
+            )
 
     # 결과 출력
     console.print(

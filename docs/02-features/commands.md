@@ -1251,4 +1251,138 @@ sbkube apply --retry-failed
 
 ---
 
+## 10. `cluster` - 클러스터 상태 관리
+
+**카테고리**: 유틸리티
+
+Kubernetes 클러스터의 전체 상태를 수집하고 로컬에 캐싱합니다.
+
+### 주요 기능
+
+- 클러스터 정보 수집 (API 서버, 버전)
+- 노드 상태 및 역할 조회
+- 네임스페이스 목록 수집
+- Helm 릴리스 상태 조회
+- YAML 형식으로 로컬 캐싱 (TTL: 5분)
+
+### 사용법
+
+```bash
+# 캐시된 상태 표시 (TTL 만료 시 자동 갱신)
+sbkube cluster status
+
+# 특정 디렉토리의 sources.yaml 사용
+sbkube cluster status --base-dir /path/to/config
+
+# 강제 갱신 (캐시 무시하고 실시간 수집)
+sbkube cluster status --refresh
+
+# 10초마다 자동 갱신 (Ctrl+C로 종료)
+sbkube cluster status --watch
+```
+
+### 캐시 파일 위치
+
+캐시 파일은 `sources.yaml`이 있는 디렉토리 아래에 저장됩니다:
+
+```
+{base-dir}/.sbkube/cluster_status/{context}_{cluster}.yaml
+```
+
+**예시:**
+- `sources.yaml` 위치: `/home/user/project/config/sources.yaml`
+- `kubeconfig_context`: `default`
+- `cluster`: `production-k3s`
+- 캐시 파일: `/home/user/project/config/.sbkube/cluster_status/default_production-k3s.yaml`
+
+### 캐시 파일 형식
+
+```yaml
+# 메타데이터
+context: default
+cluster_name: production-k3s
+timestamp: "2025-10-30T10:30:00Z"
+ttl_seconds: 300
+
+# 클러스터 정보
+cluster_info:
+  api_server: https://127.0.0.1:6443
+  version: v1.27.3
+
+# 노드 목록
+nodes:
+  - name: node1
+    status: Ready
+    roles:
+      - control-plane
+    version: v1.27.3
+
+# 네임스페이스 목록
+namespaces:
+  - default
+  - kube-system
+  - my-app
+
+# Helm 릴리스 목록
+helm_releases:
+  - name: redis
+    namespace: data
+    status: deployed
+    chart: redis-18.0.0
+    app_version: 7.2.0
+    revision: 1
+```
+
+### 출력 예시
+
+```bash
+$ sbkube cluster status
+
+Using cached data (collected 1m 23s ago)
+
+Cluster Status: production-k3s (context: default)
+┌─────────────────┬────────────────────────────────┐
+│ Resource        │ Status                         │
+├─────────────────┼────────────────────────────────┤
+│ API Server      │ https://127.0.0.1:6443         │
+│ Kubernetes      │ v1.27.3                        │
+│ Nodes           │ 3 Ready / 3 Total              │
+│ Namespaces      │ 12                             │
+│ Helm Releases   │ 5 (4 deployed, 1 pending)      │
+└─────────────────┴────────────────────────────────┘
+
+Cache file: .sbkube/cluster_status/default_production-k3s.yaml
+Last updated: 1 minute ago
+Cache expires in: 3m 37s
+```
+
+### 옵션
+
+- `--base-dir PATH`: sources.yaml이 있는 디렉토리 (기본값: 현재 디렉토리)
+- `--refresh`: 캐시를 무시하고 강제로 새로 수집
+- `--watch`: 10초마다 자동 갱신 (백그라운드)
+
+### 에러 처리
+
+- `sources.yaml` 파일이 없으면 에러 종료
+- kubectl/helm 명령어 실행 실패 시:
+  - 기존 캐시 파일이 있으면 유지
+  - 경고 메시지 출력 후 기존 캐시 사용
+  - 캐시가 없으면 에러 종료
+
+### 권장 사항
+
+**`.gitignore` 설정:**
+
+캐시 디렉토리는 Git에 포함하지 않는 것을 권장합니다:
+
+```gitignore
+# SBKube cache directory
+.sbkube/
+```
+
+`sbkube init` 명령어를 사용하면 자동으로 추가됩니다.
+
+---
+
 *각 명령어의 더 자세한 사용법은 `sbkube <명령어> --help`를 통해 확인할 수 있습니다.*

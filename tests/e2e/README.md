@@ -115,7 +115,7 @@ kubectl create namespace test-data
 
 ### 외부 의존성
 
-- **실제 Helm Charts**: Bitnami, 공식 차트
+- **실제 Helm Charts**: Grafana, Prometheus 등 오픈소스 차트
 - **Git 저장소**: 실제 GitHub/GitLab 레포지토리
 - **네트워크 접근**: 인터넷 연결 필요
 - **스토리지**: PersistentVolume 지원

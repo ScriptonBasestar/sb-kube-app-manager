@@ -238,6 +238,7 @@ apps:  # 앱 정의 (dict 형식, key = 앱 이름)
     type: <string>   # 앱 타입 (helm, yaml, action, exec, git, http, kustomize)
     enabled: <bool>  # 활성화 여부 (기본: true)
     depends_on: [<string>]  # 의존성 (다른 앱 이름 목록)
+    deps: [<string>]        # 앱 그룹 의존성 (v0.4.9+, depends_on의 별칭)
     # ... 타입별 추가 필드 (평탄화됨, specs 래퍼 없음)
 ```
 
@@ -323,8 +324,13 @@ apps:
 ### 3.2 sources.yaml 스키마
 
 ```yaml
+# 클러스터 설정 (필수, v0.4.10+)
+kubeconfig: <string>           # Kubeconfig 파일 경로 (필수)
+kubeconfig_context: <string>   # Kubectl context 이름 (필수)
+cluster: <string>              # 클러스터 이름 (선택, 문서화 목적)
+
 # Helm 차트 리포지토리 (dict 형식)
-helm:
+helm_repos:
   <repo-name>: <string>  # 저장소 이름: URL 매핑
   # 예:
   # bitnami: https://charts.bitnami.com/bitnami

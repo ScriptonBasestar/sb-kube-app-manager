@@ -8,7 +8,7 @@
 
 ### 버전 정보
 
-- **현재 버전**: 0.3.0
+- **현재 버전**: 0.4.10
 - **타겟 플랫폼**: Kubernetes (k3s 최적화)
 - **런타임**: Python 3.12+
 
@@ -70,7 +70,9 @@ prepare → build → template → deploy
 #### 2. 선언적 설정 기반 관리
 
 - **config.yaml**: 모든 애플리케이션 정의 및 배포 스펙 통합
-- **sources.yaml**: Helm 저장소, Git 리포지토리 중앙 관리
+- **sources.yaml**: Helm 저장소, Git 리포지토리 및 클러스터 설정 중앙 관리
+  - 클러스터 설정 (필수): `kubeconfig`, `kubeconfig_context`
+  - 클러스터 이름 (선택): `cluster` (문서화 목적)
 - **Pydantic 검증**: 런타임 설정 검증 및 명확한 오류 메시지
 
 #### 3. 강력한 상태 관리
@@ -218,4 +220,4 @@ prepare → build → template → deploy
 
 ---
 
-**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **담당자**: archmagece@users.noreply.github.com
+**문서 버전**: 1.1 **마지막 업데이트**: 2025-10-30 **담당자**: archmagece@users.noreply.github.com

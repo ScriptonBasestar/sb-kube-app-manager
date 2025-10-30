@@ -130,6 +130,9 @@ helm repo update bitnami
 
 # sources.yaml 확인
 cat sources.yaml
+# kubeconfig: ~/.kube/config
+# kubeconfig_context: my-cluster
+# cluster: production
 # helm_repos:
 #   bitnami:
 #     url: https://charts.bitnami.com/bitnami
@@ -547,6 +550,10 @@ Error: sources.yaml not found in: ./sources.yaml, ../sources.yaml, ./sources.yam
 
 # sources.yaml 생성
 cat > sources.yaml << 'EOF'
+kubeconfig: ~/.kube/config
+kubeconfig_context: my-cluster
+cluster: production
+
 helm_repos:
   bitnami:
     url: https://charts.bitnami.com/bitnami
@@ -555,6 +562,10 @@ EOF
 # 또는 상위 디렉토리에 생성
 cd ..
 cat > sources.yaml << 'EOF'
+kubeconfig: ~/.kube/config
+kubeconfig_context: my-cluster
+cluster: production
+
 helm_repos:
   bitnami:
     url: https://charts.bitnami.com/bitnami
@@ -841,4 +852,4 @@ sbkube deploy
 
 ---
 
-**작성자**: SBKube Documentation Team **버전**: v0.4.7 **최종 업데이트**: 2025-10-24
+**작성자**: SBKube Documentation Team **버전**: v0.4.10 **최종 업데이트**: 2025-10-30

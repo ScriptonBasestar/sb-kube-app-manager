@@ -77,13 +77,18 @@ cd my-sbkube-project
 
 ```yaml
 # sources.yaml - 외부 소스 정의
-cluster: my-cluster
-kubeconfig: ~/.kube/config
 
+# 클러스터 설정 (필수, v0.4.10+)
+kubeconfig: ~/.kube/config
+kubeconfig_context: my-k3s-cluster
+cluster: my-cluster  # 선택, 문서화 목적
+
+# Helm 리포지토리
 helm_repos:
   bitnami: https://charts.bitnami.com/bitnami
   nginx: https://kubernetes.github.io/ingress-nginx
 
+# Git 리포지토리 (선택)
 git_repos:
   my-app-repo:
     url: https://github.com/example/my-app.git

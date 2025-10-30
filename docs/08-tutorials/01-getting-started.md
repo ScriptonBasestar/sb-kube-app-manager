@@ -123,6 +123,12 @@ apps:
 **`sources.yaml`**:
 
 ```yaml
+# 클러스터 설정 (필수, v0.4.10+)
+kubeconfig: ~/.kube/config
+kubeconfig_context: kind-sbkube-tutorial
+cluster: sbkube-tutorial  # 선택, 문서화 목적
+
+# Helm 리포지토리
 helm_repos:
   bitnami:
     url: https://charts.bitnami.com/bitnami
@@ -364,4 +370,4 @@ kubectl delete namespace tutorial-demo
 
 ---
 
-**작성자**: SBKube Documentation Team **버전**: v0.4.7 **최종 업데이트**: 2025-10-24
+**작성자**: SBKube Documentation Team **버전**: v0.4.10 **최종 업데이트**: 2025-10-30

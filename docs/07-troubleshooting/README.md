@@ -127,6 +127,63 @@ sbkube --kubeconfig /path/to/kubeconfig deploy
 kubectl cluster-info
 ```
 
+---
+
+#### ❌ Context를 찾을 수 없음
+
+```bash
+# 오류 메시지
+❌ Kubernetes context 'my-context' not found in kubeconfig: ~/.kube/config
+
+Available contexts in this kubeconfig:
+  • k3d-cwrapper-local
+  • minikube
+
+📝 Please update sources.yaml with a valid context:
+  kubeconfig_context: <valid-context-name>
+```
+
+**원인**: sources.yaml의 `kubeconfig_context`가 kubeconfig 파일에 존재하지 않음
+
+**해결 방법**:
+
+```bash
+# 1. 사용 가능한 contexts 확인
+kubectl config get-contexts
+
+# 출력 예시:
+# CURRENT   NAME                  CLUSTER               AUTHINFO
+# *         k3d-cwrapper-local    k3d-cwrapper-local    admin@k3d-cwrapper-local
+#           minikube              minikube              minikube
+
+# 2. sources.yaml 수정
+cat > config/sources.yaml <<EOF
+cluster: my-cluster
+kubeconfig: ~/.kube/config
+kubeconfig_context: k3d-cwrapper-local  # ← NAME 컬럼 값 사용
+helm_repos: {}
+EOF
+
+# 3. 배포 재시도
+sbkube deploy --app-dir config --namespace test
+```
+
+**주의사항**:
+
+- `cluster` 필드는 **사람용 레이블**이며, 아무 이름이나 사용 가능
+- `kubeconfig_context`는 **kubectl의 실제 context 이름**이며, 정확히 일치해야 함
+- context 이름은 대소문자를 구분함
+
+**특정 kubeconfig 파일의 contexts 확인**:
+
+```bash
+kubectl config get-contexts --kubeconfig ~/.kube/my-cluster-config
+```
+
+**관련 FAQ**: [cluster vs kubeconfig_context](faq.md#q1-cluster와-kubeconfig_context의-차이는-무엇인가요)
+
+---
+
 #### ❌ 클러스터 접근 권한 부족
 
 ```bash

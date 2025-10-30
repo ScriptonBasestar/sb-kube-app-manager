@@ -291,3 +291,61 @@ def print_kube_connection_help():
             "\nexport KUBECONFIG=~/.kube/<파일명> 명령으로 해당 클러스터에 연결할 수 있습니다.",
         )
     print("")
+
+
+def get_available_contexts(kubeconfig: str | None = None) -> tuple[list[str], str | None]:
+    """kubeconfig 파일에서 사용 가능한 contexts 목록을 가져옵니다.
+
+    Args:
+        kubeconfig: kubeconfig 파일 경로 (None이면 기본값 사용)
+
+    Returns:
+        (contexts, error_message): 성공 시 (["context1", "context2"], None),
+                                   실패 시 ([], "error message")
+    """
+    try:
+        cmd = ["kubectl", "config", "get-contexts", "-o", "name"]
+        if kubeconfig:
+            cmd.extend(["--kubeconfig", kubeconfig])
+
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        contexts = [
+            ctx.strip() for ctx in result.stdout.strip().splitlines() if ctx.strip()
+        ]
+        return (contexts, None)
+
+    except subprocess.CalledProcessError as e:
+        error_msg = e.stderr.strip() if e.stderr else str(e)
+        return ([], error_msg)
+    except Exception as e:
+        return ([], str(e))
+
+
+def validate_context_exists(
+    context: str,
+    kubeconfig: str | None = None,
+) -> tuple[bool, list[str], str | None]:
+    """지정된 context가 kubeconfig에 존재하는지 검증합니다.
+
+    Args:
+        context: 검증할 context 이름
+        kubeconfig: kubeconfig 파일 경로 (None이면 기본값 사용)
+
+    Returns:
+        (exists, available_contexts, error_message):
+            - exists: context가 존재하면 True
+            - available_contexts: 사용 가능한 contexts 목록
+            - error_message: 오류 발생 시 메시지
+    """
+    available_contexts, error_msg = get_available_contexts(kubeconfig)
+
+    if error_msg:
+        return (False, [], error_msg)
+
+    exists = context in available_contexts
+    return (exists, available_contexts, None)

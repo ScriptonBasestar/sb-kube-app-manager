@@ -165,4 +165,38 @@ def resolve_cluster_config(
     console.print(f"  Kubeconfig: {kubeconfig}")
     console.print(f"  Context: {context}")
 
+    # Context 존재 여부 검증
+    from sbkube.utils.cli_check import validate_context_exists
+
+    exists, available_contexts, error_msg = validate_context_exists(
+        context=context,
+        kubeconfig=kubeconfig,
+    )
+
+    if not exists:
+        error_parts = [
+            f"❌ Kubernetes context '{context}' not found in kubeconfig: {kubeconfig}\n\n",
+        ]
+
+        if error_msg:
+            error_parts.append(f"Error reading contexts: {error_msg}\n\n")
+        elif available_contexts:
+            error_parts.append("Available contexts in this kubeconfig:\n")
+            for ctx in available_contexts:
+                error_parts.append(f"  • {ctx}\n")
+            error_parts.append("\n")
+        else:
+            error_parts.append("No contexts found in this kubeconfig.\n\n")
+
+        error_parts.extend(
+            [
+                "📝 Please update sources.yaml with a valid context:\n",
+                "  kubeconfig_context: <valid-context-name>\n\n",
+                "💡 To list available contexts:\n",
+                f"  kubectl config get-contexts --kubeconfig {kubeconfig}\n",
+            ]
+        )
+
+        raise ClusterConfigError("".join(error_parts))
+
     return kubeconfig, context

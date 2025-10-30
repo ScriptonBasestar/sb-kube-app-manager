@@ -1,5 +1,20 @@
 # Chart Patches Example
 
+> ⚠️ **중요: 이 기능은 아직 구현되지 않았습니다**
+>
+> `chart_patches` 기능은 계획 단계이며, 현재 SBKube에 구현되어 있지 않습니다.
+> 이 디렉토리는 미래 기능을 위한 설계 문서 및 예제입니다.
+>
+> **현재 사용 가능한 차트 커스터마이징 기능:**
+> - `overrides`: 차트 템플릿 파일 **교체** ([override-with-files](../override-with-files/) 참조)
+> - `removes`: 차트 템플릿 파일 **삭제** ([override-with-files](../override-with-files/) 참조)
+>
+> **로드맵:** `chart_patches` 기능은 v0.4.0 이후 릴리스에서 구현 예정입니다.
+
+---
+
+## 🔮 계획된 기능: chart_patches
+
 Helm 차트 템플릿 파일을 빌드 시점에 패치하는 방법을 시연합니다.
 
 이 예제는 다음을 보여줍니다:
@@ -10,7 +25,7 @@ Helm 차트 템플릿 파일을 빌드 시점에 패치하는 방법을 시연�
 
 ## 🎯 chart_patches란?
 
-`chart_patches`는 Helm 차트의 템플릿 파일을 빌드 단계에서 수정할 수 있는 기능입니다 (v0.4.0+).
+`chart_patches`는 Helm 차트의 템플릿 파일을 빌드 단계에서 수정할 수 있는 **계획된** 기능입니다 (v0.4.0+ 목표).
 
 ### 사용 시나리오
 

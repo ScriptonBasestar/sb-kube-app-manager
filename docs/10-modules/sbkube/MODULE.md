@@ -50,14 +50,9 @@ sbkube/
 │   ├── delete.py            # 리소스 삭제
 │   ├── validate.py          # 설정 검증
 │   ├── version.py           # 버전 정보
-│   ├── history.py           # 히스토리 조회
-│   ├── config.py            # 설정 관리
-│   ├── profiles.py          # 프로파일 관리
 │   ├── run.py               # 실행 명령
 │   ├── init.py              # 초기화
-│   ├── doctor.py            # 시스템 진단
-│   ├── fix.py               # 자동 수정
-│   └── assistant.py         # 대화형 도우미
+│   └── doctor.py            # 시스템 진단
 ├── models/                  # Pydantic 데이터 모델
 │   ├── config_model.py      # config.yaml 모델
 │   └── sources_model.py     # sources.yaml 모델
@@ -76,10 +71,7 @@ sbkube/
 │   ├── validation_report.py # 검증 리포트
 │   ├── progress_manager.py  # 진행 상태 관리
 │   ├── retry.py             # 재시도 로직
-│   ├── pattern_analyzer.py  # 패턴 분석
-│   ├── profile_loader.py    # 프로파일 로더
-│   ├── profile_manager.py   # 프로파일 관리
-│   └── interactive_assistant.py # 대화형 도우미
+│   └── pattern_analyzer.py  # 패턴 분석
 ├── validators/              # 검증 시스템
 │   ├── basic_validators.py  # 기본 검증
 │   ├── configuration_validators.py # 설정 검증

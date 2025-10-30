@@ -11,6 +11,7 @@ import click
 from rich.console import Console
 
 from sbkube.models.config_model import SBKubeConfig
+from sbkube.utils.common import find_all_app_dirs
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
@@ -21,8 +22,8 @@ console = Console()
 @click.option(
     "--app-dir",
     "app_config_dir_name",
-    default=".",
-    help="앱 설정 디렉토리 (config.yaml 위치, base-dir 기준)",
+    default=None,
+    help="앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
 )
 @click.option(
     "--base-dir",
@@ -69,7 +70,7 @@ console = Console()
 @click.pass_context
 def cmd(
     ctx: click.Context,
-    app_config_dir_name: str,
+    app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
     sources_file_name: str,
@@ -95,161 +96,219 @@ def cmd(
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
-    APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
-    config_file_path = APP_CONFIG_DIR / config_file_name
 
-    # 설정 파일 로드
-    if not config_file_path.exists():
-        console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
-        raise click.Abort()
+    # sources.yaml 로드 (app_dirs 확인용)
+    sources_file_path = BASE_DIR / sources_file_name
+    sources_config = None
+    if sources_file_path.exists():
+        from sbkube.utils.file_loader import load_config_file
+        from sbkube.models.sources_model import SourceScheme
+        try:
+            sources_data = load_config_file(sources_file_path)
+            sources_config = SourceScheme(**sources_data)
+        except Exception as e:
+            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
 
-    console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
-    config_data = load_config_file(config_file_path)
-
-    try:
-        config = SBKubeConfig(**config_data)
-    except Exception as e:
-        console.print(f"[red]❌ Invalid config file: {e}[/red]")
-        raise click.Abort()
-
-    # Hook executor 초기화
-    hook_executor = HookExecutor(
-        base_dir=BASE_DIR,
-        work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
-        dry_run=dry_run,
-    )
-
-    # 글로벌 pre-apply 훅 실행
-    if config.hooks and "apply" in config.hooks:
-        apply_hooks = config.hooks["apply"].model_dump()
-        console.print("[cyan]🪝 Executing global pre-apply hooks...[/cyan]")
-        if not hook_executor.execute_command_hooks(apply_hooks, "pre", "apply"):
-            console.print("[red]❌ Pre-apply hook failed[/red]")
+    # 앱 그룹 디렉토리 결정
+    if app_config_dir_name:
+        # 특정 디렉토리 지정 (--app-dir 옵션)
+        app_config_dirs = [BASE_DIR / app_config_dir_name]
+    elif sources_config and sources_config.app_dirs is not None:
+        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
+        try:
+            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
+            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
+            for app_dir in app_config_dirs:
+                console.print(f"  - {app_dir.name}/")
+        except ValueError as e:
+            console.print(f"[red]❌ {e}[/red]")
             raise click.Abort()
-
-    # 배포 순서 출력
-    deployment_order = config.get_deployment_order()
-    console.print("\n[cyan]📋 Deployment order (based on dependencies):[/cyan]")
-    for idx, app in enumerate(deployment_order, 1):
-        app_config = config.apps[app]
-        deps = getattr(app_config, "depends_on", [])
-        deps_str = f" [depends on: {', '.join(deps)}]" if deps else ""
-        console.print(f"  {idx}. {app} ({app_config.type}){deps_str}")
-
-    # 적용할 앱 필터링
-    if app_name:
-        if app_name not in config.apps:
-            console.print(f"[red]❌ App not found: {app_name}[/red]")
-            raise click.Abort()
-
-        # 의존성 체크: 해당 앱이 의존하는 앱들도 함께 배포해야 함
-        apps_to_apply = []
-        visited = set()
-
-        def collect_dependencies(name: str):
-            if name in visited:
-                return
-            visited.add(name)
-
-            app_cfg = config.apps[name]
-            if hasattr(app_cfg, "depends_on"):
-                for dep in app_cfg.depends_on:
-                    collect_dependencies(dep)
-
-            apps_to_apply.append(name)
-
-        collect_dependencies(app_name)
-        console.print(
-            f"\n[yellow]ℹ️  Including dependencies: {', '.join(apps_to_apply)}[/yellow]"
-        )
     else:
-        apps_to_apply = deployment_order
+        # 자동 탐색 (기존 동작)
+        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
+        if not app_config_dirs:
+            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
+            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
+            raise click.Abort()
 
-    # Step 1: Prepare
-    failed = False
-    try:
-        if not skip_prepare:
-            console.print("\n[bold cyan]📦 Step 1: Prepare[/bold cyan]")
+        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
+        for app_dir in app_config_dirs:
+            console.print(f"  - {app_dir.name}/")
 
-            from sbkube.commands.prepare import cmd as prepare_cmd
+    # 각 앱 그룹 처리
+    overall_success = True
+    for APP_CONFIG_DIR in app_config_dirs:
+        console.print(f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
 
-            # Create new context with parent's obj for kubeconfig/context/sources_file
-            prepare_ctx = click.Context(prepare_cmd, parent=ctx)
-            prepare_ctx.obj = ctx.obj  # Pass parent context object
-            prepare_ctx.invoke(
-                prepare_cmd,
-                app_config_dir_name=app_config_dir_name,
-                base_dir=base_dir,
-                config_file_name=config_file_name,
-                sources_file_name=sources_file_name,
-                app_name=None,  # prepare all (의존성 때문에)
-                force=False,
-                dry_run=dry_run,
-            )
-        else:
-            console.print("\n[yellow]⏭️  Skipping prepare step[/yellow]")
+        # app_config_dir_name을 현재 앱 그룹 이름으로 설정
+        current_app_dir = str(APP_CONFIG_DIR.relative_to(BASE_DIR))
+        config_file_path = APP_CONFIG_DIR / config_file_name
 
-        # Step 2: Build
-        if not skip_build:
-            console.print("\n[bold cyan]🔨 Step 2: Build[/bold cyan]")
+        # 설정 파일 로드
+        if not config_file_path.exists():
+            console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+            overall_success = False
+            continue
 
-            from sbkube.commands.build import cmd as build_cmd
+        console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        config_data = load_config_file(config_file_path)
 
-            # Create new context with parent's obj
-            build_ctx = click.Context(build_cmd, parent=ctx)
-            build_ctx.obj = ctx.obj  # Pass parent context object
-            build_ctx.invoke(
-                build_cmd,
-                app_config_dir_name=app_config_dir_name,
-                base_dir=base_dir,
-                config_file_name=config_file_name,
-                app_name=None,  # build all
-                dry_run=dry_run,
-            )
-        else:
-            console.print("\n[yellow]⏭️  Skipping build step[/yellow]")
+        try:
+            config = SBKubeConfig(**config_data)
+        except Exception as e:
+            console.print(f"[red]❌ Invalid config file: {e}[/red]")
+            overall_success = False
+            continue
 
-        # Step 3: Deploy
-        console.print("\n[bold cyan]🚀 Step 3: Deploy[/bold cyan]")
-
-        from sbkube.commands.deploy import cmd as deploy_cmd
-
-        # Create new context with parent's obj for kubeconfig/context/sources_file
-        deploy_ctx = click.Context(deploy_cmd, parent=ctx)
-        deploy_ctx.obj = ctx.obj  # Pass parent context object
-        deploy_ctx.invoke(
-            deploy_cmd,
-            app_config_dir_name=app_config_dir_name,
-            base_dir=base_dir,
-            config_file_name=config_file_name,
-            app_name=None if not app_name else app_name,  # 지정한 앱만
+        # Hook executor 초기화
+        hook_executor = HookExecutor(
+            base_dir=BASE_DIR,
+            work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
             dry_run=dry_run,
         )
 
-        # 글로벌 post-apply 훅 실행
+        # 글로벌 pre-apply 훅 실행
         if config.hooks and "apply" in config.hooks:
             apply_hooks = config.hooks["apply"].model_dump()
-            console.print("[cyan]🪝 Executing global post-apply hooks...[/cyan]")
-            if not hook_executor.execute_command_hooks(apply_hooks, "post", "apply"):
-                console.print("[red]❌ Post-apply hook failed[/red]")
-                failed = True
+            console.print("[cyan]🪝 Executing global pre-apply hooks...[/cyan]")
+            if not hook_executor.execute_command_hooks(apply_hooks, "pre", "apply"):
+                console.print("[red]❌ Pre-apply hook failed[/red]")
+                overall_success = False
+                continue
 
-    except Exception as e:
-        failed = True
-        # 글로벌 on_failure 훅 실행
-        if config.hooks and "apply" in config.hooks:
-            apply_hooks = config.hooks["apply"].model_dump()
-            console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
-            hook_executor.execute_command_hooks(apply_hooks, "on_failure", "apply")
-        raise
+        # 배포 순서 출력
+        deployment_order = config.get_deployment_order()
+        console.print("\n[cyan]📋 Deployment order (based on dependencies):[/cyan]")
+        for idx, app in enumerate(deployment_order, 1):
+            app_config = config.apps[app]
+            deps = getattr(app_config, "depends_on", [])
+            deps_str = f" [depends on: {', '.join(deps)}]" if deps else ""
+            console.print(f"  {idx}. {app} ({app_config.type}){deps_str}")
 
-    # 실패 시 on_failure 훅 실행
-    if failed:
-        if config.hooks and "apply" in config.hooks:
-            apply_hooks = config.hooks["apply"].model_dump()
-            console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
-            hook_executor.execute_command_hooks(apply_hooks, "on_failure", "apply")
+        # 적용할 앱 필터링
+        if app_name:
+            if app_name not in config.apps:
+                console.print(f"[red]❌ App not found: {app_name}[/red]")
+                overall_success = False
+                continue
+
+            # 의존성 체크: 해당 앱이 의존하는 앱들도 함께 배포해야 함
+            apps_to_apply = []
+            visited = set()
+
+            def collect_dependencies(name: str):
+                if name in visited:
+                    return
+                visited.add(name)
+
+                app_cfg = config.apps[name]
+                if hasattr(app_cfg, "depends_on"):
+                    for dep in app_cfg.depends_on:
+                        collect_dependencies(dep)
+
+                apps_to_apply.append(name)
+
+            collect_dependencies(app_name)
+            console.print(
+                f"\n[yellow]ℹ️  Including dependencies: {', '.join(apps_to_apply)}[/yellow]"
+            )
+        else:
+            apps_to_apply = deployment_order
+
+        # Step 1: Prepare
+        failed = False
+        try:
+            if not skip_prepare:
+                console.print("\n[bold cyan]📦 Step 1: Prepare[/bold cyan]")
+
+                from sbkube.commands.prepare import cmd as prepare_cmd
+
+                # Create new context with parent's obj for kubeconfig/context/sources_file
+                prepare_ctx = click.Context(prepare_cmd, parent=ctx)
+                prepare_ctx.obj = ctx.obj  # Pass parent context object
+                prepare_ctx.invoke(
+                    prepare_cmd,
+                    app_config_dir_name=current_app_dir,
+                    base_dir=base_dir,
+                    config_file_name=config_file_name,
+                    sources_file_name=sources_file_name,
+                    app_name=None,  # prepare all (의존성 때문에)
+                    force=False,
+                    dry_run=dry_run,
+                )
+            else:
+                console.print("\n[yellow]⏭️  Skipping prepare step[/yellow]")
+
+            # Step 2: Build
+            if not skip_build:
+                console.print("\n[bold cyan]🔨 Step 2: Build[/bold cyan]")
+
+                from sbkube.commands.build import cmd as build_cmd
+
+                # Create new context with parent's obj
+                build_ctx = click.Context(build_cmd, parent=ctx)
+                build_ctx.obj = ctx.obj  # Pass parent context object
+                build_ctx.invoke(
+                    build_cmd,
+                    app_config_dir_name=current_app_dir,
+                    base_dir=base_dir,
+                    config_file_name=config_file_name,
+                    app_name=None,  # build all
+                    dry_run=dry_run,
+                )
+            else:
+                console.print("\n[yellow]⏭️  Skipping build step[/yellow]")
+
+            # Step 3: Deploy
+            console.print("\n[bold cyan]🚀 Step 3: Deploy[/bold cyan]")
+
+            from sbkube.commands.deploy import cmd as deploy_cmd
+
+            # Create new context with parent's obj for kubeconfig/context/sources_file
+            deploy_ctx = click.Context(deploy_cmd, parent=ctx)
+            deploy_ctx.obj = ctx.obj  # Pass parent context object
+            deploy_ctx.invoke(
+                deploy_cmd,
+                app_config_dir_name=current_app_dir,
+                base_dir=base_dir,
+                config_file_name=config_file_name,
+                app_name=None if not app_name else app_name,  # 지정한 앱만
+                dry_run=dry_run,
+            )
+
+            # 글로벌 post-apply 훅 실행
+            if config.hooks and "apply" in config.hooks:
+                apply_hooks = config.hooks["apply"].model_dump()
+                console.print("[cyan]🪝 Executing global post-apply hooks...[/cyan]")
+                if not hook_executor.execute_command_hooks(apply_hooks, "post", "apply"):
+                    console.print("[red]❌ Post-apply hook failed[/red]")
+                    failed = True
+
+        except Exception as e:
+            failed = True
+            # 글로벌 on_failure 훅 실행
+            if config.hooks and "apply" in config.hooks:
+                apply_hooks = config.hooks["apply"].model_dump()
+                console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
+                hook_executor.execute_command_hooks(apply_hooks, "on_failure", "apply")
+            overall_success = False
+            console.print(f"[red]❌ App group '{APP_CONFIG_DIR.name}' failed: {e}[/red]")
+            continue
+
+        # 실패 시 on_failure 훅 실행
+        if failed:
+            if config.hooks and "apply" in config.hooks:
+                apply_hooks = config.hooks["apply"].model_dump()
+                console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
+                hook_executor.execute_command_hooks(apply_hooks, "on_failure", "apply")
+            overall_success = False
+            console.print(f"[red]❌ App group '{APP_CONFIG_DIR.name}' failed[/red]")
+        else:
+            console.print(f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' applied successfully![/bold green]")
+
+    # 전체 결과
+    if not overall_success:
+        console.print("\n[bold red]❌ Some app groups failed to apply[/bold red]")
         raise click.Abort()
-
-    # 완료
-    console.print("\n[bold green]🎉 Apply completed successfully![/bold green]")
+    else:
+        console.print("\n[bold green]🎉 All app groups applied successfully![/bold green]")

@@ -34,7 +34,7 @@ from sbkube.utils.cluster_config import (
     apply_cluster_config_to_command,
     resolve_cluster_config,
 )
-from sbkube.utils.common import find_sources_file, run_command
+from sbkube.utils.common import find_all_app_dirs, find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
@@ -498,8 +498,8 @@ def deploy_noop_app(
 @click.option(
     "--app-dir",
     "app_config_dir_name",
-    default=".",
-    help="앱 설정 디렉토리 (config.yaml 위치, base-dir 기준)",
+    default=None,
+    help="앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
 )
 @click.option(
     "--base-dir",
@@ -528,7 +528,7 @@ def deploy_noop_app(
 @click.pass_context
 def cmd(
     ctx: click.Context,
-    app_config_dir_name: str,
+    app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
     app_name: str | None,
@@ -546,242 +546,299 @@ def cmd(
     """
     console.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]")
 
-    # 경로 설정
-    BASE_DIR = Path(base_dir).resolve()
-    APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
-    config_file_path = APP_CONFIG_DIR / config_file_name
-
-    CHARTS_DIR = BASE_DIR / "charts"
-    BUILD_DIR = BASE_DIR / "build"
-
-    # Load sources and resolve cluster configuration
-    sources_file_name = ctx.obj.get("sources_file", "sources.yaml")
-    sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
-
-    sources = None
-    if sources_file_path and sources_file_path.exists():
-        console.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
-        try:
-            from sbkube.models.sources_model import SourceScheme
-
-            sources_data = load_config_file(sources_file_path)
-            sources = SourceScheme(**sources_data)
-        except Exception as e:
-            console.print(f"[red]❌ Invalid sources file: {e}[/red]")
-            raise click.Abort()
-
-    # Resolve cluster configuration
-    try:
-        kubeconfig, context = resolve_cluster_config(
-            cli_kubeconfig=ctx.obj.get("kubeconfig"),
-            cli_context=ctx.obj.get("context"),
-            sources=sources,
-        )
-    except ClusterConfigError as e:
-        console.print(f"[red]{e}[/red]")
-        raise click.Abort()
-
     # kubectl 설치 확인
     check_kubectl_installed_or_exit()
     check_cluster_connectivity_or_exit()
 
-    # 설정 파일 로드
-    if not config_file_path.exists():
-        console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
-        raise click.Abort()
+    # 경로 설정
+    BASE_DIR = Path(base_dir).resolve()
 
-    console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
-    config_data = load_config_file(config_file_path)
+    CHARTS_DIR = BASE_DIR / "charts"
+    BUILD_DIR = BASE_DIR / "build"
 
-    try:
-        config = SBKubeConfig(**config_data)
-    except Exception as e:
-        console.print(f"[red]❌ Invalid config file: {e}[/red]")
-        raise click.Abort()
+    # sources.yaml 로드 (app_dirs 확인용)
+    sources_file_path = BASE_DIR / "sources.yaml"
+    sources_config = None
+    if sources_file_path.exists():
+        from sbkube.utils.file_loader import load_config_file
+        from sbkube.models.sources_model import SourceScheme
+        try:
+            sources_data = load_config_file(sources_file_path)
+            sources_config = SourceScheme(**sources_data)
+        except Exception as e:
+            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
 
-    # 배포 순서 얻기 (의존성 고려)
-    deployment_order = config.get_deployment_order()
-
-    if app_name:
-        # 특정 앱만 배포
-        if app_name not in config.apps:
-            console.print(f"[red]❌ App not found: {app_name}[/red]")
+    # 앱 그룹 디렉토리 결정
+    if app_config_dir_name:
+        # 특정 디렉토리 지정 (--app-dir 옵션)
+        app_config_dirs = [BASE_DIR / app_config_dir_name]
+    elif sources_config and sources_config.app_dirs is not None:
+        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
+        try:
+            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
+            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
+            for app_dir in app_config_dirs:
+                console.print(f"  - {app_dir.name}/")
+        except ValueError as e:
+            console.print(f"[red]❌ {e}[/red]")
             raise click.Abort()
-        apps_to_deploy = [app_name]
     else:
-        # 모든 앱 배포 (의존성 순서대로)
-        apps_to_deploy = deployment_order
-
-    # Hook executor 초기화
-    hook_executor = HookExecutor(
-        base_dir=BASE_DIR,
-        work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
-        dry_run=dry_run,
-    )
-
-    # ========== 전역 pre-deploy 훅 실행 ==========
-    if config.hooks and "deploy" in config.hooks:
-        deploy_hooks = config.hooks["deploy"].model_dump()
-        if not hook_executor.execute_command_hooks(
-            hook_config=deploy_hooks,
-            hook_phase="pre",
-            command_name="deploy",
-        ):
-            console.print("[red]❌ Pre-deploy hook failed[/red]")
+        # 자동 탐색 (기존 동작)
+        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
+        if not app_config_dirs:
+            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
+            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
             raise click.Abort()
 
-    # 앱 배포
-    success_count = 0
-    total_count = len(apps_to_deploy)
-    deployment_failed = False
+        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
+        for app_dir in app_config_dirs:
+            console.print(f"  - {app_dir.name}/")
 
-    for app_name in apps_to_deploy:
-        app = config.apps[app_name]
+    # 각 앱 그룹 처리
+    overall_success = True
+    for APP_CONFIG_DIR in app_config_dirs:
+        console.print(f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
 
-        if not app.enabled:
-            console.print(f"[yellow]⏭️  Skipping disabled app: {app_name}[/yellow]")
+        config_file_path = APP_CONFIG_DIR / config_file_name
+
+        # Load sources and resolve cluster configuration
+        sources_file_name = ctx.obj.get("sources_file", "sources.yaml")
+        sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
+
+        sources = None
+        if sources_file_path and sources_file_path.exists():
+            console.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
+            try:
+                from sbkube.models.sources_model import SourceScheme
+
+                sources_data = load_config_file(sources_file_path)
+                sources = SourceScheme(**sources_data)
+            except Exception as e:
+                console.print(f"[red]❌ Invalid sources file: {e}[/red]")
+                overall_success = False
+                continue
+
+        # Resolve cluster configuration
+        try:
+            kubeconfig, context = resolve_cluster_config(
+                cli_kubeconfig=ctx.obj.get("kubeconfig"),
+                cli_context=ctx.obj.get("context"),
+                sources=sources,
+            )
+        except ClusterConfigError as e:
+            console.print(f"[red]{e}[/red]")
+            overall_success = False
             continue
 
-        # ========== 앱별 pre-deploy 훅 실행 ==========
-        if hasattr(app, "hooks") and app.hooks:
-            app_hooks = app.hooks.model_dump()
-            context = {
-                "namespace": app.namespace if hasattr(app, "namespace") else config.namespace,
-                "release_name": getattr(app, "release_name", None) or app_name,
-            }
-            if not hook_executor.execute_app_hook(
-                app_name=app_name,
-                app_hooks=app_hooks,
-                hook_type="pre_deploy",
-                context=context,
-            ):
-                console.print(f"[red]❌ Pre-deploy hook failed for app: {app_name}[/red]")
-                deployment_failed = True
-                continue
+        # 설정 파일 로드
+        if not config_file_path.exists():
+            console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+            overall_success = False
+            continue
 
-        success = False
+        console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        config_data = load_config_file(config_file_path)
 
         try:
-            if isinstance(app, HelmApp):
-                check_helm_installed_or_exit()
-                success = deploy_helm_app(
-                    app_name,
-                    app,
-                    BASE_DIR,
-                    CHARTS_DIR,
-                    BUILD_DIR,
-                    APP_CONFIG_DIR,
-                    kubeconfig,
-                    context,
-                    dry_run,
-                )
-            elif isinstance(app, YamlApp):
-                success = deploy_yaml_app(
-                    app_name,
-                    app,
-                    BASE_DIR,
-                    APP_CONFIG_DIR,
-                    kubeconfig,
-                    context,
-                    dry_run,
-                )
-            elif isinstance(app, ActionApp):
-                success = deploy_action_app(
-                    app_name,
-                    app,
-                    BASE_DIR,
-                    APP_CONFIG_DIR,
-                    kubeconfig,
-                    context,
-                    dry_run,
-                )
-            elif isinstance(app, ExecApp):
-                success = deploy_exec_app(app_name, app, BASE_DIR, dry_run)
-            elif isinstance(app, KustomizeApp):
-                success = deploy_kustomize_app(
-                    app_name,
-                    app,
-                    BASE_DIR,
-                    APP_CONFIG_DIR,
-                    kubeconfig,
-                    context,
-                    dry_run,
-                )
-            elif isinstance(app, NoopApp):
-                success = deploy_noop_app(
-                    app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run
-                )
-            else:
-                console.print(
-                    f"[yellow]⏭️  Unsupported app type '{app.type}': {app_name}[/yellow]"
-                )
+            config = SBKubeConfig(**config_data)
+        except Exception as e:
+            console.print(f"[red]❌ Invalid config file: {e}[/red]")
+            overall_success = False
+            continue
+
+        # 배포 순서 얻기 (의존성 고려)
+        deployment_order = config.get_deployment_order()
+
+        if app_name:
+            # 특정 앱만 배포
+            if app_name not in config.apps:
+                console.print(f"[red]❌ App not found: {app_name}[/red]")
+                overall_success = False
                 continue
-        except KubernetesConnectionError as exc:
-            console.print(
-                f"[red]❌ Kubernetes cluster connection error detected while processing app: {app_name}[/red]"
-            )
-            if exc.reason:
-                console.print(f"[red]   {exc.reason}[/red]")
-            console.print(
-                "[yellow]💡 Check your cluster connectivity and try again.[/yellow]"
-            )
-            deployment_failed = True
-            raise click.Abort() from exc
+            apps_to_deploy = [app_name]
+        else:
+            # 모든 앱 배포 (의존성 순서대로)
+            apps_to_deploy = deployment_order
 
-        # ========== 앱별 post-deploy 또는 on_deploy_failure 훅 실행 ==========
-        if hasattr(app, "hooks") and app.hooks:
-            app_hooks = app.hooks.model_dump()
-            context = {
-                "namespace": app.namespace if hasattr(app, "namespace") else config.namespace,
-                "release_name": getattr(app, "release_name", None) or app_name,
-            }
+        # Hook executor 초기화
+        hook_executor = HookExecutor(
+            base_dir=BASE_DIR,
+            work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
+            dry_run=dry_run,
+        )
 
-            if success:
-                # 배포 성공 시 post_deploy 훅 실행
-                hook_executor.execute_app_hook(
-                    app_name=app_name,
+        # ========== 전역 pre-deploy 훅 실행 ==========
+        if config.hooks and "deploy" in config.hooks:
+            deploy_hooks = config.hooks["deploy"].model_dump()
+            if not hook_executor.execute_command_hooks(
+                hook_config=deploy_hooks,
+                hook_phase="pre",
+                command_name="deploy",
+            ):
+                console.print("[red]❌ Pre-deploy hook failed[/red]")
+                overall_success = False
+                continue
+
+        # 앱 배포
+        success_count = 0
+        total_count = len(apps_to_deploy)
+        deployment_failed = False
+
+        for app_name_iter in apps_to_deploy:
+            app = config.apps[app_name_iter]
+
+            if not app.enabled:
+                console.print(f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]")
+                continue
+
+            # ========== 앱별 pre-deploy 훅 실행 ==========
+            if hasattr(app, "hooks") and app.hooks:
+                app_hooks = app.hooks.model_dump()
+                hook_context = {
+                    "namespace": app.namespace if hasattr(app, "namespace") else config.namespace,
+                    "release_name": getattr(app, "release_name", None) or app_name_iter,
+                }
+                if not hook_executor.execute_app_hook(
+                    app_name=app_name_iter,
                     app_hooks=app_hooks,
-                    hook_type="post_deploy",
-                    context=context,
+                    hook_type="pre_deploy",
+                    context=hook_context,
+                ):
+                    console.print(f"[red]❌ Pre-deploy hook failed for app: {app_name_iter}[/red]")
+                    deployment_failed = True
+                    continue
+
+            success = False
+
+            try:
+                if isinstance(app, HelmApp):
+                    check_helm_installed_or_exit()
+                    success = deploy_helm_app(
+                        app_name_iter,
+                        app,
+                        BASE_DIR,
+                        CHARTS_DIR,
+                        BUILD_DIR,
+                        APP_CONFIG_DIR,
+                        kubeconfig,
+                        context,
+                        dry_run,
+                    )
+                elif isinstance(app, YamlApp):
+                    success = deploy_yaml_app(
+                        app_name_iter,
+                        app,
+                        BASE_DIR,
+                        APP_CONFIG_DIR,
+                        kubeconfig,
+                        context,
+                        dry_run,
+                    )
+                elif isinstance(app, ActionApp):
+                    success = deploy_action_app(
+                        app_name_iter,
+                        app,
+                        BASE_DIR,
+                        APP_CONFIG_DIR,
+                        kubeconfig,
+                        context,
+                        dry_run,
+                    )
+                elif isinstance(app, ExecApp):
+                    success = deploy_exec_app(app_name_iter, app, BASE_DIR, dry_run)
+                elif isinstance(app, KustomizeApp):
+                    success = deploy_kustomize_app(
+                        app_name_iter,
+                        app,
+                        BASE_DIR,
+                        APP_CONFIG_DIR,
+                        kubeconfig,
+                        context,
+                        dry_run,
+                    )
+                elif isinstance(app, NoopApp):
+                    success = deploy_noop_app(
+                        app_name_iter, app, BASE_DIR, APP_CONFIG_DIR, dry_run
+                    )
+                else:
+                    console.print(
+                        f"[yellow]⏭️  Unsupported app type '{app.type}': {app_name_iter}[/yellow]"
+                    )
+                    continue
+            except KubernetesConnectionError as exc:
+                console.print(
+                    f"[red]❌ Kubernetes cluster connection error detected while processing app: {app_name_iter}[/red]"
                 )
-            else:
-                # 배포 실패 시 on_deploy_failure 훅 실행
-                hook_executor.execute_app_hook(
-                    app_name=app_name,
-                    app_hooks=app_hooks,
-                    hook_type="on_deploy_failure",
-                    context=context,
+                if exc.reason:
+                    console.print(f"[red]   {exc.reason}[/red]")
+                console.print(
+                    "[yellow]💡 Check your cluster connectivity and try again.[/yellow]"
                 )
                 deployment_failed = True
+                overall_success = False
+                break
 
-        if success:
-            success_count += 1
-        else:
-            deployment_failed = True
+            # ========== 앱별 post-deploy 또는 on_deploy_failure 훅 실행 ==========
+            if hasattr(app, "hooks") and app.hooks:
+                app_hooks = app.hooks.model_dump()
+                hook_context = {
+                    "namespace": app.namespace if hasattr(app, "namespace") else config.namespace,
+                    "release_name": getattr(app, "release_name", None) or app_name_iter,
+                }
 
-    # ========== 전역 post-deploy 또는 on_failure 훅 실행 ==========
-    if config.hooks and "deploy" in config.hooks:
-        deploy_hooks = config.hooks["deploy"].model_dump()
+                if success:
+                    # 배포 성공 시 post_deploy 훅 실행
+                    hook_executor.execute_app_hook(
+                        app_name=app_name_iter,
+                        app_hooks=app_hooks,
+                        hook_type="post_deploy",
+                        context=hook_context,
+                    )
+                else:
+                    # 배포 실패 시 on_deploy_failure 훅 실행
+                    hook_executor.execute_app_hook(
+                        app_name=app_name_iter,
+                        app_hooks=app_hooks,
+                        hook_type="on_deploy_failure",
+                        context=hook_context,
+                    )
+                    deployment_failed = True
 
-        if deployment_failed:
-            # 배포 실패 시 on_failure 훅 실행
-            hook_executor.execute_command_hooks(
-                hook_config=deploy_hooks,
-                hook_phase="on_failure",
-                command_name="deploy",
-            )
-        else:
-            # 모든 배포 성공 시 post 훅 실행
-            hook_executor.execute_command_hooks(
-                hook_config=deploy_hooks,
-                hook_phase="post",
-                command_name="deploy",
-            )
+            if success:
+                success_count += 1
+            else:
+                deployment_failed = True
 
-    # 결과 출력
-    console.print(
-        f"\n[bold green]✅ Deploy completed: {success_count}/{total_count} apps[/bold green]"
-    )
+        # ========== 전역 post-deploy 또는 on_failure 훅 실행 ==========
+        if config.hooks and "deploy" in config.hooks:
+            deploy_hooks = config.hooks["deploy"].model_dump()
 
-    if success_count < total_count:
+            if deployment_failed:
+                # 배포 실패 시 on_failure 훅 실행
+                hook_executor.execute_command_hooks(
+                    hook_config=deploy_hooks,
+                    hook_phase="on_failure",
+                    command_name="deploy",
+                )
+            else:
+                # 모든 배포 성공 시 post 훅 실행
+                hook_executor.execute_command_hooks(
+                    hook_config=deploy_hooks,
+                    hook_phase="post",
+                    command_name="deploy",
+                )
+
+        # 이 앱 그룹 결과 출력
+        console.print(
+            f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' deployed: {success_count}/{total_count} apps[/bold green]"
+        )
+
+        if success_count < total_count:
+            overall_success = False
+
+    # 전체 결과
+    if not overall_success:
+        console.print("\n[bold red]❌ Some app groups failed to deploy[/bold red]")
         raise click.Abort()
+    else:
+        console.print("\n[bold green]🎉 All app groups deployed successfully![/bold green]")

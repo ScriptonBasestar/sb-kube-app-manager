@@ -14,7 +14,7 @@ import click
 from rich.console import Console
 
 from sbkube.models.config_model import HelmApp, HttpApp, SBKubeConfig, YamlApp
-from sbkube.utils.common import run_command
+from sbkube.utils.common import find_all_app_dirs, run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
@@ -269,8 +269,8 @@ def template_http_app(
 @click.option(
     "--app-dir",
     "app_config_dir_name",
-    default=".",
-    help="앱 설정 디렉토리 (config.yaml 위치, base-dir 기준)",
+    default=None,
+    help="앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
 )
 @click.option(
     "--base-dir",
@@ -303,7 +303,7 @@ def template_http_app(
     help="Dry-run 모드 (훅 실행 시뮬레이션)",
 )
 def cmd(
-    app_config_dir_name: str,
+    app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
     output_dir_name: str,
@@ -325,176 +325,230 @@ def cmd(
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
-    APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
-    config_file_path = APP_CONFIG_DIR / config_file_name
 
     CHARTS_DIR = BASE_DIR / "charts"
     BUILD_DIR = BASE_DIR / "build"
-    RENDERED_DIR = APP_CONFIG_DIR / output_dir_name
 
-    # rendered 디렉토리 생성
-    RENDERED_DIR.mkdir(parents=True, exist_ok=True)
-    console.print(f"[cyan]📁 Output directory: {RENDERED_DIR}[/cyan]")
+    # sources.yaml 로드 (app_dirs 확인용)
+    sources_file_path = BASE_DIR / "sources.yaml"
+    sources_config = None
+    if sources_file_path.exists():
+        from sbkube.utils.file_loader import load_config_file
+        from sbkube.models.sources_model import SourceScheme
+        try:
+            sources_data = load_config_file(sources_file_path)
+            sources_config = SourceScheme(**sources_data)
+        except Exception as e:
+            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
 
-    # 설정 파일 로드
-    if not config_file_path.exists():
-        console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
-        raise click.Abort()
-
-    console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
-    config_data = load_config_file(config_file_path)
-
-    try:
-        config = SBKubeConfig(**config_data)
-    except Exception as e:
-        console.print(f"[red]❌ Invalid config file: {e}[/red]")
-        raise click.Abort()
-
-    # Hook executor 초기화
-    hook_executor = HookExecutor(
-        base_dir=BASE_DIR,
-        work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
-        dry_run=dry_run,
-    )
-
-    # 글로벌 pre-template 훅 실행
-    if config.hooks and "template" in config.hooks:
-        template_hooks = config.hooks["template"].model_dump()
-        console.print("[cyan]🪝 Executing global pre-template hooks...[/cyan]")
-        if not hook_executor.execute_command_hooks(
-            template_hooks, "pre", "template"
-        ):
-            console.print("[red]❌ Pre-template hook failed[/red]")
+    # 앱 그룹 디렉토리 결정
+    if app_config_dir_name:
+        # 특정 디렉토리 지정 (--app-dir 옵션)
+        app_config_dirs = [BASE_DIR / app_config_dir_name]
+    elif sources_config and sources_config.app_dirs is not None:
+        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
+        try:
+            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
+            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
+            for app_dir in app_config_dirs:
+                console.print(f"  - {app_dir.name}/")
+        except ValueError as e:
+            console.print(f"[red]❌ {e}[/red]")
             raise click.Abort()
-
-    # 배포 순서 얻기 (의존성 고려)
-    deployment_order = config.get_deployment_order()
-
-    if app_name:
-        # 특정 앱만 렌더링
-        if app_name not in config.apps:
-            console.print(f"[red]❌ App not found: {app_name}[/red]")
-            raise click.Abort()
-        apps_to_template = [app_name]
     else:
-        # 모든 앱 렌더링 (의존성 순서대로)
-        apps_to_template = deployment_order
+        # 자동 탐색 (기존 동작)
+        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
+        if not app_config_dirs:
+            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
+            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
+            raise click.Abort()
 
-    # 앱 렌더링
-    success_count = 0
-    total_count = len(apps_to_template)
-    failed = False
+        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
+        for app_dir in app_config_dirs:
+            console.print(f"  - {app_dir.name}/")
 
-    try:
-        for app_name in apps_to_template:
-            app = config.apps[app_name]
+    # 각 앱 그룹 처리
+    overall_success = True
+    for APP_CONFIG_DIR in app_config_dirs:
+        console.print(f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
 
-            if not app.enabled:
-                console.print(f"[yellow]⏭️  Skipping disabled app: {app_name}[/yellow]")
+        config_file_path = APP_CONFIG_DIR / config_file_name
+        RENDERED_DIR = APP_CONFIG_DIR / output_dir_name
+
+        # rendered 디렉토리 생성
+        RENDERED_DIR.mkdir(parents=True, exist_ok=True)
+        console.print(f"[cyan]📁 Output directory: {RENDERED_DIR}[/cyan]")
+
+        # 설정 파일 로드
+        if not config_file_path.exists():
+            console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+            overall_success = False
+            continue
+
+        console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        config_data = load_config_file(config_file_path)
+
+        try:
+            config = SBKubeConfig(**config_data)
+        except Exception as e:
+            console.print(f"[red]❌ Invalid config file: {e}[/red]")
+            overall_success = False
+            continue
+
+        # Hook executor 초기화
+        hook_executor = HookExecutor(
+            base_dir=BASE_DIR,
+            work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
+            dry_run=dry_run,
+        )
+
+        # 글로벌 pre-template 훅 실행
+        if config.hooks and "template" in config.hooks:
+            template_hooks = config.hooks["template"].model_dump()
+            console.print("[cyan]🪝 Executing global pre-template hooks...[/cyan]")
+            if not hook_executor.execute_command_hooks(
+                template_hooks, "pre", "template"
+            ):
+                console.print("[red]❌ Pre-template hook failed[/red]")
+                overall_success = False
                 continue
 
-            # 앱별 pre-template 훅 실행
-            if hasattr(app, "hooks") and app.hooks:
-                console.print(f"[cyan]🪝 Executing pre-template hook for {app_name}...[/cyan]")
-                if not hook_executor.execute_app_hook(
-                    app_name,
-                    app.hooks.model_dump() if app.hooks else None,
-                    "pre_template",
-                    context={"namespace": config.namespace},
-                ):
-                    console.print(f"[red]❌ Pre-template hook failed for {app_name}[/red]")
-                    failed = True
-                    break
+        # 배포 순서 얻기 (의존성 고려)
+        deployment_order = config.get_deployment_order()
 
-            success = False
+        if app_name:
+            # 특정 앱만 렌더링
+            if app_name not in config.apps:
+                console.print(f"[red]❌ App not found: {app_name}[/red]")
+                overall_success = False
+                continue
+            apps_to_template = [app_name]
+        else:
+            # 모든 앱 렌더링 (의존성 순서대로)
+            apps_to_template = deployment_order
 
-            if isinstance(app, HelmApp):
-                success = template_helm_app(
-                    app_name,
-                    app,
-                    BASE_DIR,
-                    CHARTS_DIR,
-                    BUILD_DIR,
-                    APP_CONFIG_DIR,
-                    RENDERED_DIR,
-                )
-            elif isinstance(app, YamlApp):
-                success = template_yaml_app(
-                    app_name, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, RENDERED_DIR
-                )
-            elif isinstance(app, HttpApp):
-                success = template_http_app(
-                    app_name, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, RENDERED_DIR
-                )
-            else:
-                console.print(
-                    f"[yellow]⏭️  App type '{app.type}' does not support template: {app_name}[/yellow]"
-                )
-                success = True  # 건너뛰어도 성공으로 간주
+        # 앱 렌더링
+        success_count = 0
+        total_count = len(apps_to_template)
+        failed = False
 
-            if not success:
-                failed = True
-                # 앱별 on_template_failure 훅 실행
+        try:
+            for app_name_iter in apps_to_template:
+                app = config.apps[app_name_iter]
+
+                if not app.enabled:
+                    console.print(f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]")
+                    continue
+
+                # 앱별 pre-template 훅 실행
                 if hasattr(app, "hooks") and app.hooks:
-                    console.print(f"[yellow]🪝 Executing on-failure hook for {app_name}...[/yellow]")
-                    hook_executor.execute_app_hook(
-                        app_name,
+                    console.print(f"[cyan]🪝 Executing pre-template hook for {app_name_iter}...[/cyan]")
+                    if not hook_executor.execute_app_hook(
+                        app_name_iter,
                         app.hooks.model_dump() if app.hooks else None,
-                        "on_template_failure",
+                        "pre_template",
                         context={"namespace": config.namespace},
-                    )
-                break
+                    ):
+                        console.print(f"[red]❌ Pre-template hook failed for {app_name_iter}[/red]")
+                        failed = True
+                        break
 
-            # 앱별 post-template 훅 실행
-            if hasattr(app, "hooks") and app.hooks:
-                console.print(f"[cyan]🪝 Executing post-template hook for {app_name}...[/cyan]")
-                if not hook_executor.execute_app_hook(
-                    app_name,
-                    app.hooks.model_dump() if app.hooks else None,
-                    "post_template",
-                    context={"namespace": config.namespace},
-                ):
-                    console.print(f"[red]❌ Post-template hook failed for {app_name}[/red]")
+                success = False
+
+                if isinstance(app, HelmApp):
+                    success = template_helm_app(
+                        app_name_iter,
+                        app,
+                        BASE_DIR,
+                        CHARTS_DIR,
+                        BUILD_DIR,
+                        APP_CONFIG_DIR,
+                        RENDERED_DIR,
+                    )
+                elif isinstance(app, YamlApp):
+                    success = template_yaml_app(
+                        app_name_iter, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, RENDERED_DIR
+                    )
+                elif isinstance(app, HttpApp):
+                    success = template_http_app(
+                        app_name_iter, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, RENDERED_DIR
+                    )
+                else:
+                    console.print(
+                        f"[yellow]⏭️  App type '{app.type}' does not support template: {app_name_iter}[/yellow]"
+                    )
+                    success = True  # 건너뛰어도 성공으로 간주
+
+                if not success:
                     failed = True
+                    # 앱별 on_template_failure 훅 실행
+                    if hasattr(app, "hooks") and app.hooks:
+                        console.print(f"[yellow]🪝 Executing on-failure hook for {app_name_iter}...[/yellow]")
+                        hook_executor.execute_app_hook(
+                            app_name_iter,
+                            app.hooks.model_dump() if app.hooks else None,
+                            "on_template_failure",
+                            context={"namespace": config.namespace},
+                        )
                     break
 
-            if success:
-                success_count += 1
+                # 앱별 post-template 훅 실행
+                if hasattr(app, "hooks") and app.hooks:
+                    console.print(f"[cyan]🪝 Executing post-template hook for {app_name_iter}...[/cyan]")
+                    if not hook_executor.execute_app_hook(
+                        app_name_iter,
+                        app.hooks.model_dump() if app.hooks else None,
+                        "post_template",
+                        context={"namespace": config.namespace},
+                    ):
+                        console.print(f"[red]❌ Post-template hook failed for {app_name_iter}[/red]")
+                        failed = True
+                        break
 
-        # 글로벌 post-template 훅 실행 (성공 시에만)
-        if not failed and config.hooks and "template" in config.hooks:
-            template_hooks = config.hooks["template"].model_dump()
-            console.print("[cyan]🪝 Executing global post-template hooks...[/cyan]")
-            if not hook_executor.execute_command_hooks(
-                template_hooks, "post", "template"
-            ):
-                console.print("[red]❌ Post-template hook failed[/red]")
-                failed = True
+                if success:
+                    success_count += 1
 
-    except Exception as e:
-        # 글로벌 on_failure 훅 실행
-        if config.hooks and "template" in config.hooks:
-            template_hooks = config.hooks["template"].model_dump()
-            console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
-            hook_executor.execute_command_hooks(
-                template_hooks, "on_failure", "template"
-            )
-        raise
+            # 글로벌 post-template 훅 실행 (성공 시에만)
+            if not failed and config.hooks and "template" in config.hooks:
+                template_hooks = config.hooks["template"].model_dump()
+                console.print("[cyan]🪝 Executing global post-template hooks...[/cyan]")
+                if not hook_executor.execute_command_hooks(
+                    template_hooks, "post", "template"
+                ):
+                    console.print("[red]❌ Post-template hook failed[/red]")
+                    failed = True
 
-    # 실패 시 on_failure 훅 실행
-    if failed:
-        if config.hooks and "template" in config.hooks:
-            template_hooks = config.hooks["template"].model_dump()
-            console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
-            hook_executor.execute_command_hooks(
-                template_hooks, "on_failure", "template"
-            )
+        except Exception as e:
+            # 글로벌 on_failure 훅 실행
+            if config.hooks and "template" in config.hooks:
+                template_hooks = config.hooks["template"].model_dump()
+                console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
+                hook_executor.execute_command_hooks(
+                    template_hooks, "on_failure", "template"
+                )
+            failed = True
 
-    # 결과 출력
-    console.print(
-        f"\n[bold green]✅ Template completed: {success_count}/{total_count} apps[/bold green]"
-    )
-    console.print(f"[cyan]📁 Rendered files saved to: {RENDERED_DIR}[/cyan]")
+        # 실패 시 on_failure 훅 실행
+        if failed:
+            if config.hooks and "template" in config.hooks:
+                template_hooks = config.hooks["template"].model_dump()
+                console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
+                hook_executor.execute_command_hooks(
+                    template_hooks, "on_failure", "template"
+                )
 
-    if success_count < total_count or failed:
+        # 이 앱 그룹 결과 출력
+        console.print(
+            f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' templated: {success_count}/{total_count} apps[/bold green]"
+        )
+        console.print(f"[cyan]📁 Rendered files saved to: {RENDERED_DIR}[/cyan]")
+
+        if success_count < total_count or failed:
+            overall_success = False
+
+    # 전체 결과
+    if not overall_success:
+        console.print("\n[bold red]❌ Some app groups failed to template[/bold red]")
         raise click.Abort()
+    else:
+        console.print("\n[bold green]🎉 All app groups templated successfully![/bold green]")

@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from sbkube.cli import cli
+from sbkube.cli import main as cli
 
 
 @pytest.fixture
@@ -101,8 +101,12 @@ spec:
     sources_yaml = project_dir / "sources.yaml"
     sources_yaml.write_text(
         """
-bitnami:
-  url: https://charts.bitnami.com/bitnami
+kubeconfig: "~/.kube/config"
+kubeconfig_context: "kind-test"
+
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami
 """
     )
 

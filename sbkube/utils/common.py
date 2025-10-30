@@ -256,6 +256,63 @@ def check_resource_exists(
     return return_code == 0
 
 
+def find_all_app_dirs(base_dir: Path, config_file_name: str = "config.yaml") -> list[Path]:
+    """
+    base_dir 하위의 모든 앱 그룹 디렉토리를 찾습니다.
+
+    config.yaml 파일이 존재하는 모든 하위 디렉토리를 반환합니다.
+    숨김 디렉토리(. 시작)와 시스템 디렉토리는 제외합니다.
+
+    Args:
+        base_dir: 프로젝트 루트 디렉토리
+        config_file_name: 찾을 설정 파일 이름 (기본값: "config.yaml")
+
+    Returns:
+        list[Path]: 앱 그룹 디렉토리 경로 리스트 (정렬됨)
+
+    Example:
+        >>> # 프로젝트 구조:
+        >>> # /project/
+        >>> #   ├── sources.yaml
+        >>> #   ├── redis/config.yaml
+        >>> #   ├── postgres/config.yaml
+        >>> #   └── nginx/config.yaml
+        >>> find_all_app_dirs(Path("/project"))
+        [Path("/project/nginx"), Path("/project/postgres"), Path("/project/redis")]
+    """
+    excluded_dirs = {
+        "charts", "repos", "build", "rendered", "values",
+        ".git", ".venv", "__pycache__", "node_modules",
+        "schemas", "examples", "docs", "tests"
+    }
+
+    app_dirs = []
+
+    if not base_dir.exists() or not base_dir.is_dir():
+        return app_dirs
+
+    for path in base_dir.iterdir():
+        # 디렉토리만 검사
+        if not path.is_dir():
+            continue
+
+        # 숨김 디렉토리 제외
+        if path.name.startswith('.'):
+            continue
+
+        # 시스템 디렉토리 제외
+        if path.name in excluded_dirs:
+            continue
+
+        # config.yaml 존재 확인
+        config_file = path / config_file_name
+        if config_file.exists() and config_file.is_file():
+            app_dirs.append(path)
+
+    # 정렬하여 반환 (일관된 순서)
+    return sorted(app_dirs)
+
+
 def find_sources_file(
     base_dir: Path,
     app_config_dir: Path,

@@ -43,25 +43,28 @@ class EnhancedBaseCommand:
             validate_on_load: Whether to validate configurations on load
             use_inheritance: Whether to enable configuration inheritance
         """
-        self.base_dir = Path(base_dir).resolve()
-        self.app_config_dir = self.base_dir / app_config_dir
+        # 디렉토리 경로 (명령어들과 일관성을 위해 대문자 상수 사용)
+        self.BASE_DIR = Path(base_dir).resolve()
+        self.APP_CONFIG_DIR = self.BASE_DIR / app_config_dir
+
+        # CLI 옵션 및 설정
         self.cli_namespace = cli_namespace
         self.config_file_name = config_file_name
         self.sources_file = sources_file
         self.validate_on_load = validate_on_load
         self.use_inheritance = use_inheritance
 
-        # Common directories
-        self.build_dir = self.app_config_dir / "build"
-        self.values_dir = self.app_config_dir / "values"
-        self.charts_dir = self.base_dir / "charts"
-        self.repos_dir = self.base_dir / "repos"
-        self.schema_dir = self.base_dir / "schemas"
+        # Common directories (명령어들과 일관성을 위해 대문자 상수 사용)
+        self.BUILD_DIR = self.APP_CONFIG_DIR / "build"
+        self.VALUES_DIR = self.APP_CONFIG_DIR / "values"
+        self.CHARTS_DIR = self.BASE_DIR / "charts"
+        self.REPOS_DIR = self.BASE_DIR / "repos"
+        self.SCHEMA_DIR = self.BASE_DIR / "schemas"
 
         # Configuration manager
         self.config_manager = ConfigManager(
-            base_dir=self.base_dir,
-            schema_dir=self.schema_dir if self.schema_dir.exists() else None,
+            base_dir=self.BASE_DIR,
+            schema_dir=self.SCHEMA_DIR if self.SCHEMA_DIR.exists() else None,
         )
 
         # Configuration objects
@@ -80,8 +83,8 @@ class EnhancedBaseCommand:
         """Initialize hook executor after configuration is loaded."""
         if not self.hook_executor:
             self.hook_executor = HookExecutor(
-                base_dir=self.base_dir,
-                working_dir=self.app_config_dir,
+                base_dir=self.BASE_DIR,
+                work_dir=self.APP_CONFIG_DIR,
                 dry_run=dry_run,
             )
 
@@ -129,7 +132,7 @@ class EnhancedBaseCommand:
         """Find configuration file (config.yaml, config.yml, config.toml)."""
         if self.config_file_name:
             # --config-file option specified
-            config_path = self.app_config_dir / self.config_file_name
+            config_path = self.APP_CONFIG_DIR / self.config_file_name
             if not config_path.exists() or not config_path.is_file():
                 logger.error(f"Specified config file not found: {config_path}")
                 raise click.Abort()
@@ -137,12 +140,12 @@ class EnhancedBaseCommand:
         else:
             # Auto-detect
             for ext in [".yaml", ".yml", ".toml"]:
-                candidate = self.app_config_dir / f"config{ext}"
+                candidate = self.APP_CONFIG_DIR / f"config{ext}"
                 if candidate.exists() and candidate.is_file():
                     return candidate
 
             logger.error(
-                f"App config file not found: {self.app_config_dir}/config.[yaml|yml|toml]",
+                f"App config file not found: {self.APP_CONFIG_DIR}/config.[yaml|yml|toml]",
             )
             raise click.Abort()
 
@@ -161,7 +164,7 @@ class EnhancedBaseCommand:
 
             # Load with config manager
             self.app_group = self.config_manager.load_app_config(
-                app_dir=self.app_config_dir.relative_to(self.base_dir),
+                app_dir=self.APP_CONFIG_DIR.relative_to(self.BASE_DIR),
                 config_file=self.config_file_path.name,
                 inherit_from=parent_config,
                 validate=self.validate_on_load,
@@ -353,7 +356,7 @@ class EnhancedBaseCommand:
             cmd,
             error_msg,
             success_msg,
-            self.base_dir,
+            self.BASE_DIR,
             timeout,
         )
 

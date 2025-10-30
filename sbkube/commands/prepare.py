@@ -20,7 +20,7 @@ from sbkube.utils.cluster_config import (
     apply_cluster_config_to_command,
     resolve_cluster_config,
 )
-from sbkube.utils.common import find_sources_file, run_command
+from sbkube.utils.common import find_all_app_dirs, find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
@@ -530,8 +530,8 @@ def prepare_git_app(
 @click.option(
     "--app-dir",
     "app_config_dir_name",
-    default=".",
-    help="앱 설정 디렉토리 (config.yaml 위치, base-dir 기준)",
+    default=None,
+    help="앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
 )
 @click.option(
     "--base-dir",
@@ -572,7 +572,7 @@ def prepare_git_app(
 @click.pass_context
 def cmd(
     ctx: click.Context,
-    app_config_dir_name: str,
+    app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
     sources_file_name: str,
@@ -594,188 +594,243 @@ def cmd(
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
-    APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
-    config_file_path = APP_CONFIG_DIR / config_file_name
 
-    # sources.yaml 찾기 (CLI --source 옵션 또는 --profile 우선)
-    sources_file_name = ctx.obj.get("sources_file", sources_file_name)
-    sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
+    # sources.yaml 로드 (app_dirs 확인용)
+    sources_file_path = BASE_DIR / sources_file_name
+    sources_config = None
+    if sources_file_path.exists():
+        sources_data = load_config_file(sources_file_path)
+        try:
+            sources_config = SourceScheme(**sources_data)
+        except Exception as e:
+            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
 
-    if not sources_file_path:
-        console.print("[red]❌ sources.yaml not found in:[/red]")
-        console.print(f"  - {APP_CONFIG_DIR / sources_file_name}")
-        console.print(f"  - {APP_CONFIG_DIR.parent / sources_file_name}")
-        console.print(f"  - {BASE_DIR / sources_file_name}")
-        raise click.Abort()
-
-    console.print(f"[cyan]📄 Using sources file: {sources_file_path}[/cyan]")
-
-    # sources.yaml 로드 및 클러스터 설정 해석
-    sources_data = load_config_file(sources_file_path)
-    try:
-        sources = SourceScheme(**sources_data)
-    except Exception as e:
-        console.print(f"[red]❌ Invalid sources file: {e}[/red]")
-        raise click.Abort()
-
-    # 클러스터 설정 해석
-    try:
-        kubeconfig, context = resolve_cluster_config(
-            cli_kubeconfig=ctx.obj.get("kubeconfig"),
-            cli_context=ctx.obj.get("context"),
-            sources=sources,
-        )
-    except ClusterConfigError as e:
-        console.print(f"[red]{e}[/red]")
-        raise click.Abort()
-
-    # charts/repos 디렉토리는 sources.yaml이 있는 위치 기준
-    SOURCES_BASE_DIR = sources_file_path.parent
-    CHARTS_DIR = SOURCES_BASE_DIR / "charts"
-    REPOS_DIR = SOURCES_BASE_DIR / "repos"
-
-    # 디렉토리 생성
-    CHARTS_DIR.mkdir(parents=True, exist_ok=True)
-    REPOS_DIR.mkdir(parents=True, exist_ok=True)
-
-    # 설정 파일 로드
-    if not config_file_path.exists():
-        console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
-        raise click.Abort()
-
-    console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
-    config_data = load_config_file(config_file_path)
-
-    try:
-        config = SBKubeConfig(**config_data)
-    except Exception as e:
-        console.print(f"[red]❌ Invalid config file: {e}[/red]")
-        raise click.Abort()
-
-    # 배포 순서 얻기 (의존성 고려)
-    deployment_order = config.get_deployment_order()
-
-    if app_name:
-        # 특정 앱만 준비
-        if app_name not in config.apps:
-            console.print(f"[red]❌ App not found: {app_name}[/red]")
+    # 앱 그룹 디렉토리 결정
+    if app_config_dir_name:
+        # 특정 디렉토리 지정 (--app-dir 옵션)
+        app_config_dirs = [BASE_DIR / app_config_dir_name]
+    elif sources_config and sources_config.app_dirs is not None:
+        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
+        try:
+            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
+            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
+            for app_dir in app_config_dirs:
+                console.print(f"  - {app_dir.name}/")
+        except ValueError as e:
+            console.print(f"[red]❌ {e}[/red]")
             raise click.Abort()
-        apps_to_prepare = [app_name]
     else:
-        # 모든 앱 준비 (의존성 순서대로)
-        apps_to_prepare = deployment_order
-
-    # Hook executor 초기화
-    hook_executor = HookExecutor(
-        base_dir=BASE_DIR,
-        work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
-        dry_run=dry_run,
-    )
-
-    # ========== 전역 pre-prepare 훅 실행 ==========
-    if config.hooks and "prepare" in config.hooks:
-        prepare_hooks = config.hooks["prepare"].model_dump()
-        if not hook_executor.execute_command_hooks(
-            hook_config=prepare_hooks,
-            hook_phase="pre",
-            command_name="prepare",
-        ):
-            console.print("[red]❌ Pre-prepare hook failed[/red]")
+        # 자동 탐색 (기존 동작)
+        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
+        if not app_config_dirs:
+            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
+            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
             raise click.Abort()
 
-    # 앱 준비
-    success_count = 0
-    total_count = len(apps_to_prepare)
-    preparation_failed = False
+        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
+        for app_dir in app_config_dirs:
+            console.print(f"  - {app_dir.name}/")
 
-    for app_name in apps_to_prepare:
-        app = config.apps[app_name]
+    # 각 앱 그룹 처리
+    overall_success = True
+    for APP_CONFIG_DIR in app_config_dirs:
+        console.print(f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
 
-        if not app.enabled:
-            console.print(f"[yellow]⏭️  Skipping disabled app: {app_name}[/yellow]")
+        config_file_path = APP_CONFIG_DIR / config_file_name
+
+        # sources.yaml 찾기 (CLI --source 옵션 또는 --profile 우선)
+        sources_file_name_resolved = ctx.obj.get("sources_file", sources_file_name)
+        sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name_resolved)
+
+        if not sources_file_path:
+            console.print("[red]❌ sources.yaml not found in:[/red]")
+            console.print(f"  - {APP_CONFIG_DIR / sources_file_name_resolved}")
+            console.print(f"  - {APP_CONFIG_DIR.parent / sources_file_name_resolved}")
+            console.print(f"  - {BASE_DIR / sources_file_name_resolved}")
+            overall_success = False
             continue
 
-        # ========== 앱별 pre-prepare 훅 실행 ==========
-        if hasattr(app, "hooks") and app.hooks:
-            app_hooks = app.hooks.model_dump()
-            if not hook_executor.execute_app_hook(
-                app_name=app_name,
-                app_hooks=app_hooks,
-                hook_type="pre_prepare",
-                context={},
+        console.print(f"[cyan]📄 Using sources file: {sources_file_path}[/cyan]")
+
+        # sources.yaml 로드 및 클러스터 설정 해석
+        sources_data = load_config_file(sources_file_path)
+        try:
+            sources = SourceScheme(**sources_data)
+        except Exception as e:
+            console.print(f"[red]❌ Invalid sources file: {e}[/red]")
+            overall_success = False
+            continue
+
+        # 클러스터 설정 해석
+        try:
+            kubeconfig, context = resolve_cluster_config(
+                cli_kubeconfig=ctx.obj.get("kubeconfig"),
+                cli_context=ctx.obj.get("context"),
+                sources=sources,
+            )
+        except ClusterConfigError as e:
+            console.print(f"[red]{e}[/red]")
+            overall_success = False
+            continue
+
+        # charts/repos 디렉토리는 sources.yaml이 있는 위치 기준
+        SOURCES_BASE_DIR = sources_file_path.parent
+        CHARTS_DIR = SOURCES_BASE_DIR / "charts"
+        REPOS_DIR = SOURCES_BASE_DIR / "repos"
+
+        # 디렉토리 생성
+        CHARTS_DIR.mkdir(parents=True, exist_ok=True)
+        REPOS_DIR.mkdir(parents=True, exist_ok=True)
+
+        # 설정 파일 로드
+        if not config_file_path.exists():
+            console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+            overall_success = False
+            continue
+
+        console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        config_data = load_config_file(config_file_path)
+
+        try:
+            config = SBKubeConfig(**config_data)
+        except Exception as e:
+            console.print(f"[red]❌ Invalid config file: {e}[/red]")
+            overall_success = False
+            continue
+
+        # 배포 순서 얻기 (의존성 고려)
+        deployment_order = config.get_deployment_order()
+
+        if app_name:
+            # 특정 앱만 준비
+            if app_name not in config.apps:
+                console.print(f"[red]❌ App not found: {app_name}[/red]")
+                overall_success = False
+                continue
+            apps_to_prepare = [app_name]
+        else:
+            # 모든 앱 준비 (의존성 순서대로)
+            apps_to_prepare = deployment_order
+
+        # Hook executor 초기화
+        hook_executor = HookExecutor(
+            base_dir=BASE_DIR,
+            work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
+            dry_run=dry_run,
+        )
+
+        # ========== 전역 pre-prepare 훅 실행 ==========
+        if config.hooks and "prepare" in config.hooks:
+            prepare_hooks = config.hooks["prepare"].model_dump()
+            if not hook_executor.execute_command_hooks(
+                hook_config=prepare_hooks,
+                hook_phase="pre",
+                command_name="prepare",
             ):
-                console.print(f"[red]❌ Pre-prepare hook failed for app: {app_name}[/red]")
-                preparation_failed = True
+                console.print("[red]❌ Pre-prepare hook failed[/red]")
+                overall_success = False
                 continue
 
-        success = False
+        # 앱 준비
+        success_count = 0
+        total_count = len(apps_to_prepare)
+        preparation_failed = False
 
-        if isinstance(app, HelmApp):
-            success = prepare_helm_app(
-                app_name,
-                app,
-                BASE_DIR,
-                CHARTS_DIR,
-                sources_file_path,
-                kubeconfig,
-                context,
-                force,
-                dry_run,
-            )
-        elif isinstance(app, GitApp):
-            success = prepare_git_app(
-                app_name, app, BASE_DIR, REPOS_DIR, sources_file_path, force, dry_run
-            )
-        elif isinstance(app, HttpApp):
-            success = prepare_http_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
-        else:
-            console.print(
-                f"[yellow]⏭️  App type '{app.type}' does not require prepare: {app_name}[/yellow]"
-            )
-            success = True  # 건너뛰어도 성공으로 간주
+        for app_name_iter in apps_to_prepare:
+            app = config.apps[app_name_iter]
 
-        # ========== 앱별 post-prepare 훅 실행 ==========
-        if hasattr(app, "hooks") and app.hooks:
-            app_hooks = app.hooks.model_dump()
-            if success:
-                # 준비 성공 시 post_prepare 훅 실행
-                hook_executor.execute_app_hook(
-                    app_name=app_name,
+            if not app.enabled:
+                console.print(f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]")
+                continue
+
+            # ========== 앱별 pre-prepare 훅 실행 ==========
+            if hasattr(app, "hooks") and app.hooks:
+                app_hooks = app.hooks.model_dump()
+                if not hook_executor.execute_app_hook(
+                    app_name=app_name_iter,
                     app_hooks=app_hooks,
-                    hook_type="post_prepare",
+                    hook_type="pre_prepare",
                     context={},
+                ):
+                    console.print(f"[red]❌ Pre-prepare hook failed for app: {app_name_iter}[/red]")
+                    preparation_failed = True
+                    continue
+
+            success = False
+
+            if isinstance(app, HelmApp):
+                success = prepare_helm_app(
+                    app_name_iter,
+                    app,
+                    BASE_DIR,
+                    CHARTS_DIR,
+                    sources_file_path,
+                    kubeconfig,
+                    context,
+                    force,
+                    dry_run,
                 )
+            elif isinstance(app, GitApp):
+                success = prepare_git_app(
+                    app_name_iter, app, BASE_DIR, REPOS_DIR, sources_file_path, force, dry_run
+                )
+            elif isinstance(app, HttpApp):
+                success = prepare_http_app(app_name_iter, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+            else:
+                console.print(
+                    f"[yellow]⏭️  App type '{app.type}' does not require prepare: {app_name_iter}[/yellow]"
+                )
+                success = True  # 건너뛰어도 성공으로 간주
+
+            # ========== 앱별 post-prepare 훅 실행 ==========
+            if hasattr(app, "hooks") and app.hooks:
+                app_hooks = app.hooks.model_dump()
+                if success:
+                    # 준비 성공 시 post_prepare 훅 실행
+                    hook_executor.execute_app_hook(
+                        app_name=app_name_iter,
+                        app_hooks=app_hooks,
+                        hook_type="post_prepare",
+                        context={},
+                    )
+                else:
+                    preparation_failed = True
+
+            if success:
+                success_count += 1
             else:
                 preparation_failed = True
 
-        if success:
-            success_count += 1
-        else:
-            preparation_failed = True
+        # ========== 전역 post-prepare 훅 실행 ==========
+        if config.hooks and "prepare" in config.hooks:
+            prepare_hooks = config.hooks["prepare"].model_dump()
 
-    # ========== 전역 post-prepare 훅 실행 ==========
-    if config.hooks and "prepare" in config.hooks:
-        prepare_hooks = config.hooks["prepare"].model_dump()
+            if preparation_failed:
+                # 준비 실패 시 on_failure 훅 실행
+                hook_executor.execute_command_hooks(
+                    hook_config=prepare_hooks,
+                    hook_phase="on_failure",
+                    command_name="prepare",
+                )
+            else:
+                # 모든 준비 성공 시 post 훅 실행
+                hook_executor.execute_command_hooks(
+                    hook_config=prepare_hooks,
+                    hook_phase="post",
+                    command_name="prepare",
+                )
 
-        if preparation_failed:
-            # 준비 실패 시 on_failure 훅 실행
-            hook_executor.execute_command_hooks(
-                hook_config=prepare_hooks,
-                hook_phase="on_failure",
-                command_name="prepare",
-            )
-        else:
-            # 모든 준비 성공 시 post 훅 실행
-            hook_executor.execute_command_hooks(
-                hook_config=prepare_hooks,
-                hook_phase="post",
-                command_name="prepare",
-            )
+        # 이 앱 그룹 결과 출력
+        console.print(
+            f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' prepared: {success_count}/{total_count} apps[/bold green]"
+        )
 
-    # 결과 출력
-    console.print(
-        f"\n[bold green]✅ Prepare completed: {success_count}/{total_count} apps[/bold green]"
-    )
+        if success_count < total_count:
+            overall_success = False
 
-    if success_count < total_count:
+    # 전체 결과
+    if not overall_success:
+        console.print("\n[bold red]❌ Some app groups failed to prepare[/bold red]")
         raise click.Abort()
+    else:
+        console.print("\n[bold green]🎉 All app groups prepared successfully![/bold green]")

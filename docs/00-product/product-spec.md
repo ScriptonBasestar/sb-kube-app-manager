@@ -27,11 +27,11 @@
 **사용자 시나리오**:
 
 ```
-개발자 Alice는 Bitnami Redis 차트를 사용하려고 합니다.
-1. sources.yaml에 Bitnami Helm 저장소 추가
+개발자 Alice는 Grafana 차트를 사용하려고 합니다.
+1. sources.yaml에 Grafana Helm 저장소 추가
 2. config.yaml에 helm 타입 앱 정의
 3. sbkube prepare 실행
-→ charts/redis 디렉토리에 차트 다운로드 완료
+→ charts/grafana 디렉토리에 차트 다운로드 완료
 ```
 
 **입력**:

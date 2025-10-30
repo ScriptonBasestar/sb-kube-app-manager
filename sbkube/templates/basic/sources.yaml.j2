@@ -1,3 +1,31 @@
+# ===== Cluster Configuration =====
+# These settings define how SBKube connects to your Kubernetes cluster
+
+# cluster: Human-readable cluster identifier (optional, for documentation/logging)
+#   - Displayed in logs and cache directories
+#   - Does NOT need to match kubeconfig cluster name
+#   - Example: "dev-k3s", "production-eks", "staging-gke"
+cluster: {{ cluster }}
+
+# kubeconfig: Path to your kubeconfig file (required)
+#   - Absolute or relative path to kubeconfig
+#   - Supports ~ (home directory) expansion
+#   - Example: ~/.kube/config, ~/.kube/my-cluster
+kubeconfig: {{ kubeconfig }}
+
+# kubeconfig_context: Kubectl context name (required, must match exactly)
+#   - The NAME value from: kubectl config get-contexts
+#   - Passed to helm --kube-context and kubectl --context
+#   - Must exist in the kubeconfig file above
+#   - Example: "default", "minikube", "arn:aws:eks:..."
+#
+# 💡 To find available contexts:
+#    kubectl config get-contexts --kubeconfig {{ kubeconfig }}
+kubeconfig_context: {{ kubeconfig_context }}
+
+# ===== External Sources =====
+# Helm repositories and Git repositories for your applications
+
 helm_repos:
 {%- if use_grafana %}
   grafana: https://grafana.github.io/helm-charts

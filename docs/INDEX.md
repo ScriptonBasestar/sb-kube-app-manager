@@ -40,8 +40,8 @@
 
 ### 🔍 [문제 해결](07-troubleshooting/)
 
-- 일반적인 문제 및 해결책
-- 자주 묻는 질문 (FAQ)
+- [일반적인 문제 및 해결책](07-troubleshooting/README.md)
+- [자주 묻는 질문 (FAQ)](07-troubleshooting/faq.md)
 - 디버깅 가이드
 
 ### 📚 [튜토리얼](08-tutorials/)

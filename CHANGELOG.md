@@ -1,5 +1,8 @@
 # Changelog - SBKube
 
+> **참고**: 이 문서의 과거 버전 예제에는 Bitnami 차트 참조가 포함되어 있습니다.
+> 현재 버전(v0.4.10+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
+
 ## [0.4.10] - 2025-10-29
 
 ### ✨ Features

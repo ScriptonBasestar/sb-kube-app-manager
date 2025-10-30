@@ -1,7 +1,11 @@
-namespace: chart-patches-demo
+namespace: advanced-overrides-demo
+
+# ⚠️ 주의: 이 파일은 미래 기능에 대한 API 예제입니다
+# chart_patches 필드는 아직 구현되지 않았습니다 (v0.6.0+ 계획)
+# 현재는 overrides와 removes만 사용 가능합니다
 
 apps:
-  # Helm 차트에 패치를 적용하는 예제
+  # Helm 차트에 고급 패치를 적용하는 예제 (미래 API)
   grafana:
     type: helm
     enabled: true

@@ -143,7 +143,7 @@ sbkube apply --app-dir examples/app-types/01-helm --app grafana
 # Step 1: Helm 차트 다운로드
 sbkube prepare --app-dir examples/app-types/01-helm
 
-# Step 2: 빌드 (chart_patches, overrides, removes 적용)
+# Step 2: 빌드 (overrides, removes 적용)
 sbkube build --app-dir examples/app-types/01-helm
 
 # Step 3: 템플릿 생성 (dry-run)

@@ -65,7 +65,7 @@ console = Console()
     "--skip-build",
     is_flag=True,
     default=False,
-    help="build 단계 건너뛰기 (chart_patches/removes가 없는 경우)",
+    help="build 단계 건너뛰기 (overrides/removes가 없는 경우)",
 )
 @click.pass_context
 def cmd(
@@ -84,7 +84,7 @@ def cmd(
 
     전체 워크플로우를 한 번에 실행합니다:
     1. prepare: 외부 리소스 준비 (Helm chart pull, Git clone, HTTP download 등)
-    2. build: 차트 커스터마이징 (chart_patches, removes 적용)
+    2. build: 차트 커스터마이징 (overrides, removes 적용)
     3. deploy: Kubernetes 클러스터에 배포
 
     의존성(depends_on)을 자동으로 해결하여 올바른 순서로 배포합니다.

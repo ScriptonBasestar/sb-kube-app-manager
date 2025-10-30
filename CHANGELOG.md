@@ -1,9 +1,35 @@
 # Changelog - SBKube
 
 > **참고**: 이 문서의 과거 버전 예제에는 Bitnami 차트 참조가 포함되어 있습니다.
-> 현재 버전(v0.4.10+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
+> 현재 버전(v0.5.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
 
 ## [Unreleased] - 2025-10-30
+
+### 🔥 Breaking Changes
+
+**CLI 옵션 이름 변경**
+
+이 릴리스에서는 CLI 옵션의 일관성과 명확성을 위해 두 가지 주요 옵션 이름이 변경되었습니다:
+
+1. **`--env` → `--profile`** (모든 명령어)
+   - 환경 프로파일을 지정하는 옵션명이 더 명확하게 변경되었습니다
+   - 기존: `sbkube deploy --env production`
+   - 신규: `sbkube deploy --profile production`
+   - 영향: `sbkube --env` 옵션을 사용하는 모든 스크립트
+
+2. **`--sources` → `--source`** (prepare, apply 명령어)
+   - 단수형 옵션명으로 변경하여 CLI 관례를 따르도록 개선
+   - 기존: `sbkube prepare --sources custom-sources.yaml`
+   - 신규: `sbkube prepare --source custom-sources.yaml`
+   - 영향: `prepare`, `apply` 명령어에서 `--sources` 옵션을 사용하는 스크립트
+
+**마이그레이션 가이드**
+- 모든 스크립트와 자동화 도구에서 위 옵션명을 업데이트해야 합니다
+- 내부 변수명(`sources_file`, `sources_file_name`)은 변경되지 않았습니다
+- 설정 파일(`config.yaml`, `sources.yaml`)은 변경할 필요가 없습니다
+- 하위 호환성은 제공되지 않습니다 (hard breaking change)
+
+**버전 업데이트**: Breaking change로 인해 마이너 버전이 0.5.0으로 상향됩니다.
 
 ### ✨ Features
 

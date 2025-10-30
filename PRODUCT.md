@@ -96,7 +96,7 @@ prepare → build → template → deploy
 
 ## 프로젝트 정보
 
-- **버전**: v0.4.10
+- **버전**: v0.5.0
 - **라이선스**: MIT
 - **저장소**: [github.com/ScriptonBasestar/kube-app-manaer](https://github.com/ScriptonBasestar/kube-app-manaer)
 - **PyPI**: [pypi.org/project/sbkube](https://pypi.org/project/sbkube/)
@@ -105,7 +105,7 @@ prepare → build → template → deploy
 
 ## 변경 이력
 
-- **현재 버전**: v0.4.10
+- **현재 버전**: v0.5.0
   - [CHANGELOG.md](CHANGELOG.md) - 전체 변경 이력
   - [Migration Guide](docs/MIGRATION.md) - v0.2.x에서 마이그레이션 가이드
 

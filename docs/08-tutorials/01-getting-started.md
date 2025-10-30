@@ -366,4 +366,4 @@ kubectl delete namespace tutorial-demo
 
 ---
 
-**작성자**: SBKube Documentation Team **버전**: v0.4.10 **최종 업데이트**: 2025-10-30
+**작성자**: SBKube Documentation Team **버전**: v0.5.0 **최종 업데이트**: 2025-10-31

@@ -5,18 +5,13 @@ import click
 
 from sbkube.commands import (
     apply,
-    assistant,
     build,
     cluster,
-    config,
     delete,
     deploy,
     doctor,
-    fix,
-    history,
     init,
     prepare,
-    profiles,
     state,
     template,
     upgrade,
@@ -158,15 +153,8 @@ main.add_command(upgrade.cmd)
 main.add_command(delete.cmd)
 main.add_command(validate.cmd)
 main.add_command(version.cmd)
-main.add_command(config.cmd)
 main.add_command(state.state)
-main.add_command(profiles.cmd)
-main.add_command(history.cmd)
-main.add_command(history.diagnose_cmd)
 main.add_command(doctor.cmd)
-main.add_command(fix.cmd)
-main.add_command(assistant.cmd)
-main.add_command(assistant.history_cmd)
 main.add_command(cluster.cluster)
 
 

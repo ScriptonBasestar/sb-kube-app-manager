@@ -1,0 +1,22 @@
+# OCI Registry Example Configuration
+# This example demonstrates pulling Helm charts from OCI registries
+
+apps:
+  # TrueCharts Browserless (OCI Registry)
+  browserless:
+    type: helm
+    enabled: true
+    chart: browserless/browserless-chrome
+    version: "1.0.0"  # Specify version if needed
+    values:
+      - values/browserless.yaml
+
+  # Another OCI chart example (gabe565 charts)
+  uptime-kuma:
+    type: helm
+    enabled: true
+    chart: gabe565/uptime-kuma
+    values:
+      - values/uptime-kuma.yaml
+
+namespace: devops

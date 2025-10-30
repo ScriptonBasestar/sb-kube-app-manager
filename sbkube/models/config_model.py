@@ -108,6 +108,20 @@ class HelmApp(ConfigBaseModel):
         # chart만 있는 경우는 로컬로 간주
         return False
 
+    def is_oci_chart(self) -> bool:
+        """
+        OCI 레지스트리 chart 여부 판단.
+
+        Returns:
+            True if chart가 OCI 레지스트리를 사용하는 경우
+        """
+        # OCI 프로토콜로 시작하는 경우
+        if self.chart.startswith("oci://"):
+            return True
+        # repo 이름이 sources.yaml의 oci_registries에 있는 경우
+        # (이 검증은 prepare.py에서 수행)
+        return False
+
     def get_repo_name(self) -> str | None:
         """
         repo 이름 추출 (remote chart만).

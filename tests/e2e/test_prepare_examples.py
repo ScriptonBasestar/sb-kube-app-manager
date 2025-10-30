@@ -15,7 +15,6 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 class TestPrepareExamples:
     """Test prepare command with various example configurations."""
 
-    @pytest.mark.skip(reason="examples/prepare/helm-oci directory does not exist")
     def test_prepare_pull_helm_oci(self, runner, examples_dir, tmp_path):
         """
         Test prepare with OCI Helm chart pulling.

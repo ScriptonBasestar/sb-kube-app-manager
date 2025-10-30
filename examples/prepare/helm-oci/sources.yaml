@@ -1,0 +1,21 @@
+# OCI Registry Sources Example
+# This demonstrates how to configure OCI registries in sources.yaml
+
+cluster: test-cluster
+kubeconfig: ~/.kube/config
+kubeconfig_context: docker-desktop
+
+# Standard Helm repositories
+helm_repos: {}
+
+# OCI Registries (no helm repo add needed)
+oci_registries:
+  # TrueCharts OCI Registry
+  browserless:
+    registry: oci://tccr.io/truecharts
+    # username: optional
+    # password: optional
+
+  # Gabe565 Charts (GitHub Container Registry)
+  gabe565:
+    registry: oci://ghcr.io/gabe565/charts

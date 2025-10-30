@@ -3,6 +3,69 @@
 > **참고**: 이 문서의 과거 버전 예제에는 Bitnami 차트 참조가 포함되어 있습니다.
 > 현재 버전(v0.4.10+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
 
+## [Unreleased] - 2025-10-30
+
+### ✨ Features
+
+- **OCI 레지스트리 지원** (`sbkube/commands/prepare.py`)
+  - Helm OCI 레지스트리에서 차트 직접 pull 가능
+  - `oci_registries` 섹션을 sources.yaml에서 인식
+  - `helm repo add` 없이 OCI 프로토콜로 직접 다운로드
+  - TrueCharts, GitHub Container Registry 등 지원
+
+### 🔧 Improvements
+
+- **HelmApp 모델 확장** (`sbkube/models/config_model.py`)
+  - `is_oci_chart()` 메서드 추가
+  - OCI 프로토콜 감지 기능
+
+- **prepare 명령어 개선**
+  - `prepare_oci_chart()` 함수 추가
+  - OCI와 일반 Helm 레지스트리 자동 구분
+  - 더 명확한 오류 메시지 (힌트 포함)
+
+### 📚 Documentation
+
+- **트러블슈팅 가이드 업데이트** ([docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md))
+  - OCI 레지스트리 오류 케이스 추가
+  - Deprecated Helm 저장소 해결 방법
+  - sources.yaml 설정 오류 가이드
+
+- **OCI 예제 추가** ([examples/prepare/helm-oci/](examples/prepare/helm-oci/))
+  - OCI 레지스트리 사용 예제
+  - sources.yaml 설정 샘플
+  - README.md with 사용 가이드
+
+### 🧪 Testing
+
+- **E2E 테스트 활성화**
+  - `test_prepare_pull_helm_oci` 테스트 skip 해제
+  - OCI 차트 pull 검증
+
+### 🐛 Bug Fixes
+
+- **일반적인 오류 케이스 해결**
+  - Helm repo가 sources.yaml에 없을 때 명확한 안내
+  - OCI 레지스트리와 일반 Helm repo 구분
+  - Deprecated 저장소 사용 시 가이드 제공
+
+### 📝 Usage Example
+
+```yaml
+# sources.yaml
+oci_registries:
+  browserless:
+    registry: oci://tccr.io/truecharts
+  gabe565:
+    registry: oci://ghcr.io/gabe565/charts
+
+# config.yaml
+apps:
+  browserless:
+    type: helm
+    chart: browserless/browserless-chrome
+```
+
 ## [0.4.10] - 2025-10-29
 
 ### ✨ Features

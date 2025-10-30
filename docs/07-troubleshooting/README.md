@@ -277,6 +277,98 @@ helm search repo grafana/grafana
 cat sources.yaml
 ```
 
+#### ❌ Helm repo가 sources.yaml에 없음
+
+```bash
+# 오류 메시지
+❌ Helm repo 'browserless' not found in sources.yaml
+```
+
+**원인:**
+1. **OCI 레지스트리 사용 시**: `helm_repos` 대신 `oci_registries`에 있어야 함
+2. **레포지토리 이름 오타**: sources.yaml과 config.yaml의 이름 불일치
+3. **Deprecated 저장소 사용**: 더 이상 지원되지 않는 Helm 저장소
+
+**해결 방법:**
+
+**케이스 1: OCI 레지스트리 차트**
+```yaml
+# sources.yaml
+oci_registries:
+  browserless:
+    registry: oci://tccr.io/truecharts
+  gabe565:
+    registry: oci://ghcr.io/gabe565/charts
+
+# config.yaml
+apps:
+  browserless:
+    type: helm
+    chart: browserless/browserless-chrome
+```
+
+**케이스 2: 레포지토리 이름 오타**
+```yaml
+# ❌ 잘못된 예시
+# sources.yaml
+helm_repos:
+  corecentric: https://codecentric.github.io/helm-charts  # 오타
+
+# config.yaml
+apps:
+  mailhog:
+    chart: codecentric/mailhog  # 철자 다름
+
+# ✅ 올바른 예시
+# sources.yaml
+helm_repos:
+  codecentric: https://codecentric.github.io/helm-charts
+
+# config.yaml
+apps:
+  mailhog:
+    chart: codecentric/mailhog
+```
+
+**케이스 3: Deprecated 저장소**
+```yaml
+# ❌ 잘못된 예시 (Helm Stable은 2020년에 deprecated)
+helm_repos:
+  kubernetes-charts: https://charts.helm.sh/stable
+
+apps:
+  descheduler:
+    chart: kubernetes-charts/descheduler
+
+# ✅ 올바른 예시
+helm_repos:
+  descheduler: https://kubernetes-sigs.github.io/descheduler/
+
+apps:
+  descheduler:
+    chart: descheduler/descheduler
+```
+
+**검증 명령어:**
+```bash
+# 1. OCI 레지스트리 확인
+helm pull oci://tccr.io/truecharts/browserless-chrome --version 1.0.0 --untar
+
+# 2. Helm 저장소 확인
+helm repo add codecentric https://codecentric.github.io/helm-charts
+helm repo update
+helm search repo codecentric/
+
+# 3. sources.yaml 구조 확인
+cat sources.yaml | grep -A 5 "oci_registries:"
+cat sources.yaml | grep -A 5 "helm_repos:"
+```
+
+**참고:**
+- OCI 레지스트리는 `helm repo add` 없이 직접 pull 가능
+- 2020년 이후 Helm Stable (kubernetes-charts)은 사용 불가
+- 차트별 공식 저장소는 [Artifact Hub](https://artifacthub.io/)에서 확인
+
 #### ❌ 네임스페이스가 존재하지 않음
 
 ```bash

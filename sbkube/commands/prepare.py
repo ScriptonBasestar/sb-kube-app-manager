@@ -42,6 +42,125 @@ def parse_helm_chart(chart: str) -> tuple[str, str]:
     return parts[0], parts[1]
 
 
+def prepare_oci_chart(
+    app_name: str,
+    app: HelmApp,
+    charts_dir: Path,
+    oci_sources: dict,
+    repo_name: str,
+    chart_name: str,
+    kubeconfig: str | None = None,
+    context: str | None = None,
+    force: bool = False,
+    dry_run: bool = False,
+) -> bool:
+    """
+    OCI 레지스트리에서 Helm 차트를 Pull합니다.
+
+    OCI 레지스트리는 helm repo add/update가 필요없이
+    helm pull oci://registry/chart 형식으로 직접 다운로드합니다.
+
+    Args:
+        app_name: 앱 이름
+        app: HelmApp 설정
+        charts_dir: charts 디렉토리
+        oci_sources: sources.yaml의 oci_registries 섹션
+        repo_name: 레지스트리 이름 (sources.yaml 키)
+        chart_name: 차트 이름
+        kubeconfig: kubeconfig 경로
+        context: kubectl context
+        force: 기존 차트 덮어쓰기
+        dry_run: dry-run 모드
+
+    Returns:
+        성공 여부
+    """
+    console.print(f"[cyan]📦 Preparing OCI chart: {app_name}[/cyan]")
+
+    # OCI 레지스트리 설정 가져오기
+    oci_config = oci_sources[repo_name]
+    if isinstance(oci_config, dict):
+        registry_url = oci_config.get("registry")
+        username = oci_config.get("username")
+        password = oci_config.get("password")
+    else:
+        # 구버전 호환: 단순 URL string
+        registry_url = oci_config
+        username = None
+        password = None
+
+    if not registry_url:
+        console.print(f"[red]❌ Missing 'registry' for OCI registry: {repo_name}[/red]")
+        return False
+
+    # OCI URL 구성
+    # registry_url 형식: "oci://tccr.io/truecharts" 또는 "tccr.io/truecharts"
+    if not registry_url.startswith("oci://"):
+        registry_url = f"oci://{registry_url}"
+
+    oci_chart_url = f"{registry_url}/{chart_name}"
+
+    # 인증이 필요한 경우 (추후 구현)
+    if username and password:
+        console.print("[yellow]⚠️ OCI registry authentication is not yet supported[/yellow]")
+        console.print("[yellow]   Using public registry access[/yellow]")
+
+    # Chart pull
+    dest_dir = charts_dir / chart_name
+    chart_yaml = dest_dir / chart_name / "Chart.yaml"
+
+    # Check if chart already exists (skip if not --force)
+    if chart_yaml.exists() and not force:
+        console.print(
+            f"[yellow]⏭️  Chart already exists, skipping: {chart_name}[/yellow]"
+        )
+        console.print("    Use --force to re-download")
+        return True
+
+    if dry_run:
+        console.print(
+            f"[yellow]🔍 [DRY-RUN] Would pull OCI chart: {oci_chart_url} → {dest_dir}[/yellow]"
+        )
+        if app.version:
+            console.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]")
+        if force:
+            console.print(
+                "[yellow]🔍 [DRY-RUN] Would remove existing chart (--force)[/yellow]"
+            )
+    else:
+        # If force flag is set, remove existing chart directory
+        if force and dest_dir.exists():
+            console.print(
+                f"[yellow]⚠️  Removing existing chart (--force): {dest_dir}[/yellow]"
+            )
+            shutil.rmtree(dest_dir)
+
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        console.print(f"  Pulling OCI chart: {oci_chart_url} → {dest_dir}")
+        cmd = [
+            "helm",
+            "pull",
+            oci_chart_url,
+            "--untar",
+            "--untardir",
+            str(dest_dir),
+        ]
+
+        if app.version:
+            cmd.extend(["--version", app.version])
+
+        cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
+        return_code, stdout, stderr = run_command(cmd)
+
+        if return_code != 0:
+            console.print(f"[red]❌ Failed to pull OCI chart: {stderr}[/red]")
+            return False
+
+    console.print(f"[green]✅ OCI chart prepared: {app_name}[/green]")
+    return True
+
+
 def prepare_helm_app(
     app_name: str,
     app: HelmApp,
@@ -57,6 +176,7 @@ def prepare_helm_app(
     Helm 앱 준비 (chart pull).
 
     로컬 차트는 prepare 단계를 건너뜁니다.
+    OCI 레지스트리와 일반 Helm 레지스트리를 모두 지원합니다.
 
     Args:
         app_name: 앱 이름
@@ -90,10 +210,30 @@ def prepare_helm_app(
 
     sources = load_config_file(sources_file)
     helm_sources = sources.get("helm_repos", {})
+    oci_sources = sources.get("oci_registries", {})
 
+    # OCI 레지스트리 체크 (우선순위)
+    if repo_name in oci_sources:
+        return prepare_oci_chart(
+            app_name=app_name,
+            app=app,
+            charts_dir=charts_dir,
+            oci_sources=oci_sources,
+            repo_name=repo_name,
+            chart_name=chart_name,
+            kubeconfig=kubeconfig,
+            context=context,
+            force=force,
+            dry_run=dry_run,
+        )
+
+    # 일반 Helm 레지스트리 체크
     if repo_name not in helm_sources:
         console.print(
             f"[red]❌ Helm repo '{repo_name}' not found in sources.yaml[/red]"
+        )
+        console.print(
+            f"[yellow]💡 Tip: Check if '{repo_name}' exists in either helm_repos or oci_registries[/yellow]"
         )
         return False
 
@@ -437,7 +577,7 @@ def cmd(
     APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
     config_file_path = APP_CONFIG_DIR / config_file_name
 
-    # sources.yaml 찾기 (CLI --sources 옵션 또는 --env 우선)
+    # sources.yaml 찾기 (CLI --sources 옵션 또는 --profile 우선)
     sources_file_name = ctx.obj.get("sources_file", sources_file_name)
     sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
 

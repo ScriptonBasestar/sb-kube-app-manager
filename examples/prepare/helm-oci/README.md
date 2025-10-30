@@ -27,8 +27,14 @@ oci_registries:
 apps:
   browserless:
     type: helm
-    chart: browserless/browserless-chrome  # repo_name/chart_name
+    repo: browserless  # OCI registry name from sources.yaml
+    chart: browserless-chrome  # Chart name only (not repo/chart)
+    version: "1.0.0"
 ```
+
+**Important**: Unlike traditional Helm repos, you specify:
+- `repo:` - OCI registry name (as defined in sources.yaml)
+- `chart:` - Chart name only (without registry prefix)
 
 ## Usage
 

@@ -1,0 +1,8 @@
+# sources.yaml - Dependency Chain Example
+
+kubeconfig: ~/.kube/config
+kubeconfig_context: default
+
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami

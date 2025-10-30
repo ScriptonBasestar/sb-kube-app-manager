@@ -1,0 +1,16 @@
+# Prometheus override values (환경별 오버라이드)
+# 이 파일은 prometheus-values-base.yaml을 덮어씀
+
+server:
+  # 개발 환경: 리소스 줄임
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # 개발 환경: 영속성 비활성화
+  persistentVolume:
+    enabled: false

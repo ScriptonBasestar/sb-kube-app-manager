@@ -1,0 +1,31 @@
+# Strategic Merge Patch: Deployment에 사이드카 컨테이너 추가
+
+spec:
+  template:
+    spec:
+      containers:
+      # 기존 컨테이너는 유지되고, 이 컨테이너가 추가됨
+      - name: log-forwarder
+        image: fluent/fluent-bit:2.0
+        args:
+          - -c
+          - /fluent-bit/etc/fluent-bit.conf
+        volumeMounts:
+          - name: varlog
+            mountPath: /var/log
+          - name: fluent-bit-config
+            mountPath: /fluent-bit/etc
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+
+      volumes:
+      - name: varlog
+        emptyDir: {}
+      - name: fluent-bit-config
+        configMap:
+          name: fluent-bit-config

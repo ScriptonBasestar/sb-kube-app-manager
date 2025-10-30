@@ -1,0 +1,16 @@
+namespace: multi-app-demo
+
+apps:
+  # Frontend application using Nginx
+  nginx-frontend:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: nginx
+    version: "18.2.4"
+
+    set_values:
+      - service.type=LoadBalancer
+      - replicaCount=2
+      - resources.requests.cpu=100m
+      - resources.requests.memory=128Mi

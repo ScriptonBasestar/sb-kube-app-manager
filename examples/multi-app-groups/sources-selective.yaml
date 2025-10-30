@@ -1,0 +1,16 @@
+# sources-selective.yaml - Multi-App Groups with Selective Deployment
+# app_dirs를 사용하여 특정 그룹만 선택적으로 배포합니다.
+
+kubeconfig: ~/.kube/config
+kubeconfig_context: default
+
+# 선택적 배포 (v0.5.0+)
+# frontend와 database만 배포하고, backend는 제외
+app_dirs:
+  - frontend
+  - database
+  # backend는 이번 배포에서 제외됨
+
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami

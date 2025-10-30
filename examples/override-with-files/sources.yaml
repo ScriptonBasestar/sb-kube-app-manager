@@ -1,0 +1,7 @@
+cluster: docker-desktop
+kubeconfig: ~/.kube/config
+kubeconfig_context: docker-desktop
+
+helm_repos:
+  ingress-nginx:
+    url: https://kubernetes.github.io/ingress-nginx

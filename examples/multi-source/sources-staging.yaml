@@ -1,0 +1,23 @@
+# sources-staging.yaml - Staging Environment
+# 스테이징 환경: 프로덕션과 유사한 환경
+
+cluster: staging-k3s
+kubeconfig: ~/.kube/config-staging
+kubeconfig_context: staging
+
+# Helm 리포지토리
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami
+
+# OCI 리포지토리
+oci_repos:
+  ghcr:
+    registry: ghcr.io
+    # auth_required: true  # 스테이징: 인증 필요
+
+# 스테이징 환경 특성:
+# - 전용 클러스터
+# - 프로덕션과 유사한 리소스
+# - 모니터링 활성화
+# - 영속성 활성화 (테스트용)

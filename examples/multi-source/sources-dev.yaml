@@ -1,0 +1,23 @@
+# sources-dev.yaml - Development Environment
+# 개발 환경: 로컬 Minikube/Kind 클러스터
+
+cluster: dev-k3s
+kubeconfig: ~/.kube/config
+kubeconfig_context: minikube
+
+# Helm 리포지토리 (모든 환경 공통)
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami
+
+# OCI 리포지토리 (선택적)
+oci_repos:
+  ghcr:
+    registry: ghcr.io
+    # auth_required: false  # 개발 환경: public 이미지만
+
+# 개발 환경 특성:
+# - 로컬 클러스터 (Minikube)
+# - 리소스 제한 낮음
+# - 디버그 모드 활성화
+# - 영속성 비활성화

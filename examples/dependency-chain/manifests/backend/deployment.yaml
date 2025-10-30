@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-api
+  namespace: dependency-demo
+  labels:
+    app: backend-api
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-api
+  template:
+    metadata:
+      labels:
+        app: backend-api
+        tier: backend
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine  # 실제로는 백엔드 API 이미지 사용
+        ports:
+        - containerPort: 8080
+          name: http
+        envFrom:
+        - configMapRef:
+            name: backend-config
+        env:
+        - name: DATABASE_USER
+          value: "appuser"
+        - name: DATABASE_PASSWORD
+          value: "secret123"  # 실제로는 Secret 사용
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5

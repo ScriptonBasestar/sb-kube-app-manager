@@ -1,0 +1,12 @@
+# sources.yaml - Default (Development) Environment
+# 기본 sources 파일 (명시적 지정 없을 때 사용)
+
+cluster: default-k3s
+kubeconfig: ~/.kube/config
+kubeconfig_context: default
+
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami
+
+# 기본 환경은 개발 환경과 동일

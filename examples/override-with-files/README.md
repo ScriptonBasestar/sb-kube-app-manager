@@ -1,14 +1,23 @@
-# Override with Files Example
+# Override with Files & Removes Example
 
-이 예제는 Helm 차트에 **새 파일을 추가**하는 방법을 보여줍니다.
+이 예제는 Helm 차트를 커스터마이징하는 두 가지 방법을 보여줍니다:
+
+1. **overrides**: 차트에 새 파일 추가 또는 기존 파일 교체
+2. **removes**: 차트의 불필요한 파일 삭제
 
 ## 📋 시나리오
 
-Ingress Nginx 차트에:
+Ingress Nginx 차트 커스터마이징:
 
+### ✅ overrides 사용
 1. 새 ConfigMap 템플릿 추가 (`templates/custom-configmap.yaml`)
-1. 커스텀 index.html 파일 추가 (`files/index.html`)
-1. ConfigMap에서 `.Files.Get`으로 파일 참조
+2. 커스텀 index.html 파일 추가 (`files/index.html`)
+3. ConfigMap에서 `.Files.Get`으로 파일 참조
+
+### ❌ removes 사용
+1. 테스트 파일 제거 (`templates/tests/`)
+2. Helm 설치 메시지 제거 (`templates/NOTES.txt`)
+3. 사용하지 않는 리소스 제거
 
 ## 📁 파일 구조
 
@@ -311,7 +320,9 @@ kubectl get pods -n default -l app.kubernetes.io/name=nginx
 
 ## 🎯 핵심 포인트
 
-### ✅ Override의 두 가지 역할
+### ✅ Overrides: 파일 추가/교체
+
+**두 가지 역할**:
 
 1. **기존 파일 덮어쓰기**
 
@@ -320,13 +331,66 @@ kubectl get pods -n default -l app.kubernetes.io/name=nginx
      - templates/deployment.yaml  # 차트의 기본 템플릿 교체
    ```
 
-1. **새 파일 추가**
+2. **새 파일 추가**
 
    ```yaml
    overrides:
      - templates/custom-configmap.yaml  # 차트에 없던 새 템플릿
      - files/index.html                 # 차트에 없던 새 파일
    ```
+
+### ❌ Removes: 불필요한 파일 삭제 (v0.4.0+)
+
+**주요 사용 사례**:
+
+```yaml
+removes:
+  # 1. 테스트 파일 제거 (프로덕션 배포 시)
+  - templates/tests/test-connection.yaml
+  - templates/tests/
+
+  # 2. 데모/예제 리소스 제거
+  - templates/demo-*.yaml
+  - templates/examples/
+
+  # 3. 사용하지 않는 CRD 제거
+  - crds/example-crd.yaml
+
+  # 4. Helm 설치 메시지 제거
+  - templates/NOTES.txt
+
+  # 5. 보안상 불필요한 ServiceAccount 제거
+  - templates/serviceaccount.yaml
+```
+
+**overrides vs removes 비교**:
+
+| 기능 | overrides | removes |
+|------|-----------|---------|
+| 목적 | 파일 추가/교체 | 파일 삭제 |
+| 실행 시점 | `sbkube build` | `sbkube build` |
+| 소스 필요 | 필요 (`overrides/` 디렉토리) | 불필요 (경로만 지정) |
+| Glob 패턴 | 지원 (v0.4.9+) | 지원 (v0.4.9+) |
+| Use case | 커스텀 템플릿 추가 | 불필요한 파일 제거 |
+
+**실전 예시**:
+
+```yaml
+apps:
+  nginx:
+    type: helm
+    chart: nginx
+    repo: bitnami
+
+    # 커스텀 템플릿 추가
+    overrides:
+      - templates/custom-ingress.yaml
+
+    # 불필요한 테스트 제거
+    removes:
+      - templates/tests/
+      - templates/NOTES.txt
+```
 
 ### ⚠️ .Files.Get 사용 시 주의사항
 

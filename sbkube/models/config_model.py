@@ -129,7 +129,7 @@ class HelmApp(ConfigBaseModel):
     values: list[str] = Field(default_factory=list)  # values 파일 목록
 
     # 커스터마이징
-    chart_patches: list[str] = Field(
+    overrides: list[str] = Field(
         default_factory=list,
         description="Chart customization files from overrides/ directory"
     )

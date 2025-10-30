@@ -1,0 +1,124 @@
+namespace: dependency-demo
+
+apps:
+  # Phase 1: 인프라 준비 (검증)
+  verify-cluster:
+    type: exec
+    commands:
+      - echo "=== Phase 1: Infrastructure Verification ==="
+      - kubectl version --client
+      - kubectl cluster-info
+      - kubectl get nodes
+      - echo "✅ Cluster verification completed"
+
+  # Phase 2: 스토리지 준비
+  setup-storage:
+    type: action
+    depends_on:
+      - verify-cluster
+    actions:
+      - type: apply
+        path: manifests/storage/storageclass.yaml
+      - type: apply
+        path: manifests/storage/pvc.yaml
+
+  # Phase 3: 데이터베이스 배포 (Helm)
+  postgresql:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: postgresql
+    version: "16.2.4"
+    depends_on:
+      - setup-storage
+    set_values:
+      - auth.database=appdb
+      - auth.username=appuser
+      - auth.password=secret123
+      - primary.persistence.existingClaim=postgres-pvc
+      - primary.resources.requests.memory=256Mi
+
+  # Phase 4: 캐시 레이어 배포
+  redis:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: redis
+    version: "19.0.0"
+    depends_on:
+      - verify-cluster  # postgresql과 병렬 실행 가능
+    set_values:
+      - architecture=standalone
+      - auth.enabled=false
+      - master.resources.requests.memory=128Mi
+
+  # Phase 5: 데이터베이스 초기화 (스키마 생성)
+  init-database:
+    type: exec
+    depends_on:
+      - postgresql
+    commands:
+      - echo "=== Phase 5: Database Initialization ==="
+      - sleep 10  # DB가 완전히 시작될 때까지 대기
+      - kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql -n dependency-demo --timeout=120s
+      - echo "✅ Database is ready"
+      - echo "-- Initializing schema (simulated)"
+      - echo "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(100));" > /tmp/schema.sql
+      - echo "✅ Database initialization completed"
+
+  # Phase 6: 백엔드 API 배포
+  backend-api:
+    type: yaml
+    manifests:
+      - manifests/backend/deployment.yaml
+      - manifests/backend/service.yaml
+      - manifests/backend/configmap.yaml
+    depends_on:
+      - postgresql
+      - redis
+      - init-database
+
+  # Phase 7: 프론트엔드 배포
+  frontend:
+    type: yaml
+    manifests:
+      - manifests/frontend/deployment.yaml
+      - manifests/frontend/service.yaml
+    depends_on:
+      - backend-api
+
+  # Phase 8: Ingress 설정
+  ingress:
+    type: yaml
+    manifests:
+      - manifests/ingress.yaml
+    depends_on:
+      - frontend
+
+  # Phase 9: 최종 검증
+  verify-deployment:
+    type: exec
+    depends_on:
+      - ingress
+    commands:
+      - echo "=== Phase 9: Final Verification ==="
+      - kubectl get all -n dependency-demo
+      - kubectl wait --for=condition=ready pod -l app=backend-api -n dependency-demo --timeout=120s
+      - kubectl wait --for=condition=ready pod -l app=frontend -n dependency-demo --timeout=120s
+      - echo "✅ All components deployed successfully"
+      - echo ""
+      - echo "Deployment Summary:"
+      - kubectl get pods -n dependency-demo -o wide
+      - echo ""
+      - kubectl get svc -n dependency-demo
+
+  # Optional: 모니터링 설정 (enabled: false)
+  setup-monitoring:
+    type: exec
+    enabled: false  # 필요시 활성화
+    depends_on:
+      - verify-deployment
+    commands:
+      - echo "=== Setting up monitoring ==="
+      - kubectl apply -f manifests/monitoring/servicemonitor.yaml
+      - echo "✅ Monitoring configured"

@@ -95,7 +95,7 @@ def build_helm_app(
     overrides_base = app_config_dir / "overrides" / app_name
 
     # 3.1. Warn if override directory exists but not configured
-    if overrides_base.exists() and overrides_base.is_dir() and not app.chart_patches:
+    if overrides_base.exists() and overrides_base.is_dir() and not app.overrides:
         console.print()
         console.print(
             f"[yellow]⚠️  Override directory found but not configured: {app_name}[/yellow]"
@@ -124,7 +124,7 @@ def build_helm_app(
             "[yellow]    💡 To apply these overrides, add to config.yaml:[/yellow]"
         )
         console.print(f"[yellow]       {app_name}:[/yellow]")
-        console.print("[yellow]         chart_patches:[/yellow]")
+        console.print("[yellow]         overrides:[/yellow]")
         if override_files:
             # Show up to 3 files with full path mapping explanation
             for i, f in enumerate(override_files[:3]):
@@ -140,9 +140,9 @@ def build_helm_app(
                 )
         console.print()
 
-    # 3.2. Apply chart patches if configured
-    if app.chart_patches:
-        console.print(f"  Processing {len(app.chart_patches)} chart patch patterns...")
+    # 3.2. Apply overrides if configured
+    if app.overrides:
+        console.print(f"  Processing {len(app.overrides)} override patterns...")
 
         if not overrides_base.exists():
             console.print(
@@ -151,7 +151,7 @@ def build_helm_app(
         else:
             total_files_copied = 0
 
-            for override_pattern in app.chart_patches:
+            for override_pattern in app.overrides:
                 # Check if pattern contains glob wildcards
                 if "*" in override_pattern or "?" in override_pattern:
                     # Glob pattern - match multiple files
@@ -472,7 +472,7 @@ def cmd(
 
             if isinstance(app, HelmApp):
                 # Helm 앱만 빌드 (커스터마이징 필요)
-                if app.chart_patches or app.removes or app.is_remote_chart():
+                if app.overrides or app.removes or app.is_remote_chart():
                     success = build_helm_app(
                         app_name_iter,
                         app,

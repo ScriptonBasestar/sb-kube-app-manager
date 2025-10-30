@@ -79,15 +79,15 @@ class TestHelmApp:
         assert app.is_remote_chart() is False
         assert app.get_chart_name() == "backend"
 
-    def test_helm_app_with_chart_patches(self):
-        """Test HelmApp with chart_patches and removes."""
+    def test_helm_app_with_overrides(self):
+        """Test HelmApp with overrides and removes."""
         app = HelmApp(
             type="helm",
             chart="grafana/grafana",
-            chart_patches=["configmap.yaml", "secret.yaml"],
+            overrides=["configmap.yaml", "secret.yaml"],
             removes=["tests/*", "docs/*"],
         )
-        assert app.chart_patches == ["configmap.yaml", "secret.yaml"]
+        assert app.overrides == ["configmap.yaml", "secret.yaml"]
         assert app.removes == ["tests/*", "docs/*"]
 
     def test_helm_app_with_namespace_override(self):

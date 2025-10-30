@@ -4,16 +4,55 @@ apps:
   # 원격 Helm 차트 예제 - Grafana (공식)
   grafana:
     type: helm
-    chart: grafana/grafana
+    enabled: true
+    repo: grafana  # Helm repository name from sources.yaml
+    chart: grafana
     version: "10.1.2"
+
+    # 기본 values 파일 사용
     values:
       - grafana-values.yaml
-    wait: false          # Helm이 준비 완료를 기다리지 않도록 설정 (기본값은 true)
+
+    # CLI에서 개별 값 오버라이드 (v0.4.0+)
+    # values 파일보다 우선순위가 높음
+    set_values:
+      - adminPassword=admin123
+      - service.type=LoadBalancer
+      - persistence.enabled=false
+
+    # 사용자 지정 릴리스 이름 (v0.4.0+)
+    # 기본값: {namespace}-{app_name} → helm-demo-grafana
+    release_name: my-custom-grafana
+
+    # Helm이 준비 완료를 기다리지 않도록 설정
+    wait: false
 
   # 차트 커스터마이징 예제 - Prometheus (공식)
   prometheus:
     type: helm
-    chart: prometheus-community/prometheus
+    enabled: true
+    repo: prometheus-community
+    chart: prometheus
     version: "25.28.0"
+
+    # 다중 values 파일 병합 (v0.4.0+)
+    # 나중 파일이 앞 파일을 덮어씀
     values:
-      - prometheus-values.yaml
+      - prometheus-values-base.yaml      # 기본 설정
+      - prometheus-values-override.yaml  # 환경별 오버라이드
+
+    # 앱별 namespace 오버라이드 (v0.4.0+)
+    # 글로벌 namespace 무시하고 독립적으로 배포
+    # namespace: monitoring
+
+  # 최소 설정 예제 - Redis (간단한 캐시)
+  redis:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: redis
+    version: "19.0.0"
+    # values 파일 없이 set_values만 사용 가능
+    set_values:
+      - architecture=standalone
+      - auth.enabled=false

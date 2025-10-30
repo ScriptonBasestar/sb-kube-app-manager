@@ -1,38 +1,61 @@
-apps: nginx: type: helm chart: ingress-nginx/ingress-nginx version: "4.0.0" values: - values/nginx.yaml
-
-```
-# ⚠️ 중요: Override 파일을 명시적으로 나열해야 적용됩니다
-#
-# 경로 규칙:
-#   - 실제 파일 위치: overrides/nginx/[경로]
-#   - config.yaml에 작성: [경로]  (앱 이름 제외)
-#   - 빌드 후 위치: build/nginx/[경로]
-#
-# 예시:
-#   파일: overrides/nginx/templates/custom-configmap.yaml
-#   설정: templates/custom-configmap.yaml
-#   결과: build/nginx/templates/custom-configmap.yaml
-#
-# 방법 1: 명시적 파일 나열 (기존 방식)
-overrides:
-  - templates/custom-configmap.yaml  # 새 템플릿 추가
-                                     # → build/nginx/templates/custom-configmap.yaml
-
-  - files/index.html                 # 새 파일 추가 (.Files.Get에서 사용)
-                                     # → build/nginx/files/index.html
-
-# 방법 2: Glob 패턴 사용 (v0.4.9+)
-#
-# overrides:
-#   - templates/*.yaml               # templates/의 모든 .yaml 파일
-#   - files/*                        # files/의 모든 파일
-#
-# 방법 3: 혼합 사용 (명시적 + Glob)
-#
-# overrides:
-#   - Chart.yaml                     # 차트 메타데이터 교체
-#   - templates/*.yaml               # 모든 템플릿
-#   - files/index.html               # 특정 파일만
-
 namespace: default
-```
+
+apps:
+  nginx:
+    type: helm
+    enabled: true
+    chart: ingress-nginx
+    repo: ingress-nginx
+    version: "4.11.0"
+
+    values:
+      - values/nginx.yaml
+
+    # ⚠️ 중요: Override 파일을 명시적으로 나열해야 적용됩니다
+    #
+    # 경로 규칙:
+    #   - 실제 파일 위치: overrides/nginx/[경로]
+    #   - config.yaml에 작성: [경로]  (앱 이름 제외)
+    #   - 빌드 후 위치: build/nginx/[경로]
+    #
+    # 예시:
+    #   파일: overrides/nginx/templates/custom-configmap.yaml
+    #   설정: templates/custom-configmap.yaml
+    #   결과: build/nginx/templates/custom-configmap.yaml
+
+    # 방법 1: overrides - 파일 추가/교체
+    overrides:
+      - templates/custom-configmap.yaml  # 새 템플릿 추가
+      - files/index.html                 # 새 파일 추가 (.Files.Get에서 사용)
+
+    # 방법 2: removes - 차트의 불필요한 파일 삭제 (v0.4.0+)
+    #
+    # Use cases:
+    # - 차트에 포함된 테스트 파일 제거
+    # - 사용하지 않는 CRD 제거
+    # - 데모용 리소스 제거
+    # - 보안상 불필요한 ServiceAccount 제거
+    removes:
+      - templates/tests/         # 테스트 디렉토리 전체 삭제
+      - templates/NOTES.txt      # Helm 설치 메시지 제거
+      # - crds/example-crd.yaml  # 사용하지 않는 CRD 제거
+      # - templates/demo-*.yaml  # 데모 리소스 제거
+
+# Glob 패턴 사용 예제 (v0.4.9+)
+#
+# overrides:
+#   - templates/*.yaml           # templates/의 모든 .yaml 파일
+#   - files/*                    # files/의 모든 파일
+#
+# removes:
+#   - templates/test-*.yaml      # 테스트 파일들만 삭제
+#   - crds/*                     # CRD 전체 삭제
+#
+# 혼합 사용:
+# overrides:
+#   - Chart.yaml                 # 차트 메타데이터 교체
+#   - templates/*.yaml           # 모든 템플릿
+#   - files/index.html           # 특정 파일만
+# removes:
+#   - templates/NOTES.txt        # 불필요한 파일 제거
+#   - templates/tests/           # 테스트 디렉토리 제거

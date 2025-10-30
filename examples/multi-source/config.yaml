@@ -1,0 +1,35 @@
+namespace: multi-source-demo
+
+apps:
+  # 웹 애플리케이션
+  web-app:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: nginx
+    version: "18.2.4"
+
+    values:
+      - nginx-values.yaml
+
+  # 데이터베이스
+  database:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: postgresql
+    version: "16.2.4"
+
+    values:
+      - postgres-values.yaml
+
+  # 캐시 서버
+  cache:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: redis
+    version: "19.0.0"
+
+    values:
+      - redis-values.yaml

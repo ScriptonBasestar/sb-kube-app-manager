@@ -1,0 +1,19 @@
+# PostgreSQL values (기본값 - 환경별 오버라이드)
+
+auth:
+  database: appdb
+  username: appuser
+  password: changeme123  # 프로덕션에서는 Secret 사용
+
+primary:
+  persistence:
+    enabled: true
+    size: 5Gi
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi

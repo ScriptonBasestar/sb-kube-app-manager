@@ -61,12 +61,12 @@ class TestConfigValidationErrors:
                 version="1.0.0",
             )
 
-    def test_helm_app_invalid_chart_patches(self):
-        """chart_patches가 잘못된 타입."""
+    def test_helm_app_invalid_overrides(self):
+        """overrides가 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
                 chart="grafana/grafana",
-                chart_patches="should-be-list",  # list여야 함
+                overrides="should-be-list",  # list여야 함
             )
 
 

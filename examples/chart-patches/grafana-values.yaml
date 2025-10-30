@@ -1,0 +1,28 @@
+# Grafana values
+
+adminPassword: admin123
+
+service:
+  type: LoadBalancer
+  port: 80
+
+persistence:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus-server:9090
+      access: proxy
+      isDefault: true

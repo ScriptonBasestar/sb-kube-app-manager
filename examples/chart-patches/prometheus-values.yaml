@@ -1,0 +1,23 @@
+# Prometheus values
+
+server:
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+alertmanager:
+  enabled: false
+
+pushgateway:
+  enabled: false
+
+nodeExporter:
+  enabled: true

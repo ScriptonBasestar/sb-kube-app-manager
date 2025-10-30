@@ -1,0 +1,30 @@
+# sources-prod.yaml - Production Environment
+# 프로덕션 환경: 실제 서비스 환경
+
+cluster: production-k3s
+kubeconfig: ~/.kube/config-prod
+kubeconfig_context: production
+
+# Helm 리포지토리
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami
+
+# OCI 리포지토리
+oci_repos:
+  ghcr:
+    registry: ghcr.io
+    # auth_required: true  # 프로덕션: 인증 필수
+
+# Git 리포지토리 (프로덕션 전용 설정)
+git_repos:
+  company-charts:
+    url: https://github.com/company/helm-charts.git
+    branch: main
+
+# 프로덕션 환경 특성:
+# - 전용 고가용성 클러스터
+# - 높은 리소스 할당
+# - 모든 모니터링/로깅 활성화
+# - 영속성 활성화 (프로덕션 데이터)
+# - 백업 활성화

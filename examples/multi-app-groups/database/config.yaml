@@ -1,0 +1,31 @@
+namespace: multi-app-demo
+
+apps:
+  # PostgreSQL database
+  postgres-database:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: postgresql
+    version: "16.2.4"
+
+    set_values:
+      - auth.database=appdb
+      - auth.username=appuser
+      - auth.password=changeme123
+      - primary.resources.requests.memory=256Mi
+      - primary.resources.requests.cpu=250m
+
+  # Redis cache
+  redis-cache:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: redis
+    version: "19.0.0"
+
+    set_values:
+      - architecture=standalone
+      - auth.enabled=false
+      - master.resources.requests.memory=128Mi
+      - master.resources.requests.cpu=100m

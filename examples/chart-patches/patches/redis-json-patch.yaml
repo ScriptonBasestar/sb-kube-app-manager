@@ -1,0 +1,19 @@
+# JSON Patch: Redis StatefulSet에 정확한 경로로 패치
+# RFC 6902 JSON Patch 형식
+
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: REDIS_EXTRA_FLAGS
+    value: "--maxmemory 256mb --maxmemory-policy allkeys-lru"
+
+- op: replace
+  path: /spec/template/spec/containers/0/resources/limits/memory
+  value: "512Mi"
+
+- op: add
+  path: /spec/template/metadata/annotations
+  value:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9121"
+    prometheus.io/path: "/metrics"

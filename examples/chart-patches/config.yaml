@@ -1,0 +1,83 @@
+namespace: chart-patches-demo
+
+apps:
+  # Helm 차트에 패치를 적용하는 예제
+  grafana:
+    type: helm
+    enabled: true
+    repo: grafana
+    chart: grafana
+    version: "10.1.2"
+
+    values:
+      - grafana-values.yaml
+
+    # Helm 차트 템플릿 파일 패치 (v0.4.0+)
+    chart_patches:
+      # 1. Deployment에 사이드카 컨테이너 추가
+      - target: templates/deployment.yaml
+        patch: patches/add-sidecar-container.yaml
+        type: strategic  # strategic | json | merge
+
+      # 2. Service에 추가 포트 노출
+      - target: templates/service.yaml
+        patch: patches/add-service-port.yaml
+        type: strategic
+
+      # 3. ConfigMap에 커스텀 설정 추가
+      - target: templates/configmap.yaml
+        patch: patches/add-custom-config.yaml
+        type: merge
+
+    set_values:
+      - service.type=LoadBalancer
+      - persistence.enabled=false
+
+  # 복잡한 패치 예제 - Prometheus
+  prometheus:
+    type: helm
+    enabled: true
+    repo: prometheus-community
+    chart: prometheus
+    version: "25.28.0"
+
+    values:
+      - prometheus-values.yaml
+
+    chart_patches:
+      # 1. Security Context 추가
+      - target: templates/server/deploy.yaml
+        patch: patches/prometheus-security.yaml
+        type: strategic
+
+      # 2. Persistent Volume 커스터마이징
+      - target: templates/server/pvc.yaml
+        patch: patches/prometheus-pvc.yaml
+        type: strategic
+
+      # 3. Service Monitor 추가 (존재하지 않는 파일 생성)
+      - target: templates/servicemonitor.yaml
+        patch: patches/prometheus-servicemonitor.yaml
+        type: create  # 새 파일 생성
+
+    set_values:
+      - server.persistentVolume.enabled=true
+      - server.persistentVolume.size=10Gi
+
+  # JSON Patch 예제 - Redis
+  redis:
+    type: helm
+    enabled: true
+    repo: bitnami
+    chart: redis
+    version: "19.0.0"
+
+    chart_patches:
+      # JSON Patch 사용 (정확한 경로 지정)
+      - target: templates/master/statefulset.yaml
+        patch: patches/redis-json-patch.yaml
+        type: json
+
+    set_values:
+      - architecture=standalone
+      - auth.enabled=false

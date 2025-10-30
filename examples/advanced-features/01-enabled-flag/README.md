@@ -16,21 +16,21 @@ namespace: advanced-demo
 
 apps:
   # 항상 배포
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     enabled: true  # 기본값
 
   # 비활성화 (배포하지 않음)
-  memcached:
+  prometheus:
     type: helm
-    chart: bitnami/memcached
+    chart: prometheus-community/prometheus
     enabled: false
 
   # enabled 생략 (기본값은 true)
-  postgresql:
+  cnpg:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
 ```
 
 ## 실전 예제
@@ -132,12 +132,12 @@ sbkube apply --app-dir . --apps redis
 apps:
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     enabled: true
 
   cache:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     enabled: true
 
   # database와 cache에 의존하지만 비활성화
@@ -207,7 +207,7 @@ apps:
 
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     enabled: true
 
   # === 선택적 기능 ===

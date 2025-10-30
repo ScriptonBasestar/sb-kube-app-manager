@@ -163,7 +163,7 @@ class SourceScheme(InheritableConfigModel):
     def normalize_helm_repos(cls, v: Any) -> dict[str, Any]:
         """Normalize helm_repos to support string shorthand format.
 
-        Converts: {"bitnami": "https://..."} -> {"bitnami": {"url": "https://..."}}
+        Converts: {"grafana": "https://..."} -> {"grafana": {"url": "https://..."}}
         """
         if not isinstance(v, dict):
             return v

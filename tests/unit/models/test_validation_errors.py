@@ -77,12 +77,12 @@ class TestValidators:
     def test_spec_fields_validation(self):
         """Test spec fields validation."""
         # Valid specs
-        specs = validate_spec_fields("helm", {"repo": "bitnami", "chart": "redis"})
-        assert specs["repo"] == "bitnami"
+        specs = validate_spec_fields("helm", {"repo": "grafana", "chart": "grafana"})
+        assert specs["repo"] == "grafana"
 
         # Missing required fields
         with pytest.raises(ValueError, match="Missing required fields"):
-            validate_spec_fields("helm", {"repo": "bitnami"})
+            validate_spec_fields("helm", {"repo": "grafana"})
 
         # Unknown app type
         with pytest.raises(ValueError, match="Unknown app type"):

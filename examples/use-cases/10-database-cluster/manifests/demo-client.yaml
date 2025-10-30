@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: postgresql-client
-        image: bitnami/postgresql:15
+        image: postgres:15-alpine
         command: ["/bin/bash"]
         args:
         - -c

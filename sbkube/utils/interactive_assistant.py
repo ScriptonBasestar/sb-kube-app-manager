@@ -286,7 +286,7 @@ class InteractiveSession:
             "commands": [
                 "ping google.com",
                 "kubectl cluster-info",
-                "curl -I https://charts.bitnami.com",
+                "curl -I https://grafana.github.io/helm-charts",
             ],
             "next_steps": [
                 "네트워크 관리자에게 문의",

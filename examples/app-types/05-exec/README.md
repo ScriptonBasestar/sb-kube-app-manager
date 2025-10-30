@@ -30,7 +30,7 @@ apps:
   # 2. 애플리케이션 배포
   my-app:
     type: helm
-    chart: bitnami/nginx
+    chart: ingress-nginx/ingress-nginx
     depends_on:
       - pre-deployment-check
 
@@ -53,19 +53,19 @@ apps:
 namespace: exec-demo
 
 apps:
-  # 1. PostgreSQL 배포
-  postgresql:
+  # 1. CloudNativePG 배포
+  cnpg:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
 
   # 2. DB 마이그레이션 실행
   db-migration:
     type: exec
     commands:
       - echo "Waiting for PostgreSQL to be ready..."
-      - kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql -n exec-demo --timeout=300s
+      - kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cloudnative-pg -n exec-demo --timeout=300s
       - echo "Running database migrations..."
-      - kubectl exec -n exec-demo postgresql-0 -- psql -U postgres -c "CREATE DATABASE IF NOT EXISTS myapp;"
+      - kubectl exec -n exec-demo cnpg-0 -- psql -U postgres -c "CREATE DATABASE IF NOT EXISTS myapp;"
       - echo "✅ Migration completed"
     depends_on:
       - postgresql

@@ -113,7 +113,7 @@ export KUBECONFIG=~/.kube/config
 
 ```bash
 $ sbkube prepare
-Error: failed to add Helm repo 'bitnami': context deadline exceeded
+Error: failed to add Helm repo 'grafana': context deadline exceeded
 ```
 
 **원인**: 네트워크 문제 또는 잘못된 URL
@@ -122,11 +122,11 @@ Error: failed to add Helm repo 'bitnami': context deadline exceeded
 
 ```bash
 # 네트워크 확인
-curl -I https://charts.bitnami.com/bitnami/index.yaml
+curl -I https://grafana.github.io/helm-charts/index.yaml
 
 # Helm 리포지토리 수동 추가
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo update bitnami
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update grafana
 
 # sources.yaml 확인
 cat sources.yaml
@@ -134,8 +134,8 @@ cat sources.yaml
 # kubeconfig_context: my-cluster
 # cluster: production
 # helm_repos:
-#   bitnami:
-#     url: https://charts.bitnami.com/bitnami
+#   grafana:
+#     url: https://grafana.github.io/helm-charts
 
 # 다시 시도
 sbkube prepare
@@ -147,7 +147,7 @@ sbkube prepare
 
 ```bash
 $ sbkube prepare
-Error: chart 'bitnami/redis' version '19.0.0' not found
+Error: chart 'grafana/grafana' version '6.50.0' not found
 ```
 
 **원인**: 존재하지 않는 차트 버전
@@ -156,18 +156,18 @@ Error: chart 'bitnami/redis' version '19.0.0' not found
 
 ```bash
 # 사용 가능한 버전 확인
-helm search repo bitnami/redis --versions | head -20
+helm search repo grafana/grafana --versions | head -20
 
 # config.yaml 수정 (최신 버전 사용)
 # apps:
-#   redis:
-#     chart: bitnami/redis
-#     version: 19.6.0  # 올바른 버전으로 수정
+#   grafana:
+#     chart: grafana/grafana
+#     version: 6.60.0  # 올바른 버전으로 수정
 
 # 또는 버전 생략 (최신 버전 사용)
 # apps:
-#   redis:
-#     chart: bitnami/redis
+#   grafana:
+#     chart: grafana/grafana
 #     # version 필드 제거
 ```
 
@@ -211,7 +211,7 @@ git config --global credential.helper store
 
 ```bash
 $ sbkube prepare
-Error: destination path 'charts/redis' already exists and is not an empty directory
+Error: destination path 'charts/grafana' already exists and is not an empty directory
 ```
 
 **원인**: 이전에 다운로드한 차트가 남아있음
@@ -221,7 +221,7 @@ Error: destination path 'charts/redis' already exists and is not an empty direct
 ```bash
 # 자동으로 스킵됨 (멱등성 지원)
 sbkube prepare
-# ⏭️  Chart already exists, skipping: redis
+# ⏭️  Chart already exists, skipping: grafana
 #     Use --force to re-download
 
 # 강제 재다운로드
@@ -232,7 +232,7 @@ sbkube prepare --force
 
 ```bash
 # 차트 디렉토리 삭제 후 재실행
-rm -rf charts/redis
+rm -rf charts/grafana
 sbkube prepare
 ```
 
@@ -246,7 +246,7 @@ sbkube prepare
 
 ```bash
 $ sbkube build
-Error: No such file: 'charts/redis/redis/templates/deployment.yaml'
+Error: No such file: 'charts/grafana/grafana/templates/deployment.yaml'
 ```
 
 **원인**: prepare 단계를 건너뜀
@@ -312,11 +312,11 @@ Warning: File to remove not found: 'templates/master/configmap.yaml'
 
 ```bash
 # 차트의 실제 파일 목록 확인
-ls -R charts/redis/redis/templates/
+ls -R charts/grafana/grafana/templates/
 
 # 정확한 경로로 수정
 # removes:
-#   - templates/configmap.yaml  # master/ 제거
+#   - templates/configmap.yaml  # 서브디렉토리 없이 직접 경로 사용
 ```
 
 ---
@@ -370,7 +370,7 @@ Error: cannot re-use a name that is still in use
 helm list -n test-namespace
 
 # 릴리스 삭제
-helm uninstall redis-test-namespace -n test-namespace
+helm uninstall grafana-test-namespace -n test-namespace
 
 # 또는 sbkube delete 사용
 sbkube delete --namespace test-namespace
@@ -385,8 +385,8 @@ sbkube deploy
 
 ```bash
 $ kubectl get pods -n test-namespace
-NAME                     READY   STATUS    RESTARTS   AGE
-redis-master-0           0/1     Pending   0          2m
+NAME                       READY   STATUS    RESTARTS   AGE
+grafana-5f7b4c5d9-abcde    0/1     Pending   0          2m
 ```
 
 **원인**: 리소스 부족, PVC 마운트 실패, 노드 선택자 불일치
@@ -395,7 +395,7 @@ redis-master-0           0/1     Pending   0          2m
 
 ```bash
 # Pod 이벤트 확인
-kubectl describe pod redis-master-0 -n test-namespace
+kubectl describe pod grafana-5f7b4c5d9-abcde -n test-namespace
 
 # 일반적인 원인:
 # 1. 노드 리소스 부족
@@ -408,10 +408,10 @@ kubectl describe pvc <pvc-name> -n test-namespace
 
 # 3. 노드 선택자 불일치
 kubectl get nodes --show-labels
-# redis-values.yaml에서 nodeSelector 확인
+# grafana-values.yaml에서 nodeSelector 확인
 
 # 임시 해결: 리소스 요청 줄이기
-# redis-values.yaml
+# grafana-values.yaml
 # resources:
 #   requests:
 #     cpu: 50m  # 기본값보다 낮춤
@@ -424,8 +424,8 @@ kubectl get nodes --show-labels
 
 ```bash
 $ kubectl get pods -n test-namespace
-NAME                     READY   STATUS             RESTARTS   AGE
-redis-master-0           0/1     ImagePullBackOff   0          1m
+NAME                       READY   STATUS             RESTARTS   AGE
+grafana-5f7b4c5d9-abcde    0/1     ImagePullBackOff   0          1m
 ```
 
 **원인**: 이미지를 Pull할 수 없음 (레지스트리 인증, 이미지 없음)
@@ -434,16 +434,16 @@ redis-master-0           0/1     ImagePullBackOff   0          1m
 
 ```bash
 # Pod 이벤트 확인
-kubectl describe pod redis-master-0 -n test-namespace
+kubectl describe pod grafana-5f7b4c5d9-abcde -n test-namespace
 # Events:
-#   Warning  Failed     10s   kubelet  Failed to pull image "bitnami/redis:7.2.4-debian-12-r9": rpc error: code = Unknown desc = Error response from daemon: pull access denied for bitnami/redis
+#   Warning  Failed     10s   kubelet  Failed to pull image "grafana/grafana:9.5.3": rpc error: code = Unknown desc = Error response from daemon: pull access denied for grafana/grafana
 
 # 1. 이미지 이름/태그 확인
-# redis-values.yaml
+# grafana-values.yaml
 # image:
 #   registry: docker.io
-#   repository: bitnami/redis
-#   tag: 7.2.4-debian-12-r9  # 올바른 태그 확인
+#   repository: grafana/grafana
+#   tag: 9.5.3  # 올바른 태그 확인
 
 # 2. Private 레지스트리 인증
 kubectl create secret docker-registry regcred \
@@ -452,7 +452,7 @@ kubectl create secret docker-registry regcred \
   --docker-password=<password> \
   -n test-namespace
 
-# redis-values.yaml
+# grafana-values.yaml
 # imagePullSecrets:
 #   - name: regcred
 
@@ -469,8 +469,8 @@ wget -O- https://docker.io
 
 ```bash
 $ kubectl get pods -n test-namespace
-NAME                     READY   STATUS             RESTARTS   AGE
-redis-master-0           0/1     CrashLoopBackOff   5          3m
+NAME                       READY   STATUS             RESTARTS   AGE
+grafana-5f7b4c5d9-abcde    0/1     CrashLoopBackOff   5          3m
 ```
 
 **원인**: 컨테이너 시작 실패 (잘못된 설정, 환경 변수 누락)
@@ -479,26 +479,26 @@ redis-master-0           0/1     CrashLoopBackOff   5          3m
 
 ```bash
 # 로그 확인
-kubectl logs redis-master-0 -n test-namespace
+kubectl logs grafana-5f7b4c5d9-abcde -n test-namespace
 
 # 이전 로그 확인 (재시작된 경우)
-kubectl logs redis-master-0 -n test-namespace --previous
+kubectl logs grafana-5f7b4c5d9-abcde -n test-namespace --previous
 
 # 일반적인 원인:
 # 1. 환경 변수 누락
-kubectl describe pod redis-master-0 -n test-namespace | grep -A 10 "Environment:"
+kubectl describe pod grafana-5f7b4c5d9-abcde -n test-namespace | grep -A 10 "Environment:"
 
 # 2. Secret/ConfigMap 참조 오류
 kubectl get secrets -n test-namespace
 kubectl get configmaps -n test-namespace
 
 # 3. 잘못된 명령어 인자
-kubectl get pod redis-master-0 -n test-namespace -o yaml | grep -A 5 "command:"
+kubectl get pod grafana-5f7b4c5d9-abcde -n test-namespace -o yaml | grep -A 5 "command:"
 
 # 디버깅: 컨테이너 안으로 들어가기
-kubectl exec -it redis-master-0 -n test-namespace -- /bin/bash
+kubectl exec -it grafana-5f7b4c5d9-abcde -n test-namespace -- /bin/bash
 # (CrashLoopBackOff 시에는 안 됨 - 다른 디버그 컨테이너 사용)
-kubectl debug redis-master-0 -n test-namespace -it --image=busybox
+kubectl debug grafana-5f7b4c5d9-abcde -n test-namespace -it --image=busybox
 ```
 
 ---
@@ -523,9 +523,9 @@ apps -> redis -> type
 ```yaml
 # config.yaml
 apps:
-  redis:
+  grafana:
     type: helm  # 필수 필드 추가
-    chart: bitnami/redis
+    chart: grafana/grafana
     enabled: true
 ```
 
@@ -555,8 +555,8 @@ kubeconfig_context: my-cluster
 cluster: production
 
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 EOF
 
 # 또는 상위 디렉토리에 생성
@@ -567,8 +567,8 @@ kubeconfig_context: my-cluster
 cluster: production
 
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 EOF
 cd app1
 ```
@@ -615,12 +615,12 @@ apps:
 
 ```bash
 $ kubectl get svc -n test-namespace
-NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-redis-master    ClusterIP   10.43.123.45    <none>        6379/TCP   5m
+NAME      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+grafana   ClusterIP   10.43.123.45    <none>        80/TCP    5m
 
 # 그러나 연결 실패
-$ kubectl exec -it test-pod -n test-namespace -- redis-cli -h redis-master ping
-Could not connect to Redis at redis-master:6379: Name or service not known
+$ kubectl exec -it test-pod -n test-namespace -- curl http://grafana
+Could not connect to grafana:80: Name or service not known
 ```
 
 **원인**: DNS 문제, 잘못된 서비스 이름
@@ -632,15 +632,15 @@ Could not connect to Redis at redis-master:6379: Name or service not known
 kubectl get svc -n test-namespace
 
 # 2. FQDN 사용
-redis-cli -h redis-master.test-namespace.svc.cluster.local ping
+curl http://grafana.test-namespace.svc.cluster.local
 
 # 3. DNS 테스트
 kubectl run busybox --rm -it --image=busybox -n test-namespace -- sh
-nslookup redis-master
-nslookup redis-master.test-namespace.svc.cluster.local
+nslookup grafana
+nslookup grafana.test-namespace.svc.cluster.local
 
 # 4. Endpoints 확인
-kubectl get endpoints redis-master -n test-namespace
+kubectl get endpoints grafana -n test-namespace
 # 백엔드 Pod IP가 있어야 함
 ```
 
@@ -650,8 +650,8 @@ kubectl get endpoints redis-master -n test-namespace
 
 ```bash
 $ kubectl get pvc -n test-namespace
-NAME                  STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-data-redis-master-0   Pending                                      standard       2m
+NAME             STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+grafana-storage  Pending                                      standard       2m
 ```
 
 **원인**: StorageClass 없음, 용량 부족
@@ -674,13 +674,12 @@ volumeBindingMode: WaitForFirstConsumer
 EOF
 
 # PVC 이벤트 확인
-kubectl describe pvc data-redis-master-0 -n test-namespace
+kubectl describe pvc grafana-storage -n test-namespace
 
 # 또는 PVC 비활성화 (테스트용)
-# redis-values.yaml
-# master:
-#   persistence:
-#     enabled: false
+# grafana-values.yaml
+# persistence:
+#   enabled: false
 ```
 
 ### 문제 3: Ingress 404

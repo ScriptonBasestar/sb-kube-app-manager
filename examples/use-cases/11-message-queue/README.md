@@ -244,7 +244,7 @@ http://localhost:15672/#/queues
 ## 📚 참고 자료
 
 - [RabbitMQ 공식 문서](https://www.rabbitmq.com/documentation.html)
-- [Bitnami RabbitMQ Chart](https://github.com/bitnami/charts/tree/main/bitnami/rabbitmq)
+- [RabbitMQ Cluster Operator](https://www.rabbitmq.com/kubernetes/operator/operator-overview.html)
 
 ## 🧹 정리
 

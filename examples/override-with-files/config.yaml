@@ -1,4 +1,4 @@
-apps: nginx: type: helm chart: bitnami/nginx version: "15.0.0" values: - values/nginx.yaml
+apps: nginx: type: helm chart: ingress-nginx/ingress-nginx version: "4.0.0" values: - values/nginx.yaml
 
 ```
 # ⚠️ 중요: Override 파일을 명시적으로 나열해야 적용됩니다

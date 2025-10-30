@@ -55,8 +55,8 @@ namespace: production
 apps:
   web-app:
     type: helm
-    chart: bitnami/nginx
-    version: 15.0.0
+    chart: ingress-nginx/ingress-nginx
+    version: 4.0.0
     enabled: true
     values:
       - values/common/app.yaml

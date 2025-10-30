@@ -31,7 +31,7 @@ def parse_helm_chart(chart: str) -> tuple[str, str]:
     'repo/chart' 형식을 파싱.
 
     Args:
-        chart: "bitnami/redis" 형식의 문자열
+        chart: "grafana/grafana" 형식의 문자열
 
     Returns:
         (repo_name, chart_name) 튜플

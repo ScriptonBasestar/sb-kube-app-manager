@@ -62,11 +62,11 @@ def sample_config_yaml_content():
                 "type": "helm",
                 "namespace": "helm-ns",
                 "specs": {
-                    "repo": "bitnami",
-                    "chart": "redis",
-                    "version": "17.0.0",
+                    "repo": "grafana",
+                    "chart": "grafana",
+                    "version": "6.50.0",
                     "values": ["values/helm-app-values.yaml"],
-                    "set": ["master.replicaCount=1"],
+                    "set": ["replicas=1"],
                 },
             },
             {
@@ -88,10 +88,10 @@ def sample_config_yaml_content():
                 "name": "my-helm-app",
                 "type": "helm",
                 "specs": {
-                    "repo": "bitnami",
-                    "chart": "apache",
-                    "version": "9.0.0",
-                    "dest": "pulled-apache",  # charts/<dest>
+                    "repo": "ingress-nginx",
+                    "chart": "ingress-nginx",
+                    "version": "4.0.0",
+                    "dest": "pulled-ingress",  # charts/<dest>
                 },
             },
             {
@@ -122,7 +122,7 @@ def sample_config_yaml_content():
 def sample_sources_yaml_content():
     """테스트용 기본 sources.yaml 내용."""
     return {
-        "helm_repos": {"bitnami": "https://charts.bitnami.com/bitnami"},
+        "helm_repos": {"grafana": "https://grafana.github.io/helm-charts"},
         "git_repos": {
             "my-repo": {  # 사용되지 않음, pull-git은 직접 URL 명시
                 "url": "https://github.com/some/other-repo.git",

@@ -12,18 +12,18 @@ Helm 리포지토리에서 자동으로 pull 후 install합니다.
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis  # "repo/chart" 형식
-    version: 17.13.2      # 선택적
+    chart: grafana/grafana  # "repo/chart" 형식
+    version: 6.50.0         # 선택적
     values:
-      - redis.yaml
+      - grafana.yaml
 ```
 
 **동작 방식**:
 
-1. `sbkube prepare`: `bitnami/redis` 차트를 `charts/redis/` 디렉토리에 pull
-1. `sbkube deploy`: `charts/redis/redis/` 경로의 차트로 install
+1. `sbkube prepare`: `grafana/grafana` 차트를 `charts/grafana/` 디렉토리에 pull
+1. `sbkube deploy`: `charts/grafana/grafana/` 경로의 차트로 install
 
 ---
 
@@ -107,12 +107,12 @@ namespace: production
 
 apps:
   # Remote chart (자동 pull)
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 17.13.2
+    chart: grafana/grafana
+    version: 6.50.0
     values:
-      - redis-values.yaml
+      - grafana-values.yaml
 
   # Local chart (직접 사용)
   backend:
@@ -121,7 +121,7 @@ apps:
     values:
       - backend-values.yaml
     depends_on:
-      - redis
+      - grafana
 
   # Git에서 가져온 chart
   monitoring:
@@ -152,10 +152,10 @@ myapp/
 **실행**:
 
 ```bash
-# prepare: redis만 pull (backend, monitoring은 건너뜀)
+# prepare: grafana만 pull (backend, monitoring은 건너뜀)
 sbkube prepare --app-dir myapp
 
-# deploy: 모두 배포 (의존성 순서: redis → backend, monitoring)
+# deploy: 모두 배포 (의존성 순서: grafana → backend, monitoring)
 sbkube deploy --app-dir myapp
 ```
 
@@ -165,7 +165,7 @@ sbkube deploy --app-dir myapp
 
 SBKube는 다음 규칙으로 chart 타입을 자동 판단합니다:
 
-| chart 값 | 타입 | 예시 | |----------|------|------| | `repo/chart` | Remote | `bitnami/redis` | | `./path` | Local (상대) |
+| chart 값 | 타입 | 예시 | |----------|------|------| | `repo/chart` | Remote | `grafana/grafana` | | `./path` | Local (상대) |
 `./charts/my-app` | | `/path` | Local (절대) | `/opt/charts/app` | | `chart-name` | Local (상대) | `my-chart`
 (=`./my-chart`) |
 
@@ -228,25 +228,25 @@ apps:
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 17.13.2  # 반드시 버전 명시!
+    chart: grafana/grafana
+    version: 6.50.0  # 반드시 버전 명시!
 ```
 
 ### 3. 의존성 명시
 
 ```yaml
 apps:
-  postgres:
+  cloudnative-pg:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
 
   backend:
     type: helm
     chart: ./charts/backend
     depends_on:
-      - postgres  # 명시적 의존성
+      - cloudnative-pg  # 명시적 의존성
 ```
 
 ---

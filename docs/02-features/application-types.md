@@ -22,14 +22,14 @@ SBKube은 다양한 소스와 배포 방식을 지원하는 **7가지 애플리�
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis           # <repo>/<chart> 형식
-    version: 17.13.2               # 차트 버전 (선택사항)
+    chart: grafana/grafana         # <repo>/<chart> 형식
+    version: 6.50.0                # 차트 버전 (선택사항)
     values:
-      - redis-values.yaml
-    namespace: data
-    release_name: my-redis
+      - grafana-values.yaml
+    namespace: monitoring
+    release_name: my-grafana
 ```
 
 #### 로컬 Helm 차트 (Local)
@@ -56,9 +56,9 @@ apps:
 
 ```yaml
 apps:
-  postgresql:
+  cloudnative-pg:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     overrides:
       templates/secret.yaml: custom-secret.yaml
       templates/configmap.yaml: custom-configmap.yaml
@@ -70,7 +70,7 @@ apps:
 **주요 필드**:
 
 - `chart` (필수): 차트 경로
-  - 원격: `<repo>/<chart>` (예: `bitnami/redis`)
+  - 원격: `<repo>/<chart>` (예: `grafana/grafana`)
   - 로컬: `./path` 또는 `/absolute/path`
   - 이름만: `chart-name` (로컬 차트로 간주)
 - `version` (선택): 차트 버전 (원격 차트만 해당)
@@ -354,7 +354,7 @@ apps:
 
 ## 📋 타입 선택 가이드
 
-| 타입 | 사용 시점 | 예제 | |------|----------|------| | `helm` | Helm 차트 배포 (원격/로컬) | bitnami/redis, ./charts/app | | `yaml` |
+| 타입 | 사용 시점 | 예제 | |------|----------|------| | `helm` | Helm 차트 배포 (원격/로컬) | grafana/grafana, ./charts/app | | `yaml` |
 직접 YAML 매니페스트 | deployment.yaml, service.yaml | | `git` | Git에서 차트 가져오기 | GitHub 리포지토리 | | `http` | URL에서 파일 다운로드 | CRD,
 매니페스트 | | `action` | 복잡한 배포 시퀀스 | CRD → 앱 → 설정 | | `exec` | 초기화/정리 작업 | 클러스터 체크, 정리 | | `noop` | 의존성 관리 | 수동 설정 완료 표시 |
 
@@ -366,30 +366,30 @@ apps:
 
 ```yaml
 apps:
-  - name: redis-pull
+  - name: grafana-pull
     type: helm
     specs:
-      repo: bitnami
-      chart: redis
-      dest: redis
+      repo: grafana
+      chart: grafana
+      dest: grafana
 
-  - name: redis
+  - name: grafana
     type: helm
     specs:
-      path: redis
+      path: grafana
       values:
-        - redis.yaml
+        - grafana.yaml
 ```
 
 ### After
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     values:
-      - redis.yaml
+      - grafana.yaml
 ```
 
 **자동 마이그레이션**:

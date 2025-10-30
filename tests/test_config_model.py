@@ -13,23 +13,23 @@ class TestHelmApp:
     def test_valid_helm_app(self):
         """정상적인 Helm 앱 검증."""
         app = HelmApp(
-            chart="bitnami/redis",
-            version="17.13.2",
-            values=["redis.yaml"],
+            chart="grafana/grafana",
+            version="6.50.0",
+            values=["grafana.yaml"],
         )
-        assert app.get_repo_name() == "bitnami"
-        assert app.get_chart_name() == "redis"
+        assert app.get_repo_name() == "grafana"
+        assert app.get_chart_name() == "grafana"
 
     def test_local_chart(self):
         """로컬 차트 형식 검증."""
         # 로컬 차트는 유효함
-        app1 = HelmApp(chart="./charts/redis")
+        app1 = HelmApp(chart="./charts/grafana")
         assert not app1.is_remote_chart()
 
         app2 = HelmApp(chart="/absolute/path/to/chart")
         assert not app2.is_remote_chart()
 
-        app3 = HelmApp(chart="redis")  # 로컬 차트로 간주
+        app3 = HelmApp(chart="grafana")  # 로컬 차트로 간주
         assert not app3.is_remote_chart()
 
 
@@ -61,10 +61,10 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="production",
             apps={
-                "redis": {
+                "grafana": {
                     "type": "helm",
-                    "chart": "bitnami/redis",
-                    "values": ["redis.yaml"],
+                    "chart": "grafana/grafana",
+                    "values": ["grafana.yaml"],
                 },
                 "backend": {
                     "type": "yaml",
@@ -80,43 +80,43 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="production",
             apps={
-                "redis": {
+                "grafana": {
                     "type": "helm",
-                    "chart": "bitnami/redis",
+                    "chart": "grafana/grafana",
                     # namespace 지정 안 함 → 상속
                 },
             },
         )
-        redis_app = config.apps["redis"]
-        assert redis_app.namespace == "production"
+        grafana_app = config.apps["grafana"]
+        assert grafana_app.namespace == "production"
 
     def test_namespace_override(self):
         """네임스페이스 오버라이드 검증."""
         config = SBKubeConfig(
             namespace="production",
             apps={
-                "redis": {
+                "grafana": {
                     "type": "helm",
-                    "chart": "bitnami/redis",
-                    "namespace": "cache",  # 오버라이드
+                    "chart": "grafana/grafana",
+                    "namespace": "monitoring",  # 오버라이드
                 },
             },
         )
-        redis_app = config.apps["redis"]
-        assert redis_app.namespace == "cache"
+        grafana_app = config.apps["grafana"]
+        assert grafana_app.namespace == "monitoring"
 
     def test_deployment_order_simple(self):
         """간단한 배포 순서 검증 (의존성 없음)."""
         config = SBKubeConfig(
             namespace="test",
             apps={
-                "redis": {"type": "helm", "chart": "bitnami/redis"},
-                "postgres": {"type": "helm", "chart": "bitnami/postgresql"},
+                "grafana": {"type": "helm", "chart": "grafana/grafana"},
+                "postgres": {"type": "helm", "chart": "cloudnative-pg/cloudnative-pg"},
             },
         )
         order = config.get_deployment_order()
         assert len(order) == 2
-        assert set(order) == {"redis", "postgres"}
+        assert set(order) == {"grafana", "postgres"}
 
     def test_deployment_order_with_dependencies(self):
         """의존성이 있는 배포 순서 검증."""
@@ -126,19 +126,19 @@ class TestSBKubeConfig:
                 "backend": {
                     "type": "helm",
                     "chart": "my/backend",
-                    "depends_on": ["redis", "postgres"],
+                    "depends_on": ["grafana", "postgres"],
                 },
-                "redis": {"type": "helm", "chart": "bitnami/redis"},
-                "postgres": {"type": "helm", "chart": "bitnami/postgresql"},
+                "grafana": {"type": "helm", "chart": "grafana/grafana"},
+                "postgres": {"type": "helm", "chart": "cloudnative-pg/cloudnative-pg"},
             },
         )
         order = config.get_deployment_order()
         assert len(order) == 3
-        # redis와 postgres가 backend보다 먼저
+        # grafana와 postgres가 backend보다 먼저
         backend_idx = order.index("backend")
-        redis_idx = order.index("redis")
+        grafana_idx = order.index("grafana")
         postgres_idx = order.index("postgres")
-        assert redis_idx < backend_idx
+        assert grafana_idx < backend_idx
         assert postgres_idx < backend_idx
 
     def test_circular_dependency_detection(self):
@@ -185,17 +185,17 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="test",
             apps={
-                "redis": {"type": "helm", "chart": "bitnami/redis", "enabled": True},
+                "grafana": {"type": "helm", "chart": "grafana/grafana", "enabled": True},
                 "postgres": {
                     "type": "helm",
-                    "chart": "bitnami/postgresql",
+                    "chart": "cloudnative-pg/cloudnative-pg",
                     "enabled": False,
                 },
             },
         )
         enabled_apps = config.get_enabled_apps()
         assert len(enabled_apps) == 1
-        assert "redis" in enabled_apps
+        assert "grafana" in enabled_apps
         assert "postgres" not in enabled_apps
 
     def test_get_apps_by_type(self):
@@ -203,14 +203,14 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="test",
             apps={
-                "redis": {"type": "helm", "chart": "bitnami/redis"},
+                "grafana": {"type": "helm", "chart": "grafana/grafana"},
                 "backend": {"type": "yaml", "files": ["deployment.yaml"]},
-                "postgres": {"type": "helm", "chart": "bitnami/postgresql"},
+                "postgres": {"type": "helm", "chart": "cloudnative-pg/cloudnative-pg"},
             },
         )
         helm_apps = config.get_apps_by_type("helm")
         assert len(helm_apps) == 2
-        assert set(helm_apps.keys()) == {"redis", "postgres"}
+        assert set(helm_apps.keys()) == {"grafana", "postgres"}
 
         yaml_apps = config.get_apps_by_type("yaml")
         assert len(yaml_apps) == 1
@@ -238,9 +238,9 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="production",
             apps={
-                "redis": {
+                "grafana": {
                     "type": "helm",
-                    "chart": "bitnami/redis",
+                    "chart": "grafana/grafana",
                 },
             },
         )
@@ -252,9 +252,9 @@ class TestSBKubeConfig:
             namespace="production",
             deps=[],
             apps={
-                "redis": {
+                "grafana": {
                     "type": "helm",
-                    "chart": "bitnami/redis",
+                    "chart": "grafana/grafana",
                 },
             },
         )

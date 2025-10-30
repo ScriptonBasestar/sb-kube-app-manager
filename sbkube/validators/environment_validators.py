@@ -581,7 +581,7 @@ class NetworkPolicyValidator(ValidationCheck):
             ("Docker Hub", "https://registry-1.docker.io/v2/", 10),
             ("Kubernetes API", "https://kubernetes.io/", 5),
             ("GitHub", "https://api.github.com", 5),
-            ("Bitnami Charts", "https://charts.bitnami.com/bitnami/index.yaml", 10),
+            ("Prometheus Charts", "https://prometheus-community.github.io/helm-charts/index.yaml", 10),
         ]
 
         for name, url, timeout in test_endpoints:

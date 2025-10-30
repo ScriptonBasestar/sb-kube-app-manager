@@ -47,7 +47,7 @@ def test_kubernetes_connection_error_formatting():
 
 def test_helm_chart_not_found_error_formatting():
     """HelmChartNotFoundError should show comprehensive suggestions."""
-    error = HelmChartNotFoundError(chart_name="redis", repo="bitnami")
+    error = HelmChartNotFoundError(chart_name="grafana", repo="grafana")
 
     formatted = format_error_with_suggestions(error)
 

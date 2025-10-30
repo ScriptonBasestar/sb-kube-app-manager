@@ -55,40 +55,40 @@ namespace: web-stack
 
 apps:
   # 1. 데이터베이스 (의존성 없음)
-  postgresql:
+  cloudnative-pg:
     type: helm
-    chart: bitnami/postgresql
-    version: 14.0.0
+    chart: cloudnative-pg/cloudnative-pg
+    version: 0.18.0
     enabled: true
     values:
-      - values/postgresql.yaml
+      - values/cloudnative-pg.yaml
 
   # 2. 캐시 (의존성 없음)
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 19.0.0
+    chart: grafana/grafana
+    version: 6.50.0
     enabled: true
     values:
-      - values/redis.yaml
+      - values/grafana.yaml
 
-  # 3. Backend API (DB와 Redis 필요)
+  # 3. Backend API (DB와 Grafana 필요)
   backend:
     type: helm
-    chart: bitnami/nginx  # 실제로는 custom chart 사용
-    version: 15.0.0
+    chart: ingress-nginx/ingress-nginx  # 실제로는 custom chart 사용
+    version: 4.0.0
     enabled: true
     depends_on:  # 의존성 설정
-      - postgresql
-      - redis
+      - cloudnative-pg
+      - grafana
     values:
       - values/backend.yaml
 
   # 4. Frontend (Backend 필요)
   frontend:
     type: helm
-    chart: bitnami/nginx
-    version: 15.0.0
+    chart: ingress-nginx/ingress-nginx
+    version: 4.0.0
     enabled: true
     depends_on:  # 의존성 설정
       - backend
@@ -106,34 +106,36 @@ cluster: web-stack-cluster  # 선택, 문서화 목적
 
 # Helm 리포지토리
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
+  cloudnative-pg:
+    url: https://cloudnative-pg.github.io/charts
+  ingress-nginx:
+    url: https://kubernetes.github.io/ingress-nginx
 ```
 
-### `values/postgresql.yaml`
+### `values/cloudnative-pg.yaml`
 
 ```yaml
-auth:
-  postgresPassword: "demo-password"
-  database: "webapp"
-primary:
+cluster:
+  instances: 1
+  storage:
+    size: 1Gi
   resources:
     requests:
       cpu: 250m
       memory: 256Mi
 ```
 
-### `values/redis.yaml`
+### `values/grafana.yaml`
 
 ```yaml
-architecture: standalone
-auth:
-  enabled: false
-master:
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
+replicas: 1
+adminPassword: "demo-password"
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
 ```
 
 ### `values/backend.yaml`
@@ -183,17 +185,17 @@ sbkube apply
 ✨ SBKube `apply` 시작 ✨
 
 🔧 Step 1: Prepare
-📦 Preparing Helm app: postgresql
-📦 Preparing Helm app: redis
+📦 Preparing Helm app: cloudnative-pg
+📦 Preparing Helm app: grafana
 📦 Preparing Helm app: backend
 📦 Preparing Helm app: frontend
 
 🚀 Step 3: Deploy (의존성 순서)
-📦 Deploying: postgresql
-✅ Deployed: postgresql
-📦 Deploying: redis
-✅ Deployed: redis
-📦 Deploying: backend (depends on: postgresql, redis)
+📦 Deploying: cloudnative-pg
+✅ Deployed: cloudnative-pg
+📦 Deploying: grafana
+✅ Deployed: grafana
+📦 Deploying: backend (depends on: cloudnative-pg, grafana)
 ✅ Deployed: backend
 📦 Deploying: frontend (depends on: backend)
 ✅ Deployed: frontend
@@ -223,7 +225,7 @@ sbkube apply --app frontend --app backend
 apps:
   frontend:
     type: helm
-    chart: bitnami/nginx
+    chart: ingress-nginx/ingress-nginx
     enabled: false  # 비활성화
     depends_on:
       - backend
@@ -246,11 +248,11 @@ kubectl get all -n web-stack
 sbkube state list
 
 # 예상 출력:
-# App Name     Type   Status     Namespace
-# postgresql   helm   deployed   web-stack
-# redis        helm   deployed   web-stack
-# backend      helm   deployed   web-stack
-# frontend     helm   deployed   web-stack
+# App Name        Type   Status     Namespace
+# cloudnative-pg  helm   deployed   web-stack
+# grafana         helm   deployed   web-stack
+# backend         helm   deployed   web-stack
+# frontend        helm   deployed   web-stack
 ```
 
 ---

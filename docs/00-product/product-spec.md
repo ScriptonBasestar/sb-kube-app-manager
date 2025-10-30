@@ -333,7 +333,7 @@ cluster: <string>              # 클러스터 이름 (선택, 문서화 목적)
 helm_repos:
   <repo-name>: <string>  # 저장소 이름: URL 매핑
   # 예:
-  # bitnami: https://charts.bitnami.com/bitnami
+  # grafana: https://grafana.github.io/helm-charts
   # stable: https://charts.helm.sh/stable
 
 # Git 리포지토리 (향후 지원 예정)

@@ -15,7 +15,7 @@
 apps:
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
 
   backend:
     type: helm
@@ -48,11 +48,11 @@ apps:
   # Layer 1: 데이터 레이어
   postgresql:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
 
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: prometheus-community/prometheus
 
   # Layer 2: 백엔드 (DB와 Cache에 의존)
   backend-api:
@@ -113,13 +113,13 @@ apps:
 
   postgresql:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     depends_on:
       - setup-infra
 
   rabbitmq:
     type: helm
-    chart: bitnami/rabbitmq
+    chart: prometheus-community/prometheus
     depends_on:
       - setup-infra
 
@@ -185,17 +185,17 @@ apps:
 apps:
   db-master:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
 
   db-slave-1:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     depends_on:
       - db-master
 
   db-slave-2:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     depends_on:
       - db-master
 
@@ -221,12 +221,12 @@ apps:
 apps:
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     enabled: true
 
   cache:
     type: helm
-    chart: bitnami/redis
+    chart: prometheus-community/prometheus
     enabled: false  # 비활성화
 
   backend:

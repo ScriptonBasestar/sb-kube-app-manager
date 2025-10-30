@@ -23,9 +23,9 @@ class TestConfigValidationErrors:
             SBKubeConfig(
                 # namespace 누락
                 apps={
-                    "redis": HelmApp(
-                        chart="bitnami/redis",
-                        version="17.0.0",
+                    "grafana": HelmApp(
+                        chart="grafana/grafana",
+                        version="6.50.0",
                     )
                 }
             )
@@ -65,7 +65,7 @@ class TestConfigValidationErrors:
         """overrides가 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
-                chart="bitnami/redis",
+                chart="grafana/grafana",
                 overrides="should-be-list",  # list여야 함
             )
 
@@ -141,7 +141,7 @@ class TestModelValidationErrors:
         """version이 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
-                chart="bitnami/redis",
+                chart="grafana/grafana",
                 version=123,  # str이어야 함
             )
 
@@ -149,7 +149,7 @@ class TestModelValidationErrors:
         """values가 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
-                chart="bitnami/redis",
+                chart="grafana/grafana",
                 values="should-be-list",  # list여야 함
             )
 
@@ -157,7 +157,7 @@ class TestModelValidationErrors:
         """set_values가 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
-                chart="bitnami/redis",
+                chart="grafana/grafana",
                 set_values="should-be-dict",  # dict여야 함
             )
 
@@ -178,9 +178,9 @@ class TestRuntimeErrors:
         from sbkube.commands.prepare import parse_helm_chart
 
         # 올바른 형식 테스트
-        repo, chart = parse_helm_chart("bitnami/redis")
-        assert repo == "bitnami"
-        assert chart == "redis"
+        repo, chart = parse_helm_chart("grafana/grafana")
+        assert repo == "grafana"
+        assert chart == "grafana"
 
         # 슬래시 없는 경우 (로컬 차트)
         repo, chart = parse_helm_chart("./local-chart")
@@ -201,14 +201,14 @@ class TestRuntimeErrors:
         config = SBKubeConfig(
             namespace="test",
             apps={
-                "redis": HelmApp(
-                    chart="bitnami/redis",
+                "grafana": HelmApp(
+                    chart="grafana/grafana",
                     enabled=False,  # 비활성화
                 )
             },
         )
 
-        assert config.apps["redis"].enabled is False
+        assert config.apps["grafana"].enabled is False
 
 
 # 에러 카운트 통계

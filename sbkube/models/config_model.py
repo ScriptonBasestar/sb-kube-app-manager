@@ -23,7 +23,7 @@ class HelmApp(ConfigBaseModel):
     Helm 차트 배포 앱.
 
     지원하는 chart 형식:
-    1. Remote chart: "repo/chart" (예: "bitnami/redis")
+    1. Remote chart: "repo/chart" (예: "grafana/grafana")
        → 자동으로 pull 후 install
     2. Local chart: "./charts/my-chart" (상대 경로)
        → 로컬 차트를 직접 install
@@ -32,12 +32,12 @@ class HelmApp(ConfigBaseModel):
 
     Examples:
         # Remote chart (자동 pull + install)
-        redis:
+        grafana:
           type: helm
-          chart: bitnami/redis
-          version: 17.13.2
+          chart: grafana/grafana
+          version: 6.50.0
           values:
-            - redis.yaml
+            - grafana.yaml
 
         # Local chart (install only)
         my-app:
@@ -113,7 +113,7 @@ class HelmApp(ConfigBaseModel):
         repo 이름 추출 (remote chart만).
 
         Returns:
-            repo 이름 (예: 'bitnami/redis' → 'bitnami') 또는 None (local chart)
+            repo 이름 (예: 'grafana/grafana' → 'grafana') 또는 None (local chart)
         """
         if not self.is_remote_chart():
             return None
@@ -124,7 +124,7 @@ class HelmApp(ConfigBaseModel):
         chart 이름 추출.
 
         Returns:
-            chart 이름 (예: 'bitnami/redis' → 'redis', './my-chart' → 'my-chart')
+            chart 이름 (예: 'grafana/grafana' → 'grafana', './my-chart' → 'my-chart')
         """
         if self.is_remote_chart():
             return self.chart.split("/")[1]
@@ -352,12 +352,12 @@ class SBKubeConfig(ConfigBaseModel):
           - a101_data_rdb
 
         apps:
-          redis:
+          grafana:
             type: helm
-            chart: bitnami/redis
-            version: 17.13.2
+            chart: grafana/grafana
+            version: 6.50.0
             values:
-              - redis.yaml
+              - grafana.yaml
 
           backend:
             type: helm

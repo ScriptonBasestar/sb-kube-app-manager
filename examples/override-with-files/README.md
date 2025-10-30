@@ -4,7 +4,7 @@
 
 ## 📋 시나리오
 
-Bitnami Nginx 차트에:
+Ingress Nginx 차트에:
 
 1. 새 ConfigMap 템플릿 추가 (`templates/custom-configmap.yaml`)
 1. 커스텀 index.html 파일 추가 (`files/index.html`)
@@ -102,8 +102,8 @@ ______________________________________________________________________
 apps:
   nginx:
     type: helm
-    chart: bitnami/nginx
-    version: "15.0.0"
+    chart: ingress-nginx/ingress-nginx
+    version: "4.0.0"
     values:
       - values/nginx.yaml
     overrides:
@@ -181,7 +181,7 @@ ConfigMap에 포함될 커스텀 HTML 파일입니다.
         <p>This page is served from a ConfigMap created by sbkube override mechanism.</p>
         <p>The HTML content was added to the Helm chart using the <code>files/</code> directory feature.</p>
         <hr>
-        <p><strong>Powered by</strong>: SBKube + Bitnami Nginx Chart</p>
+        <p><strong>Powered by</strong>: SBKube + Ingress Nginx Chart</p>
     </div>
 </body>
 </html>
@@ -222,8 +222,8 @@ sbkube prepare --app-dir examples/override-with-files
 ✨ SBKube `prepare` 시작 ✨
 📄 Loading config: examples/override-with-files/config.yaml
 📦 Preparing Helm app: nginx
-  Adding Helm repo: bitnami (https://charts.bitnami.com/bitnami)
-  Pulling chart: bitnami/nginx:15.0.0
+  Adding Helm repo: ingress-nginx (https://kubernetes.github.io/ingress-nginx)
+  Pulling chart: ingress-nginx/ingress-nginx:4.0.0
 ✅ Helm app prepared: nginx
 ✅ Prepare completed: 1/1 apps
 ```

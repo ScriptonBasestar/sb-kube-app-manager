@@ -255,7 +255,7 @@ rules:
 
 ### 외부 접근
 
-- **Helm 저장소**: HTTPS 접근 (예: charts.bitnami.com)
+- **Helm 저장소**: HTTPS 접근 (예: grafana.github.io/helm-charts)
 - **Git 리포지토리**: HTTPS 또는 SSH
 - **OCI 레지스트리**: HTTPS (Docker Hub, GitHub Container Registry 등)
 - **Kubernetes API**: kubeconfig에 지정된 주소

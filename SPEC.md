@@ -396,13 +396,13 @@ namespace: complete-example
 
 apps:
   # 소스 준비
-  - name: redis-chart-pull
+  - name: grafana-chart-pull
     type: pull-helm
     specs:
-      repo: bitnami
-      chart: redis
-      version: "18.0.0"
-      dest: redis
+      repo: grafana
+      chart: grafana
+      version: "6.50.0"
+      dest: grafana
 
   # 로컬 리소스 복사
   - name: config-copy
@@ -441,8 +441,8 @@ apps:
 
 ```yaml
 helm_repos:
-  - name: bitnami
-    url: https://charts.bitnami.com/bitnami
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
 
 git_repos:
   - name: example-app

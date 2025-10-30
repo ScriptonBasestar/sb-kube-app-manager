@@ -103,8 +103,8 @@ class TestEdgeCaseHandling:
           - name: app1
             type: helm
             specs:
-              repo: bitnami
-              chart: nginx
+              repo: grafana
+              chart: grafana
               # Missing closing bracket
               values: {
                 key1: value1
@@ -134,8 +134,8 @@ class TestEdgeCaseHandling:
                     "name": "app-한글이름",
                     "type": "helm",
                     "specs": {
-                        "repo": "bitnami",
-                        "chart": "nginx",
+                        "repo": "grafana",
+                        "chart": "grafana",
                         "values": {
                             "특수키": "특수값",
                             "emoji": "🚀📦",

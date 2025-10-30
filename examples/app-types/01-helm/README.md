@@ -7,26 +7,26 @@ Helm 차트를 사용한 배포 예제입니다.
 1. **원격 Helm 차트** - Helm 리포지토리에서 차트 다운로드
 2. **로컬 Helm 차트** - 로컬 디렉토리의 차트 사용
 
-## 예제 1: 원격 Helm 차트 (Bitnami Redis)
+## 예제 1: 원격 Helm 차트 (Grafana)
 
 ### config.yaml
 ```yaml
 namespace: helm-demo
 
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: "17.13.2"
+    chart: grafana/grafana
+    version: "6.50.0"
     values:
-      - redis-values.yaml
+      - grafana-values.yaml
 ```
 
 ### sources.yaml
 ```yaml
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 ```
 
 ### 실행
@@ -75,12 +75,12 @@ sbkube apply --app-dir .
 namespace: helm-demo
 
 apps:
-  postgresql:
+  cnpg:
     type: helm
-    chart: bitnami/postgresql
-    version: "12.12.10"
+    chart: cloudnative-pg/cloudnative-pg
+    version: "0.18.0"
     values:
-      - postgresql-values.yaml
+      - cnpg-values.yaml
 
     # 차트 파일 교체
     overrides:

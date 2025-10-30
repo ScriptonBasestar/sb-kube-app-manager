@@ -1,6 +1,6 @@
 # Use Case: Database Cluster (PostgreSQL HA)
 
-PostgreSQL 고가용성 클러스터 구성 예제입니다 (Bitnami PostgreSQL HA).
+PostgreSQL 고가용성 클러스터 구성 예제입니다 (CloudNativePG).
 
 ## 📋 개요
 
@@ -214,7 +214,7 @@ kubectl exec -it postgresql-ha-pgpool-<pod> -n db-cluster -- \
 
 ## 📚 참고 자료
 
-- [Bitnami PostgreSQL HA Chart](https://github.com/bitnami/charts/tree/main/bitnami/postgresql-ha)
+- [CloudNativePG Documentation](https://cloudnative-pg.io/)
 - [PostgreSQL Replication](https://www.postgresql.org/docs/current/high-availability.html)
 
 ## 🧹 정리

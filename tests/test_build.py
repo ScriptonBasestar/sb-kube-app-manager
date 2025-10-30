@@ -11,22 +11,22 @@ class TestBuildV3:
     def test_helm_app_with_overrides(self, tmp_path):
         """Overrides가 있는 Helm 앱 빌드 검증."""
         # 테스트 디렉토리 구조 생성
-        charts_dir = tmp_path / "charts" / "redis" / "redis"
+        charts_dir = tmp_path / "charts" / "grafana" / "grafana"
         charts_dir.mkdir(parents=True)
-        (charts_dir / "Chart.yaml").write_text("name: redis\nversion: 1.0.0")
+        (charts_dir / "Chart.yaml").write_text("name: grafana\nversion: 6.50.0")
         (charts_dir / "values.yaml").write_text("replicaCount: 1")
         (charts_dir / "templates").mkdir()
         (charts_dir / "templates" / "deployment.yaml").write_text("kind: Deployment")
 
         # Overrides 디렉토리
-        overrides_dir = tmp_path / "overrides" / "redis"
+        overrides_dir = tmp_path / "overrides" / "grafana"
         overrides_dir.mkdir(parents=True)
         (overrides_dir / "values.yaml").write_text("replicaCount: 3")  # 오버라이드
 
         # HelmApp 설정
         app = HelmApp(
-            chart="bitnami/redis",
-            version="17.13.2",
+            chart="grafana/grafana",
+            version="6.50.0",
             overrides=["values.yaml"],
         )
 
@@ -37,7 +37,7 @@ class TestBuildV3:
         from sbkube.commands.build import build_helm_app
 
         success = build_helm_app(
-            app_name="redis",
+            app_name="grafana",
             app=app,
             base_dir=tmp_path,
             charts_dir=tmp_path / "charts",
@@ -46,23 +46,23 @@ class TestBuildV3:
         )
 
         assert success
-        assert (build_dir / "redis" / "Chart.yaml").exists()
-        assert (build_dir / "redis" / "values.yaml").read_text() == "replicaCount: 3"
+        assert (build_dir / "grafana" / "Chart.yaml").exists()
+        assert (build_dir / "grafana" / "values.yaml").read_text() == "replicaCount: 3"
 
     def test_helm_app_with_removes(self, tmp_path):
         """Removes가 있는 Helm 앱 빌드 검증."""
         # 테스트 디렉토리 구조 생성
-        charts_dir = tmp_path / "charts" / "redis" / "redis"
+        charts_dir = tmp_path / "charts" / "grafana" / "grafana"
         charts_dir.mkdir(parents=True)
-        (charts_dir / "Chart.yaml").write_text("name: redis")
-        (charts_dir / "README.md").write_text("# Redis Chart")  # 제거 대상
+        (charts_dir / "Chart.yaml").write_text("name: grafana")
+        (charts_dir / "README.md").write_text("# Grafana Chart")  # 제거 대상
         (charts_dir / "templates").mkdir()
         (charts_dir / "templates" / "deployment.yaml").write_text("kind: Deployment")
 
         # HelmApp 설정
         app = HelmApp(
-            chart="bitnami/redis",
-            version="17.13.2",
+            chart="grafana/grafana",
+            version="6.50.0",
             removes=["README.md"],
         )
 
@@ -73,7 +73,7 @@ class TestBuildV3:
         from sbkube.commands.build import build_helm_app
 
         success = build_helm_app(
-            app_name="redis",
+            app_name="grafana",
             app=app,
             base_dir=tmp_path,
             charts_dir=tmp_path / "charts",
@@ -82,8 +82,8 @@ class TestBuildV3:
         )
 
         assert success
-        assert (build_dir / "redis" / "Chart.yaml").exists()
-        assert not (build_dir / "redis" / "README.md").exists()
+        assert (build_dir / "grafana" / "Chart.yaml").exists()
+        assert not (build_dir / "grafana" / "README.md").exists()
 
     def test_local_chart_build(self, tmp_path):
         """로컬 차트 빌드 검증."""
@@ -126,15 +126,15 @@ class TestBuildV3:
     def test_helm_app_with_glob_patterns(self, tmp_path):
         """Glob 패턴을 사용한 Overrides 테스트."""
         # 테스트 차트 생성
-        chart_dir = tmp_path / "charts" / "nginx" / "nginx"
+        chart_dir = tmp_path / "charts" / "ingress" / "ingress-nginx"
         chart_dir.mkdir(parents=True)
-        (chart_dir / "Chart.yaml").write_text("name: nginx\nversion: 1.0.0")
+        (chart_dir / "Chart.yaml").write_text("name: ingress-nginx\nversion: 4.0.0")
         (chart_dir / "templates").mkdir()
         (chart_dir / "templates" / "deployment.yaml").write_text("kind: Deployment")
         (chart_dir / "templates" / "service.yaml").write_text("kind: Service")
 
         # Overrides 디렉토리 - 여러 파일 생성
-        overrides_dir = tmp_path / "overrides" / "nginx"
+        overrides_dir = tmp_path / "overrides" / "ingress"
         (overrides_dir / "templates").mkdir(parents=True)
         (overrides_dir / "templates" / "configmap.yaml").write_text("kind: ConfigMap")
         (overrides_dir / "templates" / "secret.yaml").write_text("kind: Secret")
@@ -144,8 +144,8 @@ class TestBuildV3:
 
         # HelmApp 설정 - Glob 패턴 사용
         app = HelmApp(
-            chart="bitnami/nginx",
-            version="15.0.0",
+            chart="ingress-nginx/ingress-nginx",
+            version="4.0.0",
             overrides=[
                 "templates/*.yaml",  # 모든 YAML 템플릿
                 "files/*",  # 모든 파일
@@ -157,7 +157,7 @@ class TestBuildV3:
 
         build_dir = tmp_path / "build"
         success = build_helm_app(
-            app_name="nginx",
+            app_name="ingress",
             app=app,
             base_dir=tmp_path,
             charts_dir=tmp_path / "charts",
@@ -168,17 +168,17 @@ class TestBuildV3:
         assert success
 
         # Glob 패턴으로 복사된 파일들 확인
-        assert (build_dir / "nginx" / "templates" / "configmap.yaml").exists()
-        assert (build_dir / "nginx" / "templates" / "secret.yaml").exists()
-        assert (build_dir / "nginx" / "files" / "config.txt").exists()
-        assert (build_dir / "nginx" / "files" / "data.json").exists()
+        assert (build_dir / "ingress" / "templates" / "configmap.yaml").exists()
+        assert (build_dir / "ingress" / "templates" / "secret.yaml").exists()
+        assert (build_dir / "ingress" / "files" / "config.txt").exists()
+        assert (build_dir / "ingress" / "files" / "data.json").exists()
 
         # 내용 확인
         assert (
-            build_dir / "nginx" / "templates" / "configmap.yaml"
+            build_dir / "ingress" / "templates" / "configmap.yaml"
         ).read_text() == "kind: ConfigMap"
         assert (
-            build_dir / "nginx" / "files" / "config.txt"
+            build_dir / "ingress" / "files" / "config.txt"
         ).read_text() == "config content"
 
     def test_helm_app_with_mixed_patterns(self, tmp_path):

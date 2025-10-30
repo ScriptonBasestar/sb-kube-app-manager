@@ -404,23 +404,23 @@ sbkube prepare [옵션]
 ```bash
 # 첫 실행: 차트 다운로드
 $ sbkube prepare
-📦 Preparing Helm app: redis
-  Pulling chart: bitnami/redis → charts/redis
-✅ Helm app prepared: redis
+📦 Preparing Helm app: grafana
+  Pulling chart: grafana/grafana → charts/grafana
+✅ Helm app prepared: grafana
 
 # 재실행: 기존 차트 skip
 $ sbkube prepare
-📦 Preparing Helm app: redis
-⏭️  Chart already exists, skipping: redis
+📦 Preparing Helm app: grafana
+⏭️  Chart already exists, skipping: grafana
     Use --force to re-download
-✅ Helm app prepared: redis
+✅ Helm app prepared: grafana
 
 # 강제 재다운로드
 $ sbkube prepare --force
-📦 Preparing Helm app: redis
-⚠️  Removing existing chart (--force): charts/redis
-  Pulling chart: bitnami/redis → charts/redis
-✅ Helm app prepared: redis
+📦 Preparing Helm app: grafana
+⚠️  Removing existing chart (--force): charts/grafana
+  Pulling chart: grafana/grafana → charts/grafana
+✅ Helm app prepared: grafana
 ```
 
 ### 💡 사용 예제
@@ -496,7 +496,7 @@ sbkube build --app-dir production --config-file prod-config.yaml
 apps:
   myapp:
     type: helm
-    chart: bitnami/nginx
+    chart: ingress-nginx/ingress-nginx
     # overrides 필드 없음! ← 문제
 ```
 
@@ -528,7 +528,7 @@ overrides/
 apps:
   myapp:
     type: helm
-    chart: bitnami/nginx
+    chart: ingress-nginx/ingress-nginx
     overrides:
       - templates/configmap.yaml     # ✅ 명시적으로 나열
       - files/custom-config.txt      # ✅ files 디렉토리도 포함

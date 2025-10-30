@@ -22,9 +22,9 @@ prepare → build → deploy
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     overrides:
       - values.yaml           # values.yaml 교체
       - templates/service.yaml # service.yaml 교체
@@ -36,13 +36,13 @@ apps:
 project/
 ├── config.yaml
 ├── overrides/
-│   └── redis/                    # 앱 이름과 동일
+│   └── grafana/                  # 앱 이름과 동일
 │       ├── values.yaml           # 교체할 파일
 │       └── templates/
 │           └── service.yaml      # 교체할 파일
 └── charts/
-    └── redis/
-        └── redis/                # 원본 차트
+    └── grafana/
+        └── grafana/              # 원본 차트
             ├── values.yaml       # 원본
             └── templates/
                 └── service.yaml  # 원본
@@ -50,39 +50,39 @@ project/
 
 ### 처리 과정
 
-1. **prepare 단계**: 원본 차트를 `charts/redis/redis/`로 다운로드
+1. **prepare 단계**: 원본 차트를 `charts/grafana/grafana/`로 다운로드
 1. **build 단계**:
-   - `charts/redis/redis/` → `build/redis/` 복사
-   - `overrides/redis/values.yaml` → `build/redis/values.yaml` 교체
-   - `overrides/redis/templates/service.yaml` → `build/redis/templates/service.yaml` 교체
-1. **deploy 단계**: `build/redis/` 디렉토리의 차트로 배포
+   - `charts/grafana/grafana/` → `build/grafana/` 복사
+   - `overrides/grafana/values.yaml` → `build/grafana/values.yaml` 교체
+   - `overrides/grafana/templates/service.yaml` → `build/grafana/templates/service.yaml` 교체
+1. **deploy 단계**: `build/grafana/` 디렉토리의 차트로 배포
 
 ### 사용 사례
 
 #### 1. values.yaml 커스터마이징
 
-**원본** (`charts/redis/redis/values.yaml`):
+**원본** (`charts/grafana/grafana/values.yaml`):
 
 ```yaml
-replicaCount: 1
+replicas: 1
 resources:
   limits:
     memory: 256Mi
 ```
 
-**오버라이드** (`overrides/redis/values.yaml`):
+**오버라이드** (`overrides/grafana/values.yaml`):
 
 ```yaml
-replicaCount: 3
+replicas: 3
 resources:
   limits:
     memory: 512Mi
 ```
 
-**결과** (`build/redis/values.yaml`):
+**결과** (`build/grafana/values.yaml`):
 
 ```yaml
-replicaCount: 3
+replicas: 3
 resources:
   limits:
     memory: 512Mi
@@ -122,9 +122,9 @@ spec:
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     removes:
       - README.md                # 파일 삭제
       - templates/ingress.yaml   # 특정 템플릿 삭제
@@ -134,10 +134,10 @@ apps:
 ### 처리 과정
 
 1. **build 단계**:
-   - 차트를 `build/redis/`로 복사
-   - `build/redis/README.md` 삭제
-   - `build/redis/templates/ingress.yaml` 삭제
-   - `build/redis/tests/` 디렉토리 전체 삭제
+   - 차트를 `build/grafana/`로 복사
+   - `build/grafana/README.md` 삭제
+   - `build/grafana/templates/ingress.yaml` 삭제
+   - `build/grafana/tests/` 디렉토리 전체 삭제
 
 ### 사용 사례
 
@@ -147,10 +147,10 @@ apps:
 apps:
   nginx:
     type: helm
-    chart: bitnami/nginx
+    chart: ingress-nginx/ingress-nginx
     removes:
-      - templates/ingress.yaml     # Ingress 사용 안 함
-      - templates/servicemonitor.yaml # Prometheus 사용 안 함
+      - templates/admission-webhooks/job-patch/  # Admission Webhooks 사용 안 함
+      - templates/controller-servicemonitor.yaml  # Prometheus 사용 안 함
 ```
 
 #### 2. 문서/테스트 파일 제거
@@ -159,7 +159,7 @@ apps:
 apps:
   postgres:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     removes:
       - README.md
       - NOTES.txt
@@ -172,12 +172,12 @@ Overrides와 Removes를 함께 사용할 수 있습니다:
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 17.13.2
+    chart: grafana/grafana
+    version: 6.50.0
     values:
-      - redis.yaml
+      - grafana.yaml
 
     # 파일 교체
     overrides:
@@ -195,7 +195,7 @@ apps:
 
 **처리 순서**:
 
-1. 차트 복사: `charts/redis/redis/` → `build/redis/`
+1. 차트 복사: `charts/grafana/grafana/` → `build/grafana/`
 1. Overrides 적용: 파일 교체
 1. Removes 적용: 파일 삭제
 
@@ -280,9 +280,9 @@ sbkube deploy --app-dir my-project --dry-run
 ```yaml
 # config-prod.yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     overrides:
       - values-prod.yaml  # 프로덕션 설정
     removes:
@@ -294,9 +294,9 @@ apps:
 ```yaml
 # config-staging.yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     overrides:
       - values-staging.yaml  # 스테이징 설정
 ```
@@ -322,7 +322,7 @@ apps:
 apps:
   postgres:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     overrides:
       - templates/secret.yaml  # 커스텀 Secret 사용
     removes:
@@ -339,14 +339,14 @@ apps:
 **올바른 예**:
 
 ```
-overrides/redis/templates/service.yaml  # ✅
+overrides/grafana/templates/service.yaml  # ✅
 ```
 
 **잘못된 예**:
 
 ```
 overrides/service.yaml  # ❌ (앱 이름 디렉토리 없음)
-overrides/redis/service.yaml  # ❌ (templates 디렉토리 누락)
+overrides/grafana/service.yaml  # ❌ (templates 디렉토리 누락)
 ```
 
 ### 2. Removes 패턴
@@ -373,16 +373,16 @@ overrides/redis/service.yaml  # ❌ (templates 디렉토리 누락)
 
 ```bash
 # build 디렉토리 확인
-ls -la build/redis/
+ls -la build/grafana/
 
 # overrides 디렉토리 구조 확인
-tree overrides/redis/
+tree overrides/grafana/
 ```
 
 ### 잘못된 경로
 
 ```
-[yellow]⚠️ Override file not found: overrides/redis/values.yaml[/yellow]
+[yellow]⚠️ Override file not found: overrides/grafana/values.yaml[/yellow]
 ```
 
 **해결**:
@@ -394,7 +394,7 @@ tree overrides/redis/
 
 ```bash
 # build 디렉토리에 파일이 있는지 확인
-ls build/redis/README.md
+ls build/grafana/README.md
 
 # config.yaml의 removes 패턴 확인
 ```

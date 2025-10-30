@@ -90,8 +90,8 @@ class InitCommand(BaseCommand):
                 "production",
             ]
 
-        if click.confirm("Bitnami Helm 저장소를 추가하시겠습니까?", default=True):
-            self.template_vars["use_bitnami"] = True
+        if click.confirm("Grafana Helm 저장소를 추가하시겠습니까?", default=True):
+            self.template_vars["use_grafana"] = True
 
         if click.confirm("Prometheus 모니터링을 설정하시겠습니까?", default=False):
             self.template_vars["use_prometheus"] = True
@@ -106,7 +106,7 @@ class InitCommand(BaseCommand):
                 "app_type": "helm",
                 "create_environments": True,
                 "environments": ["development", "staging", "production"],
-                "use_bitnami": True,
+                "use_grafana": True,
                 "use_prometheus": False,
             }
         )

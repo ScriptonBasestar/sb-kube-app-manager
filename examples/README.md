@@ -329,17 +329,17 @@ namespace: my-namespace
 apps:
   app-name:
     type: helm
-    chart: bitnami/redis
-    version: "17.13.2"
+    chart: grafana/grafana
+    version: "6.50.0"
     values:
-      - redis-values.yaml
+      - grafana-values.yaml
 ```
 
 #### sources.yaml
 ```yaml
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 
 git_repos:
   my-charts:

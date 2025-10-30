@@ -340,8 +340,8 @@ class HelmRepositoryFix(AutoFix):
         try:
             # 기본 리포지토리들 추가
             repositories = [
-                ("bitnami", "https://charts.bitnami.com/bitnami"),
-                ("stable", "https://charts.helm.sh/stable"),
+                ("grafana", "https://grafana.github.io/helm-charts"),
+                ("prometheus-community", "https://prometheus-community.github.io/helm-charts"),
             ]
 
             success_count = 0
@@ -435,9 +435,9 @@ class HelmRepositoryFix(AutoFix):
             )
 
             if result.returncode == 0:
-                # bitnami 또는 stable 리포지토리가 있는지 확인
+                # grafana 또는 prometheus-community 리포지토리가 있는지 확인
                 output = result.stdout.lower()
-                return "bitnami" in output or "stable" in output
+                return "grafana" in output or "prometheus-community" in output
 
             return False
 

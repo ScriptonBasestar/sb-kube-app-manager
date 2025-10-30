@@ -249,7 +249,7 @@ class NetworkAccessCheck(DiagnosticCheck):
             # 주요 서비스 연결 테스트
             test_urls = [
                 ("Docker Hub", "https://registry-1.docker.io/v2/", 5),
-                ("Bitnami Charts", "https://charts.bitnami.com/bitnami/index.yaml", 5),
+                ("Grafana Charts", "https://grafana.github.io/helm-charts/index.yaml", 5),
                 ("Kubernetes", "https://kubernetes.io/", 5),
             ]
 
@@ -275,7 +275,7 @@ class NetworkAccessCheck(DiagnosticCheck):
             return self.create_result(
                 DiagnosticLevel.SUCCESS,
                 "네트워크 연결 상태 정상",
-                "Docker Hub, Bitnami Charts, Kubernetes 연결 확인됨",
+                "Docker Hub, Grafana Charts, Kubernetes 연결 확인됨",
             )
 
         except Exception as e:

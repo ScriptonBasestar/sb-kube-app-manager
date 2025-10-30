@@ -210,11 +210,11 @@ Error: failed to download chart: chart not found
 
 ```bash
 # Helm 저장소 업데이트
-helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
 
 # 차트 존재 확인
-helm search repo bitnami/nginx
+helm search repo grafana/grafana
 
 # sources.yaml 설정 확인
 cat sources.yaml
@@ -384,22 +384,22 @@ ssh-keygen -t rsa -b 4096 -C "your.email@example.com"
 
 ```bash
 # 오류 메시지
-Error: failed to fetch https://charts.bitnami.com/bitnami/index.yaml
+Error: failed to fetch https://grafana.github.io/helm-charts/index.yaml
 ```
 
 **해결 방법:**
 
 ```bash
 # 네트워크 연결 확인
-curl -I https://charts.bitnami.com/bitnami/index.yaml
+curl -I https://grafana.github.io/helm-charts/index.yaml
 
 # 프록시 설정 (필요한 경우)
 export HTTP_PROXY=http://proxy.company.com:8080
 export HTTPS_PROXY=http://proxy.company.com:8080
 
 # Helm 저장소 재추가
-helm repo remove bitnami
-helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo remove grafana
+helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
 ```
 
@@ -520,7 +520,7 @@ cat sources.yaml
 apps:
   myapp:
     type: helm
-    chart: bitnami/nginx
+    chart: ingress-nginx/ingress-nginx
     # overrides 필드가 없음!
 ```
 
@@ -531,7 +531,7 @@ apps:
 apps:
   myapp:
     type: helm
-    chart: bitnami/nginx
+    chart: ingress-nginx/ingress-nginx
     overrides:
       - templates/configmap.yaml
       - files/config.txt
@@ -601,8 +601,8 @@ myapp:
 ```yaml
 myapp:
   type: helm
-  chart: bitnami/nginx  # 원격 차트는 항상 빌드됨
-  version: "15.0.0"
+  chart: ingress-nginx/ingress-nginx  # 원격 차트는 항상 빌드됨
+  version: "4.0.0"
 ```
 
 **방법 3: 빌드 없이 배포** (로컬 차트 + 커스터마이징 없음)
@@ -611,6 +611,15 @@ myapp:
 # build 건너뛰고 바로 template/deploy
 sbkube template --app-dir .
 sbkube deploy --app-dir .
+```
+
+**방법 4: 차트 변경**
+
+```yaml
+myapp:
+  type: helm
+  chart: grafana/grafana  # 원격 차트는 항상 빌드됨
+  version: "6.50.0"
 ```
 
 #### 확인

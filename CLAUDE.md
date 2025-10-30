@@ -804,7 +804,7 @@ ______________________________________________________________________
 def test_config_validation():
     config = SBKubeConfig(
         namespace="test",
-        apps=[{"name": "app1", "type": "helm", "specs": {"repo": "bitnami", "chart": "redis"}}]
+        apps=[{"name": "app1", "type": "helm", "specs": {"repo": "grafana", "chart": "grafana"}}]
     )
     assert config.namespace == "test"
 ```

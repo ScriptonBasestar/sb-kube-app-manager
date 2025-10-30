@@ -373,7 +373,7 @@ apps:
   # Phase 2: 자동 데이터베이스
   postgres:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     depends_on: [manual-network, manual-secrets]
 
   # Phase 3: 자동 애플리케이션

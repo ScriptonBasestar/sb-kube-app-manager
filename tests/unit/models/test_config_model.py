@@ -30,22 +30,22 @@ class TestHelmApp:
         """Test remote chart with minimal configuration."""
         app = HelmApp(
             type="helm",
-            chart="bitnami/redis",
-            version="17.13.2",
+            chart="grafana/grafana",
+            version="6.50.0",
         )
         assert app.type == "helm"
-        assert app.chart == "bitnami/redis"
-        assert app.version == "17.13.2"
+        assert app.chart == "grafana/grafana"
+        assert app.version == "6.50.0"
         assert app.is_remote_chart() is True
-        assert app.get_repo_name() == "bitnami"
-        assert app.get_chart_name() == "redis"
+        assert app.get_repo_name() == "grafana"
+        assert app.get_chart_name() == "grafana"
 
     def test_remote_chart_with_values(self):
         """Test remote chart with values files."""
         app = HelmApp(
             type="helm",
-            chart="bitnami/postgresql",
-            version="12.5.0",
+            chart="cloudnative-pg/cloudnative-pg",
+            version="0.18.0",
             values=["values.yaml", "secrets.yaml"],
         )
         assert app.values == ["values.yaml", "secrets.yaml"]
@@ -54,7 +54,7 @@ class TestHelmApp:
         """Test remote chart with --set values."""
         app = HelmApp(
             type="helm",
-            chart="bitnami/nginx",
+            chart="ingress-nginx/ingress-nginx",
             set_values={"replicaCount": 3, "service.type": "LoadBalancer"},
         )
         assert app.set_values["replicaCount"] == 3
@@ -83,7 +83,7 @@ class TestHelmApp:
         """Test HelmApp with overrides and removes (backward compatibility)."""
         app = HelmApp(
             type="helm",
-            chart="bitnami/redis",
+            chart="grafana/grafana",
             overrides=["configmap.yaml", "secret.yaml"],
             removes=["tests/*", "docs/*"],
         )
@@ -94,7 +94,7 @@ class TestHelmApp:
         """Test HelmApp with namespace override."""
         app = HelmApp(
             type="helm",
-            chart="bitnami/redis",
+            chart="grafana/grafana",
             namespace="custom-namespace",
         )
         assert app.namespace == "custom-namespace"
@@ -103,11 +103,11 @@ class TestHelmApp:
         """Test HelmApp with labels and annotations."""
         app = HelmApp(
             type="helm",
-            chart="bitnami/redis",
-            labels={"app": "redis", "env": "prod"},
+            chart="grafana/grafana",
+            labels={"app": "grafana", "env": "prod"},
             annotations={"version": "1.0.0"},
         )
-        assert app.labels == {"app": "redis", "env": "prod"}
+        assert app.labels == {"app": "grafana", "env": "prod"}
         assert app.annotations == {"version": "1.0.0"}
 
     def test_helm_app_with_dependencies(self):
@@ -115,14 +115,14 @@ class TestHelmApp:
         app = HelmApp(
             type="helm",
             chart="my-org/backend",
-            depends_on=["redis", "postgresql"],
+            depends_on=["grafana", "cloudnative-pg"],
         )
-        assert app.depends_on == ["redis", "postgresql"]
+        assert app.depends_on == ["grafana", "cloudnative-pg"]
 
     def test_helm_app_enabled_flag(self):
         """Test HelmApp enabled flag."""
-        app_enabled = HelmApp(type="helm", chart="bitnami/redis", enabled=True)
-        app_disabled = HelmApp(type="helm", chart="bitnami/redis", enabled=False)
+        app_enabled = HelmApp(type="helm", chart="grafana/grafana", enabled=True)
+        app_disabled = HelmApp(type="helm", chart="grafana/grafana", enabled=False)
         assert app_enabled.enabled is True
         assert app_disabled.enabled is False
 
@@ -447,25 +447,25 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="production",
             apps={
-                "redis": HelmApp(type="helm", chart="bitnami/redis", version="17.13.2"),
+                "grafana": HelmApp(type="helm", chart="grafana/grafana", version="6.50.0"),
             },
         )
         assert config.namespace == "production"
-        assert "redis" in config.apps
-        assert config.apps["redis"].type == "helm"
+        assert "grafana" in config.apps
+        assert config.apps["grafana"].type == "helm"
 
     def test_sbkube_config_multiple_apps(self):
         """Test SBKubeConfig with multiple apps of different types."""
         config = SBKubeConfig(
             namespace="default",
             apps={
-                "redis": HelmApp(type="helm", chart="bitnami/redis"),
+                "grafana": HelmApp(type="helm", chart="grafana/grafana"),
                 "backend": YamlApp(type="yaml", files=["deployment.yaml"]),
                 "init": ExecApp(type="exec", commands=["echo 'Starting'"]),
             },
         )
         assert len(config.apps) == 3
-        assert config.apps["redis"].type == "helm"
+        assert config.apps["grafana"].type == "helm"
         assert config.apps["backend"].type == "yaml"
         assert config.apps["init"].type == "exec"
 
@@ -474,7 +474,7 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="production",
             apps={
-                "app1": HelmApp(type="helm", chart="bitnami/redis"),
+                "app1": HelmApp(type="helm", chart="grafana/grafana"),
                 "app2": YamlApp(type="yaml", files=["manifest.yaml"]),
             },
         )
@@ -488,7 +488,7 @@ class TestSBKubeConfig:
             namespace="production",
             apps={
                 "app1": HelmApp(
-                    type="helm", chart="bitnami/redis", namespace="custom-ns"
+                    type="helm", chart="grafana/grafana", namespace="custom-ns"
                 ),
             },
         )
@@ -500,7 +500,7 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="production",
             apps={
-                "redis": HelmApp(type="helm", chart="bitnami/redis"),
+                "grafana": HelmApp(type="helm", chart="grafana/grafana"),
             },
             global_labels={"env": "prod", "team": "platform"},
             global_annotations={"owner": "devops"},
@@ -513,8 +513,8 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="default",
             apps={
-                "app1": HelmApp(type="helm", chart="bitnami/redis", enabled=True),
-                "app2": HelmApp(type="helm", chart="bitnami/nginx", enabled=False),
+                "app1": HelmApp(type="helm", chart="grafana/grafana", enabled=True),
+                "app2": HelmApp(type="helm", chart="ingress-nginx/ingress-nginx", enabled=False),
                 "app3": YamlApp(type="yaml", files=["manifest.yaml"], enabled=True),
             },
         )
@@ -529,37 +529,37 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="default",
             apps={
-                "redis": HelmApp(type="helm", chart="bitnami/redis"),
-                "nginx": HelmApp(type="helm", chart="bitnami/nginx"),
+                "grafana": HelmApp(type="helm", chart="grafana/grafana"),
+                "ingress": HelmApp(type="helm", chart="ingress-nginx/ingress-nginx"),
                 "backend": YamlApp(type="yaml", files=["deployment.yaml"]),
             },
         )
         helm_apps = config.get_apps_by_type("helm")
         assert len(helm_apps) == 2
-        assert "redis" in helm_apps
-        assert "nginx" in helm_apps
+        assert "grafana" in helm_apps
+        assert "ingress" in helm_apps
 
     def test_sbkube_config_deployment_order_simple(self):
         """Test get_deployment_order with simple dependencies."""
         config = SBKubeConfig(
             namespace="default",
             apps={
-                "redis": HelmApp(type="helm", chart="bitnami/redis"),
+                "grafana": HelmApp(type="helm", chart="grafana/grafana"),
                 "backend": HelmApp(
-                    type="helm", chart="my-org/backend", depends_on=["redis"]
+                    type="helm", chart="my-org/backend", depends_on=["grafana"]
                 ),
             },
         )
         order = config.get_deployment_order()
-        assert order.index("redis") < order.index("backend")
+        assert order.index("grafana") < order.index("backend")
 
     def test_sbkube_config_deployment_order_complex(self):
         """Test get_deployment_order with complex dependency graph."""
         config = SBKubeConfig(
             namespace="default",
             apps={
-                "database": HelmApp(type="helm", chart="bitnami/postgresql"),
-                "cache": HelmApp(type="helm", chart="bitnami/redis"),
+                "database": HelmApp(type="helm", chart="cloudnative-pg/cloudnative-pg"),
+                "cache": HelmApp(type="helm", chart="grafana/grafana"),
                 "backend": HelmApp(
                     type="helm",
                     chart="my-org/backend",
@@ -610,7 +610,7 @@ class TestSBKubeConfig:
             SBKubeConfig(
                 namespace="default",
                 apps={
-                    "Invalid_Name": HelmApp(type="helm", chart="bitnami/redis"),
+                    "Invalid_Name": HelmApp(type="helm", chart="grafana/grafana"),
                 },
             )
         # Should fail Kubernetes naming validation
@@ -621,7 +621,7 @@ class TestSBKubeConfig:
             SBKubeConfig(
                 namespace="Invalid_Namespace",
                 apps={
-                    "redis": HelmApp(type="helm", chart="bitnami/redis"),
+                    "grafana": HelmApp(type="helm", chart="grafana/grafana"),
                 },
             )
         # Should fail Kubernetes naming validation

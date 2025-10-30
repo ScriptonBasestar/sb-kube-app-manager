@@ -48,26 +48,26 @@ sbkube apply \
 ### 2. 배포 확인
 
 ```bash
-# 3개의 Redis 인스턴스 확인
+# 3개의 Grafana 인스턴스 확인
 kubectl get pods -n helm-custom
 
 # Helm 릴리스 이름 확인
 helm list -n helm-custom
 
 # 출력:
-# redis-dev       default   1  deployed  redis-17.x.x  7.x.x
-# redis-staging   default   1  deployed  redis-17.x.x  7.x.x
-# redis-prod      default   1  deployed  redis-17.x.x  7.x.x
+# grafana-dev       default   1  deployed  grafana-6.x.x  9.x.x
+# grafana-staging   default   1  deployed  grafana-6.x.x  9.x.x
+# grafana-prod      default   1  deployed  grafana-6.x.x  9.x.x
 ```
 
 ### 3. 설정 확인
 
 ```bash
-# Dev Redis (standalone)
-kubectl get pods -n helm-custom -l app.kubernetes.io/instance=redis-dev
+# Dev Grafana (standalone)
+kubectl get pods -n helm-custom -l app.kubernetes.io/instance=grafana-dev
 
-# Prod Redis (cluster mode)
-kubectl get pods -n helm-custom -l app.kubernetes.io/instance=redis-prod
+# Prod Grafana (HA mode)
+kubectl get pods -n helm-custom -l app.kubernetes.io/instance=grafana-prod
 ```
 
 ## 📖 설정 파일 설명
@@ -79,45 +79,45 @@ namespace: helm-custom
 
 apps:
   # 1. Release Name + Set Values (Dev)
-  redis-dev:
+  grafana-dev:
     type: helm
-    chart: bitnami/redis
-    version: 17.13.2
-    release_name: redis-dev  # Helm 릴리스 이름 커스터마이징
+    chart: grafana/grafana
+    version: 6.50.0
+    release_name: grafana-dev  # Helm 릴리스 이름 커스터마이징
     values:
       - values/base-values.yaml
       - values/dev-values.yaml
     set_values:
       # CLI 값 오버라이드 (values 파일보다 우선)
-      image.tag: "7.0.11-debian-11-r0"
-      master.resources.limits.memory: "256Mi"
+      image.tag: "9.5.0"
+      resources.limits.memory: "256Mi"
 
   # 2. 다른 릴리스 (Staging)
-  redis-staging:
+  grafana-staging:
     type: helm
-    chart: bitnami/redis
-    version: 17.13.2
-    release_name: redis-staging
+    chart: grafana/grafana
+    version: 6.50.0
+    release_name: grafana-staging
     values:
       - values/base-values.yaml
       - values/staging-values.yaml
     set_values:
-      image.tag: "7.0.11-debian-11-r0"
-      replica.replicaCount: "2"
+      image.tag: "9.5.0"
+      replicas: "2"
 
-  # 3. Production 릴리스 (Cluster Mode)
-  redis-prod:
+  # 3. Production 릴리스 (HA Mode)
+  grafana-prod:
     type: helm
-    chart: bitnami/redis
-    version: 17.13.2
-    release_name: redis-prod
+    chart: grafana/grafana
+    version: 6.50.0
+    release_name: grafana-prod
     values:
       - values/base-values.yaml
       - values/prod-values.yaml
     set_values:
-      image.tag: "7.0.11-debian-11-r0"
-      cluster.enabled: "true"
-      cluster.nodes: "6"
+      image.tag: "9.5.0"
+      replicas: "3"
+      persistence.enabled: "true"
 ```
 
 ### Values 병합 우선순위
@@ -139,26 +139,26 @@ set_values (가장 높음, 최우선)
 **기본 동작** (release_name 없음):
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    # release_name 미지정 → 앱 이름(redis) 사용
+    chart: grafana/grafana
+    # release_name 미지정 → 앱 이름(grafana) 사용
 ```
 
 **커스터마이징**:
 ```yaml
 apps:
-  redis-prod:
+  grafana-prod:
     type: helm
-    chart: bitnami/redis
-    release_name: my-custom-redis-name  # Helm 릴리스 이름
+    chart: grafana/grafana
+    release_name: my-custom-grafana-name  # Helm 릴리스 이름
 ```
 
 **확인**:
 ```bash
 helm list -n <namespace>
-# NAME                    NAMESPACE  ...
-# my-custom-redis-name    default    ...
+# NAME                      NAMESPACE  ...
+# my-custom-grafana-name    default    ...
 ```
 
 ### 2. set_values 사용법
@@ -168,7 +168,7 @@ helm list -n <namespace>
 apps:
   my-app:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     set_values:
       key1: value1
       nested.key2: value2
@@ -312,17 +312,17 @@ sbkube apply --app-dir . --namespace helm-custom
 helm list -n helm-custom
 
 # 예상 출력:
-# NAME           NAMESPACE    REVISION  ...
-# redis-dev      helm-custom  1         ...
-# redis-staging  helm-custom  1         ...
-# redis-prod     helm-custom  1         ...
+# NAME              NAMESPACE    REVISION  ...
+# grafana-dev       helm-custom  1         ...
+# grafana-staging   helm-custom  1         ...
+# grafana-prod      helm-custom  1         ...
 ```
 
 ### 시나리오 2: Set Values 적용 확인
 
 ```bash
-# redis-dev의 메모리 제한 확인 (set_values로 256Mi 설정)
-kubectl get pod -n helm-custom -l app.kubernetes.io/instance=redis-dev -o yaml | grep -A 2 "limits:"
+# grafana-dev의 메모리 제한 확인 (set_values로 256Mi 설정)
+kubectl get pod -n helm-custom -l app.kubernetes.io/instance=grafana-dev -o yaml | grep -A 2 "limits:"
 
 # 예상 출력:
 #   limits:
@@ -332,10 +332,10 @@ kubectl get pod -n helm-custom -l app.kubernetes.io/instance=redis-dev -o yaml |
 ### 시나리오 3: Values 병합 확인
 
 ```bash
-# redis-prod의 클러스터 모드 확인 (set_values로 활성화)
-kubectl get pods -n helm-custom -l app.kubernetes.io/instance=redis-prod
+# grafana-prod의 HA 모드 확인 (set_values로 활성화)
+kubectl get pods -n helm-custom -l app.kubernetes.io/instance=grafana-prod
 
-# 예상 출력: 6개의 Pod (cluster.nodes=6)
+# 예상 출력: 3개의 Pod (replicas=3)
 ```
 
 ### 시나리오 4: 동적 값 변경
@@ -343,9 +343,9 @@ kubectl get pods -n helm-custom -l app.kubernetes.io/instance=redis-prod
 ```yaml
 # config.yaml 수정
 apps:
-  redis-dev:
+  grafana-dev:
     set_values:
-      image.tag: "7.2.0-debian-11-r0"  # 버전 변경
+      image.tag: "10.0.0"  # 버전 변경
 ```
 
 ```bash
@@ -353,10 +353,10 @@ apps:
 sbkube apply --app-dir . --namespace helm-custom
 
 # 이미지 태그 확인
-kubectl get pod -n helm-custom -l app.kubernetes.io/instance=redis-dev \
+kubectl get pod -n helm-custom -l app.kubernetes.io/instance=grafana-dev \
   -o jsonpath='{.items[0].spec.containers[0].image}'
 
-# 예상 출력: bitnami/redis:7.2.0-debian-11-r0
+# 예상 출력: grafana/grafana:10.0.0
 ```
 
 ## 🔍 트러블슈팅
@@ -374,11 +374,11 @@ Error: cannot re-use a name that is still in use
 ```yaml
 # 각 앱마다 고유한 release_name 사용
 apps:
-  redis-1:
-    release_name: redis-instance-1  # 고유
+  grafana-1:
+    release_name: grafana-instance-1  # 고유
 
-  redis-2:
-    release_name: redis-instance-2  # 고유
+  grafana-2:
+    release_name: grafana-instance-2  # 고유
 ```
 
 ### 문제 2: "set_values가 적용되지 않음"
@@ -388,7 +388,7 @@ apps:
 **해결**:
 ```bash
 # 차트의 기본 values 확인
-helm show values bitnami/redis > default-values.yaml
+helm show values grafana/grafana > default-values.yaml
 
 # 올바른 키 경로 찾기
 cat default-values.yaml | grep -A 5 "image:"
@@ -579,7 +579,7 @@ apps:
 kubectl delete namespace helm-custom
 
 # 또는 개별 릴리스 삭제
-helm uninstall redis-dev redis-staging redis-prod -n helm-custom
+helm uninstall grafana-dev grafana-staging grafana-prod -n helm-custom
 ```
 
 ---

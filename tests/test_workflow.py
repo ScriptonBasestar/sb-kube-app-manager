@@ -35,7 +35,7 @@ class TestWorkflowV3:
             yaml.dump(
                 {
                     "helm": {
-                        "bitnami": "https://charts.bitnami.com/bitnami",
+                        "grafana": "https://grafana.github.io/helm-charts",
                     }
                 }
             )
@@ -43,34 +43,34 @@ class TestWorkflowV3:
 
         # 3. Mock chart (prepare 시뮬레이션)
         # 실제로는 helm pull을 실행하지만, 테스트에서는 미리 차트를 생성
-        mock_chart_dir = charts_dir / "redis" / "redis"
+        mock_chart_dir = charts_dir / "grafana" / "grafana"
         mock_chart_dir.mkdir(parents=True, exist_ok=True)
-        (mock_chart_dir / "Chart.yaml").write_text("name: redis\nversion: 17.13.2")
+        (mock_chart_dir / "Chart.yaml").write_text("name: grafana\nversion: 6.50.0")
         (mock_chart_dir / "values.yaml").write_text(
-            "replicaCount: 1\nimage:\n  tag: 7.0"
+            "replicaCount: 1\nimage:\n  tag: 9.0.0"
         )
         (mock_chart_dir / "templates").mkdir(exist_ok=True)
         (mock_chart_dir / "templates" / "deployment.yaml").write_text(
-            "kind: Deployment\nmetadata:\n  name: redis"
+            "kind: Deployment\nmetadata:\n  name: grafana"
         )
-        (mock_chart_dir / "README.md").write_text("# Redis Chart")
+        (mock_chart_dir / "README.md").write_text("# Grafana Chart")
 
         # 4. Overrides 파일 생성
         (overrides_dir / "values.yaml").write_text(
-            "replicaCount: 3\nimage:\n  tag: 7.2"
+            "replicaCount: 3\nimage:\n  tag: 9.3.0"
         )
 
         # 5. HelmApp 설정
         app = HelmApp(
-            chart="bitnami/redis",
-            version="17.13.2",
+            chart="grafana/grafana",
+            version="6.50.0",
             overrides=["values.yaml"],
             removes=["README.md"],
         )
 
         # 6. Build 실행 (overrides/removes 적용)
         success = build_helm_app(
-            app_name="redis",
+            app_name="grafana",
             app=app,
             base_dir=tmp_path,
             charts_dir=charts_dir,
@@ -81,16 +81,16 @@ class TestWorkflowV3:
         assert success, "Build should succeed"
 
         # 7. 검증: build 디렉토리 생성
-        assert (build_dir / "redis").exists()
-        assert (build_dir / "redis" / "Chart.yaml").exists()
+        assert (build_dir / "grafana").exists()
+        assert (build_dir / "grafana" / "Chart.yaml").exists()
 
         # 8. 검증: overrides 적용됨
-        values_content = (build_dir / "redis" / "values.yaml").read_text()
+        values_content = (build_dir / "grafana" / "values.yaml").read_text()
         assert "replicaCount: 3" in values_content
-        assert "tag: 7.2" in values_content
+        assert "tag: 9.3.0" in values_content
 
         # 9. 검증: removes 적용됨
-        assert not (build_dir / "redis" / "README.md").exists()
+        assert not (build_dir / "grafana" / "README.md").exists()
 
         # 10. 검증: 원본 차트는 변경되지 않음
         original_values = (mock_chart_dir / "values.yaml").read_text()
@@ -110,11 +110,11 @@ class TestWorkflowV3:
             "apps": {
                 "database": {
                     "type": "helm",
-                    "chart": "bitnami/postgresql",
+                    "chart": "cloudnative-pg/cloudnative-pg",
                 },
                 "cache": {
                     "type": "helm",
-                    "chart": "bitnami/redis",
+                    "chart": "grafana/grafana",
                     "depends_on": ["database"],
                 },
                 "app": {

@@ -85,7 +85,7 @@ cluster: my-cluster  # 선택, 문서화 목적
 
 # Helm 리포지토리
 helm_repos:
-  bitnami: https://charts.bitnami.com/bitnami
+  grafana: https://grafana.github.io/helm-charts
   nginx: https://kubernetes.github.io/ingress-nginx
 
 # Git 리포지토리 (선택)
@@ -204,12 +204,12 @@ sbkube deploy --dry-run
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 17.13.2
+    chart: grafana/grafana
+    version: 6.50.0
     values:
-      - redis.yaml
+      - grafana.yaml
 ```
 
 ```bash
@@ -252,9 +252,9 @@ apps:
 
 ```yaml
 apps:
-  postgresql:
+  cnpg:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     overrides:
       templates/secret.yaml: custom-secret.yaml
     removes:

@@ -92,21 +92,21 @@ prepare → build → template → deploy
 namespace: my-namespace
 
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 17.13.2
+    chart: grafana/grafana
+    version: 6.50.0
     values:
-      - redis.yaml
+      - grafana.yaml
 ```
 
 **차트 커스터마이징**:
 
 ```yaml
 apps:
-  postgresql:
+  cnpg:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     overrides:
       templates/secret.yaml: my-custom-secret.yaml
     removes:
@@ -119,7 +119,7 @@ apps:
 apps:
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
 
   backend:
     type: helm

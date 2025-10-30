@@ -153,14 +153,14 @@ apps:
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     enabled: true              # 활성화 (기본값)
 
   old-app:
     type: helm
-    chart: bitnami/nginx
+    chart: ingress-nginx/ingress-nginx
     enabled: false             # 비활성화 (건너뜀)
 ```
 
@@ -172,7 +172,7 @@ apps:
 apps:
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
 
   backend:
     type: helm
@@ -195,10 +195,10 @@ apps:
 namespace: default            # 전역 네임스페이스
 
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    namespace: data           # 이 앱만 data 네임스페이스에 배포
+    chart: grafana/grafana
+    namespace: monitoring     # 이 앱만 monitoring 네임스페이스에 배포
 ```
 
 #### labels (dict, 선택)
@@ -207,9 +207,9 @@ apps:
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     labels:
       environment: production
       team: platform
@@ -221,11 +221,11 @@ apps:
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/grafana
     annotations:
-      description: "Production Redis"
+      description: "Production Grafana"
       owner: "platform-team"
 ```
 
@@ -241,34 +241,34 @@ Helm 차트를 준비하고 배포합니다 (원격 또는 로컬).
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis       # 필수: 차트 경로
+    chart: grafana/grafana     # 필수: 차트 경로
 ```
 
 #### 모든 필드
 
 ```yaml
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis       # 필수: <repo>/<chart> 또는 ./path
-    version: 17.13.2           # 선택: 차트 버전 (원격만)
+    chart: grafana/grafana     # 필수: <repo>/<chart> 또는 ./path
+    version: 6.50.0            # 선택: 차트 버전 (원격만)
     values:                    # 선택: values 파일 목록
-      - redis-values.yaml
-      - redis-production.yaml
+      - grafana-values.yaml
+      - grafana-production.yaml
     overrides:                 # 선택: 파일 교체
       templates/secret.yaml: custom-secret.yaml
     removes:                   # 선택: 파일 삭제
       - templates/serviceaccount.yaml
       - templates/tests/
-    namespace: data            # 선택: 네임스페이스
-    release_name: my-redis     # 선택: 릴리스 이름 (기본: 앱 이름)
+    namespace: monitoring      # 선택: 네임스페이스
+    release_name: my-grafana   # 선택: 릴리스 이름 (기본: 앱 이름)
 ```
 
 **chart 필드 형식**:
 
-- 원격: `<repo>/<chart>` (예: `bitnami/redis`)
+- 원격: `<repo>/<chart>` (예: `grafana/grafana`)
 - 로컬 (상대): `./charts/app`
 - 로컬 (절대): `/absolute/path/to/chart`
 - 이름만: `chart-name` (로컬 차트로 간주)
@@ -291,12 +291,12 @@ overrides:
 app-dir/
 ├── config.yaml
 └── overrides/
-    └── redis/              # 앱 이름과 일치해야 함
+    └── grafana/            # 앱 이름과 일치해야 함
         ├── templates/deployment.yaml      # 교체할 파일
         └── files/config.toml              # 추가할 파일
 ```
 
-**동작**: `sbkube build` 시 차트를 `build/redis/`로 복사 후, 명시된 파일을 `overrides/redis/`에서 복사하여 덮어쓰기 또는 추가
+**동작**: `sbkube build` 시 차트를 `build/grafana/`로 복사 후, 명시된 파일을 `overrides/grafana/`에서 복사하여 덮어쓰기 또는 추가
 
 **주의사항**:
 - `overrides/` 디렉토리가 있어도 config.yaml에 명시 필수
@@ -537,18 +537,18 @@ apps:
 namespace: production
 
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 17.13.2
+    chart: grafana/grafana
+    version: 6.50.0
     values:
-      - redis-values.yaml
+      - grafana-values.yaml
 
   backend:
     type: helm
     chart: ./charts/backend
     depends_on:
-      - redis
+      - grafana
 ```
 
 ### 고급 예제
@@ -580,7 +580,7 @@ apps:
   # 데이터베이스 배포 (차트 커스터마이징)
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: cloudnative-pg/cloudnative-pg
     namespace: data
     overrides:
       templates/secret.yaml: custom-secret.yaml

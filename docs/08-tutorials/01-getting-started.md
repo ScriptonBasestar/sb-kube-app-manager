@@ -111,13 +111,13 @@ my-first-sbkube-project/
 namespace: tutorial-demo
 
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 19.0.0
+    chart: grafana/grafana
+    version: 6.50.0
     enabled: true
     values:
-      - redis-values.yaml
+      - grafana-values.yaml
 ```
 
 **`sources.yaml`**:
@@ -130,24 +130,22 @@ cluster: sbkube-tutorial  # 선택, 문서화 목적
 
 # Helm 리포지토리
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 ```
 
-**`redis-values.yaml`** (Redis 설정):
+**`grafana-values.yaml`** (Grafana 설정):
 
 ```yaml
-architecture: standalone
-auth:
-  enabled: false
-master:
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
+replicas: 1
+adminPassword: "admin"
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
 ```
 
 ---
@@ -184,20 +182,20 @@ sbkube apply --dry-run
 📄 Using sources file: /path/to/sources.yaml
 
 🔧 Step 1: Prepare
-📦 Preparing Helm app: redis
-  Adding Helm repo: bitnami (https://charts.bitnami.com/bitnami)
-  Updating Helm repo: bitnami
-  Pulling chart: bitnami/redis → charts/redis
-✅ Helm app prepared: redis
+📦 Preparing Helm app: grafana
+  Adding Helm repo: grafana (https://grafana.github.io/helm-charts)
+  Updating Helm repo: grafana
+  Pulling chart: grafana/grafana → charts/grafana
+✅ Helm app prepared: grafana
 
 🔨 Step 2: Build
 ⏭️  Skipping build (no overrides/removes)
 
 🚀 Step 3: Deploy
-📦 Deploying Helm app: redis
-  Installing Helm release: redis-tutorial-demo
+📦 Deploying Helm app: grafana
+  Installing Helm release: grafana-tutorial-demo
   Namespace: tutorial-demo
-✅ Helm app deployed: redis
+✅ Helm app deployed: grafana
 
 ✅ Apply completed: 1/1 apps
 ```
@@ -232,7 +230,7 @@ kubectl get pods -n tutorial-demo
 
 # 예상 출력:
 # NAME                     READY   STATUS    RESTARTS   AGE
-# redis-master-0           1/1     Running   0          2m
+# grafana-5f7b4c5d9-abcde  1/1     Running   0          2m
 
 # Service 확인
 kubectl get svc -n tutorial-demo
@@ -249,7 +247,7 @@ sbkube state list
 
 # 예상 출력:
 # App Name    Type    Status      Release Name              Namespace
-# redis       helm    deployed    redis-tutorial-demo       tutorial-demo
+# grafana     helm    deployed    grafana-tutorial-demo     tutorial-demo
 
 # 배포 히스토리 확인
 sbkube state history --namespace tutorial-demo
@@ -257,22 +255,22 @@ sbkube state history --namespace tutorial-demo
 # 예상 출력:
 # Deployment History for namespace: tutorial-demo
 #
-# ID  App     Version  Status    Deployed At              Duration
-# 1   redis   19.0.0   success   2025-10-24 10:30:45      45s
+# ID  App      Version  Status    Deployed At              Duration
+# 1   grafana  6.50.0   success   2025-10-24 10:30:45      45s
 ```
 
-### 3.3 Redis 연결 테스트
+### 3.3 Grafana 접속 테스트
 
 ```bash
-# Redis 포트 포워딩
-kubectl port-forward -n tutorial-demo svc/redis-master 6379:6379 &
+# Grafana 포트 포워딩
+kubectl port-forward -n tutorial-demo svc/grafana 3000:80 &
 
-# Redis CLI로 연결 테스트
-redis-cli ping
-# 출력: PONG
+# 브라우저에서 접속
+# http://localhost:3000
+# 기본 계정: admin / admin (초기 비밀번호)
 
 # 포트 포워딩 종료
-pkill -f "port-forward.*redis"
+pkill -f "port-forward.*grafana"
 ```
 
 ---
@@ -281,17 +279,15 @@ pkill -f "port-forward.*redis"
 
 ### 4.1 애플리케이션 업그레이드
 
-**`redis-values.yaml` 수정**:
+**`grafana-values.yaml` 수정**:
 
 ```yaml
-architecture: standalone
-auth:
-  enabled: false
-master:
-  resources:
-    requests:
-      cpu: 150m  # 100m → 150m으로 증가
-      memory: 256Mi  # 128Mi → 256Mi로 증가
+replicas: 1
+adminPassword: "admin"
+resources:
+  requests:
+    cpu: 150m  # 100m → 150m으로 증가
+    memory: 256Mi  # 128Mi → 256Mi로 증가
 ```
 
 **업그레이드 실행**:
@@ -314,9 +310,9 @@ kubectl get pods -n tutorial-demo -w
 sbkube state history --namespace tutorial-demo
 
 # 예상 출력:
-# ID  App     Version  Status    Deployed At
-# 2   redis   19.0.0   success   2025-10-24 10:35:20  (업그레이드)
-# 1   redis   19.0.0   success   2025-10-24 10:30:45  (최초 배포)
+# ID  App      Version  Status    Deployed At
+# 2   grafana  6.50.0   success   2025-10-24 10:35:20  (업그레이드)
+# 1   grafana  6.50.0   success   2025-10-24 10:30:45  (최초 배포)
 
 # 이전 버전으로 롤백 (필요시)
 sbkube rollback --revision 1 --namespace tutorial-demo
@@ -329,7 +325,7 @@ sbkube rollback --revision 1 --namespace tutorial-demo
 sbkube delete --dry-run
 
 # 예상 출력:
-# [DRY-RUN] Would delete Helm release: redis-tutorial-demo (namespace: tutorial-demo)
+# [DRY-RUN] Would delete Helm release: grafana-tutorial-demo (namespace: tutorial-demo)
 
 # 실제 삭제
 sbkube delete
@@ -362,7 +358,7 @@ kubectl delete namespace tutorial-demo
 
 ### 트러블슈팅
 
-**문제**: Helm 리포지토리 추가 실패 **해결**: `helm repo add bitnami https://charts.bitnami.com/bitnami` 수동 실행
+**문제**: Helm 리포지토리 추가 실패 **해결**: `helm repo add grafana https://grafana.github.io/helm-charts` 수동 실행
 
 **문제**: Pod가 Running 상태가 되지 않음 **해결**: `kubectl describe pod -n tutorial-demo <pod-name>` 로 이벤트 확인
 

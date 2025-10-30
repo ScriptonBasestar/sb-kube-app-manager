@@ -15,7 +15,7 @@
 
 ## 시나리오: 기본 차트를 프로젝트에 맞게 수정
 
-**배경**: Bitnami Redis 차트는 기본적으로 리소스 제한이 없고, ServiceMonitor가 없습니다. 프로젝트 요구사항에 맞게 차트를 수정해야 합니다.
+**배경**: Grafana 차트를 프로젝트 요구사항에 맞게 수정해야 합니다.
 
 **요구사항**:
 
@@ -45,13 +45,13 @@ sbkube init --name custom-redis --template basic --non-interactive
 namespace: custom-demo
 
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 19.0.0
+    chart: grafana/grafana
+    version: 6.50.0
     enabled: true
     values:
-      - redis-values.yaml
+      - grafana-values.yaml
 ```
 
 ### 1.3 sources.yaml 작성
@@ -66,8 +66,8 @@ cluster: custom-demo-cluster  # 선택, 문서화 목적
 
 # Helm 리포지토리
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 ```
 
 ### 1.4 차트 준비 및 템플릿 확인
@@ -77,10 +77,10 @@ helm_repos:
 sbkube prepare
 
 # 템플릿 렌더링
-sbkube template --output-dir /tmp/redis-original
+sbkube template --output-dir /tmp/grafana-original
 
 # 생성된 YAML 파일 확인
-ls /tmp/redis-original/redis/templates/
+ls /tmp/grafana-original/grafana/templates/
 # deployment.yaml
 # service.yaml
 # configmap.yaml
@@ -102,13 +102,13 @@ ls /tmp/redis-original/redis/templates/
 namespace: custom-demo
 
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 19.0.0
+    chart: grafana/grafana
+    version: 6.50.0
     enabled: true
     values:
-      - redis-values.yaml
+      - grafana-values.yaml
 
     # Overrides 설정
     overrides:
@@ -347,13 +347,13 @@ grep -r "environment: production" /tmp/redis-custom/redis/templates/
 namespace: custom-demo
 
 apps:
-  redis:
+  grafana:
     type: helm
-    chart: bitnami/redis
-    version: 19.0.0
+    chart: grafana/grafana
+    version: 6.50.0
     enabled: true
     values:
-      - redis-values.yaml
+      - grafana-values.yaml
 
     overrides:
       # ServiceMonitor 추가

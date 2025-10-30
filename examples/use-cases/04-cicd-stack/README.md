@@ -109,7 +109,7 @@ apps:
   # 1단계: MinIO (S3 스토리지)
   minio:
     type: helm
-    chart: bitnami/minio
+    chart: prometheus-community/prometheus
     values:
       - values/minio-values.yaml
     enabled: true

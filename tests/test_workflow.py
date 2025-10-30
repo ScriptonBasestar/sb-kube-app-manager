@@ -4,7 +4,6 @@ SBKube v0.3.0 통합 워크플로우 테스트.
 prepare → build → template → deploy 전체 워크플로우를 검증합니다.
 """
 
-
 import yaml
 
 from sbkube.commands.build import build_helm_app
@@ -47,7 +46,9 @@ class TestWorkflowV3:
         mock_chart_dir = charts_dir / "redis" / "redis"
         mock_chart_dir.mkdir(parents=True, exist_ok=True)
         (mock_chart_dir / "Chart.yaml").write_text("name: redis\nversion: 17.13.2")
-        (mock_chart_dir / "values.yaml").write_text("replicaCount: 1\nimage:\n  tag: 7.0")
+        (mock_chart_dir / "values.yaml").write_text(
+            "replicaCount: 1\nimage:\n  tag: 7.0"
+        )
         (mock_chart_dir / "templates").mkdir(exist_ok=True)
         (mock_chart_dir / "templates" / "deployment.yaml").write_text(
             "kind: Deployment\nmetadata:\n  name: redis"
@@ -55,7 +56,9 @@ class TestWorkflowV3:
         (mock_chart_dir / "README.md").write_text("# Redis Chart")
 
         # 4. Overrides 파일 생성
-        (overrides_dir / "values.yaml").write_text("replicaCount: 3\nimage:\n  tag: 7.2")
+        (overrides_dir / "values.yaml").write_text(
+            "replicaCount: 3\nimage:\n  tag: 7.2"
+        )
 
         # 5. HelmApp 설정
         app = HelmApp(
@@ -130,8 +133,12 @@ class TestWorkflowV3:
         deployment_order = config.get_deployment_order()
 
         assert deployment_order[0] == "database", "database should be first"
-        assert deployment_order[1] == "cache", "cache should be second (depends on database)"
-        assert deployment_order[2] == "app", "app should be last (depends on database, cache)"
+        assert deployment_order[1] == "cache", (
+            "cache should be second (depends on database)"
+        )
+        assert deployment_order[2] == "app", (
+            "app should be last (depends on database, cache)"
+        )
 
     def test_local_chart_workflow(self, tmp_path):
         """
@@ -145,7 +152,9 @@ class TestWorkflowV3:
         (local_chart_dir / "Chart.yaml").write_text("name: my-chart\nversion: 1.0.0")
         (local_chart_dir / "values.yaml").write_text("enabled: true\nport: 8080")
         (local_chart_dir / "templates").mkdir(exist_ok=True)
-        (local_chart_dir / "templates" / "deployment.yaml").write_text("kind: Deployment")
+        (local_chart_dir / "templates" / "deployment.yaml").write_text(
+            "kind: Deployment"
+        )
         (local_chart_dir / "LICENSE").write_text("MIT License")
 
         # 2. Overrides 디렉토리

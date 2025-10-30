@@ -7,7 +7,6 @@ SBKube 주요 에러 시나리오 테스트.
 - 명령어 실행 에러
 """
 
-
 import pytest
 import yaml
 
@@ -40,7 +39,7 @@ class TestConfigValidationErrors:
                     "type": "unknown-type",  # 지원하지 않는 타입
                     "chart": "something",
                 }
-            }
+            },
         }
 
         with pytest.raises((ConfigValidationError, Exception)):
@@ -206,7 +205,7 @@ class TestRuntimeErrors:
                     chart="bitnami/redis",
                     enabled=False,  # 비활성화
                 )
-            }
+            },
         )
 
         assert config.apps["redis"].enabled is False
@@ -227,7 +226,7 @@ def test_error_test_count():
 
     total_tests = 0
     for cls in test_classes:
-        methods = [m for m in dir(cls) if m.startswith('test_')]
+        methods = [m for m in dir(cls) if m.startswith("test_")]
         total_tests += len(methods)
 
     print(f"\n총 에러 케이스 테스트: {total_tests}개")

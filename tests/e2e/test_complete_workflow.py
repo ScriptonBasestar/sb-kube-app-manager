@@ -5,7 +5,6 @@ This test uses the examples/complete-workflow/ directory to verify
 the entire sbkube workflow from prepare through deploy.
 """
 
-
 import pytest
 
 from tests.e2e.conftest import run_sbkube_command, verify_example_exists
@@ -29,7 +28,9 @@ class TestCompleteWorkflow:
         example_dir = examples_dir / "complete-workflow"
         sources_file = example_dir / "sources.yaml"
 
-        verify_example_exists(example_dir, required_files=["config.yaml", "sources.yaml"])
+        verify_example_exists(
+            example_dir, required_files=["config.yaml", "sources.yaml"]
+        )
 
         # Get project root
         project_root = examples_dir.parent
@@ -107,7 +108,9 @@ class TestCompleteWorkflow:
         assert "build" in result.output.lower() or "빌드" in result.output
 
     @pytest.mark.requires_k8s
-    def test_complete_workflow_deploy_phase_dry_run(self, runner, examples_dir, tmp_path):
+    def test_complete_workflow_deploy_phase_dry_run(
+        self, runner, examples_dir, tmp_path
+    ):
         """
         Test deploy phase of complete workflow (dry-run).
 

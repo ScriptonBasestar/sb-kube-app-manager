@@ -1,6 +1,5 @@
 """Tests for error suggestions module."""
 
-
 from sbkube.utils.error_suggestions import (
     ERROR_GUIDE,
     format_suggestions,
@@ -105,7 +104,14 @@ def test_is_auto_recoverable_false_for_unknown():
 
 def test_all_guides_have_required_fields():
     """All error guides should have required fields."""
-    required_fields = ["title", "suggestions", "commands", "doc_link", "quick_fix", "auto_recoverable"]
+    required_fields = [
+        "title",
+        "suggestions",
+        "commands",
+        "doc_link",
+        "quick_fix",
+        "auto_recoverable",
+    ]
 
     for error_type, guide in ERROR_GUIDE.items():
         for field in required_fields:
@@ -113,13 +119,21 @@ def test_all_guides_have_required_fields():
 
         # Validate field types
         assert isinstance(guide["title"], str), f"{error_type}.title must be string"
-        assert isinstance(guide["suggestions"], list), f"{error_type}.suggestions must be list"
-        assert isinstance(guide["commands"], dict), f"{error_type}.commands must be dict"
-        assert isinstance(guide["doc_link"], str), f"{error_type}.doc_link must be string"
-        assert guide["quick_fix"] is None or isinstance(
-            guide["quick_fix"], str
-        ), f"{error_type}.quick_fix must be string or None"
-        assert isinstance(guide["auto_recoverable"], bool), f"{error_type}.auto_recoverable must be bool"
+        assert isinstance(guide["suggestions"], list), (
+            f"{error_type}.suggestions must be list"
+        )
+        assert isinstance(guide["commands"], dict), (
+            f"{error_type}.commands must be dict"
+        )
+        assert isinstance(guide["doc_link"], str), (
+            f"{error_type}.doc_link must be string"
+        )
+        assert guide["quick_fix"] is None or isinstance(guide["quick_fix"], str), (
+            f"{error_type}.quick_fix must be string or None"
+        )
+        assert isinstance(guide["auto_recoverable"], bool), (
+            f"{error_type}.auto_recoverable must be bool"
+        )
 
 
 def test_suggestions_are_actionable():
@@ -128,7 +142,8 @@ def test_suggestions_are_actionable():
         for suggestion in guide["suggestions"]:
             # Suggestions should either contain → or be imperative (명령문)
             assert "→" in suggestion or any(
-                keyword in suggestion for keyword in ["확인", "실행", "추가", "업데이트", "문의"]
+                keyword in suggestion
+                for keyword in ["확인", "실행", "추가", "업데이트", "문의"]
             ), f"{error_type} has non-actionable suggestion: {suggestion}"
 
 
@@ -136,13 +151,21 @@ def test_commands_have_descriptions():
     """All commands should have descriptions."""
     for error_type, guide in ERROR_GUIDE.items():
         for cmd, desc in guide["commands"].items():
-            assert isinstance(cmd, str) and len(cmd) > 0, f"{error_type} has invalid command key"
-            assert isinstance(desc, str) and len(desc) > 0, f"{error_type} has empty command description"
+            assert isinstance(cmd, str) and len(cmd) > 0, (
+                f"{error_type} has invalid command key"
+            )
+            assert isinstance(desc, str) and len(desc) > 0, (
+                f"{error_type} has empty command description"
+            )
 
 
 def test_doc_links_are_valid_paths():
     """All doc links should be valid relative paths."""
     for error_type, guide in ERROR_GUIDE.items():
         doc_link = guide["doc_link"]
-        assert doc_link.startswith("docs/"), f"{error_type}.doc_link should start with 'docs/'"
-        assert doc_link.endswith(".md") or "#" in doc_link, f"{error_type}.doc_link should be .md file or anchor"
+        assert doc_link.startswith("docs/"), (
+            f"{error_type}.doc_link should start with 'docs/'"
+        )
+        assert doc_link.endswith(".md") or "#" in doc_link, (
+            f"{error_type}.doc_link should be .md file or anchor"
+        )

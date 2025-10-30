@@ -160,14 +160,22 @@ def deploy_helm_app(
 
         if namespace_missing and not app.create_namespace:
             if dry_run:
-                console.print(f"[yellow]⚠️ Namespace '{namespace}' is missing (dry-run: skipping creation)[/yellow]")
+                console.print(
+                    f"[yellow]⚠️ Namespace '{namespace}' is missing (dry-run: skipping creation)[/yellow]"
+                )
             else:
-                console.print(f"[yellow]ℹ️  Namespace '{namespace}' not found. Creating...[/yellow]")
+                console.print(
+                    f"[yellow]ℹ️  Namespace '{namespace}' not found. Creating...[/yellow]"
+                )
                 create_cmd = ["kubectl", "create", "namespace", namespace]
-                create_cmd = apply_cluster_config_to_command(create_cmd, kubeconfig, context)
+                create_cmd = apply_cluster_config_to_command(
+                    create_cmd, kubeconfig, context
+                )
                 create_return_code, _, create_stderr = run_command(create_cmd)
                 if create_return_code != 0:
-                    console.print(f"[red]❌ Failed to create namespace '{namespace}': {create_stderr}[/red]")
+                    console.print(
+                        f"[red]❌ Failed to create namespace '{namespace}': {create_stderr}[/red]"
+                    )
                     return False
 
         cmd.extend(["--namespace", namespace])
@@ -216,7 +224,9 @@ def deploy_helm_app(
         console.print(f"[red]❌ Failed to deploy: {stderr}[/red]")
         return False
 
-    console.print(f"[green]✅ Helm app deployed: {app_name} (release: {release_name})[/green]")
+    console.print(
+        f"[green]✅ Helm app deployed: {app_name} (release: {release_name})[/green]"
+    )
     return True
 
 
@@ -552,6 +562,7 @@ def cmd(
         console.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
         try:
             from sbkube.models.sources_model import SourceScheme
+
             sources_data = load_config_file(sources_file_path)
             sources = SourceScheme(**sources_data)
         except Exception as e:
@@ -617,30 +628,56 @@ def cmd(
             if isinstance(app, HelmApp):
                 check_helm_installed_or_exit()
                 success = deploy_helm_app(
-                    app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR,
-                    kubeconfig, context, dry_run
+                    app_name,
+                    app,
+                    BASE_DIR,
+                    CHARTS_DIR,
+                    BUILD_DIR,
+                    APP_CONFIG_DIR,
+                    kubeconfig,
+                    context,
+                    dry_run,
                 )
             elif isinstance(app, YamlApp):
                 success = deploy_yaml_app(
-                    app_name, app, BASE_DIR, APP_CONFIG_DIR,
-                    kubeconfig, context, dry_run
+                    app_name,
+                    app,
+                    BASE_DIR,
+                    APP_CONFIG_DIR,
+                    kubeconfig,
+                    context,
+                    dry_run,
                 )
             elif isinstance(app, ActionApp):
                 success = deploy_action_app(
-                    app_name, app, BASE_DIR, APP_CONFIG_DIR,
-                    kubeconfig, context, dry_run
+                    app_name,
+                    app,
+                    BASE_DIR,
+                    APP_CONFIG_DIR,
+                    kubeconfig,
+                    context,
+                    dry_run,
                 )
             elif isinstance(app, ExecApp):
                 success = deploy_exec_app(app_name, app, BASE_DIR, dry_run)
             elif isinstance(app, KustomizeApp):
                 success = deploy_kustomize_app(
-                    app_name, app, BASE_DIR, APP_CONFIG_DIR,
-                    kubeconfig, context, dry_run
+                    app_name,
+                    app,
+                    BASE_DIR,
+                    APP_CONFIG_DIR,
+                    kubeconfig,
+                    context,
+                    dry_run,
                 )
             elif isinstance(app, NoopApp):
-                success = deploy_noop_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
+                success = deploy_noop_app(
+                    app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run
+                )
             else:
-                console.print(f"[yellow]⏭️  Unsupported app type '{app.type}': {app_name}[/yellow]")
+                console.print(
+                    f"[yellow]⏭️  Unsupported app type '{app.type}': {app_name}[/yellow]"
+                )
                 continue
         except KubernetesConnectionError as exc:
             console.print(
@@ -648,14 +685,18 @@ def cmd(
             )
             if exc.reason:
                 console.print(f"[red]   {exc.reason}[/red]")
-            console.print("[yellow]💡 Check your cluster connectivity and try again.[/yellow]")
+            console.print(
+                "[yellow]💡 Check your cluster connectivity and try again.[/yellow]"
+            )
             raise click.Abort() from exc
 
         if success:
             success_count += 1
 
     # 결과 출력
-    console.print(f"\n[bold green]✅ Deploy completed: {success_count}/{total_count} apps[/bold green]")
+    console.print(
+        f"\n[bold green]✅ Deploy completed: {success_count}/{total_count} apps[/bold green]"
+    )
 
     if success_count < total_count:
         raise click.Abort()

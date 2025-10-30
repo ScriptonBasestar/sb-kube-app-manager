@@ -1,6 +1,5 @@
 """Integration tests for error message formatting."""
 
-
 from sbkube.exceptions import (
     ConfigFileNotFoundError,
     DeploymentError,
@@ -15,7 +14,9 @@ from sbkube.exceptions import (
 
 def test_config_file_not_found_error_formatting():
     """ConfigFileNotFoundError should show comprehensive suggestions."""
-    error = ConfigFileNotFoundError(file_path="config.yaml", searched_paths=["./config.yaml", "../config.yaml"])
+    error = ConfigFileNotFoundError(
+        file_path="config.yaml", searched_paths=["./config.yaml", "../config.yaml"]
+    )
 
     formatted = format_error_with_suggestions(error)
 
@@ -31,7 +32,9 @@ def test_config_file_not_found_error_formatting():
 
 def test_kubernetes_connection_error_formatting():
     """KubernetesConnectionError should show comprehensive suggestions."""
-    error = KubernetesConnectionError(context="minikube", kubeconfig="/home/user/.kube/config")
+    error = KubernetesConnectionError(
+        context="minikube", kubeconfig="/home/user/.kube/config"
+    )
 
     formatted = format_error_with_suggestions(error)
 
@@ -57,7 +60,9 @@ def test_helm_chart_not_found_error_formatting():
 
 def test_git_repository_error_formatting():
     """GitRepositoryError should show comprehensive suggestions."""
-    error = GitRepositoryError(repository_url="https://github.com/user/repo.git", operation="clone")
+    error = GitRepositoryError(
+        repository_url="https://github.com/user/repo.git", operation="clone"
+    )
 
     formatted = format_error_with_suggestions(error)
 
@@ -69,7 +74,9 @@ def test_git_repository_error_formatting():
 
 def test_kubernetes_resource_error_formatting():
     """KubernetesResourceError can be used to test namespace issues."""
-    error = KubernetesResourceError(resource_type="namespace", resource_name="production", operation="get")
+    error = KubernetesResourceError(
+        resource_type="namespace", resource_name="production", operation="get"
+    )
 
     formatted = format_error_with_suggestions(error)
 

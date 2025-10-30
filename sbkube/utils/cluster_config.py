@@ -88,7 +88,9 @@ def resolve_cluster_config(
         kubeconfig = str(Path(cli_kubeconfig).expanduser())
         context = cli_context
 
-        console.print("[yellow]⚠️  Using CLI override for cluster configuration[/yellow]")
+        console.print(
+            "[yellow]⚠️  Using CLI override for cluster configuration[/yellow]"
+        )
         console.print(f"  Kubeconfig: {kubeconfig}")
         console.print(f"  Context: {context}")
 

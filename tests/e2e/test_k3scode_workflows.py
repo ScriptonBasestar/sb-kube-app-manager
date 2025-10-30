@@ -5,7 +5,6 @@ These tests use the actual examples/k3scode/ directory to verify
 complete sbkube workflows with real configuration files.
 """
 
-
 import pytest
 
 from tests.e2e.conftest import run_sbkube_command, verify_example_exists
@@ -64,9 +63,9 @@ class TestK3scodeAIWorkflow:
         repos_dir = project_root / "repos"
 
         # At least one of charts or repos should exist based on config.yaml
-        assert (
-            charts_dir.exists() or repos_dir.exists()
-        ), f"Neither charts nor repos directory created in {project_root}\nContents: {list_directory_contents(project_root)}"
+        assert charts_dir.exists() or repos_dir.exists(), (
+            f"Neither charts nor repos directory created in {project_root}\nContents: {list_directory_contents(project_root)}"
+        )
 
     def test_ai_build(self, runner, examples_dir, tmp_path, list_directory_contents):
         """
@@ -125,7 +124,9 @@ class TestK3scodeAIWorkflow:
 class TestK3scodeDevOpsWorkflow:
     """Test k3scode DevOps application workflow."""
 
-    def test_devops_prepare(self, runner, examples_dir, tmp_path, list_directory_contents):
+    def test_devops_prepare(
+        self, runner, examples_dir, tmp_path, list_directory_contents
+    ):
         """
         Test k3scode DevOps prepare phase.
 
@@ -165,7 +166,9 @@ class TestK3scodeDevOpsWorkflow:
         # Verify output
         assert "prepare" in result.output.lower() or "준비" in result.output
 
-    def test_devops_build(self, runner, examples_dir, tmp_path, list_directory_contents):
+    def test_devops_build(
+        self, runner, examples_dir, tmp_path, list_directory_contents
+    ):
         """
         Test k3scode DevOps build phase.
 

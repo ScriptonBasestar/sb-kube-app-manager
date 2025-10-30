@@ -186,7 +186,11 @@ class TestSBKubeConfig:
             namespace="test",
             apps={
                 "redis": {"type": "helm", "chart": "bitnami/redis", "enabled": True},
-                "postgres": {"type": "helm", "chart": "bitnami/postgresql", "enabled": False},
+                "postgres": {
+                    "type": "helm",
+                    "chart": "bitnami/postgresql",
+                    "enabled": False,
+                },
             },
         )
         enabled_apps = config.get_enabled_apps()

@@ -75,7 +75,9 @@ class ValidateCommand:
                 schema_path = default_schema_path
                 logger.info(f"JSON 스키마 사용: {schema_path}")
             else:
-                logger.warning("JSON 스키마 파일이 없습니다. Pydantic 모델 검증만 수행합니다.")
+                logger.warning(
+                    "JSON 스키마 파일이 없습니다. Pydantic 모델 검증만 수행합니다."
+                )
                 logger.info("스키마 생성: sbkube init 또는 --schema-path 옵션 사용")
         # 설정 파일 로드
         try:
@@ -108,7 +110,9 @@ class ValidateCommand:
                         f"Instance: {json.dumps(e.instance, indent=2, ensure_ascii=False)}",
                     )
                 if e.schema_path:
-                    logger.error(f"Schema Path: {'.'.join(str(p) for p in e.schema_path)}")
+                    logger.error(
+                        f"Schema Path: {'.'.join(str(p) for p in e.schema_path)}"
+                    )
                 raise click.Abort()
             except Exception as e:
                 logger.error(f"JSON 스키마 검증 중 오류: {e}")
@@ -119,7 +123,9 @@ class ValidateCommand:
             try:
                 logger.info("Pydantic 모델 검증 중 (SBKubeConfig)...")
                 config = SBKubeConfig(**data)
-                logger.success(f"데이터 모델 유효성 검사 통과 (앱 {len(config.apps)}개)")
+                logger.success(
+                    f"데이터 모델 유효성 검사 통과 (앱 {len(config.apps)}개)"
+                )
             except PydanticValidationError as e:
                 logger.error("Pydantic 모델 검증 실패:")
                 for error in e.errors():

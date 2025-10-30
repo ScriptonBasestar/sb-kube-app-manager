@@ -110,7 +110,9 @@ def print_helm_connection_help():
     # 0. helm 설치 여부
     if shutil.which("helm") is None:
         logger.error("helm 명령이 시스템에 설치되어 있지 않습니다.")
-        logger.info("Helm을 설치하거나, asdf 등 버전 매니저에서 helm 버전을 활성화하세요.")
+        logger.info(
+            "Helm을 설치하거나, asdf 등 버전 매니저에서 helm 버전을 활성화하세요."
+        )
         logger.info("https://helm.sh/docs/intro/install/")
         return
     # 1. repo 목록

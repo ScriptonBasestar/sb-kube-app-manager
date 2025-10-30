@@ -53,8 +53,12 @@ class HelmApp(ConfigBaseModel):
     values: list[str] = Field(default_factory=list)  # values 파일 목록
 
     # 커스터마이징 (호환성 유지)
-    overrides: list[str] = Field(default_factory=list)  # overrides/ 디렉토리의 파일로 교체
-    removes: list[str] = Field(default_factory=list)  # 빌드 시 제거할 파일/디렉토리 패턴
+    overrides: list[str] = Field(
+        default_factory=list
+    )  # overrides/ 디렉토리의 파일로 교체
+    removes: list[str] = Field(
+        default_factory=list
+    )  # 빌드 시 제거할 파일/디렉토리 패턴
 
     # Helm 옵션
     set_values: dict[str, Any] = Field(default_factory=dict)  # --set 옵션
@@ -421,7 +425,9 @@ class SBKubeConfig(ConfigBaseModel):
             if hasattr(app, "depends_on"):
                 for dep in app.depends_on:
                     if dep not in app_names:
-                        raise ValueError(f"App '{app_name}' depends on non-existent app '{dep}'")
+                        raise ValueError(
+                            f"App '{app_name}' depends on non-existent app '{dep}'"
+                        )
 
         # 2. 순환 의존성 체크 (DFS 기반)
         visited = set()
@@ -446,7 +452,9 @@ class SBKubeConfig(ConfigBaseModel):
         for app_name in self.apps.keys():
             if app_name not in visited:
                 if has_cycle(app_name):
-                    raise ValueError(f"Circular dependency detected involving app '{app_name}'")
+                    raise ValueError(
+                        f"Circular dependency detected involving app '{app_name}'"
+                    )
 
         return self
 
@@ -495,4 +503,8 @@ class SBKubeConfig(ConfigBaseModel):
 
     def get_apps_by_type(self, app_type: str) -> dict[str, AppConfig]:
         """특정 타입의 앱만 반환."""
-        return {name: app for name, app in self.apps.items() if app.type == app_type and app.enabled}
+        return {
+            name: app
+            for name, app in self.apps.items()
+            if app.type == app_type and app.enabled
+        }

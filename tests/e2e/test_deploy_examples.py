@@ -7,7 +7,6 @@ deploy command functionality with real configuration files.
 Note: These tests require kubectl with cluster access (even with --dry-run).
 """
 
-
 import pytest
 
 from tests.e2e.conftest import run_sbkube_command, verify_example_exists

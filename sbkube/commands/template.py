@@ -77,7 +77,9 @@ def template_helm_app(
 
     if not chart_path or not chart_path.exists():
         console.print(f"[red]❌ Chart not found for app: {app_name}[/red]")
-        console.print("[yellow]💡 Run 'sbkube prepare' and 'sbkube build' first[/yellow]")
+        console.print(
+            "[yellow]💡 Run 'sbkube prepare' and 'sbkube build' first[/yellow]"
+        )
         return False
 
     # 2. helm template 명령어 구성
@@ -97,7 +99,9 @@ def template_helm_app(
                 helm_cmd.extend(["--values", str(values_path)])
                 console.print(f"    ✓ {values_file}")
             else:
-                console.print(f"[yellow]    ⚠️ Values file not found: {values_file}[/yellow]")
+                console.print(
+                    f"[yellow]    ⚠️ Values file not found: {values_file}[/yellow]"
+                )
 
     # --set 옵션 추가
     if app.set_values:
@@ -112,7 +116,9 @@ def template_helm_app(
         return_code, stdout, stderr = run_command(helm_cmd, check=False, timeout=60)
 
         if return_code != 0:
-            console.print(f"[red]❌ helm template failed (exit code: {return_code})[/red]")
+            console.print(
+                f"[red]❌ helm template failed (exit code: {return_code})[/red]"
+            )
             if stdout:
                 console.print(f"  [blue]STDOUT:[/blue] {stdout.strip()}")
             if stderr:
@@ -161,7 +167,9 @@ def template_yaml_app(
     build_path = build_dir / app_name
 
     if not build_path.exists():
-        console.print("[yellow]⚠️ Build directory not found, using original files[/yellow]")
+        console.print(
+            "[yellow]⚠️ Build directory not found, using original files[/yellow]"
+        )
         # build 없으면 원본 파일 사용
         combined_content = ""
         for file_rel_path in app.files:
@@ -359,7 +367,13 @@ def cmd(
 
         if isinstance(app, HelmApp):
             success = template_helm_app(
-                app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR, RENDERED_DIR
+                app_name,
+                app,
+                BASE_DIR,
+                CHARTS_DIR,
+                BUILD_DIR,
+                APP_CONFIG_DIR,
+                RENDERED_DIR,
             )
         elif isinstance(app, YamlApp):
             success = template_yaml_app(
@@ -370,14 +384,18 @@ def cmd(
                 app_name, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, RENDERED_DIR
             )
         else:
-            console.print(f"[yellow]⏭️  App type '{app.type}' does not support template: {app_name}[/yellow]")
+            console.print(
+                f"[yellow]⏭️  App type '{app.type}' does not support template: {app_name}[/yellow]"
+            )
             success = True  # 건너뛰어도 성공으로 간주
 
         if success:
             success_count += 1
 
     # 결과 출력
-    console.print(f"\n[bold green]✅ Template completed: {success_count}/{total_count} apps[/bold green]")
+    console.print(
+        f"\n[bold green]✅ Template completed: {success_count}/{total_count} apps[/bold green]"
+    )
     console.print(f"[cyan]📁 Rendered files saved to: {RENDERED_DIR}[/cyan]")
 
     if success_count < total_count:

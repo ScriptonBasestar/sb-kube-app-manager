@@ -439,9 +439,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
         required_fields = ["repo", "chart"]
         for field in required_fields:
             if field not in specs:
-                issues.append(
-                    f"{app_prefix}: helm 타입에는 {field} 필드가 필요합니다"
-                )
+                issues.append(f"{app_prefix}: helm 타입에는 {field} 필드가 필요합니다")
 
         # 버전 형식 검증
         if "version" in specs:
@@ -515,9 +513,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
 
         # actions 검증
         if "actions" not in specs:
-            issues.append(
-                f"{app_prefix}: yaml 타입에는 actions 필드가 필요합니다"
-            )
+            issues.append(f"{app_prefix}: yaml 타입에는 actions 필드가 필요합니다")
         else:
             actions = specs["actions"]
             if not isinstance(actions, list):

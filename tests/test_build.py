@@ -2,8 +2,6 @@
 SBKube v0.3.0 build 명령어 테스트.
 """
 
-
-
 from sbkube.models.config_model import HelmApp
 
 
@@ -149,8 +147,8 @@ class TestBuildV3:
             chart="bitnami/nginx",
             version="15.0.0",
             overrides=[
-                "templates/*.yaml",    # 모든 YAML 템플릿
-                "files/*",             # 모든 파일
+                "templates/*.yaml",  # 모든 YAML 템플릿
+                "files/*",  # 모든 파일
             ],
         )
 
@@ -176,8 +174,12 @@ class TestBuildV3:
         assert (build_dir / "nginx" / "files" / "data.json").exists()
 
         # 내용 확인
-        assert (build_dir / "nginx" / "templates" / "configmap.yaml").read_text() == "kind: ConfigMap"
-        assert (build_dir / "nginx" / "files" / "config.txt").read_text() == "config content"
+        assert (
+            build_dir / "nginx" / "templates" / "configmap.yaml"
+        ).read_text() == "kind: ConfigMap"
+        assert (
+            build_dir / "nginx" / "files" / "config.txt"
+        ).read_text() == "config content"
 
     def test_helm_app_with_mixed_patterns(self, tmp_path):
         """Glob 패턴과 명시적 파일을 혼합 사용."""
@@ -192,14 +194,16 @@ class TestBuildV3:
         (overrides_dir / "templates").mkdir(parents=True)
         (overrides_dir / "templates" / "deployment.yaml").write_text("kind: Deployment")
         (overrides_dir / "templates" / "service.yaml").write_text("kind: Service")
-        (overrides_dir / "Chart.yaml").write_text("name: app\nversion: 2.0.0")  # 차트 메타데이터 교체
+        (overrides_dir / "Chart.yaml").write_text(
+            "name: app\nversion: 2.0.0"
+        )  # 차트 메타데이터 교체
 
         # HelmApp 설정 - 혼합 사용
         app = HelmApp(
             chart="my/app",
             overrides=[
-                "Chart.yaml",           # 명시적 파일
-                "templates/*.yaml",     # Glob 패턴
+                "Chart.yaml",  # 명시적 파일
+                "templates/*.yaml",  # Glob 패턴
             ],
         )
 
@@ -219,6 +223,8 @@ class TestBuildV3:
         assert success
 
         # 혼합 패턴 결과 확인
-        assert (build_dir / "app" / "Chart.yaml").read_text() == "name: app\nversion: 2.0.0"
+        assert (
+            build_dir / "app" / "Chart.yaml"
+        ).read_text() == "name: app\nversion: 2.0.0"
         assert (build_dir / "app" / "templates" / "deployment.yaml").exists()
         assert (build_dir / "app" / "templates" / "service.yaml").exists()

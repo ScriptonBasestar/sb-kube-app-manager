@@ -184,16 +184,24 @@ def main_with_exception_handling() -> None:
             quick_fix = get_quick_fix_command(error_type)
             if quick_fix:
                 try:
-                    response = input("\n❓ 자동 수정을 시도하시겠습니까? (y/N): ").strip().lower()
+                    response = (
+                        input("\n❓ 자동 수정을 시도하시겠습니까? (y/N): ")
+                        .strip()
+                        .lower()
+                    )
                     if response in ["y", "yes"]:
                         import subprocess
 
                         logger.info(f"🔧 실행: {quick_fix}")
                         result = subprocess.run(quick_fix, shell=True)
                         if result.returncode == 0:
-                            logger.info("✅ 자동 수정이 완료되었습니다. 다시 시도해 주세요.")
+                            logger.info(
+                                "✅ 자동 수정이 완료되었습니다. 다시 시도해 주세요."
+                            )
                         else:
-                            logger.warning("⚠️ 자동 수정이 실패했습니다. 수동으로 처리해 주세요.")
+                            logger.warning(
+                                "⚠️ 자동 수정이 실패했습니다. 수동으로 처리해 주세요."
+                            )
                 except (KeyboardInterrupt, EOFError):
                     pass  # User cancelled, just exit normally
 

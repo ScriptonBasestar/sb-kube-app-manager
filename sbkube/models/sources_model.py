@@ -5,8 +5,6 @@ This module provides improved Pydantic models for sbkube sources configuration
 with comprehensive validation and error handling.
 """
 
-import os
-from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
@@ -250,7 +248,6 @@ class SourceScheme(InheritableConfigModel):
             )
         return v.strip()
 
-
     def get_helm_repo(self, name: str) -> HelmRepoScheme | None:
         """Get Helm repository configuration by name."""
         return self.helm_repos.get(name)
@@ -262,7 +259,6 @@ class SourceScheme(InheritableConfigModel):
     def get_oci_registry(self, name: str) -> OciRepoScheme | None:
         """Get OCI registry configuration by name."""
         return self.oci_registries.get(name)
-
 
     def validate_repo_references(self, app_configs: list[dict[str, Any]]) -> list[str]:
         """

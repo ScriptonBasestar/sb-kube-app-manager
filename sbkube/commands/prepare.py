@@ -74,7 +74,9 @@ def prepare_helm_app(
 
     # 로컬 차트는 prepare 불필요
     if not app.is_remote_chart():
-        console.print(f"[yellow]⏭️  Local chart detected, skipping prepare: {app.chart}[/yellow]")
+        console.print(
+            f"[yellow]⏭️  Local chart detected, skipping prepare: {app.chart}[/yellow]"
+        )
         return True
 
     # Remote chart: pull 수행
@@ -90,7 +92,9 @@ def prepare_helm_app(
     helm_sources = sources.get("helm_repos", {})
 
     if repo_name not in helm_sources:
-        console.print(f"[red]❌ Helm repo '{repo_name}' not found in sources.yaml[/red]")
+        console.print(
+            f"[red]❌ Helm repo '{repo_name}' not found in sources.yaml[/red]"
+        )
         return False
 
     # helm_repos는 dict 형태: {url: ..., username: ..., password: ...} 또는 단순 URL string
@@ -105,8 +109,12 @@ def prepare_helm_app(
         repo_url = repo_config
 
     if dry_run:
-        console.print(f"[yellow]🔍 [DRY-RUN] Would add Helm repo: {repo_name} ({repo_url})[/yellow]")
-        console.print(f"[yellow]🔍 [DRY-RUN] Would update Helm repo: {repo_name}[/yellow]")
+        console.print(
+            f"[yellow]🔍 [DRY-RUN] Would add Helm repo: {repo_name} ({repo_url})[/yellow]"
+        )
+        console.print(
+            f"[yellow]🔍 [DRY-RUN] Would update Helm repo: {repo_name}[/yellow]"
+        )
     else:
         # Helm repo 추가
         console.print(f"  Adding Helm repo: {repo_name} ({repo_url})")
@@ -115,7 +123,9 @@ def prepare_helm_app(
         return_code, stdout, stderr = run_command(cmd)
 
         if return_code != 0:
-            console.print(f"[yellow]⚠️ Failed to add repo (might already exist): {stderr}[/yellow]")
+            console.print(
+                f"[yellow]⚠️ Failed to add repo (might already exist): {stderr}[/yellow]"
+            )
 
         # Helm repo 업데이트
         console.print(f"  Updating Helm repo: {repo_name}")
@@ -133,26 +143,41 @@ def prepare_helm_app(
 
     # Check if chart already exists (skip if not --force)
     if chart_yaml.exists() and not force:
-        console.print(f"[yellow]⏭️  Chart already exists, skipping: {chart_name}[/yellow]")
+        console.print(
+            f"[yellow]⏭️  Chart already exists, skipping: {chart_name}[/yellow]"
+        )
         console.print("    Use --force to re-download")
         return True
 
     if dry_run:
-        console.print(f"[yellow]🔍 [DRY-RUN] Would pull chart: {app.chart} → {dest_dir}[/yellow]")
+        console.print(
+            f"[yellow]🔍 [DRY-RUN] Would pull chart: {app.chart} → {dest_dir}[/yellow]"
+        )
         if app.version:
             console.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]")
         if force:
-            console.print(f"[yellow]🔍 [DRY-RUN] Would remove existing chart (--force)[/yellow]")
+            console.print(
+                "[yellow]🔍 [DRY-RUN] Would remove existing chart (--force)[/yellow]"
+            )
     else:
         # If force flag is set, remove existing chart directory
         if force and dest_dir.exists():
-            console.print(f"[yellow]⚠️  Removing existing chart (--force): {dest_dir}[/yellow]")
+            console.print(
+                f"[yellow]⚠️  Removing existing chart (--force): {dest_dir}[/yellow]"
+            )
             shutil.rmtree(dest_dir)
 
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         console.print(f"  Pulling chart: {app.chart} → {dest_dir}")
-        cmd = ["helm", "pull", f"{repo_name}/{chart_name}", "--untar", "--untardir", str(dest_dir)]
+        cmd = [
+            "helm",
+            "pull",
+            f"{repo_name}/{chart_name}",
+            "--untar",
+            "--untardir",
+            str(dest_dir),
+        ]
 
         if app.version:
             cmd.extend(["--version", app.version])
@@ -195,11 +220,15 @@ def prepare_http_app(
 
     # 이미 존재하면 건너뛰기
     if dest_path.exists():
-        console.print(f"[yellow]⏭️  File already exists, skipping download: {dest_path}[/yellow]")
+        console.print(
+            f"[yellow]⏭️  File already exists, skipping download: {dest_path}[/yellow]"
+        )
         return True
 
     if dry_run:
-        console.print(f"[yellow]🔍 [DRY-RUN] Would download: {app.url} → {dest_path}[/yellow]")
+        console.print(
+            f"[yellow]🔍 [DRY-RUN] Would download: {app.url} → {dest_path}[/yellow]"
+        )
         if app.headers:
             console.print(f"[yellow]🔍 [DRY-RUN] Headers: {app.headers}[/yellow]")
     else:
@@ -262,14 +291,20 @@ def prepare_git_app(
     git_sources = sources.get("git_repos", {})
 
     # app.repo가 alias인지 URL인지 판단
-    if app.repo.startswith("http://") or app.repo.startswith("https://") or app.repo.startswith("git@"):
+    if (
+        app.repo.startswith("http://")
+        or app.repo.startswith("https://")
+        or app.repo.startswith("git@")
+    ):
         repo_url = app.repo
         repo_alias = app_name
         branch = app.branch or app.ref or "main"
     else:
         # sources.yaml에서 찾기
         if app.repo not in git_sources:
-            console.print(f"[red]❌ Git repo '{app.repo}' not found in sources.yaml[/red]")
+            console.print(
+                f"[red]❌ Git repo '{app.repo}' not found in sources.yaml[/red]"
+            )
             return False
         repo_config = git_sources[app.repo]
         # repo_config는 dict 형태: {url: ..., branch: ...}
@@ -290,18 +325,26 @@ def prepare_git_app(
 
     # Check if repository already exists (skip if not --force)
     if git_dir.exists() and not force:
-        console.print(f"[yellow]⏭️  Repository already exists, skipping: {repo_alias}[/yellow]")
+        console.print(
+            f"[yellow]⏭️  Repository already exists, skipping: {repo_alias}[/yellow]"
+        )
         console.print("    Use --force to re-clone")
         return True
 
     if dry_run:
-        console.print(f"[yellow]🔍 [DRY-RUN] Would clone: {repo_url} (branch: {branch}) → {dest_dir}[/yellow]")
+        console.print(
+            f"[yellow]🔍 [DRY-RUN] Would clone: {repo_url} (branch: {branch}) → {dest_dir}[/yellow]"
+        )
         if force and dest_dir.exists():
-            console.print(f"[yellow]🔍 [DRY-RUN] Would remove existing repository (--force)[/yellow]")
+            console.print(
+                "[yellow]🔍 [DRY-RUN] Would remove existing repository (--force)[/yellow]"
+            )
     else:
         # If force flag is set, remove existing repository
         if force and dest_dir.exists():
-            console.print(f"[yellow]⚠️  Removing existing repository (--force): {dest_dir}[/yellow]")
+            console.print(
+                f"[yellow]⚠️  Removing existing repository (--force): {dest_dir}[/yellow]"
+            )
             shutil.rmtree(dest_dir)
 
         dest_dir.mkdir(parents=True, exist_ok=True)
@@ -477,21 +520,35 @@ def cmd(
 
         if isinstance(app, HelmApp):
             success = prepare_helm_app(
-                app_name, app, BASE_DIR, CHARTS_DIR, sources_file_path, kubeconfig, context, force, dry_run
+                app_name,
+                app,
+                BASE_DIR,
+                CHARTS_DIR,
+                sources_file_path,
+                kubeconfig,
+                context,
+                force,
+                dry_run,
             )
         elif isinstance(app, GitApp):
-            success = prepare_git_app(app_name, app, BASE_DIR, REPOS_DIR, sources_file_path, force, dry_run)
+            success = prepare_git_app(
+                app_name, app, BASE_DIR, REPOS_DIR, sources_file_path, force, dry_run
+            )
         elif isinstance(app, HttpApp):
             success = prepare_http_app(app_name, app, BASE_DIR, APP_CONFIG_DIR, dry_run)
         else:
-            console.print(f"[yellow]⏭️  App type '{app.type}' does not require prepare: {app_name}[/yellow]")
+            console.print(
+                f"[yellow]⏭️  App type '{app.type}' does not require prepare: {app_name}[/yellow]"
+            )
             success = True  # 건너뛰어도 성공으로 간주
 
         if success:
             success_count += 1
 
     # 결과 출력
-    console.print(f"\n[bold green]✅ Prepare completed: {success_count}/{total_count} apps[/bold green]")
+    console.print(
+        f"\n[bold green]✅ Prepare completed: {success_count}/{total_count} apps[/bold green]"
+    )
 
     if success_count < total_count:
         raise click.Abort()

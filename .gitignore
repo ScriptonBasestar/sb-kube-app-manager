@@ -94,6 +94,8 @@ repos/
 
 # sb-yesman-cli settings
 .claude/
+!.claude/commands/
+!.claude/commit-rules.yaml
 
 results/
 .ruff_cache/

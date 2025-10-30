@@ -223,9 +223,12 @@ def cleanup(days: int, keep_per_app: int, dry_run: bool):
             from datetime import datetime, timedelta
 
             cutoff_date = datetime.now() - timedelta(days=days)
-            deployments_to_delete = db.session.query(db.DeploymentRecord).filter(
-                db.DeploymentRecord.timestamp < cutoff_date
-            ).order_by(db.DeploymentRecord.timestamp.desc()).all()
+            deployments_to_delete = (
+                db.session.query(db.DeploymentRecord)
+                .filter(db.DeploymentRecord.timestamp < cutoff_date)
+                .order_by(db.DeploymentRecord.timestamp.desc())
+                .all()
+            )
 
             if deployments_to_delete:
                 logger.info(f"Would delete {len(deployments_to_delete)} deployment(s):")

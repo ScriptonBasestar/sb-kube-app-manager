@@ -5,7 +5,6 @@ These tests use the actual examples/prepare/ directory to verify
 prepare command functionality with real configuration files.
 """
 
-
 import pytest
 
 from tests.e2e.conftest import run_sbkube_command, verify_example_exists
@@ -26,7 +25,9 @@ class TestPrepareExamples:
         """
         # Verify example files exist
         example_dir = examples_dir / "prepare" / "helm-oci"
-        verify_example_exists(example_dir, required_files=["config.yaml", "sources.yaml"])
+        verify_example_exists(
+            example_dir, required_files=["config.yaml", "sources.yaml"]
+        )
 
         # Get project root
         project_root = examples_dir.parent

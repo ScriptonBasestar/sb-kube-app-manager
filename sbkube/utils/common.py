@@ -58,8 +58,6 @@ def common_click_options(func):
     return func
 
 
-
-
 def execute_command_with_logging(
     cmd: list,
     error_msg: str,
@@ -129,10 +127,7 @@ def check_required_cli_tools(app_info_list: list):
         check_kubectl_installed,
     )
 
-    needs_helm = any(
-        app.type in ["helm", "helm", "helm-oci"]
-        for app in app_info_list
-    )
+    needs_helm = any(app.type in ["helm", "helm", "helm-oci"] for app in app_info_list)
     needs_kubectl = any(
         app.type in ["yaml", "install-kustomize"] for app in app_info_list
     )

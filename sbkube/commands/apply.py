@@ -140,7 +140,9 @@ def cmd(
             apps_to_apply.append(name)
 
         collect_dependencies(app_name)
-        console.print(f"\n[yellow]ℹ️  Including dependencies: {', '.join(apps_to_apply)}[/yellow]")
+        console.print(
+            f"\n[yellow]ℹ️  Including dependencies: {', '.join(apps_to_apply)}[/yellow]"
+        )
     else:
         apps_to_apply = deployment_order
 

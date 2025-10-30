@@ -428,7 +428,9 @@ class TestHttpApp:
     def test_http_app_invalid_url_validation(self):
         """Test that non-HTTP URL raises validation error."""
         with pytest.raises(ConfigValidationError) as exc_info:
-            HttpApp(type="http", url="ftp://example.com/file.yaml", dest="manifest.yaml")
+            HttpApp(
+                type="http", url="ftp://example.com/file.yaml", dest="manifest.yaml"
+            )
         assert "url must start with http:// or https://" in str(exc_info.value)
 
 
@@ -485,7 +487,9 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="production",
             apps={
-                "app1": HelmApp(type="helm", chart="bitnami/redis", namespace="custom-ns"),
+                "app1": HelmApp(
+                    type="helm", chart="bitnami/redis", namespace="custom-ns"
+                ),
             },
         )
         # App-specific namespace should not be overridden
@@ -541,7 +545,9 @@ class TestSBKubeConfig:
             namespace="default",
             apps={
                 "redis": HelmApp(type="helm", chart="bitnami/redis"),
-                "backend": HelmApp(type="helm", chart="my-org/backend", depends_on=["redis"]),
+                "backend": HelmApp(
+                    type="helm", chart="my-org/backend", depends_on=["redis"]
+                ),
             },
         )
         order = config.get_deployment_order()
@@ -555,9 +561,13 @@ class TestSBKubeConfig:
                 "database": HelmApp(type="helm", chart="bitnami/postgresql"),
                 "cache": HelmApp(type="helm", chart="bitnami/redis"),
                 "backend": HelmApp(
-                    type="helm", chart="my-org/backend", depends_on=["database", "cache"]
+                    type="helm",
+                    chart="my-org/backend",
+                    depends_on=["database", "cache"],
                 ),
-                "frontend": HelmApp(type="helm", chart="my-org/frontend", depends_on=["backend"]),
+                "frontend": HelmApp(
+                    type="helm", chart="my-org/frontend", depends_on=["backend"]
+                ),
             },
         )
         order = config.get_deployment_order()
@@ -574,7 +584,9 @@ class TestSBKubeConfig:
                 namespace="default",
                 apps={
                     "backend": HelmApp(
-                        type="helm", chart="my-org/backend", depends_on=["non-existent-app"]
+                        type="helm",
+                        chart="my-org/backend",
+                        depends_on=["non-existent-app"],
                     ),
                 },
             )

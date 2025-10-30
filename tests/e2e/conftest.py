@@ -60,9 +60,9 @@ def verify_example_exists(example_path: Path, required_files: list[str] | None =
         # Support both .yaml and .yml extensions
         if not file_path.exists():
             alt_path = example_path / filename.replace(".yaml", ".yml")
-            assert (
-                alt_path.exists()
-            ), f"Required file not found: {filename} (tried {file_path} and {alt_path})"
+            assert alt_path.exists(), (
+                f"Required file not found: {filename} (tried {file_path} and {alt_path})"
+            )
 
 
 def run_sbkube_command(
@@ -104,7 +104,15 @@ def run_sbkube_command(
             import traceback
 
             error_msg.append("\n--- Traceback ---")
-            error_msg.append("".join(traceback.format_exception(type(result.exception), result.exception, result.exception.__traceback__)))
+            error_msg.append(
+                "".join(
+                    traceback.format_exception(
+                        type(result.exception),
+                        result.exception,
+                        result.exception.__traceback__,
+                    )
+                )
+            )
 
         if debug_info:
             error_msg.append("\n--- Debug Info ---")
@@ -289,7 +297,9 @@ def skip_if_helm_unavailable(request, helm_available):
     """
     if request.node.get_closest_marker("requires_helm"):
         if not helm_available:
-            pytest.skip("Helm is not installed or not in PATH. Install helm to run this test.")
+            pytest.skip(
+                "Helm is not installed or not in PATH. Install helm to run this test."
+            )
 
 
 def is_k8s_cluster_reachable():
@@ -321,6 +331,10 @@ def skip_if_k8s_unavailable(request, kubectl_available):
     """
     if request.node.get_closest_marker("requires_k8s"):
         if not kubectl_available:
-            pytest.skip("kubectl is not installed or not in PATH. Install kubectl to run this test.")
+            pytest.skip(
+                "kubectl is not installed or not in PATH. Install kubectl to run this test."
+            )
         if not is_k8s_cluster_reachable():
-            pytest.skip("Kubernetes cluster is not reachable. Ensure a cluster is running and kubeconfig is valid.")
+            pytest.skip(
+                "Kubernetes cluster is not reachable. Ensure a cluster is running and kubeconfig is valid."
+            )

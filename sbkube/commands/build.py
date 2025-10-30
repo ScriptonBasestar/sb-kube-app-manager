@@ -73,9 +73,13 @@ def build_helm_app(
     dest_path = build_dir / app_name
 
     if dry_run:
-        console.print(f"[yellow]🔍 [DRY-RUN] Would copy chart: {source_path} → {dest_path}[/yellow]")
+        console.print(
+            f"[yellow]🔍 [DRY-RUN] Would copy chart: {source_path} → {dest_path}[/yellow]"
+        )
         if dest_path.exists():
-            console.print(f"[yellow]🔍 [DRY-RUN] Would remove existing build directory[/yellow]")
+            console.print(
+                "[yellow]🔍 [DRY-RUN] Would remove existing build directory[/yellow]"
+            )
     else:
         # 기존 디렉토리 삭제
         if dest_path.exists():
@@ -91,7 +95,9 @@ def build_helm_app(
     # 3.1. Warn if override directory exists but not configured
     if overrides_base.exists() and overrides_base.is_dir() and not app.overrides:
         console.print()
-        console.print(f"[yellow]⚠️  Override directory found but not configured: {app_name}[/yellow]")
+        console.print(
+            f"[yellow]⚠️  Override directory found but not configured: {app_name}[/yellow]"
+        )
 
         try:
             rel_path = overrides_base.relative_to(Path.cwd())
@@ -108,9 +114,13 @@ def build_helm_app(
             console.print(f"[yellow]      - {rel_file_path}[/yellow]")
 
         if len(override_files) > 5:
-            console.print(f"[yellow]      ... and {len(override_files) - 5} more files[/yellow]")
+            console.print(
+                f"[yellow]      ... and {len(override_files) - 5} more files[/yellow]"
+            )
 
-        console.print("[yellow]    💡 To apply these overrides, add to config.yaml:[/yellow]")
+        console.print(
+            "[yellow]    💡 To apply these overrides, add to config.yaml:[/yellow]"
+        )
         console.print(f"[yellow]       {app_name}:[/yellow]")
         console.print("[yellow]         overrides:[/yellow]")
         if override_files:
@@ -119,9 +129,13 @@ def build_helm_app(
                 rel_file_path = f.relative_to(overrides_base)
                 console.print(f"[yellow]           - {rel_file_path}[/yellow]")
                 if i == 0:
-                    console.print(f"[dim yellow]             # → build/{app_name}/{rel_file_path}[/dim yellow]")
+                    console.print(
+                        f"[dim yellow]             # → build/{app_name}/{rel_file_path}[/dim yellow]"
+                    )
             if len(override_files) > 3:
-                console.print(f"[yellow]           # ... and {len(override_files) - 3} more[/yellow]")
+                console.print(
+                    f"[yellow]           # ... and {len(override_files) - 3} more[/yellow]"
+                )
         console.print()
 
     # 3.2. Apply overrides if configured
@@ -129,7 +143,9 @@ def build_helm_app(
         console.print(f"  Processing {len(app.overrides)} override patterns...")
 
         if not overrides_base.exists():
-            console.print(f"[yellow]⚠️ Overrides directory not found: {overrides_base}[/yellow]")
+            console.print(
+                f"[yellow]⚠️ Overrides directory not found: {overrides_base}[/yellow]"
+            )
         else:
             total_files_copied = 0
 
@@ -140,10 +156,14 @@ def build_helm_app(
                     matched_files = list(overrides_base.glob(override_pattern))
 
                     if not matched_files:
-                        console.print(f"[yellow]    ⚠️ No files matched pattern: {override_pattern}[/yellow]")
+                        console.print(
+                            f"[yellow]    ⚠️ No files matched pattern: {override_pattern}[/yellow]"
+                        )
                         continue
 
-                    console.print(f"    Pattern '{override_pattern}' matched {len(matched_files)} files")
+                    console.print(
+                        f"    Pattern '{override_pattern}' matched {len(matched_files)} files"
+                    )
 
                     for src_file in matched_files:
                         if src_file.is_file():
@@ -153,7 +173,9 @@ def build_helm_app(
 
                             # Create destination directory
                             if dry_run:
-                                console.print(f"[yellow]      🔍 [DRY-RUN] Would override: {override_rel_path}[/yellow]")
+                                console.print(
+                                    f"[yellow]      🔍 [DRY-RUN] Would override: {override_rel_path}[/yellow]"
+                                )
                             else:
                                 dst_file.parent.mkdir(parents=True, exist_ok=True)
                                 shutil.copy2(src_file, dst_file)
@@ -166,7 +188,9 @@ def build_helm_app(
 
                     if src_file.exists() and src_file.is_file():
                         if dry_run:
-                            console.print(f"[yellow]    🔍 [DRY-RUN] Would override: {override_pattern}[/yellow]")
+                            console.print(
+                                f"[yellow]    🔍 [DRY-RUN] Would override: {override_pattern}[/yellow]"
+                            )
                         else:
                             # 대상 디렉토리 생성
                             dst_file.parent.mkdir(parents=True, exist_ok=True)
@@ -174,7 +198,9 @@ def build_helm_app(
                             console.print(f"    ✓ Override: {override_pattern}")
                             total_files_copied += 1
                     else:
-                        console.print(f"[yellow]    ⚠️ Override file not found: {src_file}[/yellow]")
+                        console.print(
+                            f"[yellow]    ⚠️ Override file not found: {src_file}[/yellow]"
+                        )
 
             if total_files_copied > 0:
                 console.print(f"  Total files copied: {total_files_copied}")
@@ -188,11 +214,17 @@ def build_helm_app(
             if dry_run:
                 if remove_target.exists():
                     if remove_target.is_dir():
-                        console.print(f"[yellow]    🔍 [DRY-RUN] Would remove directory: {remove_pattern}[/yellow]")
+                        console.print(
+                            f"[yellow]    🔍 [DRY-RUN] Would remove directory: {remove_pattern}[/yellow]"
+                        )
                     elif remove_target.is_file():
-                        console.print(f"[yellow]    🔍 [DRY-RUN] Would remove file: {remove_pattern}[/yellow]")
+                        console.print(
+                            f"[yellow]    🔍 [DRY-RUN] Would remove file: {remove_pattern}[/yellow]"
+                        )
                 else:
-                    console.print(f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]")
+                    console.print(
+                        f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]"
+                    )
             else:
                 if remove_target.exists():
                     if remove_target.is_dir():
@@ -202,7 +234,9 @@ def build_helm_app(
                         remove_target.unlink()
                         console.print(f"    ✓ Removed file: {remove_pattern}")
                 else:
-                    console.print(f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]")
+                    console.print(
+                        f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]"
+                    )
 
     console.print(f"[green]✅ Helm app built: {app_name}[/green]")
     return True
@@ -244,7 +278,9 @@ def build_http_app(
     dest_file = build_dir / app_name / source_file.name
 
     if dry_run:
-        console.print(f"[yellow]🔍 [DRY-RUN] Would copy: {source_file} → {dest_file}[/yellow]")
+        console.print(
+            f"[yellow]🔍 [DRY-RUN] Would copy: {source_file} → {dest_file}[/yellow]"
+        )
     else:
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         console.print(f"  Copying: {source_file} → {dest_file}")
@@ -356,21 +392,37 @@ def cmd(
         if isinstance(app, HelmApp):
             # Helm 앱만 빌드 (커스터마이징 필요)
             if app.overrides or app.removes or app.is_remote_chart():
-                success = build_helm_app(app_name, app, BASE_DIR, CHARTS_DIR, BUILD_DIR, APP_CONFIG_DIR, dry_run)
+                success = build_helm_app(
+                    app_name,
+                    app,
+                    BASE_DIR,
+                    CHARTS_DIR,
+                    BUILD_DIR,
+                    APP_CONFIG_DIR,
+                    dry_run,
+                )
             else:
-                console.print(f"[yellow]⏭️  Skipping Helm app (no customization): {app_name}[/yellow]")
+                console.print(
+                    f"[yellow]⏭️  Skipping Helm app (no customization): {app_name}[/yellow]"
+                )
                 success = True  # 건너뛰어도 성공으로 간주
         elif isinstance(app, HttpApp):
-            success = build_http_app(app_name, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, dry_run)
+            success = build_http_app(
+                app_name, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, dry_run
+            )
         else:
-            console.print(f"[yellow]⏭️  App type '{app.type}' does not require build: {app_name}[/yellow]")
+            console.print(
+                f"[yellow]⏭️  App type '{app.type}' does not require build: {app_name}[/yellow]"
+            )
             success = True  # 건너뛰어도 성공으로 간주
 
         if success:
             success_count += 1
 
     # 결과 출력
-    console.print(f"\n[bold green]✅ Build completed: {success_count}/{total_count} apps[/bold green]")
+    console.print(
+        f"\n[bold green]✅ Build completed: {success_count}/{total_count} apps[/bold green]"
+    )
 
     if success_count < total_count:
         raise click.Abort()

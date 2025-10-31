@@ -117,5 +117,12 @@ data/
 lint-output.txt
 *-output.txt
 tmp/
-charts/
-repos/
+
+# ───────────────
+# 🔧 SBKube 다운로드 디렉토리 (prepare 명령 결과)
+# ───────────────
+# examples 하위 포함 모든 charts, repos, build, rendered 무시
+**/charts/
+**/repos/
+**/build/
+**/rendered/

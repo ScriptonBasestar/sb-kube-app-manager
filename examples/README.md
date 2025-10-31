@@ -316,9 +316,17 @@ example-dir/
 ├── README.md           # 예제 설명 및 사용법
 ├── config.yaml         # SBKube 설정 (앱 정의)
 ├── sources.yaml        # 외부 소스 정의 (Helm repos, Git repos)
-└── values/             # Helm values 파일들
-    └── app-values.yaml
+├── values/             # Helm values 파일들
+│   └── app-values.yaml
+├── charts/             # ⚠️ sbkube prepare로 다운로드 (Git 미포함)
+├── repos/              # ⚠️ sbkube prepare로 클론 (Git 미포함)
+├── build/              # ⚠️ sbkube build로 생성 (Git 미포함)
+└── rendered/           # ⚠️ sbkube template로 생성 (Git 미포함)
 ```
+
+> **📌 중요**: `charts/`, `repos/`, `build/`, `rendered/` 디렉토리는 **SBKube 명령 실행 시 자동 생성**되며, **Git 저장소에는 포함되지 않습니다** (.gitignore).
+>
+> 예제를 처음 사용할 때는 반드시 `sbkube prepare`를 먼저 실행하여 외부 소스를 다운로드해야 합니다.
 
 ### 핵심 파일 설명
 

@@ -13,7 +13,7 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from sbkube.models.config_model import HelmApp, HttpApp, SBKubeConfig, YamlApp
+from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig, YamlApp
 from sbkube.utils.common import find_all_app_dirs, run_command
 from sbkube.utils.hook_executor import HookExecutor
 
@@ -466,7 +466,13 @@ def cmd(
 
                 success = False
 
-                if isinstance(app, HelmApp):
+                if isinstance(app, HookApp):
+                    # HookApp은 template 단계 불필요 (deploy 시에만 실행)
+                    console.print(
+                        f"[yellow]⏭️  HookApp does not support template: {app_name_iter}[/yellow]"
+                    )
+                    success = True
+                elif isinstance(app, HelmApp):
                     success = template_helm_app(
                         app_name_iter,
                         app,

@@ -14,7 +14,7 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from sbkube.models.config_model import HelmApp, HttpApp, SBKubeConfig
+from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig
 from sbkube.utils.common import find_all_app_dirs
 from sbkube.utils.hook_executor import HookExecutor
 
@@ -471,7 +471,13 @@ def cmd(
 
             success = False
 
-            if isinstance(app, HelmApp):
+            if isinstance(app, HookApp):
+                # HookApp은 build 단계 불필요 (deploy 시에만 실행)
+                console.print(
+                    f"[yellow]⏭️  HookApp does not require build: {app_name_iter}[/yellow]"
+                )
+                success = True
+            elif isinstance(app, HelmApp):
                 # Helm 앱만 빌드 (커스터마이징 필요)
                 if app.overrides or app.removes or app.is_remote_chart():
                     success = build_helm_app(

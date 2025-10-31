@@ -12,7 +12,7 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from sbkube.models.config_model import GitApp, HelmApp, HttpApp, SBKubeConfig
+from sbkube.models.config_model import GitApp, HelmApp, HookApp, HttpApp, SBKubeConfig
 from sbkube.models.sources_model import SourceScheme
 from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.utils.cluster_config import (
@@ -760,7 +760,13 @@ def cmd(
 
             success = False
 
-            if isinstance(app, HelmApp):
+            if isinstance(app, HookApp):
+                # HookApp은 prepare 단계 불필요 (deploy 시에만 실행)
+                console.print(
+                    f"[yellow]⏭️  HookApp does not require prepare: {app_name_iter}[/yellow]"
+                )
+                success = True
+            elif isinstance(app, HelmApp):
                 success = prepare_helm_app(
                     app_name_iter,
                     app,

@@ -85,15 +85,34 @@ uv run -m sbkube.cli delete --base-dir examples/k3scode --app-dir rdb --namespac
 
 #### sources.yaml 검증
 
+```bash
+# Explicit path
 sbkube validate sources.yaml
+
+# Using --app-dir with sources.yaml
+sbkube validate --config-file sources.yaml
+```
 
 #### config.yaml 검증
 
+```bash
+# Explicit path (기존 방식)
 sbkube validate a000_infra/config.yaml
+
+# Using --app-dir (신규 방식)
+sbkube validate --app-dir a000_infra
+
+# 현재 디렉토리 검증
+cd a000_infra
+sbkube validate
+```
 
 #### 스키마 명시
 
-sbkube validate somefile.yaml --schema schemas/custom.schema.json
+```bash
+sbkube validate somefile.yaml --schema-path schemas/custom.schema.json
+sbkube validate --app-dir redis --schema-type config
+```
 
 ## 자동화 테스트 (Automated Testing)
 

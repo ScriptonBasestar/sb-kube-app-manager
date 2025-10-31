@@ -204,7 +204,21 @@ class ValidateCommand:
 @click.command(name="validate")
 @click.argument(
     "target_file",
-    type=click.Path(exists=True, dir_okay=False, resolve_path=True),
+    type=click.Path(dir_okay=False, resolve_path=True),
+    required=False,
+    default=None,
+)
+@click.option(
+    "--app-dir",
+    "app_config_dir_name",
+    default=None,
+    help="앱 설정 디렉토리 (config.yaml 자동 검색)",
+)
+@click.option(
+    "--config-file",
+    "config_file_name",
+    default="config.yaml",
+    help="설정 파일 이름 (app-dir 내부, 기본값: config.yaml)",
 )
 @click.option(
     "--schema-type",
@@ -228,7 +242,9 @@ class ValidateCommand:
 @click.pass_context
 def cmd(
     ctx,
-    target_file: str,
+    target_file: str | None,
+    app_config_dir_name: str | None,
+    config_file_name: str,
     schema_type: str | None,
     base_dir: str,
     custom_schema_path: str | None,
@@ -237,15 +253,75 @@ def cmd(
 ):
     """
     config.yaml/toml 또는 sources.yaml/toml 파일을 JSON 스키마 및 데이터 모델로 검증합니다.
+
+    Examples:
+
+        # Explicit file path (backward compatible)
+        sbkube validate /path/to/config.yaml
+
+        # Using --app-dir
+        sbkube validate --app-dir redis
+
+        # Custom config file name
+        sbkube validate --app-dir redis --config-file custom.yaml
+
+        # Current directory (default)
+        sbkube validate
     """
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
     ctx.obj["debug"] = debug
     setup_logging_from_context(ctx)
+
+    # Resolve base directory
+    BASE_DIR = Path(base_dir).resolve()
+
+    # Resolve target file path
+    if target_file:
+        # Case 1: Explicit file path provided (backward compatible)
+        target_path = Path(target_file)
+        logger.info(f"Using explicit file path: {target_path}")
+
+    elif app_config_dir_name:
+        # Case 2: --app-dir specified
+        app_dir = BASE_DIR / app_config_dir_name
+
+        # Validate app directory exists
+        if not app_dir.exists() or not app_dir.is_dir():
+            logger.error(f"App directory not found: {app_dir}")
+            logger.info("💡 Check directory path or use explicit file path")
+            raise click.Abort()
+
+        # Construct config file path
+        target_path = app_dir / config_file_name
+        logger.info(f"Using app directory: {app_dir}")
+        logger.info(f"Config file: {config_file_name}")
+
+        # Validate config file exists
+        if not target_path.exists():
+            logger.error(f"Config file not found: {target_path}")
+            logger.info("💡 Use --config-file to specify different name")
+            raise click.Abort()
+
+    else:
+        # Case 3: Current directory fallback
+        target_path = BASE_DIR / config_file_name
+        logger.info(f"Using current directory: {BASE_DIR}")
+
+        # Validate file exists
+        if not target_path.exists():
+            logger.error(f"Config file not found: {target_path}")
+            logger.info("💡 Solutions:")
+            logger.info("   1. Provide explicit path: sbkube validate path/to/config.yaml")
+            logger.info("   2. Use --app-dir: sbkube validate --app-dir <directory>")
+            logger.info("   3. Ensure config.yaml exists in current directory")
+            raise click.Abort()
+
+    # Execute validation (existing logic)
     validate_cmd = ValidateCommand(
-        target_file=target_file,
+        target_file=str(target_path),
         schema_type=schema_type,
-        base_dir=base_dir,
+        base_dir=str(BASE_DIR),
         custom_schema_path=custom_schema_path,
     )
     validate_cmd.execute()

@@ -232,11 +232,16 @@ sbkube delete [옵션]
 #### 4.2.7 validate - 설정 검증
 
 ```bash
-sbkube validate [옵션]
+sbkube validate [TARGET_FILE] [옵션]
 ```
 
-- 설정 파일 유효성 검증
+- 설정 파일 유효성 검증 (config.yaml, sources.yaml)
 - JSON 스키마 및 Pydantic 모델 검증
+- 앱 그룹 의존성 검증 (config 파일만)
+- 지원 옵션:
+  - `--app-dir <디렉토리>`: 앱 설정 디렉토리
+  - `--config-file <파일>`: 설정 파일 이름 (기본: config.yaml)
+  - `--schema-type <타입>`: 파일 종류 (config 또는 sources)
 
 #### 4.2.8 state - 상태 관리
 

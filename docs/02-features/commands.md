@@ -849,30 +849,86 @@ sbkube delete --app redis --dry-run --skip-not-found
 ### 📋 사용법
 
 ```bash
-sbkube validate [옵션]
+sbkube validate [TARGET_FILE] [옵션]
 ```
 
 ### 🎛️ 옵션
 
-- `--app-dir <디렉토리>` - 앱 설정 디렉토리 (기본값: `.`)
-- `--base-dir <경로>` - 프로젝트 루트 디렉토리 (기본값: `.`)
-- `--config-file <파일>` - 검증할 설정 파일 이름
+| 옵션 | 설명 | 기본값 |
+|------|------|--------|
+| `TARGET_FILE` | 검증할 파일 경로 (선택) | - |
+| `--app-dir <디렉토리>` | 앱 설정 디렉토리 (config.yaml 자동 검색) | - |
+| `--config-file <파일>` | 설정 파일 이름 (app-dir 내부) | `config.yaml` |
+| `--base-dir <경로>` | 프로젝트 루트 디렉토리 | `.` |
+| `--schema-type <타입>` | 파일 종류 (config 또는 sources) | 자동 유추 |
+| `--schema-path <경로>` | 사용자 정의 JSON 스키마 파일 경로 | - |
 
 ### 🔍 검증 항목
 
-- **JSON 스키마** 준수 여부
-- **Pydantic 모델** 유효성
+- **JSON 스키마** 준수 여부 (선택적)
+- **Pydantic 모델** 유효성 검증
 - **필수 필드** 존재 여부
 - **타입 검증** 및 제약사항
+- **앱 그룹 의존성** 검증 (config 파일만 해당)
+
+### 📂 파일 해석 우선순위
+
+1. **명시적 파일 경로**: `TARGET_FILE` 인자가 제공된 경우
+2. **--app-dir 옵션**: `--app-dir` + `--config-file` 조합
+3. **현재 디렉토리**: 인자 없이 실행 시 `./config.yaml` 사용
 
 ### 💡 사용 예제
 
 ```bash
-# 기본 설정 파일 검증
+# 1. 명시적 파일 경로로 검증 (기존 방식, 여전히 지원)
+sbkube validate config.yaml
+sbkube validate /path/to/config.yaml
+sbkube validate examples/basic/config.yaml
+
+# 2. --app-dir로 앱 그룹별 검증 (신규 기능)
+sbkube validate --app-dir redis
+sbkube validate --app-dir app_000_infra_network
+
+# 3. --app-dir + --config-file 조합 (커스텀 파일명)
+sbkube validate --app-dir redis --config-file staging.yaml
+
+# 4. 현재 디렉토리 검증 (인자 없이 실행)
+cd examples/basic
 sbkube validate
 
-# 특정 설정 파일 검증
-sbkube validate --config-file staging-config.yaml
+# 5. sources.yaml 검증
+sbkube validate sources.yaml
+sbkube validate --app-dir . --config-file sources.yaml
+
+# 6. 스키마 타입 명시적 지정
+sbkube validate config.yaml --schema-type config
+sbkube validate sources.yaml --schema-type sources
+```
+
+### 🚨 에러 처리
+
+**App directory not found:**
+```bash
+$ sbkube validate --app-dir nonexistent
+❌ App directory not found: /path/to/nonexistent
+💡 Check directory path or use explicit file path
+```
+
+**Config file not found:**
+```bash
+$ sbkube validate --app-dir redis --config-file custom.yaml
+❌ Config file not found: /path/to/redis/custom.yaml
+💡 Use --config-file to specify different name
+```
+
+**No arguments and no config in current directory:**
+```bash
+$ sbkube validate
+❌ Config file not found: ./config.yaml
+💡 Solutions:
+   1. Provide explicit path: sbkube validate path/to/config.yaml
+   2. Use --app-dir: sbkube validate --app-dir <directory>
+   3. Ensure config.yaml exists in current directory
 ```
 
 ---

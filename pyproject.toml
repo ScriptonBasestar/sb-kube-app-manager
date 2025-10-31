@@ -17,16 +17,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Operating System :: POSIX :: Linux",
 ]
-
-[project.urls]
-Homepage = "https://github.com/archmagece/sb-kube-app-manager"
-Documentation = "https://github.com/archmagece/sb-kube-app-manager/tree/main/docs"
-Repository = "https://github.com/archmagece/sb-kube-app-manager"
-"Bug Tracker" = "https://github.com/archmagece/sb-kube-app-manager/issues"
-"Product Definition" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/00-product/product-definition.md"
-"API Reference" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/10-modules/sbkube/API_CONTRACT.md"
-"Getting Started" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/01-getting-started/README.md"
-
 dependencies = [
   "click>=8.1",
   "pyyaml",
@@ -40,6 +30,15 @@ dependencies = [
   "requests>=2.31.0",
   "kubernetes>=28.1.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/archmagece/sb-kube-app-manager"
+Documentation = "https://github.com/archmagece/sb-kube-app-manager/tree/main/docs"
+Repository = "https://github.com/archmagece/sb-kube-app-manager"
+"Bug Tracker" = "https://github.com/archmagece/sb-kube-app-manager/issues"
+"Product Definition" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/00-product/product-definition.md"
+"API Reference" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/10-modules/sbkube/API_CONTRACT.md"
+"Getting Started" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/01-getting-started/README.md"
 
 [project.scripts]
 sbkube = "sbkube.cli:main_with_exception_handling"

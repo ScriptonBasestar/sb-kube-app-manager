@@ -1,39 +1,17 @@
-# Advanced Chart Customization (Future Feature)
+# Advanced Chart Customization
 
-> ⚠️ **중요: 이 기능은 아직 구현되지 않았습니다**
->
-> 이 디렉토리는 **미래 기능을 위한 설계 문서 및 예제**입니다.
-> 고급 패칭 기능 (Strategic Merge Patch, JSON Patch 등)은 계획 단계이며, 현재 SBKube에 구현되어 있지 않습니다.
->
-> **현재 사용 가능한 차트 커스터마이징 기능:**
-> - `overrides`: 차트 템플릿 파일 **교체** ([override-with-files](../override-with-files/) 참조)
-> - `removes`: 차트 템플릿 파일 **삭제** ([override-with-files](../override-with-files/) 참조)
->
-> **로드맵:** 고급 패칭 기능은 v0.6.0 이후 릴리스에서 구현 예정입니다.
+Helm 차트를 고급 방식으로 커스터마이징하는 예제입니다.
 
----
+## 📋 개요
 
-## 🔮 계획된 기능: Advanced Patching
+이 예제는 SBKube의 `overrides`와 `removes` 기능을 사용하여 Helm 차트를 정교하게 커스터마이징하는 방법을 보여줍니다.
 
-Helm 차트 템플릿 파일을 빌드 시점에 정교하게 패치하는 기능입니다.
+### 주요 기능
 
-### 기획 의도
-
-현재 `overrides` 기능은 파일 **전체를 교체**하는 방식입니다.
-고급 패칭 기능은 파일의 **일부분만 수정**할 수 있도록 합니다:
-
-- **Strategic Merge Patch**: 컨테이너, 볼륨, 포트 추가 (Kubernetes 병합 전략)
-- **JSON Patch (RFC 6902)**: 정확한 경로로 값 변경 (add/replace/remove/test 등)
-- **Merge Patch (RFC 7386)**: 간단한 키-값 병합 (ConfigMap, Secret)
-- **Create Patch**: 새로운 리소스 파일 생성 (ServiceMonitor, NetworkPolicy)
-
-### 사용 시나리오
-
-1. **공식 차트 커스터마이징**: values 파일로 불가능한 변경
-2. **사이드카 컨테이너 추가**: 로그 수집, 보안 스캐너 등
-3. **보안 강화**: SecurityContext, NetworkPolicy 추가
-4. **모니터링 통합**: ServiceMonitor, Annotation 추가
-5. **스토리지 커스터마이징**: PVC 설정 변경
+- **overrides**: 차트 템플릿 파일 **전체 교체**
+- **removes**: 차트 템플릿 파일/디렉토리 **삭제** (Glob 패턴 지원)
+- **values**: Helm values 파일을 통한 기본 커스터마이징
+- **set_values**: 명령줄 스타일 값 오버라이드
 
 ---
 
@@ -41,176 +19,170 @@ Helm 차트 템플릿 파일을 빌드 시점에 정교하게 패치하는 기�
 
 ```
 advanced-overrides/
-├── config.yaml               # 앱 설정 (미래 API 예제)
+├── config.yaml               # 앱 설정
 ├── sources.yaml              # Helm 리포지토리
 ├── grafana-values.yaml       # Grafana 기본 values
 ├── prometheus-values.yaml    # Prometheus 기본 values
-├── patches/                  # 패치 파일들 (예제)
-│   ├── add-sidecar-container.yaml       # Sidecar 추가 (Strategic)
-│   ├── add-service-port.yaml            # 포트 추가 (Strategic)
-│   ├── add-custom-config.yaml           # ConfigMap 추가 (Merge)
-│   ├── prometheus-security.yaml         # Security Context (Strategic)
-│   ├── prometheus-pvc.yaml              # PVC 커스터마이징 (Strategic)
-│   ├── prometheus-servicemonitor.yaml   # 새 파일 생성 (Create)
-│   └── redis-json-patch.yaml            # 환경 변수 추가 (JSON)
+├── overrides/                # 커스텀 템플릿 파일들
+│   └── grafana/
+│       └── templates/
+│           ├── deployment.yaml    # 사이드카가 포함된 Deployment
+│           └── service.yaml       # 추가 포트가 포함된 Service
 └── README.md                 # 이 문서
 ```
 
 ---
 
-## 🔧 계획된 Patch 타입
+## 🔧 사용 시나리오
 
-### 1. Strategic Merge Patch (권장)
+### 시나리오 1: 사이드카 컨테이너 추가 (Grafana)
 
-**특징**:
-- Kubernetes 리소스 병합 전략 사용
-- 리스트 항목 추가/수정 가능
-- 가장 직관적
+**목적**: Grafana Deployment에 로그 수집 사이드카 추가
 
-**예시**: Deployment에 사이드카 컨테이너 추가
+**방법**: `overrides`를 사용하여 `templates/deployment.yaml` 파일 전체 교체
 
 ```yaml
-# patches/add-sidecar-container.yaml
-spec:
-  template:
-    spec:
-      containers:
-      - name: log-forwarder  # ← 기존 컨테이너에 추가
-        image: fluent/fluent-bit:2.0
-```
-
-**예상 사용법**:
-```yaml
-# config.yaml (미래 API)
+# config.yaml
 grafana:
-  type: helm
-  patches:  # 또는 advanced_overrides
-    - target: templates/deployment.yaml
-      patch: patches/add-sidecar-container.yaml
-      strategy: strategic  # strategic | json | merge | create
+  overrides:
+    - templates/deployment.yaml  # 사이드카가 포함된 커스텀 Deployment
 ```
 
-### 2. JSON Patch (정밀 제어)
+**커스텀 파일 위치**: `overrides/grafana/templates/deployment.yaml`
 
-**특징**:
-- RFC 6902 표준
-- 정확한 경로로 값 변경 (add/replace/remove/test 등)
-- 복잡한 변경에 유용
+### 시나리오 2: 불필요한 리소스 제거 (Prometheus)
 
-**예시**: Redis 환경 변수 추가
+**목적**: Prometheus에서 사용하지 않는 컴포넌트 제거
+
+**방법**: `removes`를 사용하여 디렉토리 단위 삭제
 
 ```yaml
-# patches/redis-json-patch.yaml
-- op: add
-  path: /spec/template/spec/containers/0/env/-
-  value:
-    name: REDIS_EXTRA_FLAGS
-    value: "--maxmemory 256mb"
+# config.yaml
+prometheus:
+  removes:
+    - templates/pushgateway/         # Pushgateway 미사용
+    - templates/kube-state-metrics/  # 별도 설치
+    - templates/node-exporter/       # 별도 설치
 ```
 
-**예상 사용법**:
+### 시나리오 3: Glob 패턴 활용 (Redis)
+
+**목적**: Standalone 모드에서 Replica 관련 파일 제거
+
+**방법**: `removes`에서 Glob 패턴 사용
+
 ```yaml
+# config.yaml
 redis:
-  type: helm
-  patches:
-    - target: templates/master/statefulset.yaml
-      patch: patches/redis-json-patch.yaml
-      strategy: json
-```
-
-### 3. Merge Patch (단순 병합)
-
-**특징**:
-- RFC 7386 표준
-- 간단한 키-값 병합
-- ConfigMap, Secret 수정에 적합
-
-**예시**: ConfigMap에 데이터 추가
-
-```yaml
-# patches/add-custom-config.yaml
-data:
-  custom-dashboard.json: |
-    { "dashboard": { "title": "Custom" } }
-```
-
-### 4. Create Patch (파일 생성)
-
-**특징**:
-- 차트에 없는 새로운 템플릿 파일 생성
-- ServiceMonitor, NetworkPolicy 등 추가
-
-**예시**: ServiceMonitor 생성
-
-```yaml
-# patches/prometheus-servicemonitor.yaml
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: {{ include "prometheus.fullname" . }}-monitor
-spec:
-  selector:
-    matchLabels:
-      app: prometheus
-  endpoints:
-  - port: http
-    interval: 30s
+  removes:
+    - templates/replicas/**/*        # replicas 디렉토리 전체 제거
+    - templates/*-pdb.yaml          # PodDisruptionBudget 제거
 ```
 
 ---
 
-## 🚀 예상 워크플로우
+## 🚀 실행 방법
+
+### 전체 워크플로우
 
 ```bash
 # 1단계: Helm 차트 다운로드
 sbkube prepare --app-dir examples/advanced-overrides
 
-# 2단계: 빌드 (고급 패치 적용)
+# 2단계: 빌드 (overrides/removes 적용)
 sbkube build --app-dir examples/advanced-overrides
 
-# 패치가 적용된 차트 확인:
+# 커스터마이징 확인:
 cat build/grafana/templates/deployment.yaml | grep log-forwarder
+ls build/prometheus/templates/  # pushgateway/ 디렉토리가 없음
 
 # 3단계: 템플릿 생성 (검증)
 sbkube template --app-dir examples/advanced-overrides --output-dir rendered
 
 # 4단계: 배포
-sbkube deploy --app-dir examples/advanced-overrides
+sbkube deploy --app-dir examples/advanced-overrides --namespace advanced-demo
 
 # 또는 한 번에
-sbkube apply --app-dir examples/advanced-overrides
+sbkube apply --app-dir examples/advanced-overrides --namespace advanced-demo
+```
+
+### 개별 앱 테스트
+
+```bash
+# Grafana만 배포
+sbkube apply --app-dir examples/advanced-overrides --namespace advanced-demo --app grafana
+
+# Prometheus만 배포
+sbkube apply --app-dir examples/advanced-overrides --namespace advanced-demo --app prometheus
 ```
 
 ---
 
-## 📋 실전 패턴 (미래 사용 예)
+## 📋 실전 패턴
 
-### 패턴 1: 사이드카 컨테이너 추가
+### 패턴 1: 파일 전체 교체 (overrides)
 
-**목적**: 모든 Pod에 로그 수집 사이드카 추가
+**사용 시기**:
+- values 파일로 불가능한 변경 (컨테이너 추가, 포트 추가 등)
+- 템플릿 로직 자체를 변경해야 할 때
 
+**예시**:
 ```yaml
-# patches/log-sidecar.yaml (Strategic Merge)
-spec:
-  template:
-    spec:
-      containers:
-      - name: log-forwarder
-        image: fluent/fluent-bit:2.0
-        volumeMounts:
-          - name: varlog
-            mountPath: /var/log
-      volumes:
-      - name: varlog
-        emptyDir: {}
+grafana:
+  overrides:
+    - templates/deployment.yaml
+    - templates/service.yaml
 ```
 
-### 패턴 2: 보안 강화
+**주의사항**:
+- 원본 차트 버전 업데이트 시 overrides 파일도 함께 업데이트 필요
+- 파일 경로는 차트 루트 기준 상대 경로
 
-**목적**: SecurityContext 추가
+### 패턴 2: 디렉토리 삭제 (removes)
 
+**사용 시기**:
+- 불필요한 컴포넌트 제거 (테스트, 예제 등)
+- 리소스 절약
+
+**예시**:
 ```yaml
-# patches/security.yaml (Strategic Merge)
+prometheus:
+  removes:
+    - templates/pushgateway/
+    - templates/tests/
+```
+
+### 패턴 3: Glob 패턴 활용 (removes)
+
+**사용 시기**:
+- 패턴 기반 대량 파일 제거
+- 특정 타입의 리소스만 선택적 제거
+
+**예시**:
+```yaml
+redis:
+  removes:
+    - templates/replicas/**/*    # 하위 모든 파일
+    - templates/*-pdb.yaml       # PDB만 제거
+    - templates/**/*-test-*.yaml # 모든 테스트 파일
+```
+
+**지원 패턴**:
+- `*`: 단일 레벨 와일드카드
+- `**`: 재귀 디렉토리 매칭
+- `?`: 단일 문자 매칭
+
+### 패턴 4: 보안 강화
+
+**목적**: SecurityContext, NetworkPolicy 추가
+
+**방법**:
+1. 원본 Deployment에 SecurityContext 추가
+2. `overrides/`에 커스텀 Deployment 파일 작성
+3. `overrides`로 파일 교체
+
+**예시** (`overrides/prometheus/templates/server/deploy.yaml`):
+```yaml
 spec:
   template:
     spec:
@@ -226,128 +198,94 @@ spec:
             drop: [ALL]
 ```
 
-### 패턴 3: 모니터링 통합
+---
 
-**목적**: Prometheus ServiceMonitor 추가
+## 🎯 현재 기능 vs 제한사항
 
-```yaml
-# patches/servicemonitor.yaml (Create)
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: {{ include "prometheus.fullname" . }}
-spec:
-  selector:
-    matchLabels:
-      app: prometheus
-  endpoints:
-  - port: http
-    interval: 30s
-```
+### ✅ 현재 사용 가능
 
-### 패턴 4: 환경 변수 추가
+| 기능 | 설명 | 예제 |
+|------|------|------|
+| **파일 전체 교체** | `overrides` | `templates/deployment.yaml` |
+| **파일 삭제** | `removes` | `templates/tests/` |
+| **Glob 패턴 삭제** | `removes` | `templates/**/*-test.yaml` |
+| **Values 오버라이드** | `values` | `grafana-values.yaml` |
+| **CLI 스타일 값 설정** | `set_values` | `service.type=LoadBalancer` |
 
-**목적**: 특정 설정 추가 (values로 불가능한 경우)
+### ⚠️ 제한사항
 
-```yaml
-# patches/env.yaml (JSON Patch)
-- op: add
-  path: /spec/template/spec/containers/0/env/-
-  value:
-    name: CUSTOM_FLAG
-    value: "enabled"
-```
+| 기능 | 현재 상태 | 대안 |
+|------|----------|------|
+| **부분 패칭** | ❌ 미지원 | `overrides`로 파일 전체 교체 |
+| **Strategic Merge** | ❌ 미지원 | `overrides`로 파일 전체 교체 |
+| **JSON Patch** | ❌ 미지원 | `overrides`로 파일 전체 교체 |
+| **파일 생성** | ⚠️ `overrides`로 가능 | 커스텀 파일을 `overrides/`에 작성 |
+
+**미래 계획**: 부분 패칭 기능은 v0.6.0 이후 릴리스에서 검토 예정
 
 ---
 
-## 🎯 현재 vs 미래
+## 💡 모범 사례
 
-| 기능 | 현재 (v0.5.x) | 미래 (v0.6.0+) |
-|------|---------------|----------------|
-| **파일 전체 교체** | ✅ `overrides` | ✅ `overrides` (유지) |
-| **파일 삭제** | ✅ `removes` | ✅ `removes` (유지) |
-| **부분 패칭 (Strategic)** | ❌ | ✅ `patches` (신규) |
-| **JSON Patch** | ❌ | ✅ `patches` (신규) |
-| **Merge Patch** | ❌ | ✅ `patches` (신규) |
-| **파일 생성 (Create)** | ⚠️ overrides로 가능 | ✅ `patches` (개선) |
+### 1. 버전 관리
 
----
-
-## 💡 설계 고려사항
-
-### API 설계
-
-**옵션 1**: 새 필드 `patches` 추가
-
-```yaml
-grafana:
-  overrides:  # 기존 - 전체 교체
-    - templates/deployment.yaml
-  removes:    # 기존 - 삭제
-    - templates/tests/
-  patches:    # 신규 - 부분 수정
-    - target: templates/deployment.yaml
-      patch: patches/add-sidecar.yaml
-      strategy: strategic
+```bash
+# overrides 파일도 Git에 커밋
+git add overrides/
+git commit -m "Add custom Grafana deployment with sidecar"
 ```
 
-**옵션 2**: `overrides`를 확장
+### 2. 차트 업데이트 시 주의
+
+```bash
+# 차트 버전 업데이트 전 diff 확인
+helm pull grafana/grafana --version 10.1.2 --untar
+helm pull grafana/grafana --version 10.2.0 --untar
+
+diff grafana-10.1.2/templates/deployment.yaml \
+     grafana-10.2.0/templates/deployment.yaml
+```
+
+### 3. 검증
+
+```bash
+# template 단계에서 미리 확인
+sbkube template --app-dir examples/advanced-overrides --output-dir rendered
+
+# 렌더링된 매니페스트 검증
+kubectl apply --dry-run=client -f rendered/grafana/
+```
+
+### 4. 문서화
 
 ```yaml
+# config.yaml에 주석으로 이유 명시
 grafana:
   overrides:
-    - path: templates/deployment.yaml  # 전체 교체
-    - target: templates/service.yaml   # 부분 패치
-      patch: patches/add-port.yaml
-      strategy: strategic
+    - templates/deployment.yaml  # fluent-bit 사이드카 추가 (로그 수집)
   removes:
-    - templates/tests/
-```
-
-### 처리 순서
-
-```
-prepare (차트 다운로드)
-  → build:
-      1. overrides (전체 교체)
-      2. patches (부분 수정)
-      3. removes (삭제)
-  → template (렌더링)
-  → deploy (배포)
+    - templates/tests/           # 테스트 리소스 불필요
 ```
 
 ---
 
-## 📚 관련 문서
+## 📚 관련 예제
 
-- **현재 사용 가능**: [override-with-files](../override-with-files/) - `overrides`와 `removes` 예제
-- **기본 가이드**: [app-types/01-helm](../app-types/01-helm/) - Helm 앱 타입
-- **고급 기능**: [advanced-features/](../advanced-features/) - Helm 고급 설정
+- [override-with-files](../override-with-files/) - `overrides`와 `removes` 기본 예제
+- [app-types/01-helm](../app-types/01-helm/) - Helm 앱 타입 기본
+- [advanced-features/](../advanced-features/) - Helm 고급 설정
 
 ---
 
 ## 🔑 핵심 정리
 
-1. **이 디렉토리는 설계 문서입니다**
-   - 현재 구현되지 않은 미래 기능
-   - API 설계 및 사용 패턴 기획
-
-2. **현재 대안**
-   - 전체 파일 교체: `overrides` 사용
-   - 불필요한 파일 제거: `removes` 사용
-   - 예제: [override-with-files](../override-with-files/)
-
-3. **구현 로드맵**
-   - v0.6.0: Strategic Merge Patch
-   - v0.7.0: JSON Patch, Merge Patch
-   - v0.8.0: Create Patch 최적화
-
-4. **기여 환영**
-   - 이 기능에 대한 피드백은 GitHub Issues에 환영합니다
-   - 설계 개선 제안이 있다면 PR을 보내주세요
+1. **overrides**: 파일 전체를 교체하여 정교한 커스터마이징
+2. **removes**: 불필요한 파일/디렉토리 제거 (Glob 패턴 지원)
+3. **values**: Helm 표준 방식의 기본 커스터마이징
+4. **조합**: overrides + removes + values를 함께 사용하여 복잡한 요구사항 해결
 
 ---
 
 **작성일**: 2025-10-31
-**상태**: 설계 단계 (구현 예정)
 **버전**: SBKube v0.5.0+
+**상태**: 실제 동작 예제

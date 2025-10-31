@@ -1,86 +1,67 @@
 namespace: advanced-overrides-demo
 
-# ⚠️ 주의: 이 파일은 미래 기능에 대한 API 예제입니다
-# chart_patches 필드는 아직 구현되지 않았습니다 (v0.6.0+ 계획)
-# 현재는 overrides와 removes만 사용 가능합니다
-
 apps:
-  # Helm 차트에 고급 패치를 적용하는 예제 (미래 API)
+  # Helm 차트에 고급 커스터마이징을 적용하는 예제
   grafana:
     type: helm
     enabled: true
-    repo: grafana
-    chart: grafana
+    chart: grafana/grafana  # repo/chart format (v0.5.0+)
     version: "10.1.2"
 
     values:
       - grafana-values.yaml
 
-    # Helm 차트 템플릿 파일 패치 (v0.4.0+)
-    chart_patches:
-      # 1. Deployment에 사이드카 컨테이너 추가
-      - target: templates/deployment.yaml
-        patch: patches/add-sidecar-container.yaml
-        type: strategic  # strategic | json | merge
+    # 차트 템플릿 파일 전체 교체
+    overrides:
+      - templates/deployment.yaml  # 사이드카 컨테이너가 포함된 커스텀 Deployment
+      - templates/service.yaml     # 추가 포트가 포함된 커스텀 Service
 
-      # 2. Service에 추가 포트 노출
-      - target: templates/service.yaml
-        patch: patches/add-service-port.yaml
-        type: strategic
-
-      # 3. ConfigMap에 커스텀 설정 추가
-      - target: templates/configmap.yaml
-        patch: patches/add-custom-config.yaml
-        type: merge
+    # 불필요한 파일 삭제
+    removes:
+      - templates/tests/           # 테스트 리소스 제거
+      - templates/serviceaccount.yaml  # ServiceAccount 사용 안 함
 
     set_values:
       - service.type=LoadBalancer
       - persistence.enabled=false
 
-  # 복잡한 패치 예제 - Prometheus
+  # 복잡한 커스터마이징 예제 - Prometheus
   prometheus:
     type: helm
     enabled: true
-    repo: prometheus-community
-    chart: prometheus
+    chart: prometheus-community/prometheus  # repo/chart format (v0.5.0+)
     version: "25.28.0"
 
     values:
       - prometheus-values.yaml
 
-    chart_patches:
-      # 1. Security Context 추가
-      - target: templates/server/deploy.yaml
-        patch: patches/prometheus-security.yaml
-        type: strategic
+    # 보안 강화 및 PVC 커스터마이징
+    overrides:
+      - templates/server/deploy.yaml   # Security Context가 포함된 Deployment
+      - templates/server/pvc.yaml      # 커스텀 PVC 설정
 
-      # 2. Persistent Volume 커스터마이징
-      - target: templates/server/pvc.yaml
-        patch: patches/prometheus-pvc.yaml
-        type: strategic
-
-      # 3. Service Monitor 추가 (존재하지 않는 파일 생성)
-      - target: templates/servicemonitor.yaml
-        patch: patches/prometheus-servicemonitor.yaml
-        type: create  # 새 파일 생성
+    # 불필요한 컴포넌트 제거
+    removes:
+      - templates/pushgateway/         # Pushgateway 미사용
+      - templates/kube-state-metrics/  # 별도 설치
+      - templates/node-exporter/       # 별도 설치
 
     set_values:
       - server.persistentVolume.enabled=true
       - server.persistentVolume.size=10Gi
 
-  # JSON Patch 예제 - Redis
+  # Glob 패턴 활용 예제 - Redis
   redis:
     type: helm
     enabled: true
-    repo: bitnami
-    chart: redis
+    chart: bitnami/redis  # repo/chart format (v0.5.0+)
     version: "19.0.0"
 
-    chart_patches:
-      # JSON Patch 사용 (정확한 경로 지정)
-      - target: templates/master/statefulset.yaml
-        patch: patches/redis-json-patch.yaml
-        type: json
+    # Glob 패턴으로 여러 파일 제거
+    removes:
+      - templates/master/application.yaml
+      - templates/replicas/**/*        # replicas 디렉토리 전체 제거 (standalone 모드)
+      - templates/*-pdb.yaml          # PodDisruptionBudget 제거
 
     set_values:
       - architecture=standalone

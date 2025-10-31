@@ -4,11 +4,8 @@ SBKube 차트 커스터마이징 통합 테스트.
 overrides와 removes 기능의 실전 시나리오를 검증합니다.
 """
 
-import pytest
-from pathlib import Path
-
-from sbkube.models.config_model import HelmApp
 from sbkube.commands.build import build_helm_app
+from sbkube.models.config_model import HelmApp
 
 
 class TestChartCustomization:
@@ -34,7 +31,9 @@ class TestChartCustomization:
         # Overrides 디렉토리 - 일부 파일 교체
         overrides_dir = tmp_path / "overrides" / "grafana"
         overrides_dir.mkdir(parents=True)
-        (overrides_dir / "values.yaml").write_text("replicaCount: 3\nimage: custom/grafana")
+        (overrides_dir / "values.yaml").write_text(
+            "replicaCount: 3\nimage: custom/grafana"
+        )
         (overrides_dir / "templates").mkdir()
         (overrides_dir / "templates" / "deployment.yaml").write_text(
             "kind: Deployment\nmetadata:\n  labels:\n    custom: override"
@@ -62,8 +61,13 @@ class TestChartCustomization:
         assert success
 
         # 검증: Overrides 적용 확인
-        assert (build_dir / "grafana" / "values.yaml").read_text() == "replicaCount: 3\nimage: custom/grafana"
-        assert "custom: override" in (build_dir / "grafana" / "templates" / "deployment.yaml").read_text()
+        assert (
+            build_dir / "grafana" / "values.yaml"
+        ).read_text() == "replicaCount: 3\nimage: custom/grafana"
+        assert (
+            "custom: override"
+            in (build_dir / "grafana" / "templates" / "deployment.yaml").read_text()
+        )
 
         # 검증: Removes 적용 확인
         assert not (build_dir / "grafana" / "README.md").exists()
@@ -91,9 +95,15 @@ class TestChartCustomization:
         # Overrides - 완전히 새로운 템플릿 세트
         overrides_dir = tmp_path / "overrides" / "myapp"
         (overrides_dir / "templates").mkdir(parents=True)
-        (overrides_dir / "templates" / "statefulset.yaml").write_text("kind: StatefulSet")
-        (overrides_dir / "templates" / "service.yaml").write_text("kind: Service\nmetadata:\n  name: custom-svc")
-        (overrides_dir / "templates" / "pvc.yaml").write_text("kind: PersistentVolumeClaim")
+        (overrides_dir / "templates" / "statefulset.yaml").write_text(
+            "kind: StatefulSet"
+        )
+        (overrides_dir / "templates" / "service.yaml").write_text(
+            "kind: Service\nmetadata:\n  name: custom-svc"
+        )
+        (overrides_dir / "templates" / "pvc.yaml").write_text(
+            "kind: PersistentVolumeClaim"
+        )
 
         # HelmApp - templates/* 패턴 사용 (glob은 재귀적이지 않음)
         app = HelmApp(
@@ -120,7 +130,9 @@ class TestChartCustomization:
         assert (build_dir / "myapp" / "templates" / "pvc.yaml").exists()
 
         # 검증: 기존 service.yaml은 교체됨
-        service_content = (build_dir / "myapp" / "templates" / "service.yaml").read_text()
+        service_content = (
+            build_dir / "myapp" / "templates" / "service.yaml"
+        ).read_text()
         assert "custom-svc" in service_content
 
         # 검증: 원본의 deployment.yaml, configmap.yaml은 유지 (overrides에 없으므로)
@@ -253,7 +265,9 @@ spec:
         assert success
 
         # 검증: 보안 설정 적용 확인
-        deployment_content = (build_dir / "webapp" / "templates" / "deployment.yaml").read_text()
+        deployment_content = (
+            build_dir / "webapp" / "templates" / "deployment.yaml"
+        ).read_text()
         assert "runAsNonRoot: true" in deployment_content
         assert "allowPrivilegeEscalation: false" in deployment_content
         assert "readOnlyRootFilesystem: true" in deployment_content
@@ -332,7 +346,9 @@ data:
         assert "cpu: 2000m" in values_content
         assert "memory: 4Gi" in values_content
 
-        configmap_content = (build_dir / "saas-app-premium" / "templates" / "configmap.yaml").read_text()
+        configmap_content = (
+            build_dir / "saas-app-premium" / "templates" / "configmap.yaml"
+        ).read_text()
         assert "tier: premium" in configmap_content
         assert "features: all-enabled" in configmap_content
         assert "sla: 99.99" in configmap_content
@@ -450,5 +466,7 @@ data:
         assert (build_dir / "vanilla" / "templates" / "deployment.yaml").exists()
 
         # 검증: 내용도 동일
-        assert (build_dir / "vanilla" / "Chart.yaml").read_text() == "name: vanilla\nversion: 1.0.0"
+        assert (
+            build_dir / "vanilla" / "Chart.yaml"
+        ).read_text() == "name: vanilla\nversion: 1.0.0"
         assert (build_dir / "vanilla" / "values.yaml").read_text() == "replicas: 1"

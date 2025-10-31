@@ -1,11 +1,9 @@
 """Tests for cluster status command."""
 
 import json
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-import pytest
 import yaml
 
 from sbkube.utils.cluster_cache import ClusterCache
@@ -22,7 +20,10 @@ class TestClusterCache:
 
         # Save test data
         test_data = {
-            "cluster_info": {"api_server": "https://127.0.0.1:6443", "version": "v1.27.3"},
+            "cluster_info": {
+                "api_server": "https://127.0.0.1:6443",
+                "version": "v1.27.3",
+            },
             "nodes": [{"name": "node1", "status": "Ready"}],
             "namespaces": ["default", "kube-system"],
             "helm_releases": [],
@@ -46,7 +47,12 @@ class TestClusterCache:
         cache = ClusterCache(cache_dir, context="default", cluster="test-cluster")
 
         # Save with default TTL (300 seconds)
-        test_data = {"cluster_info": {}, "nodes": [], "namespaces": [], "helm_releases": []}
+        test_data = {
+            "cluster_info": {},
+            "nodes": [],
+            "namespaces": [],
+            "helm_releases": [],
+        }
         cache.save(test_data, ttl_seconds=300)
 
         # Should be valid immediately
@@ -54,7 +60,7 @@ class TestClusterCache:
 
         # Manually expire cache by modifying timestamp
         data = cache.load()
-        old_time = datetime.now(timezone.utc) - timedelta(seconds=400)
+        old_time = datetime.now(UTC) - timedelta(seconds=400)
         data["timestamp"] = old_time.isoformat()
 
         # Write back expired data
@@ -79,7 +85,12 @@ class TestClusterCache:
         cache = ClusterCache(cache_dir, context="default", cluster="test-cluster")
 
         # Save cache
-        test_data = {"cluster_info": {}, "nodes": [], "namespaces": [], "helm_releases": []}
+        test_data = {
+            "cluster_info": {},
+            "nodes": [],
+            "namespaces": [],
+            "helm_releases": [],
+        }
         cache.save(test_data, ttl_seconds=300)
 
         # Age should be close to 0
@@ -98,7 +109,12 @@ class TestClusterCache:
         cache = ClusterCache(cache_dir, context="default", cluster="test-cluster")
 
         # Create cache
-        test_data = {"cluster_info": {}, "nodes": [], "namespaces": [], "helm_releases": []}
+        test_data = {
+            "cluster_info": {},
+            "nodes": [],
+            "namespaces": [],
+            "helm_releases": [],
+        }
         cache.save(test_data)
         assert cache.exists()
 
@@ -125,7 +141,9 @@ class TestClusterStatusCollector:
         with patch.object(collector, "_run_kubectl") as mock_kubectl:
             # Mock cluster-info
             mock_kubectl.side_effect = [
-                MagicMock(stdout="Kubernetes control plane is running at https://127.0.0.1:6443\n"),
+                MagicMock(
+                    stdout="Kubernetes control plane is running at https://127.0.0.1:6443\n"
+                ),
                 MagicMock(
                     stdout=json.dumps({"serverVersion": {"gitVersion": "v1.27.3"}})
                 ),
@@ -235,13 +253,17 @@ class TestClusterStatusCollector:
         """Test collect_all with partial failures (non-blocking)."""
         collector = ClusterStatusCollector(kubeconfig=None, context=None)
 
-        with patch.object(collector, "_collect_cluster_info") as mock_info, \
-             patch.object(collector, "_collect_nodes") as mock_nodes, \
-             patch.object(collector, "_collect_namespaces") as mock_namespaces, \
-             patch.object(collector, "_collect_helm_releases") as mock_helm:
-
+        with (
+            patch.object(collector, "_collect_cluster_info") as mock_info,
+            patch.object(collector, "_collect_nodes") as mock_nodes,
+            patch.object(collector, "_collect_namespaces") as mock_namespaces,
+            patch.object(collector, "_collect_helm_releases") as mock_helm,
+        ):
             # Simulate helm failure
-            mock_info.return_value = {"api_server": "https://test", "version": "v1.27.3"}
+            mock_info.return_value = {
+                "api_server": "https://test",
+                "version": "v1.27.3",
+            }
             mock_nodes.return_value = [{"name": "node1", "status": "Ready"}]
             mock_namespaces.return_value = ["default"]
             mock_helm.side_effect = Exception("Helm command failed")
@@ -294,7 +316,12 @@ class TestClusterCommand:
         cache_dir = tmp_path / ".sbkube" / "cluster_status"
         cache = ClusterCache(cache_dir, context="default", cluster="test")
 
-        test_data = {"cluster_info": {}, "nodes": [], "namespaces": [], "helm_releases": []}
+        test_data = {
+            "cluster_info": {},
+            "nodes": [],
+            "namespaces": [],
+            "helm_releases": [],
+        }
         cache.save(test_data)
 
         # Temp file should not exist after save

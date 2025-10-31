@@ -120,10 +120,12 @@ def check_required_cli_tools(app_info_list: list):
     """
     import click
 
-    from sbkube.utils.cli_check import (CliToolExecutionError,
-                                        CliToolNotFoundError,
-                                        check_helm_installed,
-                                        check_kubectl_installed)
+    from sbkube.utils.cli_check import (
+        CliToolExecutionError,
+        CliToolNotFoundError,
+        check_helm_installed,
+        check_kubectl_installed,
+    )
 
     needs_helm = any(app.type in ["helm", "helm", "helm-oci"] for app in app_info_list)
     needs_kubectl = any(

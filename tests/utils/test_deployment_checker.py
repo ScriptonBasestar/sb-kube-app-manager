@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sbkube.state.database import DeploymentDetail, DeploymentStatus
+from sbkube.state.database import DeploymentStatus
 from sbkube.utils.deployment_checker import DeploymentChecker, get_current_cluster
 
 
@@ -135,16 +135,16 @@ class TestDeploymentChecker:
 
     def test_check_app_group_deployed_database_error(self, checker, mock_db):
         """Test handling database errors."""
-        mock_db.get_latest_deployment_any_namespace.side_effect = Exception("DB connection failed")
+        mock_db.get_latest_deployment_any_namespace.side_effect = Exception(
+            "DB connection failed"
+        )
 
         is_deployed, msg = checker.check_app_group_deployed("a000_infra")
 
         assert is_deployed is False
         assert "database error" in msg
 
-    def test_check_app_group_deployed_with_namespace_override(
-        self, checker, mock_db
-    ):
+    def test_check_app_group_deployed_with_namespace_override(self, checker, mock_db):
         """Test checking with namespace override."""
         mock_deployment = MagicMock()
         mock_deployment.status = DeploymentStatus.SUCCESS
@@ -295,9 +295,7 @@ class TestDeploymentChecker:
                 return mock_dep
             return None
 
-        mock_db.get_latest_deployment_any_namespace.side_effect = (
-            mock_get_any_namespace
-        )
+        mock_db.get_latest_deployment_any_namespace.side_effect = mock_get_any_namespace
 
         deps = ["a000_infra", "a101_data"]
         result = checker.check_dependencies(deps, namespace=None)

@@ -2,7 +2,7 @@
 
 import pytest
 from click.testing import CliRunner
-from pathlib import Path
+
 from sbkube.cli import main
 
 
@@ -57,7 +57,10 @@ class TestValidateHelp:
         """Test validate --help displays correctly."""
         result = runner.invoke(main, ["validate", "--help"])
         assert result.exit_code == 0
-        assert "config.yaml/toml 또는 sources.yaml/toml 파일을 JSON 스키마 및 데이터 모델로 검증합니다" in result.output
+        assert (
+            "config.yaml/toml 또는 sources.yaml/toml 파일을 JSON 스키마 및 데이터 모델로 검증합니다"
+            in result.output
+        )
         assert "--app-dir" in result.output
         assert "--config-file" in result.output
 
@@ -99,7 +102,13 @@ class TestValidateAppDir:
         """Test validate with --app-dir option."""
         result = runner.invoke(
             main,
-            ["validate", "--app-dir", "examples/basic", "--base-dir", str(temp_project)]
+            [
+                "validate",
+                "--app-dir",
+                "examples/basic",
+                "--base-dir",
+                str(temp_project),
+            ],
         )
 
         # Should succeed
@@ -114,11 +123,15 @@ class TestValidateAppDir:
             main,
             [
                 "validate",
-                "--app-dir", "examples/custom",
-                "--config-file", "custom.yaml",
-                "--schema-type", "config",  # Required for non-standard filenames
-                "--base-dir", str(temp_project)
-            ]
+                "--app-dir",
+                "examples/custom",
+                "--config-file",
+                "custom.yaml",
+                "--schema-type",
+                "config",  # Required for non-standard filenames
+                "--base-dir",
+                str(temp_project),
+            ],
         )
 
         # Should succeed
@@ -131,7 +144,7 @@ class TestValidateAppDir:
         """Test validate with non-existent app directory."""
         result = runner.invoke(
             main,
-            ["validate", "--app-dir", "nonexistent", "--base-dir", str(temp_project)]
+            ["validate", "--app-dir", "nonexistent", "--base-dir", str(temp_project)],
         )
 
         # Should fail with clear error message
@@ -146,14 +159,16 @@ class TestValidateAppDir:
         empty_dir.mkdir()
 
         result = runner.invoke(
-            main,
-            ["validate", "--app-dir", "empty", "--base-dir", str(temp_project)]
+            main, ["validate", "--app-dir", "empty", "--base-dir", str(temp_project)]
         )
 
         # Should fail with clear error message
         assert result.exit_code != 0
         assert "Config file not found" in result.output
-        assert "validation failed" in result.output or "Failed to validate" in result.output
+        assert (
+            "validation failed" in result.output
+            or "Failed to validate" in result.output
+        )
 
 
 class TestValidateCurrentDir:
@@ -173,10 +188,7 @@ apps:
 """
         (app1_dir / "config.yaml").write_text(config_content)
 
-        result = runner.invoke(
-            main,
-            ["validate", "--base-dir", str(temp_project)]
-        )
+        result = runner.invoke(main, ["validate", "--base-dir", str(temp_project)])
 
         # Should succeed (auto-discovers app directories)
         assert result.exit_code == 0
@@ -190,10 +202,7 @@ apps:
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
 
-        result = runner.invoke(
-            main,
-            ["validate", "--base-dir", str(empty_dir)]
-        )
+        result = runner.invoke(main, ["validate", "--base-dir", str(empty_dir)])
 
         # Should fail with helpful error message (no app directories found)
         assert result.exit_code != 0
@@ -213,9 +222,11 @@ class TestValidatePriorityLogic:
             [
                 "validate",
                 str(config_file),
-                "--app-dir", "examples/basic",
-                "--base-dir", str(temp_project)
-            ]
+                "--app-dir",
+                "examples/basic",
+                "--base-dir",
+                str(temp_project),
+            ],
         )
 
         # Should use explicit path (not app-dir)
@@ -226,7 +237,13 @@ class TestValidatePriorityLogic:
         """Test that --app-dir takes precedence over current directory."""
         result = runner.invoke(
             main,
-            ["validate", "--app-dir", "examples/basic", "--base-dir", str(temp_project)]
+            [
+                "validate",
+                "--app-dir",
+                "examples/basic",
+                "--base-dir",
+                str(temp_project),
+            ],
         )
 
         # Should use app-dir (not current dir auto-discovery)
@@ -244,8 +261,7 @@ class TestValidateSchemaType:
         config_file = temp_project / "config.yaml"
 
         result = runner.invoke(
-            main,
-            ["validate", str(config_file), "--schema-type", "config"]
+            main, ["validate", str(config_file), "--schema-type", "config"]
         )
 
         # Should succeed
@@ -256,8 +272,7 @@ class TestValidateSchemaType:
         sources_file = temp_project / "sources.yaml"
 
         result = runner.invoke(
-            main,
-            ["validate", str(sources_file), "--schema-type", "sources"]
+            main, ["validate", str(sources_file), "--schema-type", "sources"]
         )
 
         # Should succeed
@@ -270,24 +285,24 @@ class TestValidateIntegration:
     def test_validate_workflow(self, runner, temp_project):
         """Test typical validate workflow."""
         # Step 1: Validate with explicit path
-        result1 = runner.invoke(
-            main,
-            ["validate", str(temp_project / "config.yaml")]
-        )
+        result1 = runner.invoke(main, ["validate", str(temp_project / "config.yaml")])
         assert result1.exit_code == 0
 
         # Step 2: Validate with --app-dir
         result2 = runner.invoke(
             main,
-            ["validate", "--app-dir", "examples/basic", "--base-dir", str(temp_project)]
+            [
+                "validate",
+                "--app-dir",
+                "examples/basic",
+                "--base-dir",
+                str(temp_project),
+            ],
         )
         assert result2.exit_code == 0
 
         # Step 3: Validate sources.yaml
-        result3 = runner.invoke(
-            main,
-            ["validate", str(temp_project / "sources.yaml")]
-        )
+        result3 = runner.invoke(main, ["validate", str(temp_project / "sources.yaml")])
         assert result3.exit_code == 0
 
 
@@ -299,28 +314,24 @@ class TestValidateEdgeCases:
         empty_config = tmp_path / "empty.yaml"
         empty_config.write_text("")
 
-        result = runner.invoke(
-            main,
-            ["validate", str(empty_config)]
-        )
+        result = runner.invoke(main, ["validate", str(empty_config)])
 
         # Should fail with clear error
         assert result.exit_code != 0
         # Error message may be in Korean: "파일 타입을 유추할 수 없습니다"
-        assert ("Configuration validation failed" in result.output or
-                "Empty" in result.output or
-                "유추할 수 없습니다" in result.output or
-                "schema-type" in result.output)
+        assert (
+            "Configuration validation failed" in result.output
+            or "Empty" in result.output
+            or "유추할 수 없습니다" in result.output
+            or "schema-type" in result.output
+        )
 
     def test_validate_malformed_yaml(self, runner, tmp_path):
         """Test validation with malformed YAML."""
         bad_yaml = tmp_path / "bad.yaml"
         bad_yaml.write_text("namespace: test\napps:\n  - invalid: [unclosed")
 
-        result = runner.invoke(
-            main,
-            ["validate", str(bad_yaml)]
-        )
+        result = runner.invoke(main, ["validate", str(bad_yaml)])
 
         # Should fail with YAML parse error
         assert result.exit_code != 0
@@ -335,10 +346,7 @@ apps:
     # Missing 'chart' field - should fail validation
 """)
 
-        result = runner.invoke(
-            main,
-            ["validate", str(incomplete_config)]
-        )
+        result = runner.invoke(main, ["validate", str(incomplete_config)])
 
         # Should fail with field requirement error
         assert result.exit_code != 0
@@ -346,21 +354,18 @@ apps:
 
     def test_validate_nonexistent_file(self, runner):
         """Test validation with nonexistent file."""
-        result = runner.invoke(
-            main,
-            ["validate", "/nonexistent/config.yaml"]
-        )
+        result = runner.invoke(main, ["validate", "/nonexistent/config.yaml"])
 
         # Should fail with file not found error
         assert result.exit_code != 0
-        assert "not found" in result.output.lower() or "does not exist" in result.output.lower()
+        assert (
+            "not found" in result.output.lower()
+            or "does not exist" in result.output.lower()
+        )
 
     def test_validate_directory_instead_of_file(self, runner, tmp_path):
         """Test validation when given a directory path."""
-        result = runner.invoke(
-            main,
-            ["validate", str(tmp_path)]
-        )
+        result = runner.invoke(main, ["validate", str(tmp_path)])
 
         # Should fail with appropriate error
         assert result.exit_code != 0
@@ -382,10 +387,7 @@ apps:
       - app-a
 """)
 
-        result = runner.invoke(
-            main,
-            ["validate", str(circular_config)]
-        )
+        result = runner.invoke(main, ["validate", str(circular_config)])
 
         # Should fail with circular dependency error
         assert result.exit_code != 0
@@ -401,10 +403,7 @@ apps:
     chart: example/test
 """)
 
-        result = runner.invoke(
-            main,
-            ["validate", str(invalid_name_config)]
-        )
+        result = runner.invoke(main, ["validate", str(invalid_name_config)])
 
         # Should fail with naming validation error
         assert result.exit_code != 0
@@ -421,11 +420,11 @@ apps:
       - nonexistent-app
 """)
 
-        result = runner.invoke(
-            main,
-            ["validate", str(bad_dep_config)]
-        )
+        result = runner.invoke(main, ["validate", str(bad_dep_config)])
 
         # Should fail with dependency validation error
         assert result.exit_code != 0
-        assert "nonexistent" in result.output.lower() or "not found" in result.output.lower()
+        assert (
+            "nonexistent" in result.output.lower()
+            or "not found" in result.output.lower()
+        )

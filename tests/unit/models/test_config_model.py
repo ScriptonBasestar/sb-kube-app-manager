@@ -657,7 +657,9 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="production",
             apps={
-                "grafana": HelmApp(type="helm", chart="grafana/grafana", version="6.50.0"),
+                "grafana": HelmApp(
+                    type="helm", chart="grafana/grafana", version="6.50.0"
+                ),
             },
         )
         assert config.namespace == "production"
@@ -724,7 +726,9 @@ class TestSBKubeConfig:
             namespace="default",
             apps={
                 "app1": HelmApp(type="helm", chart="grafana/grafana", enabled=True),
-                "app2": HelmApp(type="helm", chart="ingress-nginx/ingress-nginx", enabled=False),
+                "app2": HelmApp(
+                    type="helm", chart="ingress-nginx/ingress-nginx", enabled=False
+                ),
                 "app3": YamlApp(type="yaml", manifests=["manifest.yaml"], enabled=True),
             },
         )

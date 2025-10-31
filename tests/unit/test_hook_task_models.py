@@ -9,7 +9,6 @@ HookTask 모델들의 Pydantic validation 검증:
 """
 
 import pytest
-from pydantic import ValidationError
 
 from sbkube.exceptions import ConfigValidationError
 from sbkube.models.config_model import (
@@ -18,7 +17,6 @@ from sbkube.models.config_model import (
     InlineHookTask,
     ManifestsHookTask,
 )
-
 
 # ============================================================================
 # ManifestsHookTask 테스트

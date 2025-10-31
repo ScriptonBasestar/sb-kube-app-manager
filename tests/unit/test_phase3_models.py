@@ -6,17 +6,17 @@ HookTask에 통합된 Phase 3 필드 테스트.
 """
 
 import pytest
-from sbkube.models.config_model import (
-    ValidationRule,
-    DependencyConfig,
-    RollbackPolicy,
-    ManifestsHookTask,
-    InlineHookTask,
-    CommandHookTask,
-    AppHooks,
-)
-from sbkube.exceptions import ConfigValidationError
 
+from sbkube.exceptions import ConfigValidationError
+from sbkube.models.config_model import (
+    AppHooks,
+    CommandHookTask,
+    DependencyConfig,
+    InlineHookTask,
+    ManifestsHookTask,
+    RollbackPolicy,
+    ValidationRule,
+)
 
 # ============================================================================
 # ValidationRule 테스트
@@ -70,9 +70,7 @@ def test_validation_rule_defaults():
 
 def test_dependency_config_depends_on():
     """DependencyConfig depends_on 테스트."""
-    dependency = DependencyConfig(
-        depends_on=["deploy-secrets", "verify-database"]
-    )
+    dependency = DependencyConfig(depends_on=["deploy-secrets", "verify-database"])
     assert len(dependency.depends_on) == 2
     assert "deploy-secrets" in dependency.depends_on
 
@@ -98,9 +96,7 @@ def test_dependency_config_combined():
     """DependencyConfig depends_on + wait_for 테스트."""
     dependency = DependencyConfig(
         depends_on=["task-a", "task-b"],
-        wait_for=[
-            {"kind": "Deployment", "name": "nginx", "condition": "Available"}
-        ],
+        wait_for=[{"kind": "Deployment", "name": "nginx", "condition": "Available"}],
     )
     assert len(dependency.depends_on) == 2
     assert len(dependency.wait_for) == 1
@@ -364,7 +360,10 @@ def test_cert_manager_full_scenario_with_phase3():
                     "metadata": {"name": "wildcard-cert", "namespace": "default"},
                     "spec": {
                         "secretName": "wildcard-cert-tls",
-                        "issuerRef": {"name": "letsencrypt-prd", "kind": "ClusterIssuer"},
+                        "issuerRef": {
+                            "name": "letsencrypt-prd",
+                            "kind": "ClusterIssuer",
+                        },
                         "dnsNames": ["*.example.com"],
                     },
                 },

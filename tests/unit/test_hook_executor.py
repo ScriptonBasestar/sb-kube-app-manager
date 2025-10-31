@@ -9,9 +9,7 @@ HookExecutor 클래스의 기능을 검증:
 - 실패 처리
 """
 
-import os
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

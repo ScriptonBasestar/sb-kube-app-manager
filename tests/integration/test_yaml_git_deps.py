@@ -1,7 +1,8 @@
 """Integration tests for YAML apps depending on Git repositories."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 import yaml
 
 from sbkube.models.config_model import SBKubeConfig
@@ -48,11 +49,15 @@ class TestYamlGitDependencies:
         app_dir.mkdir()
 
         # Create .sbkube/repos/olm structure
-        olm_dir = project / ".sbkube" / "repos" / "olm" / "deploy" / "upstream" / "quickstart"
+        olm_dir = (
+            project / ".sbkube" / "repos" / "olm" / "deploy" / "upstream" / "quickstart"
+        )
         olm_dir.mkdir(parents=True)
 
         # Create dummy YAML files
-        (olm_dir / "crds.yaml").write_text("apiVersion: v1\nkind: CustomResourceDefinition\n")
+        (olm_dir / "crds.yaml").write_text(
+            "apiVersion: v1\nkind: CustomResourceDefinition\n"
+        )
         (olm_dir / "olm.yaml").write_text("apiVersion: v1\nkind: Deployment\n")
 
         return project
@@ -169,8 +174,9 @@ class TestErrorHandling:
 
     def test_invalid_variable_syntax_detected(self):
         """Invalid variable syntax should be caught at validation."""
-        from sbkube.exceptions import SbkubeError
         from pydantic import ValidationError
+
+        from sbkube.exceptions import SbkubeError
 
         # Invalid: empty app name
         config_data = {
@@ -188,8 +194,8 @@ class TestErrorHandling:
 
     def test_nonexistent_app_reference(self):
         """Reference to non-existent git app should fail at expansion time."""
-        from sbkube.utils.path_resolver import expand_repo_variables
         from sbkube.exceptions import SbkubeError
+        from sbkube.utils.path_resolver import expand_repo_variables
 
         apps_config = {
             "my-app": {
@@ -206,8 +212,8 @@ class TestErrorHandling:
 
     def test_non_git_app_reference(self):
         """Reference to non-git type app should fail."""
-        from sbkube.utils.path_resolver import expand_repo_variables
         from sbkube.exceptions import SbkubeError
+        from sbkube.utils.path_resolver import expand_repo_variables
 
         apps_config = {
             "my-app": {

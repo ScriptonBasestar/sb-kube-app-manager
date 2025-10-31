@@ -1,24 +1,20 @@
 # Hooks 시스템 개선 (Phase 1-4)
 
-> **최종 업데이트**: 2025-10-31 (Phase 3 완료)
-> **현재 구현 상태**: Phase 1, 2, 3 완료 (v0.9.0+)
+> **최종 업데이트**: 2025-10-31 (Phase 3 완료) **현재 구현 상태**: Phase 1, 2, 3 완료 (v0.9.0+)
 
 ## 개요
 
 SBKube의 hooks 시스템을 "shell 명령어 실행기"에서 "sbkube의 1급 기능"으로 개선하는 4단계 계획입니다.
 
----
+______________________________________________________________________
 
 ## 📋 Phase 별 개요
 
-| Phase | 기능 | 복잡도 | 효과 | 상태 | 버전 |
-|-------|------|-------|------|------|------|
-| Phase 1 | Manifests 지원 | 낮음 | 중간 | ✅ 완료 | v0.7.0 |
-| Phase 2 | Type System | 중간 | 높음 | ✅ 완료 | v0.8.0 |
-| Phase 3 | Validation & Dependency | 높음 | 매우 높음 | ✅ 완료 | v0.9.0 |
-| Phase 4 | Hook as App | 매우 높음 | 낮음 | 📝 계획 | v1.0.0? |
+| Phase | 기능 | 복잡도 | 효과 | 상태 | 버전 | |-------|------|-------|------|------|------| | Phase 1 | Manifests 지원 | 낮음 | 중간 | ✅
+완료 | v0.7.0 | | Phase 2 | Type System | 중간 | 높음 | ✅ 완료 | v0.8.0 | | Phase 3 | Validation & Dependency | 높음 | 매우 높음 | ✅
+완료 | v0.9.0 | | Phase 4 | Hook as App | 매우 높음 | 낮음 | 📝 계획 | v1.0.0? |
 
----
+______________________________________________________________________
 
 ## ❌ 기존 Hooks의 문제점
 
@@ -36,6 +32,7 @@ apps:
 ```
 
 **문제**:
+
 - kubectl 직접 호출 → sbkube가 상태 추적 불가
 - 검증 및 롤백 불가
 - 실패 시 디버깅 어려움
@@ -44,6 +41,7 @@ apps:
 ### 2. Manifests 미지원
 
 hooks는 명령어 문자열 리스트만 받음:
+
 ```python
 post_deploy: list[str]  # Shell 명령어만
 ```
@@ -56,7 +54,7 @@ YAML 파일 경로 리스트를 직접 받을 수 없음.
 - 실패 시 상태 불명확
 - `on_deploy_failure`가 있지만 복구 로직 없음
 
----
+______________________________________________________________________
 
 ## ✅ Phase 1: Manifests 지원 (v0.7.0)
 
@@ -200,13 +198,14 @@ apps:
 - ✅ namespace 자동 적용
 - ✅ 상세 로깅
 
----
+______________________________________________________________________
 
 ## 📋 Phase 2: Type System (v0.8.0 계획)
 
 ### 목표
 
 여러 hook 타입을 명시적으로 지원:
+
 - `type: manifests` - YAML 파일 배포
 - `type: inline` - 인라인 YAML 콘텐츠
 - `type: command` - Shell 명령어 (개선된)
@@ -255,13 +254,14 @@ apps:
           on_failure: warn
 ```
 
----
+______________________________________________________________________
 
 ## 🔍 Phase 3: Validation & Dependency (✅ v0.9.0 완료)
 
 ### 목표 (달성!)
 
 Hooks를 sbkube 워크플로우에 완전히 통합:
+
 - ✅ Task 실행 후 검증 (validation)
 - ✅ Task 간 의존성 관리 (dependency)
 - ✅ 실패 시 자동 롤백 (rollback)
@@ -289,6 +289,7 @@ post_deploy_tasks:
 ```
 
 **동작**:
+
 - `wait_for_ready: true` → `kubectl wait --for=condition=Ready` 실행
 - 타임아웃 내에 조건 만족 안 되면 **실패** → rollback 실행
 
@@ -317,6 +318,7 @@ post_deploy_tasks:
 ```
 
 **동작**:
+
 - `depends_on`: 명시된 task가 먼저 완료되어야 실행 가능
 - `wait_for`: `kubectl wait` 명령어로 외부 리소스 조건 대기
 
@@ -341,6 +343,7 @@ post_deploy_tasks:
 ```
 
 **동작**:
+
 - Task 실행 실패 또는 Validation 실패 시 자동 롤백
 - `on_failure: always` → 자동 롤백
 - `on_failure: manual` → 수동 확인 (현재는 스킵)
@@ -417,23 +420,26 @@ apps:
 ### 구현 상세
 
 **새로운 모델**:
+
 - `ValidationRule`: 검증 규칙 정의
 - `DependencyConfig`: 의존성 설정 (`depends_on`, `wait_for`)
 - `RollbackPolicy`: 롤백 정책 (`enabled`, `on_failure`, `manifests`, `commands`)
 
 **HookExecutor 확장**:
+
 - `_validate_task_result()`: Task 실행 후 validation 검증
 - `_check_task_dependencies()`: Task 실행 전 dependency 검증
 - `_execute_rollback()`: 실패 시 rollback 실행
 - `execute_hook_tasks()` 수정: Phase 3 기능 통합
 
 **테스트 커버리지**:
+
 - 모델 테스트: 17개 (test_phase3_models.py)
 - Executor 테스트: 19개 (test_phase3_executor.py)
 - 전체 hook 테스트: 74개 통과
 - hook_executor.py 커버리지: **82%**
 
----
+______________________________________________________________________
 
 ## 🚀 Phase 4: Hook as App (v1.0.0 검토중)
 
@@ -467,45 +473,52 @@ apps:
 - ✅ 재사용 가능한 hook 라이브러리
 - ✅ 독립적인 lifecycle
 
----
+______________________________________________________________________
 
 ## 📚 참고 자료
 
 ### 관련 파일
 
 **모델**:
+
 - `sbkube/models/config_model.py`:
   - Phase 2: `ManifestsHookTask`, `InlineHookTask`, `CommandHookTask`
   - Phase 3: `ValidationRule`, `DependencyConfig`, `RollbackPolicy`
   - `AppHooks`: `pre_deploy_tasks`, `post_deploy_tasks`
 
 **실행**:
+
 - `sbkube/utils/hook_executor.py`:
   - Phase 2: `execute_hook_tasks()`, `_execute_single_task()`
   - Phase 3: `_validate_task_result()`, `_check_task_dependencies()`, `_execute_rollback()`
 
 **통합**:
+
 - `sbkube/commands/deploy.py`: Hook 실행 통합
 
 **테스트**:
+
 - `tests/unit/test_hook_executor.py`: Phase 1, 2 executor 테스트
 - `tests/unit/test_hook_task_models.py`: Phase 2 모델 테스트
 - `tests/unit/test_phase3_models.py`: Phase 3 모델 테스트
 - `tests/unit/test_phase3_executor.py`: Phase 3 executor 테스트
 
 **예제**:
+
 - `examples/hooks-manifests/`: Phase 1 (manifests 지원)
 - `examples/hooks-phase3/`: Phase 3 (validation, dependency, rollback)
 
 ### 예제 실행
 
 **Phase 1 예제**:
+
 ```bash
 cd examples/hooks-manifests
 sbkube apply --app-dir . --namespace cert-manager
 ```
 
 **Phase 3 예제**:
+
 ```bash
 cd examples/hooks-phase3
 sbkube apply --app-dir . --namespace cert-manager
@@ -527,16 +540,13 @@ uv run pytest tests/unit/test_phase3_models.py -v
 uv run pytest tests/unit/test_phase3_executor.py -v
 ```
 
----
+______________________________________________________________________
 
 ## 🎯 요약
 
-| Phase | 핵심 개선사항 | 사용자 이점 | 상태 |
-|-------|------------|-----------|------|
-| **Phase 1** | Manifests 지원 | kubectl 직접 호출 불필요 | ✅ 완료 (v0.7.0) |
-| **Phase 2** | Type System | 타입별 전용 처리, 강타입 검증 | ✅ 완료 (v0.8.0) |
-| **Phase 3** | Validation & Dependency | 자동 검증, 의존성 관리, 롤백 | ✅ 완료 (v0.9.0) |
-| **Phase 4** | Hook as App | 재사용, 독립 관리 | 📝 계획 (v1.0.0?) |
+| Phase | 핵심 개선사항 | 사용자 이점 | 상태 | |-------|------------|-----------|------| | **Phase 1** | Manifests 지원 | kubectl 직접 호출
+불필요 | ✅ 완료 (v0.7.0) | | **Phase 2** | Type System | 타입별 전용 처리, 강타입 검증 | ✅ 완료 (v0.8.0) | | **Phase 3** | Validation &
+Dependency | 자동 검증, 의존성 관리, 롤백 | ✅ 완료 (v0.9.0) | | **Phase 4** | Hook as App | 재사용, 독립 관리 | 📝 계획 (v1.0.0?) |
 
 ### 현재 상태 (2025-10-31)
 
@@ -545,19 +555,22 @@ uv run pytest tests/unit/test_phase3_executor.py -v
 sbkube hooks는 이제 단순한 shell 명령어 실행기가 아니라, **강력한 Kubernetes 리소스 관리 시스템**입니다:
 
 1. **Type System** (Phase 2): `manifests`, `inline`, `command` 타입별 전용 처리
-2. **Validation** (Phase 3): 배포 후 리소스 상태 자동 검증
-3. **Dependency** (Phase 3): Task 간 의존성 관리 및 외부 리소스 대기
-4. **Rollback** (Phase 3): 실패 시 자동 정리 및 복구
+1. **Validation** (Phase 3): 배포 후 리소스 상태 자동 검증
+1. **Dependency** (Phase 3): Task 간 의존성 관리 및 외부 리소스 대기
+1. **Rollback** (Phase 3): 실패 시 자동 정리 및 복구
 
 **사용 가능한 필드**:
+
 - `pre_deploy_tasks` / `post_deploy_tasks`: Phase 2, 3 기능 모두 포함
 - `pre_deploy_manifests` / `post_deploy_manifests`: Phase 1 (호환성 유지)
 - `pre_deploy` / `post_deploy`: 기존 shell 명령어 (호환성 유지)
 
 **예제**:
+
 - Phase 1: `examples/hooks-manifests/`
 - Phase 3: `examples/hooks-phase3/`
 
 **테스트 커버리지**:
+
 - 74개 테스트 통과
 - hook_executor.py: 82% 커버리지

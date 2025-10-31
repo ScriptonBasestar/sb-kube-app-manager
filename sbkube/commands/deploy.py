@@ -15,21 +15,34 @@ import click
 from rich.console import Console
 
 from sbkube.exceptions import KubernetesConnectionError
-from sbkube.models.config_model import (ActionApp, ExecApp, HelmApp, HookApp,
-                                        KustomizeApp, NoopApp, SBKubeConfig,
-                                        YamlApp)
+from sbkube.models.config_model import (
+    ActionApp,
+    ExecApp,
+    HelmApp,
+    HookApp,
+    KustomizeApp,
+    NoopApp,
+    SBKubeConfig,
+    YamlApp,
+)
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
-from sbkube.utils.app_labels import (build_helm_set_annotations,
-                                     build_helm_set_labels,
-                                     build_sbkube_annotations,
-                                     build_sbkube_labels,
-                                     extract_app_group_from_name)
-from sbkube.utils.cli_check import (check_cluster_connectivity_or_exit,
-                                    check_helm_installed_or_exit,
-                                    check_kubectl_installed_or_exit)
-from sbkube.utils.cluster_config import (ClusterConfigError,
-                                         apply_cluster_config_to_command,
-                                         resolve_cluster_config)
+from sbkube.utils.app_labels import (
+    build_helm_set_annotations,
+    build_helm_set_labels,
+    build_sbkube_annotations,
+    build_sbkube_labels,
+    extract_app_group_from_name,
+)
+from sbkube.utils.cli_check import (
+    check_cluster_connectivity_or_exit,
+    check_helm_installed_or_exit,
+    check_kubectl_installed_or_exit,
+)
+from sbkube.utils.cluster_config import (
+    ClusterConfigError,
+    apply_cluster_config_to_command,
+    resolve_cluster_config,
+)
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor

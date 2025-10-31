@@ -12,14 +12,15 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from sbkube.models.config_model import (GitApp, HelmApp, HookApp, HttpApp,
-                                        SBKubeConfig)
+from sbkube.models.config_model import GitApp, HelmApp, HookApp, HttpApp, SBKubeConfig
 from sbkube.models.sources_model import SourceScheme
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.cli_check import check_helm_installed_or_exit
-from sbkube.utils.cluster_config import (ClusterConfigError,
-                                         apply_cluster_config_to_command,
-                                         resolve_cluster_config)
+from sbkube.utils.cluster_config import (
+    ClusterConfigError,
+    apply_cluster_config_to_command,
+    resolve_cluster_config,
+)
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor

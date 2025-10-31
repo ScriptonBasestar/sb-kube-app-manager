@@ -12,8 +12,12 @@ from typing import Any
 import yaml
 
 from sbkube.exceptions import RollbackError
-from sbkube.models.deployment_state import (DeploymentDetail, DeploymentStatus,
-                                            ResourceAction, RollbackRequest)
+from sbkube.models.deployment_state import (
+    DeploymentDetail,
+    DeploymentStatus,
+    ResourceAction,
+    RollbackRequest,
+)
 from sbkube.state.database import DeploymentDatabase
 from sbkube.utils.logger import get_logger
 

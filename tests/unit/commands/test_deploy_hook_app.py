@@ -4,13 +4,11 @@ Phase 4 deploy_hook_app() 함수 단위 테스트.
 HookApp 배포 기능 검증.
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from sbkube.commands.deploy import deploy_hook_app
 from sbkube.models.config_model import HookApp
-
 
 # ============================================================================
 # deploy_hook_app() 기본 테스트

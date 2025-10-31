@@ -5,8 +5,11 @@ from pathlib import Path
 import requests
 import yaml
 
-from sbkube.utils.diagnostic_system import (DiagnosticCheck, DiagnosticLevel,
-                                            DiagnosticResult)
+from sbkube.utils.diagnostic_system import (
+    DiagnosticCheck,
+    DiagnosticLevel,
+    DiagnosticResult,
+)
 
 
 class KubernetesConnectivityCheck(DiagnosticCheck):

@@ -4,22 +4,22 @@ SBKube hooks 기능을 사용하면 명령어 실행 전후 및 앱 배포 전�
 
 ## 목차
 
-- [개요](#개요)
-- [Hooks 종류](#hooks-종류)
-- [설정 방법](#설정-방법)
-- [실행 순서](#실행-순서)
-- [환경변수](#환경변수)
-- [실전 사용 사례](#실전-사용-사례)
+- [개요](#%EA%B0%9C%EC%9A%94)
+- [Hooks 종류](#hooks-%EC%A2%85%EB%A5%98)
+- [설정 방법](#%EC%84%A4%EC%A0%95-%EB%B0%A9%EB%B2%95)
+- [실행 순서](#%EC%8B%A4%ED%96%89-%EC%88%9C%EC%84%9C)
+- [환경변수](#%ED%99%98%EA%B2%BD%EB%B3%80%EC%88%98)
+- [실전 사용 사례](#%EC%8B%A4%EC%A0%84-%EC%82%AC%EC%9A%A9-%EC%82%AC%EB%A1%80)
 - [Phase 4: HookApp (Hook as First-Class App)](#phase-4-hookapp-hook-as-first-class-app)
-- [Helm Hooks와의 차이](#helm-hooks와의-차이)
-- [고급 기능 및 참고 자료](#고급-기능-및-참고-자료)
+- [Helm Hooks와의 차이](#helm-hooks%EC%99%80%EC%9D%98-%EC%B0%A8%EC%9D%B4)
+- [고급 기능 및 참고 자료](#%EA%B3%A0%EA%B8%89-%EA%B8%B0%EB%8A%A5-%EB%B0%8F-%EC%B0%B8%EA%B3%A0-%EC%9E%90%EB%A3%8C)
 
 ## 개요
 
 Hooks는 두 가지 레벨에서 실행할 수 있습니다:
 
 1. **명령어 수준 (Command-level)**: 전역 훅으로, 모든 앱 배포에 적용
-2. **앱 수준 (App-level)**: 개별 앱에 특화된 훅
+1. **앱 수준 (App-level)**: 개별 앱에 특화된 훅
 
 ## Hooks 종류
 
@@ -183,11 +183,8 @@ apps:
 
 ### 앱별 훅 환경변수
 
-| 변수 | 설명 | 예시 |
-|------|------|------|
-| `SBKUBE_APP_NAME` | 현재 앱 이름 | `redis` |
-| `SBKUBE_NAMESPACE` | 배포 네임스페이스 | `production` |
-| `SBKUBE_RELEASE_NAME` | Helm 릴리스 이름 | `my-redis` |
+| 변수 | 설명 | 예시 | |------|------|------| | `SBKUBE_APP_NAME` | 현재 앱 이름 | `redis` | | `SBKUBE_NAMESPACE` | 배포 네임스페이스 |
+`production` | | `SBKUBE_RELEASE_NAME` | Helm 릴리스 이름 | `my-redis` |
 
 ### 사용 예시
 
@@ -249,6 +246,7 @@ hooks:
 ```
 
 **실제 실행**:
+
 ```bash
 cd /project/redis_dir          # work_dir로 이동
 ./scripts/pre-deploy.sh        # 실행
@@ -258,8 +256,8 @@ cd /project/redis_dir          # work_dir로 이동
 ### 핵심 원칙
 
 1. **훅은 APP_CONFIG_DIR에서 실행**: `--app-dir`로 지정한 디렉토리가 작업 디렉토리
-2. **상대 경로 사용 가능**: `./scripts/backup.sh` 같은 상대 경로를 자연스럽게 사용
-3. **절대 경로도 가능**: `/usr/local/bin/my-script.sh` 같은 절대 경로도 지원
+1. **상대 경로 사용 가능**: `./scripts/backup.sh` 같은 상대 경로를 자연스럽게 사용
+1. **절대 경로도 가능**: `/usr/local/bin/my-script.sh` 같은 절대 경로도 지원
 
 ### 실전 팁
 
@@ -413,8 +411,7 @@ apps:
 
 ## Phase 4: HookApp (Hook as First-Class App)
 
-> **도입 버전**: v0.8.0
-> **상태**: ✅ 안정
+> **도입 버전**: v0.8.0 **상태**: ✅ 안정
 
 ### 개요
 
@@ -436,6 +433,7 @@ apps:
 ```
 
 **문제점**:
+
 - Hook을 다른 환경이나 프로젝트에서 재사용하기 어려움
 - 복잡한 초기화 로직을 독립적으로 관리하기 어려움
 - `enabled: false`로 쉽게 비활성화할 수 없음
@@ -481,14 +479,10 @@ apps:
 
 ### HookApp의 특징
 
-| 특징 | 설명 | 장점 |
-|------|------|------|
-| **First-class App** | `type: hook`으로 독립된 앱 | 다른 앱과 동일하게 관리 |
-| **Lifecycle 간소화** | `prepare`, `build`, `template` 건너뜀 | `deploy`에서만 실행 |
-| **재사용 가능** | 다른 프로젝트에서도 사용 가능 | 중복 제거 |
-| **Enabled 플래그** | `enabled: false`로 비활성화 | 쉬운 On/Off |
-| **Dependency 지원** | 앱 간 의존성 관리 | 실행 순서 제어 |
-| **개별 배포 가능** | `sbkube deploy --app setup-issuers` | 독립적 관리 |
+| 특징 | 설명 | 장점 | |------|------|------| | **First-class App** | `type: hook`으로 독립된 앱 | 다른 앱과 동일하게 관리 | | **Lifecycle
+간소화** | `prepare`, `build`, `template` 건너뜀 | `deploy`에서만 실행 | | **재사용 가능** | 다른 프로젝트에서도 사용 가능 | 중복 제거 | | **Enabled
+플래그** | `enabled: false`로 비활성화 | 쉬운 On/Off | | **Dependency 지원** | 앱 간 의존성 관리 | 실행 순서 제어 | | **개별 배포 가능** |
+`sbkube deploy --app setup-issuers` | 독립적 관리 |
 
 ### 실행 순서
 
@@ -619,24 +613,22 @@ apps:
 
 ### HookApp vs 일반 Hook
 
-| 항목 | 일반 Hook (앱에 종속) | HookApp (`type: hook`) |
-|------|---------------------|----------------------|
-| **정의 위치** | 기존 앱의 `hooks:` 섹션 | 독립된 앱 정의 |
-| **재사용성** | ❌ 낮음 (앱과 결합) | ✅ 높음 (독립적) |
-| **Lifecycle** | 앱과 동일 (prepare/build/template/deploy) | 간소화 (deploy만) |
-| **Enabled 플래그** | ❌ 없음 | ✅ 있음 |
-| **개별 배포** | ❌ 불가 | ✅ 가능 |
-| **사용 시나리오** | 특정 앱에만 필요한 작업 | 재사용 가능한 초기화 작업 |
+| 항목 | 일반 Hook (앱에 종속) | HookApp (`type: hook`) | |------|---------------------|----------------------| | **정의 위치** | 기존
+앱의 `hooks:` 섹션 | 독립된 앱 정의 | | **재사용성** | ❌ 낮음 (앱과 결합) | ✅ 높음 (독립적) | | **Lifecycle** | 앱과 동일
+(prepare/build/template/deploy) | 간소화 (deploy만) | | **Enabled 플래그** | ❌ 없음 | ✅ 있음 | | **개별 배포** | ❌ 불가 | ✅ 가능 | | **사용
+시나리오** | 특정 앱에만 필요한 작업 | 재사용 가능한 초기화 작업 |
 
 ### 언제 HookApp을 사용할까?
 
 **HookApp 사용 권장**:
+
 - ✅ 여러 프로젝트/환경에서 재사용
 - ✅ 복잡한 초기화 로직 (여러 task 포함)
 - ✅ 독립적으로 On/Off 전환 필요
 - ✅ 다른 앱과 명확한 의존성 관계
 
 **일반 Hook 사용 권장**:
+
 - ✅ 특정 앱에만 종속된 작업
 - ✅ 간단한 Shell 명령어
 - ✅ 한 번만 사용
@@ -652,12 +644,8 @@ apps:
 
 SBKube hooks와 Helm hooks는 다른 개념입니다:
 
-| 특성 | SBKube Hooks | Helm Hooks |
-|------|--------------|------------|
-| **정의** | SBKube 명령어 실행 시점 | Helm 릴리스 라이프사이클 |
-| **실행 주체** | SBKube CLI | Helm/Kubernetes |
-| **실행 위치** | 로컬 머신 | Kubernetes 클러스터 |
-| **목적** | 배포 자동화, 검증 | 클러스터 내 작업 |
+| 특성 | SBKube Hooks | Helm Hooks | |------|--------------|------------| | **정의** | SBKube 명령어 실행 시점 | Helm 릴리스 라이프사이클 |
+| **실행 주체** | SBKube CLI | Helm/Kubernetes | | **실행 위치** | 로컬 머신 | Kubernetes 클러스터 | | **목적** | 배포 자동화, 검증 | 클러스터 내 작업 |
 | **사용 예시** | 백업, 알림, 외부 시스템 통합 | DB 마이그레이션, 초기화 작업 |
 
 ### SBKube Hooks 사용 시기
@@ -706,11 +694,12 @@ spec:
 ```
 
 **실행 순서**:
+
 1. SBKube `pre_deploy` 훅 (로컬)
-2. Helm `pre-install` 훅 (클러스터)
-3. 실제 배포
-4. Helm `post-install` 훅 (클러스터)
-5. SBKube `post_deploy` 훅 (로컬)
+1. Helm `pre-install` 훅 (클러스터)
+1. 실제 배포
+1. Helm `post-install` 훅 (클러스터)
+1. SBKube `post_deploy` 훅 (로컬)
 
 ## 고급 기능 및 참고 자료
 
@@ -743,15 +732,18 @@ spec:
 #### 예제 코드
 
 **기본 예제**:
+
 - [examples/hooks/](../../examples/hooks/) - 기본 Hook 사용법
 - [examples/hooks-basic-all/](../../examples/hooks-basic-all/) - 모든 Hook 타입 종합 예제
 
 **Phase별 예제**:
+
 - [examples/hooks-manifests/](../../examples/hooks-manifests/) - Phase 1: Manifests
 - [examples/hooks-phase3/](../../examples/hooks-phase3/) - Phase 3: Validation/Dependency/Rollback
 - [examples/hooks-phase4/](../../examples/hooks-phase4/) - Phase 4: HookApp (복잡한 체인)
 
 **시나리오별 예제**:
+
 - [examples/hooks-pre-deploy-tasks/](../../examples/hooks-pre-deploy-tasks/) - 배포 전 검증
 - [examples/hooks-command-level/](../../examples/hooks-command-level/) - 전역 알림 및 로깅
 - [examples/hooks-error-handling/](../../examples/hooks-error-handling/) - 에러 처리 및 롤백

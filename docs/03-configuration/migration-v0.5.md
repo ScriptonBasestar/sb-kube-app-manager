@@ -7,6 +7,7 @@
 ### 디렉토리 구조 변경
 
 **v0.4.x 이전**:
+
 ```
 project/
 ├── charts/          # Helm 차트
@@ -18,6 +19,7 @@ project/
 ```
 
 **v0.5.0 이후**:
+
 ```
 project/
 ├── .sbkube/         # 모든 작업 디렉토리 통합
@@ -31,16 +33,14 @@ project/
 
 ### 변경된 기본 경로
 
-| 명령어 | v0.4.x | v0.5.0 |
-|--------|--------|--------|
-| `prepare` | `charts/`, `repos/` | `.sbkube/charts/`, `.sbkube/repos/` |
-| `build` | `build/` | `.sbkube/build/` |
-| `template` | `rendered/` (app-dir 기준) | `.sbkube/rendered/` (base-dir 기준) |
-| `upgrade` | `build/` (app-dir 기준) | `.sbkube/build/` (base-dir 기준) |
+| 명령어 | v0.4.x | v0.5.0 | |--------|--------|--------| | `prepare` | `charts/`, `repos/` | `.sbkube/charts/`,
+`.sbkube/repos/` | | `build` | `build/` | `.sbkube/build/` | | `template` | `rendered/` (app-dir 기준) |
+`.sbkube/rendered/` (base-dir 기준) | | `upgrade` | `build/` (app-dir 기준) | `.sbkube/build/` (base-dir 기준) |
 
 ### .gitignore 단순화
 
 **v0.4.x**:
+
 ```gitignore
 charts/
 repos/
@@ -52,6 +52,7 @@ rendered/
 ```
 
 **v0.5.0**:
+
 ```gitignore
 # 모든 작업 디렉토리가 .sbkube/ 하나로 통합
 .sbkube/
@@ -140,6 +141,7 @@ git merge migrate-v0.5
 기존 CI/CD 스크립트에서 경로를 참조하는 경우 업데이트 필요:
 
 **v0.4.x**:
+
 ```yaml
 # .github/workflows/deploy.yml
 - name: Check rendered files
@@ -147,6 +149,7 @@ git merge migrate-v0.5
 ```
 
 **v0.5.0**:
+
 ```yaml
 # .github/workflows/deploy.yml
 - name: Check rendered files
@@ -174,6 +177,7 @@ fi
 `template` 명령어의 `--output-dir` 기본값 변경:
 
 **v0.4.x**:
+
 ```bash
 # 기본값: rendered/ (app-dir 기준)
 sbkube template --app-dir config
@@ -181,6 +185,7 @@ sbkube template --app-dir config
 ```
 
 **v0.5.0**:
+
 ```bash
 # 기본값: .sbkube/rendered/ (base-dir 기준)
 sbkube template --app-dir config
@@ -188,6 +193,7 @@ sbkube template --app-dir config
 ```
 
 **이전 동작 유지 방법**:
+
 ```bash
 # 명시적으로 경로 지정
 sbkube template --app-dir config --output-dir config/rendered
@@ -198,6 +204,7 @@ sbkube template --app-dir config --output-dir config/rendered
 환경별로 별도 디렉토리를 사용하는 경우:
 
 **v0.4.x**:
+
 ```
 project/
 ├── dev/
@@ -212,6 +219,7 @@ project/
 ```
 
 **v0.5.0**:
+
 ```
 project/
 ├── dev/
@@ -268,18 +276,16 @@ rm -rf .sbkube
 마이그레이션 중 문제가 발생한 경우:
 
 1. **GitHub Issues**: https://github.com/archmagece/sb-kube-app-manager/issues
-2. **문서**: https://github.com/archmagece/sb-kube-app-manager/tree/main/docs
-3. **예제**: `examples/` 디렉토리 참조
+1. **문서**: https://github.com/archmagece/sb-kube-app-manager/tree/main/docs
+1. **예제**: `examples/` 디렉토리 참조
 
 ## 🎯 마이그레이션 후 장점
 
 1. **단순한 .gitignore**: 5개 항목 → 1개 항목
-2. **명확한 구분**: 사용자 파일 vs SBKube 작업 파일
-3. **일관성**: 모든 임시/캐시 파일이 한 곳에
-4. **멀티 환경**: 각 환경별 독립적 작업 디렉토리
+1. **명확한 구분**: 사용자 파일 vs SBKube 작업 파일
+1. **일관성**: 모든 임시/캐시 파일이 한 곳에
+1. **멀티 환경**: 각 환경별 독립적 작업 디렉토리
 
----
+______________________________________________________________________
 
-**버전**: v0.5.0
-**작성일**: 2025-10-31
-**업데이트**: 2025-10-31
+**버전**: v0.5.0 **작성일**: 2025-10-31 **업데이트**: 2025-10-31

@@ -2,7 +2,7 @@
 
 This guide helps you migrate your SBKube configuration from older versions to the latest format.
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
@@ -13,7 +13,7 @@ This guide helps you migrate your SBKube configuration from older versions to th
 - [Quick Migration Checklist](#quick-migration-checklist)
 - [Troubleshooting](#troubleshooting)
 
----
+______________________________________________________________________
 
 ## v0.2.x → v0.5.0
 
@@ -22,6 +22,7 @@ This guide helps you migrate your SBKube configuration from older versions to th
 #### 1. Helm Chart Format
 
 **Before (v0.2.x)**:
+
 ```yaml
 apps:
   grafana:
@@ -32,6 +33,7 @@ apps:
 ```
 
 **After (v0.6.0+)**:
+
 ```yaml
 apps:
   grafana:
@@ -42,17 +44,16 @@ apps:
 
 **Rationale**: Simplifies configuration and aligns with Helm's native `chart` parameter format.
 
----
+______________________________________________________________________
 
 #### 2. CLI Options Renamed
 
-| v0.2.x | v0.6.0+ | Purpose |
-|--------|---------|---------|
-| `--env` | `--profile` | Environment profile selection |
-| `--sources` | `--source` | Source configuration file |
-| `--config` | `--config` | Main configuration file (unchanged) |
+| v0.2.x | v0.6.0+ | Purpose | |--------|---------|---------| | `--env` | `--profile` | Environment profile selection |
+| `--sources` | `--source` | Source configuration file | | `--config` | `--config` | Main configuration file (unchanged)
+|
 
 **Example**:
+
 ```bash
 # Before (v0.2.x)
 sbkube deploy --env production --sources sources.yaml
@@ -61,7 +62,7 @@ sbkube deploy --env production --sources sources.yaml
 sbkube deploy --profile production --source sources.yaml
 ```
 
----
+______________________________________________________________________
 
 #### 3. Deprecated Fields Removed
 
@@ -70,7 +71,7 @@ The following deprecated fields are no longer supported:
 - `chart_patches` → Use `overrides` instead
 - `app.specs.repo` + `app.specs.chart` → Use single `app.specs.chart: repo/chart`
 
----
+______________________________________________________________________
 
 ### Automated Migration
 
@@ -88,12 +89,14 @@ sbkube migrate --config <path>/config.yaml
 ```
 
 **Migration Process**:
+
 1. Backs up original files to `config.yaml.backup`
-2. Converts `repo:` + `chart:` → `chart: repo/chart`
-3. Updates deprecated field names
-4. Validates new format with Pydantic models
+1. Converts `repo:` + `chart:` → `chart: repo/chart`
+1. Updates deprecated field names
+1. Validates new format with Pydantic models
 
 **Example Output**:
+
 ```
 ✅ Migrating: examples/basic/config.yaml
   - Converted grafana: repo='grafana', chart='grafana' → chart='grafana/grafana'
@@ -102,7 +105,7 @@ sbkube migrate --config <path>/config.yaml
 ✅ Migration completed: 2 apps updated
 ```
 
----
+______________________________________________________________________
 
 ### Manual Migration
 
@@ -153,6 +156,7 @@ sbkube deploy --profile production
 Ensure your `sources.yaml` uses the correct repository name format:
 
 **sources.yaml**:
+
 ```yaml
 helm_sources:
   bitnami:
@@ -165,6 +169,7 @@ helm_sources:
 ```
 
 **config.yaml** references:
+
 ```yaml
 apps:
   nginx:
@@ -183,6 +188,7 @@ sbkube validate --app-dir <path>
 ```
 
 Expected output:
+
 ```
 ✅ Configuration is valid
   - Namespace: default
@@ -191,7 +197,7 @@ Expected output:
   - YAML apps: 0
 ```
 
----
+______________________________________________________________________
 
 ## Quick Migration Checklist
 
@@ -216,13 +222,14 @@ Expected output:
 - [ ] Update documentation/runbooks with new CLI syntax
 - [ ] Remove backup files after successful migration
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### Issue: "Unknown field 'repo'"
 
 **Error**:
+
 ```
 ValidationError: Extra inputs are not permitted
   - Field: apps.grafana.repo
@@ -239,11 +246,12 @@ chart: grafana
 chart: grafana/grafana
 ```
 
----
+______________________________________________________________________
 
 ### Issue: "Chart not found in repository"
 
 **Error**:
+
 ```
 Error: chart "grafana" not found in grafana repository
 ```
@@ -266,11 +274,12 @@ apps:
     # Not: chart: grafana   # ❌ Wrong
 ```
 
----
+______________________________________________________________________
 
 ### Issue: Migration command not found
 
 **Error**:
+
 ```
 Error: No such command 'migrate'
 ```
@@ -288,11 +297,12 @@ pip install --upgrade sbkube
 sbkube --version  # Should show 0.5.0 or higher
 ```
 
----
+______________________________________________________________________
 
 ### Issue: OCI Registry Charts
 
 **Before (v0.2.x)**:
+
 ```yaml
 apps:
   browserless:
@@ -301,6 +311,7 @@ apps:
 ```
 
 **After (v0.6.0+)**:
+
 ```yaml
 apps:
   browserless:
@@ -308,6 +319,7 @@ apps:
 ```
 
 **sources.yaml**:
+
 ```yaml
 helm_sources:
   browserless:
@@ -315,11 +327,12 @@ helm_sources:
     url: oci://tccr.io/truecharts
 ```
 
----
+______________________________________________________________________
 
 ### Issue: Multiple Apps with Same Chart
 
 **Before**:
+
 ```yaml
 apps:
   redis-cache:
@@ -331,6 +344,7 @@ apps:
 ```
 
 **After**:
+
 ```yaml
 apps:
   redis-cache:
@@ -341,7 +355,7 @@ apps:
 
 No issues here - SBKube distinguishes apps by their key (`redis-cache`, `redis-queue`), not by chart name.
 
----
+______________________________________________________________________
 
 ## Need Help?
 
@@ -350,7 +364,6 @@ No issues here - SBKube distinguishes apps by their key (`redis-cache`, `redis-q
 - **Issues**: [GitHub Issues](https://github.com/ScriptonBasestar-io/sb-kube-app-manager/issues)
 - **Changelog**: [CHANGELOG.md](../../CHANGELOG.md)
 
----
+______________________________________________________________________
 
-**Last Updated**: 2025-10-31
-**Target Version**: v0.6.0+
+**Last Updated**: 2025-10-31 **Target Version**: v0.6.0+

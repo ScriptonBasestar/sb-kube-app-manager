@@ -4,12 +4,14 @@ import sys
 import click
 from rich.console import Console
 
-from sbkube.diagnostics.kubernetes_checks import (ConfigValidityCheck,
-                                                  HelmInstallationCheck,
-                                                  KubernetesConnectivityCheck,
-                                                  NetworkAccessCheck,
-                                                  PermissionsCheck,
-                                                  ResourceAvailabilityCheck)
+from sbkube.diagnostics.kubernetes_checks import (
+    ConfigValidityCheck,
+    HelmInstallationCheck,
+    KubernetesConnectivityCheck,
+    NetworkAccessCheck,
+    PermissionsCheck,
+    ResourceAvailabilityCheck,
+)
 from sbkube.utils.diagnostic_system import DiagnosticEngine
 from sbkube.utils.logger import logger
 

@@ -731,6 +731,7 @@ class EnhancedBaseCommand:
 ```
 
 **주요 기능**:
+
 - 설정 상속 지원 (Configuration inheritance)
 - 자동 검증 (Automatic validation)
 - sources.yaml 위치 기반 작업 디렉토리 결정
@@ -922,6 +923,7 @@ class SbkubeGroup(click.Group):
    - 동일한 문제가 재발하지 않도록 회귀 테스트(regression test) 구성
 
    **예제 추가 위치**:
+
    ```
    examples/
    ├── edge-cases/           # 엣지 케이스 예제
@@ -933,6 +935,7 @@ class SbkubeGroup(click.Group):
    ```
 
    **테스트 추가 위치**:
+
    ```
    tests/
    ├── e2e/                  # E2E 테스트
@@ -942,6 +945,7 @@ class SbkubeGroup(click.Group):
    ```
 
    **실제 적용 예시** (2025-10-30):
+
    - **버그**: OCI 레지스트리 미지원, Deprecated 저장소, 레포 이름 오타
    - **추가된 예제**: `examples/prepare/helm-oci/`
    - **추가된 테스트**: `tests/e2e/test_prepare_examples.py::test_prepare_pull_helm_oci`

@@ -7,11 +7,9 @@ Test for sources.yaml app_dirs feature.
 """
 
 import pytest
-from pathlib import Path
-from pydantic import ValidationError
 
-from sbkube.models.sources_model import SourceScheme
 from sbkube.exceptions import ConfigValidationError
+from sbkube.models.sources_model import SourceScheme
 
 
 def test_sources_app_dirs_validation():
@@ -21,22 +19,19 @@ def test_sources_app_dirs_validation():
     sources = SourceScheme(
         kubeconfig="~/.kube/config",
         kubeconfig_context="test",
-        app_dirs=["redis", "postgres", "nginx"]
+        app_dirs=["redis", "postgres", "nginx"],
     )
     assert sources.app_dirs == ["redis", "postgres", "nginx"]
 
     # 정상 케이스: app_dirs 미지정 (None)
-    sources = SourceScheme(
-        kubeconfig="~/.kube/config",
-        kubeconfig_context="test"
-    )
+    sources = SourceScheme(kubeconfig="~/.kube/config", kubeconfig_context="test")
     assert sources.app_dirs is None
 
     # 정상 케이스: 빈 값은 제거됨
     sources = SourceScheme(
         kubeconfig="~/.kube/config",
         kubeconfig_context="test",
-        app_dirs=["redis", "  postgres  ", "nginx"]
+        app_dirs=["redis", "  postgres  ", "nginx"],
     )
     assert sources.app_dirs == ["redis", "postgres", "nginx"]
 
@@ -47,41 +42,47 @@ def test_sources_app_dirs_validation_errors():
     # 빈 리스트 (오류)
     with pytest.raises(ConfigValidationError, match="app_dirs cannot be empty"):
         SourceScheme(
-            kubeconfig="~/.kube/config",
-            kubeconfig_context="test",
-            app_dirs=[]
+            kubeconfig="~/.kube/config", kubeconfig_context="test", app_dirs=[]
         )
 
     # 경로 포함 (오류)
-    with pytest.raises(ConfigValidationError, match="must contain directory names only, not paths"):
+    with pytest.raises(
+        ConfigValidationError, match="must contain directory names only, not paths"
+    ):
         SourceScheme(
             kubeconfig="~/.kube/config",
             kubeconfig_context="test",
-            app_dirs=["redis", "apps/postgres"]
+            app_dirs=["redis", "apps/postgres"],
         )
 
     # 숨김 디렉토리 (오류)
-    with pytest.raises(ConfigValidationError, match="cannot contain hidden directories"):
+    with pytest.raises(
+        ConfigValidationError, match="cannot contain hidden directories"
+    ):
         SourceScheme(
             kubeconfig="~/.kube/config",
             kubeconfig_context="test",
-            app_dirs=[".hidden", "redis"]
+            app_dirs=[".hidden", "redis"],
         )
 
     # 중복 (오류)
-    with pytest.raises(ConfigValidationError, match="cannot contain duplicate directory names"):
+    with pytest.raises(
+        ConfigValidationError, match="cannot contain duplicate directory names"
+    ):
         SourceScheme(
             kubeconfig="~/.kube/config",
             kubeconfig_context="test",
-            app_dirs=["redis", "postgres", "redis"]
+            app_dirs=["redis", "postgres", "redis"],
         )
 
     # 빈 문자열 (오류)
-    with pytest.raises(ConfigValidationError, match="cannot contain empty directory names"):
+    with pytest.raises(
+        ConfigValidationError, match="cannot contain empty directory names"
+    ):
         SourceScheme(
             kubeconfig="~/.kube/config",
             kubeconfig_context="test",
-            app_dirs=["redis", "", "postgres"]
+            app_dirs=["redis", "", "postgres"],
         )
 
 
@@ -102,7 +103,7 @@ def test_get_app_dirs_explicit_mode(tmp_path):
     sources = SourceScheme(
         kubeconfig="~/.kube/config",
         kubeconfig_context="test",
-        app_dirs=["redis", "postgres"]  # nginx는 제외
+        app_dirs=["redis", "postgres"],  # nginx는 제외
     )
 
     # get_app_dirs 호출
@@ -134,10 +135,7 @@ def test_get_app_dirs_auto_discovery_mode(tmp_path):
     (tmp_path / "node_modules").mkdir(exist_ok=True)
 
     # sources.yaml without app_dirs
-    sources = SourceScheme(
-        kubeconfig="~/.kube/config",
-        kubeconfig_context="test"
-    )
+    sources = SourceScheme(kubeconfig="~/.kube/config", kubeconfig_context="test")
 
     # get_app_dirs 호출 (자동 탐색)
     app_dirs = sources.get_app_dirs(tmp_path, "config.yaml")
@@ -165,7 +163,7 @@ def test_get_app_dirs_missing_directory_error(tmp_path):
     sources = SourceScheme(
         kubeconfig="~/.kube/config",
         kubeconfig_context="test",
-        app_dirs=["redis", "postgres"]  # postgres는 없음
+        app_dirs=["redis", "postgres"],  # postgres는 없음
     )
 
     # get_app_dirs 호출 시 오류
@@ -181,9 +179,7 @@ def test_get_app_dirs_missing_config_file_error(tmp_path):
 
     # sources.yaml with directory that has no config.yaml
     sources = SourceScheme(
-        kubeconfig="~/.kube/config",
-        kubeconfig_context="test",
-        app_dirs=["redis"]
+        kubeconfig="~/.kube/config", kubeconfig_context="test", app_dirs=["redis"]
     )
 
     # get_app_dirs 호출 시 오류
@@ -203,7 +199,7 @@ def test_get_app_dirs_sorted_output(tmp_path):
     sources = SourceScheme(
         kubeconfig="~/.kube/config",
         kubeconfig_context="test",
-        app_dirs=["zulu", "alpha", "bravo"]
+        app_dirs=["zulu", "alpha", "bravo"],
     )
 
     # get_app_dirs 호출

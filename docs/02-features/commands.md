@@ -2,32 +2,25 @@
 
 SBKube의 모든 명령어에 대한 상세한 사용법과 옵션을 설명합니다.
 
----
+______________________________________________________________________
 
 ## 🚀 빠른 참조 (Quick Reference)
 
 ### 상황별 명령어 가이드
 
-- **🎬 새 프로젝트 시작** — `sbkube init`
-  설정 파일 및 디렉토리 구조 생성
+- **🎬 새 프로젝트 시작** — `sbkube init` 설정 파일 및 디렉토리 구조 생성
 
-- **⭐ 전체 배포** — `sbkube apply`
-  가장 많이 사용 (prepare→build→template→deploy)
+- **⭐ 전체 배포** — `sbkube apply` 가장 많이 사용 (prepare→build→template→deploy)
 
-- **🔍 배포 전 확인** — `sbkube apply --dry-run`
-  실제 배포 없이 계획만 확인
+- **🔍 배포 전 확인** — `sbkube apply --dry-run` 실제 배포 없이 계획만 확인
 
-- **🏥 문제 진단** — `sbkube doctor`
-  시스템 종합 진단 및 문제 해결
+- **🏥 문제 진단** — `sbkube doctor` 시스템 종합 진단 및 문제 해결
 
-- **✅ 설정 검증** — `sbkube validate`
-  config.yaml 유효성 검사
+- **✅ 설정 검증** — `sbkube validate` config.yaml 유효성 검사
 
-- **🗑️ 리소스 삭제** — `sbkube delete --dry-run`
-  삭제 전 대상 확인
+- **🗑️ 리소스 삭제** — `sbkube delete --dry-run` 삭제 전 대상 확인
 
-- **♻️ 릴리스 업그레이드** — `sbkube upgrade`
-  Helm 릴리스 업그레이드
+- **♻️ 릴리스 업그레이드** — `sbkube upgrade` Helm 릴리스 업그레이드
 
 ### 워크플로우별 명령어 조합
 
@@ -211,7 +204,7 @@ history
  └─ 조회: .sbkube/runs/ (apply 실행 기록)
 ```
 
----
+______________________________________________________________________
 
 ## 🌐 전역 옵션
 
@@ -238,7 +231,7 @@ sbkube
 sbkube --context prod-cluster --namespace monitoring deploy
 ```
 
----
+______________________________________________________________________
 
 ## 🎬 init - 프로젝트 초기화
 
@@ -291,7 +284,7 @@ sbkube init --non-interactive --force
 - **기존 프로젝트**: `--force` 옵션 사용 시 기존 파일 백업 권장
 - **템플릿 커스터마이징**: 생성된 파일을 수정하여 프로젝트에 맞게 조정
 
----
+______________________________________________________________________
 
 ## 🔄 apply - 통합 워크플로우 실행 ⭐
 
@@ -379,7 +372,7 @@ sbkube apply --dry-run                         # 실행 계획만 확인
 - 각 단계의 상세 옵션은 개별 명령어 참조 (prepare, build, template, deploy)
 - 실패 시 `.sbkube/runs/`에서 실행 기록 확인 가능
 
----
+______________________________________________________________________
 
 ## 🔧 prepare - 소스 준비
 
@@ -456,7 +449,7 @@ sbkube prepare --force
 sbkube prepare --app redis --force
 ```
 
----
+______________________________________________________________________
 
 ## 🔨 build - 앱 빌드
 
@@ -672,6 +665,7 @@ apps:
 ```
 
 **주의사항:**
+
 - 매칭되는 파일 없으면 경고 표시
 - 정확한 파일명을 아는 경우 명시적 경로 권장
 
@@ -681,7 +675,7 @@ apps:
 - [troubleshooting.md](../07-troubleshooting/README.md) - Override 문제 해결
 - [examples/override-with-files/](../../examples/override-with-files/) - 실전 예제
 
----
+______________________________________________________________________
 
 ## 📄 template - 템플릿 렌더링
 
@@ -725,7 +719,7 @@ sbkube template --namespace production
 sbkube template --output-dir /tmp/manifests
 ```
 
----
+______________________________________________________________________
 
 ## 🚀 deploy - 애플리케이션 배포
 
@@ -768,7 +762,7 @@ sbkube deploy --app web-frontend
 sbkube --namespace staging deploy
 ```
 
----
+______________________________________________________________________
 
 ## ⬆️ upgrade - 릴리스 업그레이드
 
@@ -801,7 +795,7 @@ sbkube upgrade
 sbkube upgrade --app database
 ```
 
----
+______________________________________________________________________
 
 ## 🗑️ delete - 리소스 삭제
 
@@ -853,7 +847,7 @@ sbkube delete --app redis --dry-run --skip-not-found
 - **YAML 앱**: `kubectl delete --dry-run=client`로 삭제 대상 확인
 - **Action 앱**: Dry-run 모드에서는 스크립트가 실행되지 않으며 경고 메시지만 표시됩니다
 
----
+______________________________________________________________________
 
 ## ✅ validate - 설정 파일 검증
 
@@ -867,14 +861,10 @@ sbkube validate [TARGET_FILE] [옵션]
 
 ### 🎛️ 옵션
 
-| 옵션 | 설명 | 기본값 |
-|------|------|--------|
-| `TARGET_FILE` | 검증할 파일 경로 (선택) | - |
-| `--app-dir <디렉토리>` | 앱 설정 디렉토리 (config.yaml 자동 검색) | - |
-| `--config-file <파일>` | 설정 파일 이름 (app-dir 내부) | `config.yaml` |
-| `--base-dir <경로>` | 프로젝트 루트 디렉토리 | `.` |
-| `--schema-type <타입>` | 파일 종류 (config 또는 sources) | 자동 유추 |
-| `--schema-path <경로>` | 사용자 정의 JSON 스키마 파일 경로 | - |
+| 옵션 | 설명 | 기본값 | |------|------|--------| | `TARGET_FILE` | 검증할 파일 경로 (선택) | - | | `--app-dir <디렉토리>` | 앱 설정 디렉토리
+(config.yaml 자동 검색) | - | | `--config-file <파일>` | 설정 파일 이름 (app-dir 내부) | `config.yaml` | | `--base-dir <경로>` | 프로젝트 루트
+디렉토리 | `.` | | `--schema-type <타입>` | 파일 종류 (config 또는 sources) | 자동 유추 | | `--schema-path <경로>` | 사용자 정의 JSON 스키마 파일 경로
+| - |
 
 ### 🔍 검증 항목
 
@@ -887,8 +877,8 @@ sbkube validate [TARGET_FILE] [옵션]
 ### 📂 파일 해석 우선순위
 
 1. **명시적 파일 경로**: `TARGET_FILE` 인자가 제공된 경우
-2. **--app-dir 옵션**: `--app-dir` + `--config-file` 조합
-3. **현재 디렉토리**: 인자 없이 실행 시 `./config.yaml` 사용
+1. **--app-dir 옵션**: `--app-dir` + `--config-file` 조합
+1. **현재 디렉토리**: 인자 없이 실행 시 `./config.yaml` 사용
 
 ### 💡 사용 예제
 
@@ -921,6 +911,7 @@ sbkube validate sources.yaml --schema-type sources
 ### 🚨 에러 처리
 
 **App directory not found:**
+
 ```bash
 $ sbkube validate --app-dir nonexistent
 ❌ App directory not found: /path/to/nonexistent
@@ -928,6 +919,7 @@ $ sbkube validate --app-dir nonexistent
 ```
 
 **Config file not found:**
+
 ```bash
 $ sbkube validate --app-dir redis --config-file custom.yaml
 ❌ Config file not found: /path/to/redis/custom.yaml
@@ -935,6 +927,7 @@ $ sbkube validate --app-dir redis --config-file custom.yaml
 ```
 
 **No arguments and no config in current directory:**
+
 ```bash
 $ sbkube validate
 ❌ Config file not found: ./config.yaml
@@ -947,6 +940,7 @@ $ sbkube validate
 ### 🎯 실전 사용 시나리오
 
 #### 시나리오 1: 프로젝트 초기 검증
+
 ```bash
 # 프로젝트 루트에서 전체 설정 검증
 cd myproject
@@ -954,6 +948,7 @@ sbkube validate  # 현재 디렉토리의 config.yaml 검증
 ```
 
 #### 시나리오 2: 앱 그룹별 검증
+
 ```bash
 # 특정 앱 그룹만 검증 (권장 방식)
 sbkube validate --app-dir app_000_infra_network
@@ -965,6 +960,7 @@ sbkube validate --app-dir redis --config-file staging.yaml
 ```
 
 #### 시나리오 3: CI/CD 파이프라인
+
 ```bash
 # 배포 전 모든 앱 그룹 자동 검증
 #!/bin/bash
@@ -976,6 +972,7 @@ echo "✅ All app groups validated successfully"
 ```
 
 #### 시나리오 4: Pre-commit Hook
+
 ```bash
 # .git/hooks/pre-commit
 #!/bin/bash
@@ -994,6 +991,7 @@ done
 ```
 
 #### 시나리오 5: 다중 환경 설정 검증
+
 ```bash
 # 개발/스테이징/프로덕션 환경별 검증
 sbkube validate --app-dir redis --config-file config.dev.yaml
@@ -1001,7 +999,7 @@ sbkube validate --app-dir redis --config-file config.staging.yaml
 sbkube validate --app-dir redis --config-file config.prod.yaml
 ```
 
----
+______________________________________________________________________
 
 ## 🏥 doctor - 시스템 종합 진단
 
@@ -1072,8 +1070,7 @@ sbkube doctor --check helm_installation
 - **트러블슈팅**: 문제 발생 시 가장 먼저 실행할 명령어
 - **CI/CD 통합**: `--detailed` 옵션으로 빌드 로그에 상세 정보 기록
 
----
-
+______________________________________________________________________
 
 ## ℹ️ version - 버전 정보
 
@@ -1091,7 +1088,7 @@ sbkube version
 SBKube CLI v0.1.10
 ```
 
----
+______________________________________________________________________
 
 ## 🔄 일반적인 워크플로우
 
@@ -1170,7 +1167,7 @@ sbkube apply --continue-from template
 sbkube apply --retry-failed
 ```
 
----
+______________________________________________________________________
 
 ## 📊 `sbkube status` - 클러스터 상태 확인
 
@@ -1216,15 +1213,11 @@ sbkube status --managed --unhealthy --health-check
 
 ### 옵션 상세
 
-| 옵션 | 설명 | 예제 |
-|------|------|------|
-| `--by-group` | App-group별로 그룹핑하여 표시 | `sbkube status --by-group` |
-| `--managed` | sbkube가 관리하는 앱만 표시 | `sbkube status --managed` |
-| `--unhealthy` | 문제있는 리소스만 표시 | `sbkube status --unhealthy` |
-| `--deps` | 의존성 트리 시각화 (Phase 6) | `sbkube status --deps` |
-| `--health-check` | Pod 헬스체크 상세 (Phase 7) | `sbkube status --health-check` |
-| `--refresh` | 캐시 강제 갱신 | `sbkube status --refresh` |
-| `--watch` | 10초마다 자동 갱신 | `sbkube status --watch` |
+| 옵션 | 설명 | 예제 | |------|------|------| | `--by-group` | App-group별로 그룹핑하여 표시 | `sbkube status --by-group` | |
+`--managed` | sbkube가 관리하는 앱만 표시 | `sbkube status --managed` | | `--unhealthy` | 문제있는 리소스만 표시 |
+`sbkube status --unhealthy` | | `--deps` | 의존성 트리 시각화 (Phase 6) | `sbkube status --deps` | | `--health-check` | Pod 헬스체크
+상세 (Phase 7) | `sbkube status --health-check` | | `--refresh` | 캐시 강제 갱신 | `sbkube status --refresh` | | `--watch` |
+10초마다 자동 갱신 | `sbkube status --watch` |
 
 ### App-Group 기반 관리
 
@@ -1238,13 +1231,15 @@ apps:
 ```
 
 **그룹핑 우선순위**:
+
 1. Kubernetes Labels (`sbkube.io/app-group`)
-2. State DB 기록
-3. 이름 패턴 매칭
+1. State DB 기록
+1. 이름 패턴 매칭
 
 ### 출력 예시
 
 **기본 상태**:
+
 ```
 Status: my-cluster (context: k3s-prod)
 
@@ -1262,6 +1257,7 @@ Helm Releases       8 (7 deployed, 1 failed)
 ```
 
 **App-Group별 그룹핑** (`--by-group`):
+
 ```
 Managed App-Groups
 
@@ -1276,6 +1272,7 @@ Managed App-Groups
 ```
 
 **의존성 트리** (`--deps`):
+
 ```
 🔗 Dependency Tree
 
@@ -1291,6 +1288,7 @@ Total: 3 apps, 2 with dependencies
 ```
 
 **헬스체크** (`--health-check`):
+
 ```
 💊 Health Check Details
 
@@ -1307,30 +1305,34 @@ Namespace: default
 ### 실전 사용 시나리오
 
 **시나리오 1: 배포 후 전체 상태 확인**
+
 ```bash
 sbkube apply
 sbkube status --by-group
 ```
 
 **시나리오 2: 특정 그룹 문제 해결**
+
 ```bash
 sbkube status --unhealthy
 sbkube status app_020_app_backend --health-check
 ```
 
 **시나리오 3: 의존성 검증**
+
 ```bash
 sbkube status --deps
 # 순환 의존성 있으면 빨간색으로 표시
 ```
 
 **시나리오 4: 실시간 모니터링**
+
 ```bash
 sbkube status --watch --unhealthy
 # 문제있는 리소스만 10초마다 갱신
 ```
 
----
+______________________________________________________________________
 
 ## 📜 `sbkube history` - 배포 히스토리 및 비교
 
@@ -1368,19 +1370,17 @@ sbkube history --diff dep_123,dep_456 --format json
 
 ### 옵션 상세
 
-| 옵션 | 설명 | 예제 |
-|------|------|------|
-| `--show <id>` | 특정 배포 상세 조회 | `sbkube history --show dep_123` |
-| `--diff <id1>,<id2>` | 두 배포 비교 (Phase 5) | `sbkube history --diff dep_123,dep_456` |
-| `--values-diff <id1>,<id2>` | Helm values 비교 (Phase 5) | `sbkube history --values-diff dep_123,dep_456` |
-| `--cluster <name>` | 클러스터별 필터링 | `sbkube history --cluster prod` |
-| `--namespace <ns>` | 네임스페이스별 필터링 | `sbkube history -n default` |
-| `--limit <n>` | 최대 개수 제한 | `sbkube history --limit 50` |
-| `--format <type>` | 출력 형식 (table/json/yaml) | `sbkube history --format json` |
+| 옵션 | 설명 | 예제 | |------|------|------| | `--show <id>` | 특정 배포 상세 조회 | `sbkube history --show dep_123` | |
+`--diff <id1>,<id2>` | 두 배포 비교 (Phase 5) | `sbkube history --diff dep_123,dep_456` | | `--values-diff <id1>,<id2>` |
+Helm values 비교 (Phase 5) | `sbkube history --values-diff dep_123,dep_456` | | `--cluster <name>` | 클러스터별 필터링 |
+`sbkube history --cluster prod` | | `--namespace <ns>` | 네임스페이스별 필터링 | `sbkube history -n default` | | `--limit <n>` |
+최대 개수 제한 | `sbkube history --limit 50` | | `--format <type>` | 출력 형식 (table/json/yaml) | `sbkube history --format json`
+|
 
 ### 출력 예시
 
 **배포 목록**:
+
 ```
 Deployment History
 
@@ -1392,6 +1392,7 @@ dep_20250130_120000   2025-01-30 12:00:00   failed     5     prod
 ```
 
 **배포 비교** (`--diff`):
+
 ```
 Deployment Comparison
 
@@ -1423,6 +1424,7 @@ App Count            5                       6
 ```
 
 **Helm Values 비교** (`--values-diff`):
+
 ```
 Helm Values Comparison
 
@@ -1449,29 +1451,33 @@ Deployment 2: dep_456 (2025-01-31 15:00:00)
 ### 실전 사용 시나리오
 
 **시나리오 1: 최근 배포 확인**
+
 ```bash
 sbkube history --limit 10
 ```
 
 **시나리오 2: 배포 실패 원인 분석**
+
 ```bash
 sbkube history --show dep_failed_123
 sbkube history --diff dep_success_122,dep_failed_123
 ```
 
 **시나리오 3: 설정 변경 추적**
+
 ```bash
 sbkube history --diff dep_prod_old,dep_prod_new
 # 무엇이 변경되었는지 확인
 ```
 
 **시나리오 4: Helm values 변경 검토**
+
 ```bash
 sbkube history --values-diff dep_old,dep_new
 # 각 릴리스의 values 차이 확인
 ```
 
----
+______________________________________________________________________
 
 ## ♻️ `sbkube rollback` - 배포 롤백
 
@@ -1496,15 +1502,13 @@ sbkube rollback dep_20250131_143022 --force
 
 ### 옵션 상세
 
-| 옵션 | 설명 | 예제 |
-|------|------|------|
-| `--dry-run` | 실제 롤백 없이 계획만 표시 | `sbkube rollback dep_123 --dry-run` |
-| `--force` | 확인 없이 강제 롤백 | `sbkube rollback dep_123 --force` |
-| `--list` | 롤백 가능한 배포 목록 | `sbkube rollback --list` |
+| 옵션 | 설명 | 예제 | |------|------|------| | `--dry-run` | 실제 롤백 없이 계획만 표시 | `sbkube rollback dep_123 --dry-run` | |
+`--force` | 확인 없이 강제 롤백 | `sbkube rollback dep_123 --force` | | `--list` | 롤백 가능한 배포 목록 | `sbkube rollback --list` |
 
 ### 실전 사용 시나리오
 
 **시나리오 1: 안전한 롤백**
+
 ```bash
 # 1. 롤백 가능한 배포 확인
 sbkube rollback --list
@@ -1517,11 +1521,12 @@ sbkube rollback dep_success_old
 ```
 
 **시나리오 2: 긴급 롤백**
+
 ```bash
 sbkube rollback dep_last_good --force
 ```
 
----
+______________________________________________________________________
 
 ## 🚨 Deprecated 명령어
 
@@ -1546,5 +1551,4 @@ sbkube state show <id>     → sbkube history --show <id>
 sbkube state rollback <id> → sbkube rollback <id>
 ```
 
----
-
+______________________________________________________________________

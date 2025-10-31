@@ -17,9 +17,11 @@ from rich.tree import Tree
 from sbkube.models.config_manager import ConfigManager
 from sbkube.state.database import DeploymentDatabase
 from sbkube.utils.cluster_cache import ClusterCache
-from sbkube.utils.cluster_grouping import (filter_by_app_group,
-                                           get_app_group_summary,
-                                           group_releases_by_app_group)
+from sbkube.utils.cluster_grouping import (
+    filter_by_app_group,
+    get_app_group_summary,
+    group_releases_by_app_group,
+)
 from sbkube.utils.cluster_status import ClusterStatusCollector
 
 console = Console()

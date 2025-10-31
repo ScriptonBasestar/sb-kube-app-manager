@@ -37,7 +37,10 @@ class TestRollbackDryRun:
         """Test --dry-run option is available."""
         result = runner.invoke(main, ["rollback", "--help"])
         assert "--dry-run" in result.output
-        assert "without actual rollback" in result.output.lower() or "plan" in result.output.lower()
+        assert (
+            "without actual rollback" in result.output.lower()
+            or "plan" in result.output.lower()
+        )
 
     @pytest.mark.integration
     def test_rollback_dry_run_shows_plan(self, runner, state_db_with_data):
@@ -52,7 +55,10 @@ class TestRollbackForce:
         """Test --force option is available."""
         result = runner.invoke(main, ["rollback", "--help"])
         assert "--force" in result.output
-        assert "without confirmation" in result.output.lower() or "force" in result.output.lower()
+        assert (
+            "without confirmation" in result.output.lower()
+            or "force" in result.output.lower()
+        )
 
     @pytest.mark.integration
     def test_rollback_force_skips_confirmation(self, runner, state_db_with_data):
@@ -69,7 +75,9 @@ class TestRollbackList:
         assert "--list" in result.output
 
     @pytest.mark.integration
-    def test_rollback_list_shows_available_deployments(self, runner, state_db_with_data):
+    def test_rollback_list_shows_available_deployments(
+        self, runner, state_db_with_data
+    ):
         """Test --list displays rollback candidates."""
         pytest.skip("Requires State DB with deployment history")
 

@@ -1,7 +1,6 @@
 """Tests for path_resolver utility module."""
 
 import pytest
-from pathlib import Path
 
 from sbkube.exceptions import SbkubeError
 from sbkube.utils.path_resolver import expand_repo_variables, validate_variable_syntax

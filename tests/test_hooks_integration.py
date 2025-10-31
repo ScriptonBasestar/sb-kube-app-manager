@@ -8,9 +8,6 @@ Hooks 통합 테스트.
 - 실패 처리
 """
 
-import tempfile
-from pathlib import Path
-
 import pytest
 from click.testing import CliRunner
 

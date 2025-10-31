@@ -5,7 +5,6 @@ Phase 4 HookApp E2E 테스트.
 """
 
 import pytest
-from pathlib import Path
 
 # E2E 테스트는 실제 k3s 클러스터가 필요하므로 skip 마커 추가
 pytestmark = pytest.mark.e2e

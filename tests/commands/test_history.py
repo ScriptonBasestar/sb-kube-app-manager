@@ -76,7 +76,9 @@ class TestHistoryDiff:
         assert "Invalid --diff format" in result.output
 
     @pytest.mark.integration
-    def test_history_diff_two_deployments(self, runner, state_db_with_multiple_deployments):
+    def test_history_diff_two_deployments(
+        self, runner, state_db_with_multiple_deployments
+    ):
         """Test --diff compares two deployments."""
         pytest.skip("Requires State DB with multiple deployments")
 

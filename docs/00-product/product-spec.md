@@ -443,11 +443,13 @@ CREATE TABLE deployment_history (
 `deps` 필드에 선언된 의존 앱 그룹이 실제로 배포되었는지 확인합니다. 이 검증은 배포 히스토리 데이터베이스(`.sbkube/deployments.db`)를 조회하여 수행됩니다.
 
 **네임스페이스 자동 감지** (v0.6.0+):
+
 - 의존 앱 그룹이 어떤 네임스페이스에 배포되었는지 자동으로 감지
 - 현재 앱과 다른 네임스페이스에 배포된 의존성도 올바르게 감지
 - 예: 인프라 앱(`a000_infra`)은 `infra` 네임스페이스에, 데이터베이스 앱(`a101_data_rdb`)은 `postgresql` 네임스페이스에 배포된 경우에도 정상 작동
 
 **검증 동작**:
+
 - `validate` 명령어: 경고 출력 (non-blocking, 배포는 차단하지 않음)
 - `apply` 명령어: 오류 출력 및 배포 차단 (blocking)
 
@@ -499,6 +501,7 @@ CREATE TABLE deployment_history (
 **목적**: 명령어 실행 전후 및 앱 배포 전후에 커스텀 스크립트를 실행하여 배포 워크플로우를 자동화하고 커스터마이징
 
 **핵심 가치**:
+
 - 배포 자동화 확장
 - 외부 시스템 통합
 - 검증 및 알림
@@ -509,11 +512,13 @@ CREATE TABLE deployment_history (
 **정의**: 전역 훅으로 모든 앱 배포에 적용
 
 **지원 명령어**:
+
 - `prepare`: 소스 준비 전후
 - `build`: 빌드 전후
 - `deploy`: 배포 전후
 
 **지원 단계**:
+
 - `pre`: 명령어 실행 전
 - `post`: 명령어 실행 후 (성공 시)
 - `on_failure`: 명령어 실패 시
@@ -555,6 +560,7 @@ DevOps 엔지니어 Frank는 모든 배포 전에 클러스터 상태를 확인�
 **정의**: 개별 앱에 특화된 훅
 
 **지원 타입**:
+
 - `pre_prepare`: 앱 준비 전
 - `post_prepare`: 앱 준비 후
 - `pre_build`: 앱 빌드 전
@@ -601,6 +607,7 @@ apps:
 ### 6.4 환경변수 주입
 
 **자동 주입 변수** (앱별 훅):
+
 - `SBKUBE_APP_NAME`: 현재 앱 이름
 - `SBKUBE_NAMESPACE`: 배포 네임스페이스
 - `SBKUBE_RELEASE_NAME`: Helm 릴리스 이름
@@ -638,18 +645,22 @@ apps:
 ### 6.6 주요 기능
 
 **타임아웃 관리**:
+
 - 기본 타임아웃: 300초 (5분)
 - 훅이 타임아웃되면 실패로 처리
 
 **Dry-run 지원**:
+
 - `--dry-run` 모드에서는 훅 실행 명령어만 표시
 - 실제 실행하지 않음
 
 **에러 처리**:
+
 - 훅 실패 시 배포 중단
 - 명확한 오류 메시지 및 종료 코드 표시
 
 **Rich 콘솔 출력**:
+
 ```
 🪝 Executing pre-deploy hook for app 'database'...
   ▶ Running: ./scripts/backup-db.sh
@@ -660,40 +671,43 @@ apps:
 ### 6.7 고급 기능 (Phase 1-4)
 
 **Phase 1: Manifests** (v0.7.0+):
+
 - `pre_deploy_manifests`, `post_deploy_manifests`
 - SBKube가 자동으로 YAML 파일 배포
 - `kubectl apply` 명령어 불필요
 
 **Phase 2: Tasks** (v0.8.0+):
+
 - `pre_deploy_tasks`, `post_deploy_tasks`
 - 타입 시스템: `manifests`, `inline`, `command`
 - Inline YAML 지원
 
 **Phase 3: Validation/Dependency/Rollback** (v0.8.0+):
+
 - 실행 결과 자동 검증
 - Task 간 의존성 관리
 - 실패 시 자동 롤백
 
 **Phase 4: HookApp** (v0.8.0+):
+
 - Hook을 First-class App으로 관리 (`type: hook`)
 - 독립적이고 재사용 가능한 Hook
 - 다른 앱과 동일한 lifecycle 관리
 
 **참고 문서**:
+
 - [Hooks 레퍼런스](../02-features/hooks-reference.md) - 전체 Hook 타입 및 환경 변수
 - [Hooks 상세 가이드](../02-features/hooks.md) - 실전 예제 및 Best Practices
 - [Hooks 마이그레이션 가이드](../02-features/hooks-migration-guide.md) - Phase 간 전환 방법
 
 ### 6.8 Helm Hooks와의 차이
 
-| 특성 | SBKube Hooks | Helm Hooks |
-|------|--------------|------------|
-| **실행 위치** | 로컬 머신 | Kubernetes 클러스터 |
-| **실행 주체** | SBKube CLI | Helm/Kubernetes |
-| **목적** | 배포 자동화, 외부 시스템 통합 | 클러스터 내 작업 |
-| **사용 예시** | 백업, 알림, GitOps 통합 | DB 마이그레이션 Job |
+| 특성 | SBKube Hooks | Helm Hooks | |------|--------------|------------| | **실행 위치** | 로컬 머신 | Kubernetes 클러스터 | | **실행
+주체** | SBKube CLI | Helm/Kubernetes | | **목적** | 배포 자동화, 외부 시스템 통합 | 클러스터 내 작업 | | **사용 예시** | 백업, 알림, GitOps 통합 | DB
+마이그레이션 Job |
 
 **함께 사용하기**:
+
 - SBKube hooks: 로컬 작업 (백업, 알림)
 - Helm hooks: 클러스터 내 작업 (초기화 Job)
 
@@ -821,7 +835,7 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 - [ ] sbkube rollback으로 이전 배포로 복원
 - [ ] 롤백도 히스토리에 기록됨
 
----
+______________________________________________________________________
 
 **문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
 

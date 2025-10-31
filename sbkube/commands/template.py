@@ -13,8 +13,7 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from sbkube.models.config_model import (HelmApp, HookApp, HttpApp,
-                                        SBKubeConfig, YamlApp)
+from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig, YamlApp
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file

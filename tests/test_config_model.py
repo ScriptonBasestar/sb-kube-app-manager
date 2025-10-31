@@ -185,7 +185,11 @@ class TestSBKubeConfig:
         config = SBKubeConfig(
             namespace="test",
             apps={
-                "grafana": {"type": "helm", "chart": "grafana/grafana", "enabled": True},
+                "grafana": {
+                    "type": "helm",
+                    "chart": "grafana/grafana",
+                    "enabled": True,
+                },
                 "postgres": {
                     "type": "helm",
                     "chart": "cloudnative-pg/cloudnative-pg",

@@ -2,7 +2,7 @@
 
 SBKube 사용 중 발생할 수 있는 일반적인 문제들과 해결 방법을 제공합니다.
 
----
+______________________________________________________________________
 
 ## 🚨 일반적인 문제들
 
@@ -54,7 +54,7 @@ pip install sbkube
 pip install --user sbkube
 ```
 
----
+______________________________________________________________________
 
 ### 2. CLI 도구 관련 문제
 
@@ -100,7 +100,7 @@ helm version
 export PATH=$PATH:/usr/local/bin
 ```
 
----
+______________________________________________________________________
 
 ### 3. Kubernetes 연결 문제
 
@@ -127,7 +127,7 @@ sbkube --kubeconfig /path/to/kubeconfig deploy
 kubectl cluster-info
 ```
 
----
+______________________________________________________________________
 
 #### ❌ Context를 찾을 수 없음
 
@@ -180,9 +180,10 @@ sbkube deploy --app-dir config --namespace test
 kubectl config get-contexts --kubeconfig ~/.kube/my-cluster-config
 ```
 
-**관련 FAQ**: [cluster vs kubeconfig_context](faq.md#q1-cluster와-kubeconfig_context의-차이는-무엇인가요)
+**관련 FAQ**:
+[cluster vs kubeconfig_context](faq.md#q1-cluster%EC%99%80-kubeconfig_context%EC%9D%98-%EC%B0%A8%EC%9D%B4%EB%8A%94-%EB%AC%B4%EC%97%87%EC%9D%B8%EA%B0%80%EC%9A%94)
 
----
+______________________________________________________________________
 
 #### ❌ 클러스터 접근 권한 부족
 
@@ -207,7 +208,7 @@ kubectl create clusterrolebinding sbkube-admin \
   --user=$(kubectl config current-context)
 ```
 
----
+______________________________________________________________________
 
 ### 4. 설정 파일 문제
 
@@ -252,7 +253,7 @@ sbkube --help
 #           helm, yaml, action, exec, noop
 ```
 
----
+______________________________________________________________________
 
 ### 5. 배포 관련 문제
 
@@ -285,13 +286,15 @@ cat sources.yaml
 ```
 
 **원인:**
+
 1. **OCI 레지스트리 사용 시**: `helm_repos` 대신 `oci_registries`에 있어야 함
-2. **레포지토리 이름 오타**: sources.yaml과 config.yaml의 이름 불일치
-3. **Deprecated 저장소 사용**: 더 이상 지원되지 않는 Helm 저장소
+1. **레포지토리 이름 오타**: sources.yaml과 config.yaml의 이름 불일치
+1. **Deprecated 저장소 사용**: 더 이상 지원되지 않는 Helm 저장소
 
 **해결 방법:**
 
 **케이스 1: OCI 레지스트리 차트**
+
 ```yaml
 # sources.yaml
 oci_registries:
@@ -308,6 +311,7 @@ apps:
 ```
 
 **케이스 2: 레포지토리 이름 오타**
+
 ```yaml
 # ❌ 잘못된 예시
 # sources.yaml
@@ -331,6 +335,7 @@ apps:
 ```
 
 **케이스 3: Deprecated 저장소**
+
 ```yaml
 # ❌ 잘못된 예시 (Helm Stable은 2020년에 deprecated)
 helm_repos:
@@ -350,6 +355,7 @@ apps:
 ```
 
 **검증 명령어:**
+
 ```bash
 # 1. OCI 레지스트리 확인
 helm pull oci://tccr.io/truecharts/browserless-chrome --version 1.0.0 --untar
@@ -365,6 +371,7 @@ cat sources.yaml | grep -A 5 "helm_repos:"
 ```
 
 **참고:**
+
 - OCI 레지스트리는 `helm repo add` 없이 직접 pull 가능
 - 2020년 이후 Helm Stable (kubernetes-charts)은 사용 불가
 - 차트별 공식 저장소는 [Artifact Hub](https://artifacthub.io/)에서 확인
@@ -410,7 +417,7 @@ sbkube delete
 sbkube deploy
 ```
 
----
+______________________________________________________________________
 
 ## 🔧 디버깅 방법
 
@@ -467,7 +474,7 @@ jsonschema.validate(config, schema)
 "
 ```
 
----
+______________________________________________________________________
 
 ## 📊 상태 관리 문제
 
@@ -503,7 +510,7 @@ helm list -A
 sbkube history
 ```
 
----
+______________________________________________________________________
 
 ## 🌐 네트워크 관련 문제
 
@@ -552,7 +559,7 @@ helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
 ```
 
----
+______________________________________________________________________
 
 ## 🚀 성능 관련 문제
 
@@ -583,7 +590,7 @@ sbkube build --app app1
 sbkube build --app app2
 ```
 
----
+______________________________________________________________________
 
 ## 📱 플랫폼별 문제
 
@@ -612,7 +619,7 @@ echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
----
+______________________________________________________________________
 
 ## 📞 추가 지원
 
@@ -641,7 +648,7 @@ cat sources.yaml
 - **[FAQ](faq.md)** - 자주 묻는 질문들
 - **[GitHub Discussions](https://github.com/ScriptonBasestar/kube-app-manaer/discussions)** - 사용법 질문
 
----
+______________________________________________________________________
 
 ## 🔧 빌드 및 Override 문제
 
@@ -956,7 +963,7 @@ cat /tmp/test/[앱이름]/*.yaml
 - [config-schema.md - overrides 필드](../03-configuration/config-schema.md)
 - [examples/override-with-files/](../../examples/override-with-files/) - 실전 예제
 
----
+______________________________________________________________________
 
 ## 🪝 Hooks 관련 문제
 
@@ -973,9 +980,9 @@ Exit code: 127
 #### 원인
 
 1. 스크립트 파일이 존재하지 않음
-2. 실행 권한 없음
-3. 환경 변수 미설정
-4. Working directory 오류
+1. 실행 권한 없음
+1. 환경 변수 미설정
+1. Working directory 오류
 
 #### 해결 방법
 
@@ -1073,7 +1080,7 @@ sbkube deploy --app-dir config --app setup-issuers
 - **[Hooks 마이그레이션 가이드](../02-features/hooks-migration-guide.md)** - Phase 간 전환 방법
 - **[예제: hooks-error-handling/](../../examples/hooks-error-handling/)** - 에러 처리 예제
 
----
+______________________________________________________________________
 
 ## 📚 관련 문서
 
@@ -1082,7 +1089,7 @@ sbkube deploy --app-dir config --app setup-issuers
 - **[디버깅 가이드](debugging.md)** - 심화 디버깅 방법
 - **[설정 가이드](../03-configuration/)** - 올바른 설정 방법
 
----
+______________________________________________________________________
 
 *문제가 해결되지 않으시면 언제든지 [이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)에 문의해 주세요. 가능한 한 빠르게 도움을
 드리겠습니다!*

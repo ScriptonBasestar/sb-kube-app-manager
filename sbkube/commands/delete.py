@@ -5,8 +5,10 @@ from pydantic import ValidationError as PydanticValidationError
 from rich.console import Console
 
 from sbkube.models.config_model import ActionApp, SBKubeConfig, YamlApp
-from sbkube.utils.cli_check import (check_helm_installed_or_exit,
-                                    check_kubectl_installed_or_exit)
+from sbkube.utils.cli_check import (
+    check_helm_installed_or_exit,
+    check_kubectl_installed_or_exit,
+)
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts

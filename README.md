@@ -5,12 +5,12 @@
 [![Repo](https://img.shields.io/badge/GitHub-kube--app--manaer-blue?logo=github)](https://github.com/archmagece/sb-kube-app-manager)
 [![Version](https://img.shields.io/badge/version-0.6.0-blue)](CHANGELOG.md)
 
-**SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML manifests, and Git repositories into a unified declarative configuration.
+**SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML
+manifests, and Git repositories into a unified declarative configuration.
 
 **SBKube**는 `YAML`, `Helm`, `Git` 리소스를 로컬에서 정의하고 `k3s` 등 Kubernetes 환경에 일관되게 배포할 수 있는 CLI 도구입니다.
 
-> Kubernetes deployment automation CLI tool for k3s with Helm, YAML, and Git integration
-> k3s용 헬름+yaml+git 배포 자동화 CLI 도구
+> Kubernetes deployment automation CLI tool for k3s with Helm, YAML, and Git integration k3s용 헬름+yaml+git 배포 자동화 CLI 도구
 
 ______________________________________________________________________
 
@@ -102,6 +102,7 @@ prepare → build → template → deploy
 Or **unified execution**: `sbkube apply` (runs all 4 stages automatically)
 
 **Stage descriptions:**
+
 - `prepare`: Download Helm charts and clone Git repositories
 - `build`: Build Docker images (if needed)
 - `template`: Render Kubernetes manifests from Helm charts
@@ -111,14 +112,11 @@ Or **unified execution**: `sbkube apply` (runs all 4 stages automatically)
 
 SBKube supports various deployment sources:
 
-| Type | Description | Example |
-|------|-------------|---------|
-| **helm** | Helm charts (remote/local) | `chart: grafana/grafana` |
-| **yaml** | Raw YAML manifests | `chart: ./manifests/` |
-| **git** | Git repositories | `git_url: https://github.com/...` |
-| **http** | HTTP file downloads | `url: https://example.com/manifest.yaml` |
-| **action** | Custom actions (apply/delete) | `action: apply` |
-| **exec** | Custom command execution | `exec: ./scripts/deploy.sh` |
+| Type | Description | Example | |------|-------------|---------| | **helm** | Helm charts (remote/local) |
+`chart: grafana/grafana` | | **yaml** | Raw YAML manifests | `chart: ./manifests/` | | **git** | Git repositories |
+`git_url: https://github.com/...` | | **http** | HTTP file downloads | `url: https://example.com/manifest.yaml` | |
+**action** | Custom actions (apply/delete) | `action: apply` | | **exec** | Custom command execution |
+`exec: ./scripts/deploy.sh` |
 
 ### Configuration-Based Management
 
@@ -240,6 +238,7 @@ apps:
 ```
 
 **App-group 네이밍 컨벤션**: `app_{priority}_{category}_{name}`
+
 - `priority`: 000-999 (배포 우선순위)
 - `category`: infra, data, app 등
 - `name`: 구체적인 애플리케이션 이름

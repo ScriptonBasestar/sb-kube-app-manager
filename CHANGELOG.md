@@ -1,13 +1,13 @@
 # Changelog - SBKube
 
-> **참고**: 이 문서의 과거 버전 예제에는 Bitnami 차트 참조가 포함되어 있습니다.
-> 현재 버전(v0.6.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
+> **참고**: 이 문서의 과거 버전 예제에는 Bitnami 차트 참조가 포함되어 있습니다. 현재 버전(v0.6.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
 
 ## [Unreleased]
 
 ### ✨ Improved
 
 **Help 화면 개선**
+
 - ✅ 명령어를 카테고리별로 그룹화하여 가독성 향상
   - 🔄 핵심 워크플로우: prepare, build, template, deploy
   - ⚡ 통합 명령어: apply
@@ -22,6 +22,7 @@
 ### 🎯 New Features
 
 **App-Group Dependency Validation**
+
 - ✅ Automatic namespace detection for `deps` field validation
 - ✅ Cross-namespace dependency checking (e.g., infra apps in `infra` namespace, data apps in `postgresql` namespace)
 - ✅ Integration with `validate` command (non-blocking warnings)
@@ -30,21 +31,24 @@
 - ✅ New database method: `get_latest_deployment_any_namespace()` for namespace-agnostic queries
 
 **Deployment Checker Enhancement**
+
 - ✅ Automatic namespace detection in `DeploymentChecker.check_app_group_deployed()`
 - ✅ Graceful fallback: namespace-specific query → any-namespace query
 - ✅ Deployment status messages now include actual deployed namespace
 
 **Validate Command Enhancement** (2025-10-31)
+
 - ✅ Added `--app-dir` option for directory-based validation
 - ✅ Added `--config-file` option (default: config.yaml)
 - ✅ 3-level file resolution priority:
   1. Explicit file path (backward compatible)
-  2. `--app-dir` + `--config-file` combination
-  3. Current directory fallback (./config.yaml)
+  1. `--app-dir` + `--config-file` combination
+  1. Current directory fallback (./config.yaml)
 - ✅ Clear error messages with actionable solutions
 - ✅ Comprehensive test suite added (15 test cases)
 
 **Doctor Command Safety Improvements** (2025-10-31)
+
 - ✅ Improved kubectl/helm detection using `shutil.which()` (fixes false negatives)
 - ✅ Changed messaging from "자동 수정 가능" to "권장 해결 방법"
 - ✅ Links to official documentation instead of shell commands
@@ -53,6 +57,7 @@
 ### 🗑️ Breaking Changes
 
 **Doctor Command** (2025-10-31):
+
 - ❌ `--fix` option removed (security improvement)
   - **Reason**: Automatic system modifications can damage user environments
   - **Alternative**: Follow suggested commands manually after verification
@@ -65,6 +70,7 @@
 ### 🗑️ Breaking Changes (Previous)
 
 **Removed Deprecated Commands**:
+
 - ❌ `sbkube cluster` command removed → Use `sbkube status` instead
 - ❌ `sbkube state` command removed → Use `sbkube history` and `sbkube rollback` instead
 
@@ -96,28 +102,32 @@ sbkube rollback dep_123            # ✅ Rollback to deployment
 - ✅ Fixed 6 existing tests for new mock patterns
 - ✅ All 19 tests passing in `test_deployment_checker.py`
 
----
+______________________________________________________________________
 
 ## [0.5.1] - 2025-10-30
 
 ### Previous Features
 
 **Simplified Command Structure**
+
 - ✅ `sbkube status` - Unified cluster and app status (replaces `sbkube cluster status`)
 - ✅ `sbkube history` - Deployment history (replaces `sbkube state list/show`)
 - ✅ `sbkube rollback` - Rollback operations (replaces `sbkube state rollback`)
 
 **App-Group Tracking (Phase 2)**
+
 - ✅ Automatic label injection: `sbkube.io/app-group`, `sbkube.io/app-name`
 - ✅ State DB enhancement: `app_group` column added to `AppDeployment` model
 - ✅ Grouping utilities: `cluster_grouping.py` for app-group classification
 
 **Label Injection System**
+
 - ✅ Auto-inject sbkube labels during Helm deployments
 - ✅ Labels: `app.kubernetes.io/managed-by=sbkube`, `sbkube.io/app-group`, `sbkube.io/app-name`
 - ✅ Annotations: `sbkube.io/deployment-id`, `sbkube.io/deployed-at`, `sbkube.io/deployed-by`
 
 **Phase 4 Complete - Advanced Features**
+
 - ✅ `sbkube status --by-group` - Group apps by app-group
 - ✅ `sbkube status <app-group>` - Show specific app-group details
 - ✅ `sbkube status --managed` - Show only sbkube-managed apps
@@ -125,6 +135,7 @@ sbkube rollback dep_123            # ✅ Rollback to deployment
 - ✅ Rich formatted output with colors and tables
 
 **Phase 5 Complete - Deployment History Enhancement**
+
 - ✅ `sbkube history <app-group>` - Filter history by app-group
 - ✅ `sbkube history --diff ID1,ID2` - Compare two deployments
 - ✅ `sbkube history --values-diff ID1,ID2` - Compare Helm values between deployments
@@ -133,6 +144,7 @@ sbkube rollback dep_123            # ✅ Rollback to deployment
 - ✅ Support for JSON/YAML output formats
 
 **Phase 6 Complete - Dependency Tree Visualization**
+
 - ✅ `sbkube status --deps` - Display dependency tree for all applications
 - ✅ `sbkube status <app-group> --deps` - Show dependencies for specific app-group
 - ✅ Circular dependency detection with DFS algorithm
@@ -141,6 +153,7 @@ sbkube rollback dep_123            # ✅ Rollback to deployment
 - ✅ Color-coded output (green: normal, red: circular dependency)
 
 **Phase 7 Complete - Health Check Integration**
+
 - ✅ `sbkube status --health-check` - Display detailed pod health information
 - ✅ Pod condition analysis (Ready, PodScheduled, etc.)
 - ✅ Container readiness and restart count tracking
@@ -200,11 +213,12 @@ sbkube rollback --dry-run dep_20250131_143022
 ```
 
 ### Planned for Future Releases
+
 - Enhanced validation with pre/post deployment checks
 - Interactive CLI wizard for initialization
 - Resource usage metrics and cost estimation
 
----
+______________________________________________________________________
 
 ## [0.5.1] - 2025-10-31
 
@@ -230,7 +244,7 @@ sbkube rollback --dry-run dep_20250131_143022
 - 새 프로젝트는 OpsTree Redis Operator 사용 권장
 - 기존 Bitnami Redis 차트도 계속 사용 가능
 
----
+______________________________________________________________________
 
 ## [0.5.0] - 2025-10-31
 
@@ -252,6 +266,7 @@ apps:
 ```
 
 **2. CLI Options Renamed**
+
 - `--env` → `--profile` (환경 프로파일 지정)
 - `--sources` → `--source` (소스 설정 파일)
 
@@ -260,21 +275,25 @@ apps:
 ### ✨ New Features
 
 **1. Hooks System**
+
 - 명령어/앱 수준 훅 지원 (pre/post/on_failure)
 - 환경변수 자동 주입, dry-run 모드, 타임아웃 관리
 - 예제: [examples/hooks/](examples/hooks/)
 
 **2. OCI Registry Support**
+
 - Helm OCI 레지스트리 직접 pull 지원
 - TrueCharts, GitHub Container Registry 등 지원
 - 예제: [examples/prepare/helm-oci/](examples/prepare/helm-oci/)
 
 **3. Advanced Chart Customization**
+
 - `overrides`: 차트 템플릿 파일 추가/교체
 - `removes`: 불필요한 파일 삭제 (Glob 패턴 지원)
 - 예제: [examples/advanced-overrides/](examples/advanced-overrides/)
 
 **4. Dependency Management**
+
 - 앱 간 의존성 선언 (`depends_on` 필드)
 - 토폴로지 정렬을 통한 자동 배포 순서 결정
 - 순환 의존성 감지 및 오류 리포트

@@ -4,11 +4,10 @@ Phase 3 HookExecutor 기능 테스트.
 Validation, Dependency, Rollback 기능 검증.
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-from sbkube.utils.hook_executor import HookExecutor
+from unittest.mock import patch
 
+from sbkube.utils.hook_executor import HookExecutor
 
 # ============================================================================
 # Validation 테스트
@@ -20,7 +19,11 @@ from sbkube.utils.hook_executor import HookExecutor
 def test_validate_task_result_simple(mock_apply_config, mock_run_command):
     """간단한 validation (kind만 지정) 테스트."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
-    mock_run_command.return_value = (0, "clusterissuer.cert-manager.io/letsencrypt-prd created", "")
+    mock_run_command.return_value = (
+        0,
+        "clusterissuer.cert-manager.io/letsencrypt-prd created",
+        "",
+    )
 
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -98,7 +101,11 @@ def test_validate_task_result_with_conditions(mock_apply_config, mock_run_comman
 def test_validate_task_result_failure(mock_apply_config, mock_run_command):
     """Validation 실패 테스트."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
-    mock_run_command.return_value = (1, "", "Error: timed out waiting for the condition")
+    mock_run_command.return_value = (
+        1,
+        "",
+        "Error: timed out waiting for the condition",
+    )
 
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -212,9 +219,7 @@ def test_check_task_dependencies_wait_for_failure(mock_apply_config, mock_run_co
     task = {
         "name": "task-c",
         "dependency": {
-            "wait_for": [
-                {"kind": "Pod", "condition": "Ready", "timeout": 30}
-            ],
+            "wait_for": [{"kind": "Pod", "condition": "Ready", "timeout": 30}],
         },
     }
 

@@ -15,13 +15,21 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from sbkube.models.deployment_state import (AppDeployment, AppDeploymentCreate,
-                                            Base, DeployedResource, Deployment,
-                                            DeploymentCreate, DeploymentDetail,
-                                            DeploymentStatus,
-                                            DeploymentSummary, HelmRelease,
-                                            HelmReleaseInfo, ResourceAction,
-                                            ResourceInfo)
+from sbkube.models.deployment_state import (
+    AppDeployment,
+    AppDeploymentCreate,
+    Base,
+    DeployedResource,
+    Deployment,
+    DeploymentCreate,
+    DeploymentDetail,
+    DeploymentStatus,
+    DeploymentSummary,
+    HelmRelease,
+    HelmReleaseInfo,
+    ResourceAction,
+    ResourceInfo,
+)
 from sbkube.utils.logger import get_logger
 
 logger = get_logger()

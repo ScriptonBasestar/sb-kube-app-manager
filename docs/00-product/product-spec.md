@@ -32,7 +32,7 @@
 1. sources.yaml에 Grafana Helm 저장소 추가
 2. config.yaml에 helm 타입 앱 정의
 3. sbkube prepare 실행
-→ charts/grafana 디렉토리에 차트 다운로드 완료
+→ .sbkube/charts/grafana 디렉토리에 차트 다운로드 완료
 ```
 
 **입력**:
@@ -69,7 +69,7 @@
 개발자 Bob은 Helm 차트에 커스텀 values를 적용하려 합니다.
 1. config.yaml에 helm 타입 앱 정의 및 values 파일 지정
 2. sbkube build 실행
-→ build/ 디렉토리에 커스터마이징된 차트 준비
+→ .sbkube/build/ 디렉토리에 커스터마이징된 차트 준비
 ```
 
 **입력**:

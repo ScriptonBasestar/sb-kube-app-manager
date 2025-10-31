@@ -185,7 +185,7 @@ sbkube apply --dry-run
 📦 Preparing Helm app: grafana
   Adding Helm repo: grafana (https://grafana.github.io/helm-charts)
   Updating Helm repo: grafana
-  Pulling chart: grafana/grafana → charts/grafana
+  Pulling chart: grafana/grafana → .sbkube/charts/grafana
 ✅ Helm app prepared: grafana
 
 🔨 Step 2: Build

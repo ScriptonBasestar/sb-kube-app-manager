@@ -155,7 +155,7 @@ sbkube prepare --app-dir config
 sbkube build --app-dir config
 
 # 3. 템플릿 렌더링 (YAML 미리보기)
-sbkube template --app-dir config --output-dir rendered
+sbkube template --app-dir config  # 기본값: .sbkube/rendered/
 
 # 4. 실제 배포
 sbkube deploy --app-dir config --namespace default

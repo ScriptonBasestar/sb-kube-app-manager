@@ -693,7 +693,7 @@ sbkube build --app-dir .
 
 # 성공 메시지 확인:
 # 🔨 Building Helm app: myapp
-#   Copying chart: charts/nginx/nginx → build/myapp
+#   Copying chart: .sbkube/charts/nginx/nginx → .sbkube/build/myapp
 #   Applying 2 overrides...
 #     ✓ Override: templates/configmap.yaml
 #     ✓ Override: files/config.txt

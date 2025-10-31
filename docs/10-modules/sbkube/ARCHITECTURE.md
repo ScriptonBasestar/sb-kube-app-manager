@@ -309,20 +309,20 @@ history = state_tracker.get_history(
     │  prepare   │
     │  (소스준비) │
     └────┬───────┘
-         │ ✓ Helm 차트 다운로드 → charts/
-         │ ✓ Git 리포지토리 클론 → repos/
+         │ ✓ Helm 차트 다운로드 → .sbkube/charts/
+         │ ✓ Git 리포지토리 클론 → .sbkube/repos/
          ▼
     ┌────────────┐
     │   build    │
     │  (앱빌드)   │
     └────┬───────┘
-         │ ✓ 소스 정리 및 복사 → build/
+         │ ✓ 소스 정리 및 복사 → .sbkube/build/
          ▼
     ┌────────────┐
     │  template  │
     │ (템플릿화)  │
     └────┬───────┘
-         │ ✓ Helm 차트 렌더링 → rendered/
+         │ ✓ Helm 차트 렌더링 → .sbkube/rendered/
          │ ✓ YAML 템플릿 처리
          ▼
     ┌────────────┐

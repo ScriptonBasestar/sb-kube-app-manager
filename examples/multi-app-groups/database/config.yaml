@@ -19,11 +19,12 @@ apps:
   redis-cache:
     type: helm
     enabled: true
-    chart: bitnami/redis  # repo/chart format (v0.5.0+)
-    version: "19.0.0"
+    chart: ot-helm/redis  # OpsTree Redis Operator
+    version: "0.15.10"
 
     set_values:
-      - architecture=standalone
-      - auth.enabled=false
-      - master.resources.requests.memory=128Mi
-      - master.resources.requests.cpu=100m
+      - redisCluster.clusterSize=1  # standalone mode
+      - kubernetesConfig.image=redis:7.2
+      - redisExporter.enabled=false
+      - kubernetesConfig.resources.requests.memory=128Mi
+      - kubernetesConfig.resources.requests.cpu=100m

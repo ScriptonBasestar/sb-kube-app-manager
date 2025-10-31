@@ -7,8 +7,8 @@ kubeconfig_context: production
 
 # Helm 리포지토리
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  ot-helm:
+    url: https://ot-container-kit.github.io/helm-charts/
 
 # OCI 리포지토리
 oci_repos:

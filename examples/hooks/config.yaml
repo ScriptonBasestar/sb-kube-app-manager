@@ -23,24 +23,28 @@ apps:
   # 예제 1: Redis - 앱별 훅 사용
   redis:
     type: helm
-    chart: bitnami/redis
-    version: 18.0.0
+    chart: ot-helm/redis
+    version: "0.15.10"
     namespace: hooks-demo
+    set_values:
+      - redisCluster.clusterSize=1
+      - kubernetesConfig.image=redis:7.2
+      - redisExporter.enabled=false
     hooks:
       pre_deploy:
         - echo "🚀 Preparing to deploy Redis..."
         - echo "Checking if Redis is already running..."
-        - kubectl get pods -l app.kubernetes.io/name=redis -n hooks-demo || echo "Redis not found, proceeding with deployment"
+        - kubectl get redis -n hooks-demo || echo "Redis not found, proceeding with deployment"
       post_deploy:
         - echo "✅ Redis deployed successfully!"
         - echo "Waiting for Redis to be ready..."
-        - kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n hooks-demo --timeout=300s
+        - kubectl wait --for=condition=ready redis/redis -n hooks-demo --timeout=300s
         - echo "Redis is ready!"
       on_deploy_failure:
         - echo "❌ Redis deployment failed!"
-        - echo "Checking pod status..."
-        - kubectl get pods -l app.kubernetes.io/name=redis -n hooks-demo
-        - kubectl describe pods -l app.kubernetes.io/name=redis -n hooks-demo
+        - echo "Checking Redis CR status..."
+        - kubectl get redis -n hooks-demo
+        - kubectl describe redis -n hooks-demo
 
   # 예제 2: Nginx - 간단한 post-deploy 헬스체크
   nginx:

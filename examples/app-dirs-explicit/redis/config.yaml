@@ -4,9 +4,12 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: bitnami/redis  # repo/chart format (v0.5.0+)
-    version: "19.0.0"
+    chart: ot-helm/redis  # OpsTree Redis Operator
+    version: "0.15.10"
     values:
-      architecture: standalone
-      auth:
+      redisCluster:
+        clusterSize: 1  # standalone mode
+      kubernetesConfig:
+        image: redis:7.2
+      redisExporter:
         enabled: false

@@ -12,5 +12,5 @@ app_dirs:
   # nginx is excluded from deployment
 
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  ot-helm:
+    url: https://ot-container-kit.github.io/helm-charts/

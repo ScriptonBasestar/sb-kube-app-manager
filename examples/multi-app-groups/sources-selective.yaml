@@ -12,5 +12,5 @@ app_dirs:
   # backend는 이번 배포에서 제외됨
 
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  ot-helm:
+    url: https://ot-container-kit.github.io/helm-charts/

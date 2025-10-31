@@ -6,7 +6,7 @@ kubeconfig: ~/.kube/config
 kubeconfig_context: default
 
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  ot-helm:
+    url: https://ot-container-kit.github.io/helm-charts/
 
 # 기본 환경은 개발 환경과 동일

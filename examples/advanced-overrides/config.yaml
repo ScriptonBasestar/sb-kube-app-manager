@@ -54,15 +54,13 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: bitnami/redis  # repo/chart format (v0.5.0+)
-    version: "19.0.0"
+    chart: ot-helm/redis  # OpsTree Redis Operator
+    version: "0.15.10"
 
-    # Glob 패턴으로 여러 파일 제거
-    removes:
-      - templates/master/application.yaml
-      - templates/replicas/**/*        # replicas 디렉토리 전체 제거 (standalone 모드)
-      - templates/*-pdb.yaml          # PodDisruptionBudget 제거
+    # Note: OpsTree Redis uses CRDs, removes pattern not applicable
+    # Operator automatically manages resources based on configuration
 
     set_values:
-      - architecture=standalone
-      - auth.enabled=false
+      - redisCluster.clusterSize=1  # standalone mode
+      - kubernetesConfig.image=redis:7.2
+      - redisExporter.enabled=false

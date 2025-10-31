@@ -8,5 +8,5 @@ kubeconfig_context: default
 # 이 경우 frontend/, backend/, database/ 세 그룹이 자동으로 발견됩니다.
 
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  ot-helm:
+    url: https://ot-container-kit.github.io/helm-charts/

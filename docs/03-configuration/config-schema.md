@@ -358,7 +358,7 @@ Kubernetes YAML 매니페스트를 직접 배포합니다.
 apps:
   nginx:
     type: yaml
-    files:                     # 필수: YAML 파일 목록
+    manifests:                 # 필수: YAML 파일 목록
       - manifests/deployment.yaml
       - manifests/service.yaml
 ```
@@ -369,12 +369,49 @@ apps:
 apps:
   nginx:
     type: yaml
-    files:                     # 필수: YAML 파일 목록 (비어있으면 안됨)
+    manifests:                 # 필수: YAML 파일 목록 (비어있으면 안됨)
       - manifests/deployment.yaml
       - manifests/service.yaml
       - manifests/ingress.yaml
     namespace: web             # 선택: 네임스페이스
 ```
+
+#### 변수 치환 (v0.6.0+)
+
+Git 리포지토리 내부의 파일을 참조할 때 `${repos.app-name}` 변수를 사용할 수 있습니다.
+
+```yaml
+apps:
+  # 1. Git 리포지토리 클론
+  olm:
+    type: git
+    repo: olm
+    branch: master
+    enabled: true
+
+  # 2. Git 리포지토리 내부 YAML 파일 참조
+  olm-operator:
+    type: yaml
+    manifests:
+      - ${repos.olm}/deploy/upstream/quickstart/crds.yaml
+      - ${repos.olm}/deploy/upstream/quickstart/olm.yaml
+    namespace: ""
+    depends_on:
+      - olm
+```
+
+**변수 치환 규칙**:
+
+- `${repos.app-name}` 형식: `app-name`은 git 타입 앱의 이름
+- 자동 확장: `.sbkube/repos/app-name`으로 변환
+- 검증: 참조된 앱이 존재하고 git 타입인지 검증
+- 하위 호환성: 기존 상대경로 방식도 계속 지원
+
+**장점**:
+
+- **유지보수성**: 명시적이고 깨지지 않는 경로
+- **가독성**: 의도가 명확 (어떤 리포지토리의 파일인지)
+- **안전성**: 설정 로드 시 변수 구문 검증
 
 ---
 

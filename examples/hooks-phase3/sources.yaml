@@ -1,0 +1,5 @@
+# Helm 리포지토리 소스 설정
+
+repos:
+  - name: jetstack
+    url: https://charts.jetstack.io

@@ -93,22 +93,50 @@ apps:
 
 **목적**: Kubernetes YAML 매니페스트 직접 배포 **워크플로우**: `build` → `template` → `deploy`
 
-#### 설정 예제
+#### 기본 설정 예제
 
 ```yaml
 apps:
   nginx:
     type: yaml
-    files:
+    manifests:
       - manifests/deployment.yaml
       - manifests/service.yaml
       - manifests/ingress.yaml
     namespace: web
 ```
 
+#### Git 리포지토리 파일 참조 (v0.6.0+)
+
+Git 타입 앱으로 클론된 리포지토리 내부의 YAML 파일을 참조할 수 있습니다.
+
+```yaml
+apps:
+  # 1. Git 리포지토리 클론
+  olm:
+    type: git
+    repo: olm
+    branch: master
+
+  # 2. Git 리포지토리 내부 YAML 참조
+  olm-operator:
+    type: yaml
+    manifests:
+      - ${repos.olm}/deploy/upstream/quickstart/crds.yaml
+      - ${repos.olm}/deploy/upstream/quickstart/olm.yaml
+    depends_on:
+      - olm
+```
+
+**변수 치환 규칙**:
+
+- `${repos.app-name}`: git 타입 앱 이름을 참조
+- 자동 확장: `.sbkube/repos/app-name`으로 변환
+- 참조 검증: 앱 존재 여부 및 타입 검증
+
 **주요 필드**:
 
-- `files` (필수): YAML 파일 경로 목록
+- `manifests` (필수): YAML 파일 경로 목록 (변수 사용 가능)
 - `namespace` (선택): 배포 네임스페이스
 
 **워크플로우**:
@@ -116,7 +144,7 @@ apps:
 1. **prepare**: 건너뜀 (YAML 파일이 이미 준비됨)
 1. **build**: 파일 유효성 검증
 1. **template**: 파일 읽기 및 렌더링
-1. **deploy**: `kubectl apply` 실행
+1. **deploy**: `kubectl apply` 실행 (변수 확장)
 
 ---
 

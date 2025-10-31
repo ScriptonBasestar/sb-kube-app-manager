@@ -19,6 +19,7 @@ from sbkube.models.config_model import (
     ActionApp,
     ExecApp,
     HelmApp,
+    HookApp,
     KustomizeApp,
     NoopApp,
     SBKubeConfig,
@@ -569,6 +570,78 @@ def deploy_noop_app(
     return True
 
 
+def deploy_hook_app(
+    app_name: str,
+    app: HookApp,
+    base_dir: Path,
+    app_config_dir: Path,
+    kubeconfig: str | None = None,
+    context: str | None = None,
+    namespace: str | None = None,
+    dry_run: bool = False,
+) -> bool:
+    """
+    Hook 앱 배포 (Phase 4: Hook as First-class App).
+
+    HookApp은 독립적인 리소스 관리 앱으로, Phase 2/3의 HookTask를 재사용합니다.
+
+    Args:
+        app_name: 앱 이름
+        app: HookApp 설정
+        base_dir: 프로젝트 루트
+        app_config_dir: 앱 설정 디렉토리
+        kubeconfig: kubeconfig 파일 경로
+        context: kubectl context
+        namespace: 배포 대상 namespace
+        dry_run: dry-run 모드
+
+    Returns:
+        성공 여부
+    """
+    console.print(f"[cyan]🪝 Deploying Hook app: {app_name}[/cyan]")
+
+    # HookApp의 tasks가 비어있으면 경고
+    if not app.tasks:
+        console.print("[yellow]⚠️  No tasks defined in Hook app, skipping[/yellow]")
+        return True
+
+    # namespace 결정 (우선순위: 앱 설정 > 명령어 인자)
+    target_namespace = app.namespace or namespace
+
+    # HookExecutor 초기화
+    hook_executor = HookExecutor(
+        base_dir=base_dir,
+        work_dir=app_config_dir,
+        dry_run=dry_run,
+        kubeconfig=kubeconfig,
+        context=context,
+        namespace=target_namespace,
+    )
+
+    # Hook Context 준비
+    hook_context = {
+        "namespace": target_namespace,
+        "app_name": app_name,
+        "dry_run": dry_run,
+    }
+
+    # Hook Tasks 실행 (Phase 2/3 로직 재사용)
+    console.print(f"  Executing {len(app.tasks)} tasks...")
+    success = hook_executor.execute_hook_tasks(
+        app_name=app_name,
+        tasks=app.tasks,
+        hook_type="hook_app_deploy",  # HookApp 전용 hook_type
+        context=hook_context,
+    )
+
+    if success:
+        console.print(f"[green]✅ Hook app deployed: {app_name}[/green]")
+    else:
+        console.print(f"[red]❌ Hook app failed: {app_name}[/red]")
+
+    return success
+
+
 @click.command(name="deploy")
 @click.option(
     "--app-dir",
@@ -856,6 +929,17 @@ def cmd(
                 elif isinstance(app, NoopApp):
                     success = deploy_noop_app(
                         app_name_iter, app, BASE_DIR, APP_CONFIG_DIR, dry_run
+                    )
+                elif isinstance(app, HookApp):
+                    success = deploy_hook_app(
+                        app_name_iter,
+                        app,
+                        BASE_DIR,
+                        APP_CONFIG_DIR,
+                        kubeconfig,
+                        context,
+                        namespace,
+                        dry_run,
                     )
                 else:
                     console.print(

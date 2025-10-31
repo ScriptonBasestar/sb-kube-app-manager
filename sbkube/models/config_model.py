@@ -435,6 +435,112 @@ class AppHooks(ConfigBaseModel):
 
 
 # ============================================================================
+# Phase 4: HookApp - Hook as First-class App
+# ============================================================================
+
+
+class HookApp(ConfigBaseModel):
+    """
+    Hook 타입 앱 (독립적인 리소스 관리).
+
+    Phase 3의 HookTask를 앱 레벨로 승격한 형태.
+    다른 앱의 post_deploy_tasks를 별도 앱으로 분리하여 관리.
+
+    Examples:
+        # cert-manager와 issuers를 별도 앱으로 분리
+        apps:
+          cert-manager:
+            type: helm
+            chart: jetstack/cert-manager
+
+          cert-manager-issuers:
+            type: hook
+            depends_on:
+              - cert-manager
+            tasks:
+              - type: manifests
+                name: deploy-issuers
+                files:
+                  - manifests/issuers/cluster-issuer-letsencrypt-prd.yaml
+                validation:
+                  kind: ClusterIssuer
+                  wait_for_ready: true
+
+          wildcard-certificate:
+            type: hook
+            depends_on:
+              - cert-manager-issuers
+            tasks:
+              - type: inline
+                name: create-certificate
+                content:
+                  apiVersion: cert-manager.io/v1
+                  kind: Certificate
+                  metadata:
+                    name: wildcard-cert
+                  spec:
+                    secretName: wildcard-cert-tls
+    """
+
+    type: Literal["hook"] = "hook"
+
+    # Hook Tasks (Phase 2/3 기능 재사용)
+    tasks: list[HookTask] = Field(
+        default_factory=list,
+        description="실행할 Hook Tasks (manifests, inline, command)",
+        json_schema_extra={
+            "examples": [
+                [
+                    {"type": "manifests", "name": "deploy-config", "files": ["manifests/config.yaml"]},
+                    {"type": "inline", "name": "create-secret", "content": {"apiVersion": "v1", "kind": "Secret"}},
+                    {"type": "command", "name": "verify", "command": "kubectl get pods"},
+                ]
+            ]
+        },
+    )
+
+    # Phase 3 기능 (앱 레벨 validation, dependency, rollback)
+    validation: dict[str, Any] | None = Field(
+        default=None,
+        description="앱 전체 검증 규칙 (ValidationRule 타입)",
+    )
+    dependency: dict[str, Any] | None = Field(
+        default=None,
+        description="앱 전체 의존성 설정 (DependencyConfig 타입)",
+    )
+    rollback: dict[str, Any] | None = Field(
+        default=None,
+        description="앱 전체 롤백 정책 (RollbackPolicy 타입)",
+    )
+
+    # 공통 필드
+    namespace: str | None = Field(
+        default=None,
+        description="배포 대상 namespace (지정하지 않으면 기본 namespace 사용)",
+    )
+    depends_on: list[str] = Field(
+        default_factory=list,
+        description="의존하는 앱 이름 리스트 (선행 배포 필요)",
+        json_schema_extra={"examples": [["cert-manager"], ["database", "redis"]]},
+    )
+    enabled: bool = Field(
+        default=True,
+        description="앱 활성화 여부 (False면 배포 건너뛰기)",
+    )
+    labels: dict[str, str] = Field(
+        default_factory=dict,
+        description="앱에 적용할 레이블",
+    )
+    annotations: dict[str, str] = Field(
+        default_factory=dict,
+        description="앱에 적용할 주석",
+    )
+
+    # HookApp은 hooks를 가질 수 없음 (재귀 방지)
+    # hooks 필드는 의도적으로 제외
+
+
+# ============================================================================
 # App Type Models (Discriminated Union)
 # ============================================================================
 
@@ -847,7 +953,7 @@ class NoopApp(ConfigBaseModel):
 # ============================================================================
 
 AppConfig = Annotated[
-    HelmApp | YamlApp | ActionApp | ExecApp | GitApp | KustomizeApp | HttpApp | NoopApp,
+    HelmApp | YamlApp | ActionApp | ExecApp | GitApp | KustomizeApp | HttpApp | NoopApp | HookApp,
     Field(discriminator="type"),
 ]
 

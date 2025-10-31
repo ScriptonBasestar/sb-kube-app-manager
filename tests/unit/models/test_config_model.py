@@ -12,6 +12,7 @@ from sbkube.models.config_model import (
     ExecApp,
     GitApp,
     HelmApp,
+    HookApp,
     HttpApp,
     KustomizeApp,
     SBKubeConfig,
@@ -435,6 +436,215 @@ class TestHttpApp:
 
 
 # ============================================================================
+# HookApp Tests (Phase 4)
+# ============================================================================
+
+
+class TestHookApp:
+    """Tests for HookApp model (Phase 4: Hook as First-class App)."""
+
+    def test_hook_app_basic(self):
+        """Test HookApp with minimal configuration."""
+        app = HookApp(
+            type="hook",
+            tasks=[
+                {
+                    "type": "command",
+                    "name": "verify-deployment",
+                    "command": "kubectl get pods",
+                }
+            ],
+        )
+        assert app.type == "hook"
+        assert len(app.tasks) == 1
+        assert app.tasks[0].type == "command"
+        assert app.tasks[0].name == "verify-deployment"
+
+    def test_hook_app_with_multiple_tasks(self):
+        """Test HookApp with multiple tasks."""
+        app = HookApp(
+            type="hook",
+            tasks=[
+                {
+                    "type": "manifests",
+                    "name": "deploy-config",
+                    "files": ["manifests/config.yaml"],
+                },
+                {
+                    "type": "inline",
+                    "name": "create-secret",
+                    "content": {"apiVersion": "v1", "kind": "Secret"},
+                },
+                {
+                    "type": "command",
+                    "name": "verify",
+                    "command": "kubectl get pods",
+                },
+            ],
+        )
+        assert len(app.tasks) == 3
+        assert app.tasks[0].type == "manifests"
+        assert app.tasks[1].type == "inline"
+        assert app.tasks[2].type == "command"
+
+    def test_hook_app_with_namespace(self):
+        """Test HookApp with custom namespace."""
+        app = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+            namespace="custom-ns",
+        )
+        assert app.namespace == "custom-ns"
+
+    def test_hook_app_with_dependencies(self):
+        """Test HookApp with dependencies."""
+        app = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+            depends_on=["cert-manager", "database"],
+        )
+        assert app.depends_on == ["cert-manager", "database"]
+
+    def test_hook_app_with_validation(self):
+        """Test HookApp with validation rules."""
+        app = HookApp(
+            type="hook",
+            tasks=[
+                {
+                    "type": "manifests",
+                    "name": "deploy-config",
+                    "files": ["config.yaml"],
+                }
+            ],
+            validation={
+                "kind": "ConfigMap",
+                "wait_for_ready": True,
+                "timeout": 120,
+            },
+        )
+        assert app.validation is not None
+        assert app.validation["kind"] == "ConfigMap"
+        assert app.validation["wait_for_ready"] is True
+
+    def test_hook_app_with_dependency_config(self):
+        """Test HookApp with dependency configuration."""
+        app = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+            dependency={
+                "depends_on": ["app1"],
+                "wait_for": [
+                    {
+                        "kind": "Deployment",
+                        "namespace": "default",
+                        "label_selector": "app=myapp",
+                    }
+                ],
+            },
+        )
+        assert app.dependency is not None
+        assert app.dependency["depends_on"] == ["app1"]
+        assert len(app.dependency["wait_for"]) == 1
+
+    def test_hook_app_with_rollback_policy(self):
+        """Test HookApp with rollback policy."""
+        app = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+            rollback={
+                "enabled": True,
+                "on_failure": "always",
+                "commands": ["kubectl delete configmap test"],
+            },
+        )
+        assert app.rollback is not None
+        assert app.rollback["enabled"] is True
+        assert app.rollback["on_failure"] == "always"
+
+    def test_hook_app_enabled_flag(self):
+        """Test HookApp enabled flag."""
+        app_enabled = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+            enabled=True,
+        )
+        app_disabled = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+            enabled=False,
+        )
+        assert app_enabled.enabled is True
+        assert app_disabled.enabled is False
+
+    def test_hook_app_empty_tasks_allowed(self):
+        """Test HookApp with empty tasks (should be allowed, but warned in deploy)."""
+        app = HookApp(type="hook", tasks=[])
+        assert app.type == "hook"
+        assert len(app.tasks) == 0
+
+    def test_hook_app_no_hooks_field(self):
+        """Test that HookApp does not have hooks field (prevent recursion)."""
+        app = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+        )
+        # HookApp should not have a 'hooks' attribute
+        assert not hasattr(app, "hooks")
+
+    def test_hook_app_with_labels_and_annotations(self):
+        """Test HookApp with labels and annotations."""
+        app = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+            labels={"app": "hook-app", "env": "prod"},
+            annotations={"version": "1.0.0", "owner": "team-platform"},
+        )
+        assert app.labels == {"app": "hook-app", "env": "prod"}
+        assert app.annotations == {"version": "1.0.0", "owner": "team-platform"}
+
+    def test_hook_app_with_all_phase3_features(self):
+        """Test HookApp with all Phase 3 features combined."""
+        app = HookApp(
+            type="hook",
+            tasks=[
+                {
+                    "type": "manifests",
+                    "name": "deploy-config",
+                    "files": ["config.yaml"],
+                }
+            ],
+            namespace="test-ns",
+            depends_on=["database"],
+            validation={
+                "kind": "ConfigMap",
+                "wait_for_ready": True,
+                "timeout": 60,
+            },
+            dependency={
+                "depends_on": ["database"],
+                "wait_for": [{"kind": "Pod", "namespace": "test-ns"}],
+            },
+            rollback={
+                "enabled": True,
+                "on_failure": "always",
+                "commands": ["kubectl delete configmap test"],
+            },
+            labels={"app": "hook-app"},
+            annotations={"version": "1.0.0"},
+            enabled=True,
+        )
+        assert app.type == "hook"
+        assert app.namespace == "test-ns"
+        assert app.depends_on == ["database"]
+        assert app.validation is not None
+        assert app.dependency is not None
+        assert app.rollback is not None
+        assert app.labels == {"app": "hook-app"}
+        assert app.annotations == {"version": "1.0.0"}
+        assert app.enabled is True
+
+
+# ============================================================================
 # SBKubeConfig Tests
 # ============================================================================
 
@@ -625,3 +835,56 @@ class TestSBKubeConfig:
                 },
             )
         # Should fail Kubernetes naming validation
+
+    def test_sbkube_config_with_hook_app(self):
+        """Test SBKubeConfig with HookApp (Phase 4)."""
+        config = SBKubeConfig(
+            namespace="default",
+            apps={
+                "cert-manager": HelmApp(type="helm", chart="jetstack/cert-manager"),
+                "post-deploy-hooks": HookApp(
+                    type="hook",
+                    tasks=[
+                        {
+                            "type": "command",
+                            "name": "verify-deployment",
+                            "command": "kubectl get pods",
+                        }
+                    ],
+                    depends_on=["cert-manager"],
+                ),
+            },
+        )
+        assert "post-deploy-hooks" in config.apps
+        assert config.apps["post-deploy-hooks"].type == "hook"
+        assert isinstance(config.apps["post-deploy-hooks"], HookApp)
+
+    def test_sbkube_config_hook_app_deployment_order(self):
+        """Test deployment order with HookApp dependencies."""
+        config = SBKubeConfig(
+            namespace="default",
+            apps={
+                "database": HelmApp(type="helm", chart="cloudnative-pg/cloudnative-pg"),
+                "verify-db": HookApp(
+                    type="hook",
+                    tasks=[
+                        {
+                            "type": "command",
+                            "name": "verify",
+                            "command": "kubectl get pods -l app=postgres",
+                        }
+                    ],
+                    depends_on=["database"],
+                ),
+                "backend": HelmApp(
+                    type="helm",
+                    chart="my-org/backend",
+                    depends_on=["verify-db"],
+                ),
+            },
+        )
+        order = config.get_deployment_order()
+        # database must come before verify-db
+        assert order.index("database") < order.index("verify-db")
+        # verify-db must come before backend
+        assert order.index("verify-db") < order.index("backend")

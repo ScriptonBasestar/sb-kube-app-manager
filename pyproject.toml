@@ -1,11 +1,31 @@
 [project]
 name = "sbkube"
-version = "0.5.0"
+version = "0.6.0"
 license = "MIT"
 description = "k3s용 헬름+yaml+git 배포 자동화 CLI 도구"
 authors = [{ name = "archmagece", email = "archmagece@users.noreply.github.com" }]
 requires-python = ">=3.12"
 readme = "README.md"
+keywords = ["kubernetes", "k3s", "helm", "deployment", "cli", "devops", "automation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Systems Administration",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: POSIX :: Linux",
+]
+
+[project.urls]
+Homepage = "https://github.com/archmagece/sb-kube-app-manager"
+Documentation = "https://github.com/archmagece/sb-kube-app-manager/tree/main/docs"
+Repository = "https://github.com/archmagece/sb-kube-app-manager"
+"Bug Tracker" = "https://github.com/archmagece/sb-kube-app-manager/issues"
+"Product Definition" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/00-product/product-definition.md"
+"API Reference" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/10-modules/sbkube/API_CONTRACT.md"
+"Getting Started" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/01-getting-started/README.md"
 
 dependencies = [
   "click>=8.1",

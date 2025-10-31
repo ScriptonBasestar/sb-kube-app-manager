@@ -1,8 +1,24 @@
-# 📚 SBKube 문서 가이드
+# 📚 SBKube Documentation Index
 
-> k3s용 헬름+yaml+git 배포 자동화 CLI 도구
+> Kubernetes deployment automation CLI tool for k3s with Helm, YAML, and Git integration
+
+**SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML manifests, and Git repositories into a unified declarative configuration.
 
 **SBKube**는 YAML, Helm, Git 리소스를 로컬에서 정의하고 Kubernetes 환경에 일관되게 배포할 수 있는 CLI 도구입니다.
+
+---
+
+## 🔍 Quick Navigation
+
+| I want to... | Go to |
+|--------------|-------|
+| **Understand SBKube** | [PRODUCT.md](../PRODUCT.md) |
+| **Install and use** | [Getting Started](01-getting-started/README.md) |
+| **Configure deployments** | [Configuration Guide](03-configuration/config-schema.md) |
+| **Learn commands** | [Commands Reference](02-features/commands.md) |
+| **Troubleshoot** | [Troubleshooting](07-troubleshooting/README.md) |
+| **Contribute code** | [Developer Guide](04-development/README.md) |
+| **Understand architecture** | [Architecture](10-modules/sbkube/ARCHITECTURE.md) |
 
 ---
 
@@ -147,5 +163,51 @@ sbkube deploy --base-dir . --app-dir config --namespace <namespace>
 
 ---
 
-*📅 마지막 업데이트: 2025-10-30 | 📋 문서 버전: v1.1*
-*🎯 SBKube v0.5.0 기준 | 🇰🇷 한국어 우선 지원*
+## 🤖 Context7 Integration (For LLMs)
+
+This documentation is optimized for Context7 and AI agent access:
+
+### Library Information
+- **Library ID**: `/archmagece/sbkube` (registration pending)
+- **Repository**: https://github.com/archmagece/sb-kube-app-manager
+- **Documentation URL**: https://github.com/archmagece/sb-kube-app-manager/tree/main/docs
+- **Primary Language**: English (with Korean translations)
+- **Code Examples**: 100+ snippets across documentation
+
+### Key Topics for LLM Queries
+
+**Commands**:
+- `prepare` - Download Helm charts and Git repositories
+- `build` - Build Docker images
+- `template` - Render Kubernetes manifests
+- `deploy` - Apply manifests to cluster
+- `apply` - Unified workflow (all stages)
+- `status` - Check deployment status
+- `history` - View deployment history
+- `rollback` - Rollback to previous version
+
+**Configuration**:
+- `config.yaml` - Application definitions and deployment specs
+- `sources.yaml` - External sources (Helm repos, Git repos)
+- Helm chart customization - `overrides` and `removes`
+- Dependency management - `depends_on` configuration
+
+**Architecture**:
+- Multi-stage workflow: prepare → build → template → deploy
+- Pydantic-based validation
+- SQLAlchemy state management
+- Click CLI framework
+
+### Document Priority for AI Agents
+
+1. **Product Understanding**: [PRODUCT.md](../PRODUCT.md) → [product-spec.md](00-product/product-spec.md)
+2. **Implementation**: [ARCHITECTURE.md](10-modules/sbkube/ARCHITECTURE.md) → [API_CONTRACT.md](10-modules/sbkube/API_CONTRACT.md)
+3. **Usage**: [commands.md](02-features/commands.md) → [config-schema.md](03-configuration/config-schema.md)
+4. **Troubleshooting**: [troubleshooting/](07-troubleshooting/)
+
+See [CLAUDE.md](../CLAUDE.md) for complete AI agent guidelines.
+
+---
+
+*📅 Last Updated: 2025-10-31 | 📋 Documentation Version: v1.2*
+*🎯 SBKube v0.6.0 | 🌐 English + Korean*

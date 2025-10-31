@@ -2,91 +2,142 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)](<>)
-[![Repo](https://img.shields.io/badge/GitHub-kube--app--manaer-blue?logo=github)](https://github.com/ScriptonBasestar/kube-app-manaer)
-[![Version](https://img.shields.io/badge/version-0.5.0-blue)](CHANGELOG.md)
+[![Repo](https://img.shields.io/badge/GitHub-kube--app--manaer-blue?logo=github)](https://github.com/archmagece/sb-kube-app-manager)
+[![Version](https://img.shields.io/badge/version-0.6.0-blue)](CHANGELOG.md)
+
+**SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML manifests, and Git repositories into a unified declarative configuration.
 
 **SBKube**는 `YAML`, `Helm`, `Git` 리소스를 로컬에서 정의하고 `k3s` 등 Kubernetes 환경에 일관되게 배포할 수 있는 CLI 도구입니다.
 
+> Kubernetes deployment automation CLI tool for k3s with Helm, YAML, and Git integration
 > k3s용 헬름+yaml+git 배포 자동화 CLI 도구
 
 ______________________________________________________________________
 
-## 🚀 빠른 시작
+## 🚀 Quick Start
+
+### Installation
 
 ```bash
-# 설치
 pip install sbkube
-
-# 통합 워크플로우 (권장)
-sbkube apply --app-dir config --namespace <namespace>
-
-# 또는 단계별 실행
-sbkube prepare --base-dir . --app-dir config
-sbkube build --base-dir . --app-dir config
-sbkube template --base-dir . --app-dir config --output-dir rendered/
-sbkube deploy --base-dir . --app-dir config --namespace <namespace>
 ```
 
-## 📚 문서 구조
+### Basic Usage
 
-### 제품 이해 (Product-First)
+```bash
+# Unified workflow (recommended)
+sbkube apply --app-dir config --namespace production
 
-완전한 제품 정의 및 기능 명세는 \*\*[PRODUCT.md](PRODUCT.md)\*\*를 참조하세요.
+# Or step-by-step execution
+sbkube prepare --app-dir config    # Download Helm charts and Git repos
+sbkube build --app-dir config      # Build custom images (if needed)
+sbkube template --app-dir config   # Render Kubernetes manifests
+sbkube deploy --app-dir config --namespace production  # Deploy to cluster
+```
 
-- 📋 [제품 정의서](docs/00-product/product-definition.md) - 문제 정의 및 해결 방안
-- 📖 [기능 명세서](docs/00-product/product-spec.md) - 전체 기능 및 사용자 시나리오
-- 🗺️ [비전과 로드맵](docs/00-product/vision-roadmap.md) - 장기 비전 및 개발 계획
-- 👥 [대상 사용자](docs/00-product/target-users.md) - 사용자 페르소나 및 여정
+### Configuration Example
 
-### 사용자 가이드
+Create a `config.yaml` file:
 
-- 📖 [시작하기](docs/01-getting-started/) - 설치 및 빠른 시작
-- ⚙️ [기능 가이드](docs/02-features/) - 명령어 및 기능 설명
-- 🔧 [설정 가이드](docs/03-configuration/) - 설정 파일 작성법
-- 📖 [사용 예제](examples/) - 다양한 배포 시나리오
-- 🔍 [문제 해결](docs/07-troubleshooting/) - 일반적인 문제 및 해결책
+```yaml
+namespace: production
 
-### 개발자 리소스
+apps:
+  grafana:
+    type: helm
+    chart: grafana/grafana
+    version: 6.50.0
+    values:
+      - grafana.yaml
 
-- 👨‍💻 [개발자 가이드](docs/04-development/) - 개발 환경 구성
-- 🤖 [AI 작업 가이드](CLAUDE.md) - AI 에이전트를 위한 통합 작업 가이드
-- 🏗️ [모듈 아키텍처](docs/10-modules/sbkube/ARCHITECTURE.md) - 상세 아키텍처 설계
+  backend:
+    type: helm
+    chart: ./charts/backend
+    depends_on:
+      - grafana
+```
 
-전체 문서 인덱스는 \*\*[docs/INDEX.md](docs/INDEX.md)\*\*에서 확인하세요.
+Then deploy:
 
-## ⚙️ 주요 기능
+```bash
+sbkube apply --app-dir . --namespace production
+```
 
-### 다단계 워크플로우
+## 📚 Documentation
+
+### Product Understanding
+
+Complete product definition and specifications: **[PRODUCT.md](PRODUCT.md)**
+
+- 📋 [Product Definition](docs/00-product/product-definition.md) - Problem statement and solutions
+- 📖 [Feature Specification](docs/00-product/product-spec.md) - Complete features and user scenarios
+- 🗺️ [Vision & Roadmap](docs/00-product/vision-roadmap.md) - Long-term vision and development plan
+- 👥 [Target Users](docs/00-product/target-users.md) - User personas and journeys
+
+### User Guides
+
+- 📖 [Getting Started](docs/01-getting-started/) - Installation and quick start
+- ⚙️ [Features](docs/02-features/) - Commands and feature descriptions
+- 🔧 [Configuration](docs/03-configuration/) - Configuration file guide
+- 📖 [Examples](examples/) - Various deployment scenarios
+- 🔍 [Troubleshooting](docs/07-troubleshooting/) - Common issues and solutions
+
+### Developer Resources
+
+- 👨‍💻 [Developer Guide](docs/04-development/) - Development environment setup
+- 🤖 [AI Agent Guide](CLAUDE.md) - Integrated guide for AI agents
+- 🏗️ [Architecture](docs/10-modules/sbkube/ARCHITECTURE.md) - Detailed architecture design
+- 📄 [API Contract](docs/10-modules/sbkube/API_CONTRACT.md) - API reference
+
+Full documentation index: **[docs/INDEX.md](docs/INDEX.md)**
+
+## ⚙️ Key Features
+
+### Multi-Stage Workflow
 
 ```
 prepare → build → template → deploy
 ```
 
-또는 **통합 실행**: `sbkube apply` (4단계 자동 실행)
+Or **unified execution**: `sbkube apply` (runs all 4 stages automatically)
 
-### 지원 애플리케이션 타입
+**Stage descriptions:**
+- `prepare`: Download Helm charts and clone Git repositories
+- `build`: Build Docker images (if needed)
+- `template`: Render Kubernetes manifests from Helm charts
+- `deploy`: Apply manifests to Kubernetes cluster
 
-- **helm** - Helm 차트 (원격/로컬)
-- **yaml** - YAML 매니페스트
-- **git** - Git 리포지토리
-- **http** - HTTP 파일 다운로드
-- **action** - 커스텀 액션 (apply/delete)
-- **exec** - 커스텀 명령어 실행
+### Supported Application Types
 
-### 설정 기반 관리
+SBKube supports various deployment sources:
 
-- **config.yaml** - 애플리케이션 정의 및 배포 스펙 (간소화된 현재 버전 형식)
-- **sources.yaml** - 외부 소스 정의 (Helm repos, Git repos)
-- **values/** - Helm 값 파일 디렉토리
+| Type | Description | Example |
+|------|-------------|---------|
+| **helm** | Helm charts (remote/local) | `chart: grafana/grafana` |
+| **yaml** | Raw YAML manifests | `chart: ./manifests/` |
+| **git** | Git repositories | `git_url: https://github.com/...` |
+| **http** | HTTP file downloads | `url: https://example.com/manifest.yaml` |
+| **action** | Custom actions (apply/delete) | `action: apply` |
+| **exec** | Custom command execution | `exec: ./scripts/deploy.sh` |
 
-### 차트 커스터마이징 (현재 버전)
+### Configuration-Based Management
 
-- **overrides** - 차트 내 파일 교체
-- **removes** - 차트 내 파일 삭제
+SBKube uses declarative YAML files for all configurations:
 
-### 설정 예제 (현재 버전)
+- **config.yaml** - Application definitions and deployment specs
+- **sources.yaml** - External sources (Helm repos, Git repos)
+- **values/** - Helm values files directory
 
-**간단한 Helm 배포**:
+### Helm Chart Customization
+
+Advanced chart customization without forking:
+
+- **overrides** - Replace files in chart templates
+- **removes** - Remove files from chart templates
+
+### Configuration Examples
+
+**Simple Helm Deployment**:
 
 ```yaml
 namespace: my-namespace
@@ -100,7 +151,7 @@ apps:
       - grafana.yaml
 ```
 
-**차트 커스터마이징**:
+**Chart Customization**:
 
 ```yaml
 apps:
@@ -108,12 +159,12 @@ apps:
     type: helm
     chart: cloudnative-pg/cloudnative-pg
     overrides:
-      templates/secret.yaml: my-custom-secret.yaml
+      templates/secret.yaml: my-custom-secret.yaml  # Replace chart file
     removes:
-      - templates/serviceaccount.yaml
+      - templates/serviceaccount.yaml               # Remove chart file
 ```
 
-**의존성 관리**:
+**Dependency Management**:
 
 ```yaml
 apps:
@@ -125,10 +176,87 @@ apps:
     type: helm
     chart: ./charts/backend
     depends_on:
-      - database
+      - database  # Deploy backend after database
 ```
 
-더 많은 예제는 [examples/](examples/) 디렉토리를 참조하세요.
+More examples: [examples/](examples/) directory
+
+## 📊 상태 관리 및 모니터링
+
+### 새로운 통합 명령어 (v0.6.0+)
+
+SBKube는 배포 상태 관리를 위한 직관적인 명령어를 제공합니다:
+
+```bash
+# 클러스터 상태 확인
+sbkube status
+
+# App-group별 그룹핑
+sbkube status --by-group
+
+# 특정 app-group 상세 조회
+sbkube status app_000_infra_network
+
+# 의존성 트리 시각화
+sbkube status --deps
+
+# Pod 헬스체크 상세 정보
+sbkube status --health-check
+
+# 배포 히스토리
+sbkube history
+
+# 두 배포 비교
+sbkube history --diff dep_123,dep_456
+
+# Helm values 비교
+sbkube history --values-diff dep_123,dep_456
+
+# 롤백
+sbkube rollback dep_123
+```
+
+### App-Group 기반 관리
+
+애플리케이션을 논리적 그룹으로 관리할 수 있습니다:
+
+```yaml
+apps:
+  - name: app_000_infra_network  # 인프라 네트워크 그룹
+    type: helm
+    chart: cilium/cilium
+
+  - name: app_010_data_postgresql  # 데이터 스토리지 그룹
+    type: helm
+    chart: cloudnative-pg/cloudnative-pg
+    deps:
+      - app_000_infra_network
+
+  - name: app_020_app_backend  # 애플리케이션 그룹
+    type: helm
+    chart: ./charts/backend
+    deps:
+      - app_010_data_postgresql
+```
+
+**App-group 네이밍 컨벤션**: `app_{priority}_{category}_{name}`
+- `priority`: 000-999 (배포 우선순위)
+- `category`: infra, data, app 등
+- `name`: 구체적인 애플리케이션 이름
+
+### Deprecated 명령어 마이그레이션
+
+v1.0.0에서 제거될 예정인 명령어:
+
+```bash
+# 이전 (deprecated)          # 새로운 (권장)
+sbkube cluster status      → sbkube status
+sbkube state list          → sbkube history
+sbkube state show <id>     → sbkube history --show <id>
+sbkube state rollback <id> → sbkube rollback <id>
+```
+
+자세한 내용은 [CHANGELOG.md](CHANGELOG.md#unreleased)를 참조하세요.
 
 ## 🔄 마이그레이션
 

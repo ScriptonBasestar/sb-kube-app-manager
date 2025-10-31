@@ -3,175 +3,87 @@
 > **참고**: 이 문서의 과거 버전 예제에는 Bitnami 차트 참조가 포함되어 있습니다.
 > 현재 버전(v0.5.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
 
-## [Unreleased] - 2025-10-30
+## [Unreleased]
 
-### ✨ New Features
+### Planned
+- State management improvements (rollback command)
+- Enhanced validation with pre/post deployment checks
+- Interactive CLI wizard for initialization
 
-**Hooks System**
+---
 
-SBKube에 강력한 hooks 기능이 추가되었습니다! 이제 명령어 실행 전후 및 앱 배포 전후에 커스텀 스크립트를 실행할 수 있습니다.
-
-- **명령어 수준 hooks (Command-level)**
-  - 전역 훅: 모든 앱 배포에 적용되는 pre/post/on_failure 훅
-  - 지원 명령어: `prepare`, `build`, `deploy`
-
-- **앱 수준 hooks (App-level)**
-  - 개별 앱에 특화된 훅
-  - 지원 타입: pre_prepare, post_prepare, pre_build, post_build, pre_deploy, post_deploy, on_deploy_failure
-
-- **주요 기능**
-  - 환경변수 자동 주입 (SBKUBE_APP_NAME, SBKUBE_NAMESPACE, SBKUBE_RELEASE_NAME)
-  - dry-run 모드 지원
-  - 타임아웃 관리 (기본 300초)
-  - 상세한 실행 로그
-
-```yaml
-# config.yaml 예시
-namespace: production
-
-# 전역 훅
-hooks:
-  deploy:
-    pre:
-      - echo "Starting deployment"
-      - kubectl cluster-info
-    post:
-      - echo "Deployment completed"
-    on_failure:
-      - ./scripts/rollback.sh
-
-# 앱별 훅
-apps:
-  database:
-    type: helm
-    chart: bitnami/postgresql
-    hooks:
-      pre_deploy:
-        - ./scripts/backup-db.sh
-      post_deploy:
-        - kubectl wait --for=condition=ready pod -l app=postgresql
-        - ./scripts/migrate.sh
-      on_deploy_failure:
-        - ./scripts/restore-backup.sh
-```
-
-**관련 파일**:
-- `sbkube/models/config_model.py`: CommandHooks, AppHooks 모델 추가
-- `sbkube/utils/hook_executor.py`: 훅 실행 엔진 (신규)
-- `sbkube/utils/base_command.py`: 훅 메서드 추가
-- `sbkube/commands/prepare.py`: prepare 훅 통합
-- `sbkube/commands/build.py`: build 훅 통합
-- `sbkube/commands/deploy.py`: deploy 훅 통합
-
-**문서 및 예제**:
-- `docs/02-features/hooks.md`: 상세 hooks 가이드
-- `examples/hooks/`: 기본 사용 예제
-- `examples/hooks/README.md`: 실전 사용 사례
+## [0.5.0] - 2025-10-31
 
 ### 🔥 Breaking Changes
 
-**CLI 옵션 이름 변경**
+**1. Helm Chart Format** - `repo` + `chart` → 단일 `chart` 필드로 통합
 
-이 릴리스에서는 CLI 옵션의 일관성과 명확성을 위해 두 가지 주요 옵션 이름이 변경되었습니다:
+```yaml
+# Before (v0.2.x)
+apps:
+  grafana:
+    repo: grafana
+    chart: grafana
 
-1. **`--env` → `--profile`** (모든 명령어)
-   - 환경 프로파일을 지정하는 옵션명이 더 명확하게 변경되었습니다
-   - 기존: `sbkube deploy --env production`
-   - 신규: `sbkube deploy --profile production`
-   - 영향: `sbkube --env` 옵션을 사용하는 모든 스크립트
+# After (v0.5.0+)
+apps:
+  grafana:
+    chart: grafana/grafana  # repo/chart format
+```
 
-2. **`--sources` → `--source`** (prepare, apply 명령어)
-   - 단수형 옵션명으로 변경하여 CLI 관례를 따르도록 개선
-   - 기존: `sbkube prepare --sources custom-sources.yaml`
-   - 신규: `sbkube prepare --source custom-sources.yaml`
-   - 영향: `prepare`, `apply` 명령어에서 `--sources` 옵션을 사용하는 스크립트
+**2. CLI Options Renamed**
+- `--env` → `--profile` (환경 프로파일 지정)
+- `--sources` → `--source` (소스 설정 파일)
 
-**마이그레이션 가이드**
-- 모든 스크립트와 자동화 도구에서 위 옵션명을 업데이트해야 합니다
-- 내부 변수명(`sources_file`, `sources_file_name`)은 변경되지 않았습니다
-- 설정 파일(`config.yaml`, `sources.yaml`)은 변경할 필요가 없습니다
-- 하위 호환성은 제공되지 않습니다 (hard breaking change)
+**Migration**: `sbkube migrate --app-dir <path>` 명령어 사용 또는 [마이그레이션 가이드](docs/03-configuration/migration.md) 참조
 
-**버전 업데이트**: Breaking change로 인해 마이너 버전이 0.5.0으로 상향됩니다.
+### ✨ New Features
 
-### ✨ Features
+**1. Hooks System**
+- 명령어/앱 수준 훅 지원 (pre/post/on_failure)
+- 환경변수 자동 주입, dry-run 모드, 타임아웃 관리
+- 예제: [examples/hooks/](examples/hooks/)
 
-- **OCI 레지스트리 지원** (`sbkube/commands/prepare.py`)
-  - Helm OCI 레지스트리에서 차트 직접 pull 가능
-  - `oci_registries` 섹션을 sources.yaml에서 인식
-  - `helm repo add` 없이 OCI 프로토콜로 직접 다운로드
-  - TrueCharts, GitHub Container Registry 등 지원
+**2. OCI Registry Support**
+- Helm OCI 레지스트리 직접 pull 지원
+- TrueCharts, GitHub Container Registry 등 지원
+- 예제: [examples/prepare/helm-oci/](examples/prepare/helm-oci/)
+
+**3. Advanced Chart Customization**
+- `overrides`: 차트 템플릿 파일 추가/교체
+- `removes`: 불필요한 파일 삭제 (Glob 패턴 지원)
+- 예제: [examples/advanced-overrides/](examples/advanced-overrides/)
+
+**4. Dependency Management**
+- 앱 간 의존성 선언 (`depends_on` 필드)
+- 토폴로지 정렬을 통한 자동 배포 순서 결정
+- 순환 의존성 감지 및 오류 리포트
 
 ### 🔧 Improvements
 
-- **HelmApp 모델 확장** (`sbkube/models/config_model.py`)
-  - `is_oci_chart()` 메서드 추가
-  - OCI 프로토콜 감지 기능
-
-- **prepare 명령어 개선**
-  - `prepare_oci_chart()` 함수 추가
-  - OCI와 일반 Helm 레지스트리 자동 구분
-  - 더 명확한 오류 메시지 (힌트 포함)
+- Enhanced error messages with suggestions
+- CLI option naming consistency
+- Performance optimization through parallel processing
+- Better validation and type checking with Pydantic 2.7+
 
 ### 📚 Documentation
 
-- **트러블슈팅 가이드 업데이트** ([docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md))
-  - OCI 레지스트리 오류 케이스 추가
-  - Deprecated Helm 저장소 해결 방법
-  - sources.yaml 설정 오류 가이드
-
-- **OCI 예제 추가** ([examples/prepare/helm-oci/](examples/prepare/helm-oci/))
-  - OCI 레지스트리 사용 예제
-  - sources.yaml 설정 샘플
-  - README.md with 사용 가이드
-
-- **개발 가이드 개선** ([CLAUDE.md](CLAUDE.md))
-  - 버그 수정 시 예제 및 엣지 케이스 추가 정책 명시
-  - 회귀 테스트(regression test) 작성 가이드
-  - 실제 적용 예시 포함 (2025-10-30 OCI 지원)
-
-### 🧪 Testing
-
-- **E2E 테스트 활성화**
-  - `test_prepare_pull_helm_oci` 테스트 skip 해제
-  - OCI 차트 pull 검증
-
-- **엣지 케이스 테스트 전략**
-  - 버그 발견 시 재발 방지를 위한 테스트 추가 정책
-  - examples/edge-cases/ 디렉토리 구조 정의
+- [Migration Guide](docs/03-configuration/migration.md) - v0.2.x to v0.5.0
+- [Troubleshooting Guide](docs/07-troubleshooting/README.md) - OCI registry, deprecated repos
+- 38 실전 예제 추가 (app types, hooks, dependencies, customization)
+- 5개 튜토리얼 완성 (getting started to production)
+- API 계약 명세 추가 ([API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md))
 
 ### 🐛 Bug Fixes
 
-- **일반적인 오류 케이스 해결**
-  - Helm repo가 sources.yaml에 없을 때 명확한 안내
-  - OCI 레지스트리와 일반 Helm repo 구분
-  - Deprecated 저장소 사용 시 가이드 제공
+- Security: Removed `shell=True` from subprocess calls
+- Validation: Fixed config parsing for OCI charts
+- Dependencies: Improved circular dependency detection
 
-### 🎯 Development Policy
+### ⬆️ Upgrades
 
-- **버그 수정 시 필수 작업**
-  1. 재현 테스트 작성
-  2. 예제 추가 (`examples/`)
-  3. 엣지 케이스 테스트 작성
-  4. 트러블슈팅 문서 업데이트
-  - 목적: 동일한 버그의 재발 방지
-
-### 📝 Usage Example
-
-```yaml
-# sources.yaml
-oci_registries:
-  browserless:
-    registry: oci://tccr.io/truecharts
-  gabe565:
-    registry: oci://ghcr.io/gabe565/charts
-
-# config.yaml
-apps:
-  browserless:
-    type: helm
-    chart: browserless/browserless-chrome
-```
+- Pydantic: 2.6.x → 2.7+
+- Python: 3.11+ recommended (3.12+ supported)
 
 ## [0.4.10] - 2025-10-29
 

@@ -4,8 +4,7 @@ apps:
   nginx:
     type: helm
     enabled: true
-    chart: nginx
-    repo: bitnami
+    chart: bitnami/nginx  # repo/chart format (v0.5.0+)
     version: "15.0.0"
     values:
       service:

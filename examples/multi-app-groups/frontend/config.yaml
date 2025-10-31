@@ -5,8 +5,7 @@ apps:
   nginx-frontend:
     type: helm
     enabled: true
-    repo: bitnami
-    chart: nginx
+    chart: bitnami/nginx  # repo/chart format (v0.5.0+)
     version: "18.2.4"
 
     set_values:

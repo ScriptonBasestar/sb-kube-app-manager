@@ -354,7 +354,7 @@ class SourceScheme(InheritableConfigModel):
 
             if missing:
                 raise ValueError(
-                    f"Invalid app_dirs in sources.yaml:\n" + "\n".join(f"  - {msg}" for msg in missing)
+                    "Invalid app_dirs in sources.yaml:\n" + "\n".join(f"  - {msg}" for msg in missing)
                 )
 
             return sorted(app_paths)

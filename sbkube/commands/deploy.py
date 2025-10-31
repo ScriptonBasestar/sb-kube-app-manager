@@ -35,7 +35,6 @@ from sbkube.utils.cluster_config import (
     resolve_cluster_config,
 )
 from sbkube.utils.common import find_all_app_dirs, find_sources_file, run_command
-from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
@@ -387,7 +386,7 @@ def deploy_exec_app(
             continue
 
         console.print(f"  Running: {command}")
-        return_code, stdout, stderr = run_command(command, shell=True, timeout=60)
+        return_code, stdout, stderr = run_command(command, timeout=60)
 
         if return_code != 0:
             reason = _get_connection_error_reason(stdout, stderr)
@@ -560,8 +559,8 @@ def cmd(
     sources_file_path = BASE_DIR / "sources.yaml"
     sources_config = None
     if sources_file_path.exists():
-        from sbkube.utils.file_loader import load_config_file
         from sbkube.models.sources_model import SourceScheme
+        from sbkube.utils.file_loader import load_config_file
         try:
             sources_data = load_config_file(sources_file_path)
             sources_config = SourceScheme(**sources_data)

@@ -4,8 +4,7 @@ This module provides functionality to cache and retrieve Kubernetes cluster stat
 information in YAML format with TTL (Time To Live) support.
 """
 
-import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -54,7 +53,7 @@ class ClusterCache:
         cache_data = {
             "context": self.context,
             "cluster_name": self.cluster,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "ttl_seconds": ttl_seconds,
             **data,
         }
@@ -114,8 +113,8 @@ class ClusterCache:
             cached_time = datetime.fromisoformat(timestamp_str)
             # Ensure timezone awareness for comparison
             if cached_time.tzinfo is None:
-                cached_time = cached_time.replace(tzinfo=timezone.utc)
-            current_time = datetime.now(timezone.utc)
+                cached_time = cached_time.replace(tzinfo=UTC)
+            current_time = datetime.now(UTC)
 
             # Use provided TTL or fall back to cached TTL
             ttl = ttl_seconds if ttl_seconds is not None else data.get("ttl_seconds", DEFAULT_CACHE_TTL_SECONDS)
@@ -144,8 +143,8 @@ class ClusterCache:
             cached_time = datetime.fromisoformat(timestamp_str)
             # Ensure timezone awareness for comparison
             if cached_time.tzinfo is None:
-                cached_time = cached_time.replace(tzinfo=timezone.utc)
-            current_time = datetime.now(timezone.utc)
+                cached_time = cached_time.replace(tzinfo=UTC)
+            current_time = datetime.now(UTC)
             return (current_time - cached_time).total_seconds()
         except Exception:
             return None

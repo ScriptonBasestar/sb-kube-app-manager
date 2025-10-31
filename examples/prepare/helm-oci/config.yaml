@@ -8,8 +8,7 @@ apps:
   browserless:
     type: helm
     enabled: true
-    repo: browserless  # OCI registry name from sources.yaml
-    chart: browserless-chrome
+    chart: browserless/browserless-chrome  # repo/chart format (v0.5.0+)
     version: "1.0.0"  # Specify version if needed
     values:
       - values/browserless.yaml
@@ -18,8 +17,7 @@ apps:
   uptime-kuma:
     type: helm
     enabled: true
-    repo: gabe565  # OCI registry name from sources.yaml
-    chart: uptime-kuma
+    chart: gabe565/uptime-kuma  # repo/chart format (v0.5.0+)
     version: "2.0.0"
     values:
       - values/uptime-kuma.yaml

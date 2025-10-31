@@ -5,8 +5,7 @@ apps:
   postgres-database:
     type: helm
     enabled: true
-    repo: bitnami
-    chart: postgresql
+    chart: bitnami/postgresql  # repo/chart format (v0.5.0+)
     version: "16.2.4"
 
     set_values:
@@ -20,8 +19,7 @@ apps:
   redis-cache:
     type: helm
     enabled: true
-    repo: bitnami
-    chart: redis
+    chart: bitnami/redis  # repo/chart format (v0.5.0+)
     version: "19.0.0"
 
     set_values:

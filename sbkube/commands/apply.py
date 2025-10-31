@@ -12,7 +12,6 @@ from rich.console import Console
 
 from sbkube.models.config_model import SBKubeConfig
 from sbkube.utils.common import find_all_app_dirs
-from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
@@ -101,8 +100,8 @@ def cmd(
     sources_file_path = BASE_DIR / sources_file_name
     sources_config = None
     if sources_file_path.exists():
-        from sbkube.utils.file_loader import load_config_file
         from sbkube.models.sources_model import SourceScheme
+        from sbkube.utils.file_loader import load_config_file
         try:
             sources_data = load_config_file(sources_file_path)
             sources_config = SourceScheme(**sources_data)

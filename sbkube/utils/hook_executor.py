@@ -5,6 +5,7 @@ Hook Executor for SBKube.
 """
 
 import os
+import shlex
 import subprocess
 from pathlib import Path
 from typing import Literal
@@ -192,8 +193,8 @@ class HookExecutor:
                 full_env.update(env)
 
             result = subprocess.run(
-                command,
-                shell=True,
+                shlex.split(command),
+                shell=False,
                 cwd=self.work_dir,
                 env=full_env,
                 capture_output=True,

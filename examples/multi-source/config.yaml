@@ -5,8 +5,7 @@ apps:
   web-app:
     type: helm
     enabled: true
-    repo: bitnami
-    chart: nginx
+    chart: bitnami/nginx  # repo/chart format (v0.5.0+)
     version: "18.2.4"
 
     values:
@@ -16,8 +15,7 @@ apps:
   database:
     type: helm
     enabled: true
-    repo: bitnami
-    chart: postgresql
+    chart: bitnami/postgresql  # repo/chart format (v0.5.0+)
     version: "16.2.4"
 
     values:
@@ -27,8 +25,7 @@ apps:
   cache:
     type: helm
     enabled: true
-    repo: bitnami
-    chart: redis
+    chart: bitnami/redis  # repo/chart format (v0.5.0+)
     version: "19.0.0"
 
     values:

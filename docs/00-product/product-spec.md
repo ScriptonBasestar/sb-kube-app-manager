@@ -657,7 +657,34 @@ apps:
 ✅ pre-deploy hook for 'database' completed successfully
 ```
 
-### 6.7 Helm Hooks와의 차이
+### 6.7 고급 기능 (Phase 1-4)
+
+**Phase 1: Manifests** (v0.7.0+):
+- `pre_deploy_manifests`, `post_deploy_manifests`
+- SBKube가 자동으로 YAML 파일 배포
+- `kubectl apply` 명령어 불필요
+
+**Phase 2: Tasks** (v0.8.0+):
+- `pre_deploy_tasks`, `post_deploy_tasks`
+- 타입 시스템: `manifests`, `inline`, `command`
+- Inline YAML 지원
+
+**Phase 3: Validation/Dependency/Rollback** (v0.8.0+):
+- 실행 결과 자동 검증
+- Task 간 의존성 관리
+- 실패 시 자동 롤백
+
+**Phase 4: HookApp** (v0.8.0+):
+- Hook을 First-class App으로 관리 (`type: hook`)
+- 독립적이고 재사용 가능한 Hook
+- 다른 앱과 동일한 lifecycle 관리
+
+**참고 문서**:
+- [Hooks 레퍼런스](../02-features/hooks-reference.md) - 전체 Hook 타입 및 환경 변수
+- [Hooks 상세 가이드](../02-features/hooks.md) - 실전 예제 및 Best Practices
+- [Hooks 마이그레이션 가이드](../02-features/hooks-migration-guide.md) - Phase 간 전환 방법
+
+### 6.8 Helm Hooks와의 차이
 
 | 특성 | SBKube Hooks | Helm Hooks |
 |------|--------------|------------|

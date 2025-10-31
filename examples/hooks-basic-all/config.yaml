@@ -1,0 +1,111 @@
+namespace: hooks-test
+
+# ============================================================
+# Command-Level Hooks (전역 훅)
+# - 객체 표기법 사용
+# - 모든 앱 배포에 적용
+# ============================================================
+hooks:
+  deploy:
+    pre:
+      - echo "🚀 [Command-Level] Starting deployment for ALL apps"
+      - echo "Namespace: $SBKUBE_NAMESPACE"
+      - echo "Phase: $SBKUBE_PHASE"
+
+    post:
+      - echo "✅ [Command-Level] Deployment completed for ALL apps"
+
+    on_failure:
+      - echo "❌ [Command-Level] Deployment FAILED"
+
+# ============================================================
+# Apps
+# ============================================================
+apps:
+  # --------------------------------------------------------
+  # Redis App - 모든 Hook 타입 시연
+  # --------------------------------------------------------
+  - name: redis
+    type: helm
+    enabled: true
+
+    specs:
+      repo: bitnami
+      chart: redis
+      version: 17.11.3
+
+    values:
+      auth:
+        enabled: false
+      master:
+        persistence:
+          enabled: false
+      replica:
+        replicaCount: 0
+
+    # --------------------------------------------------------
+    # App-Level Hooks (앱별 훅)
+    # - snake_case 사용
+    # --------------------------------------------------------
+    hooks:
+      # ----------------------------------------------------
+      # 기본 Shell Hooks
+      # ----------------------------------------------------
+      pre_deploy:
+        - echo "📦 [App-Level Shell] Redis: App-level pre-deploy hook"
+        - echo "App Name: $SBKUBE_APP_NAME"
+        - echo "App Type: $SBKUBE_APP_TYPE"
+
+      post_deploy:
+        - echo "📦 [App-Level Shell] Redis: App-level post-deploy hook"
+        - kubectl get pods -n $SBKUBE_NAMESPACE -l app.kubernetes.io/name=redis
+
+      # ----------------------------------------------------
+      # Phase 1: Manifests (YAML 파일 자동 배포)
+      # - SBKube가 kubectl apply 자동 실행
+      # - 파일 경로만 지정
+      # ----------------------------------------------------
+      pre_deploy_manifests:
+        - path: manifests/configmap-phase1.yaml
+
+      # post_deploy_manifests:
+      #   # 사용 안 함 (예시를 위해 주석)
+
+      # ----------------------------------------------------
+      # Phase 2: Tasks (타입별 작업 구조화)
+      # - type: manifests, inline, command
+      # - Task 이름으로 명확한 식별
+      # - Retry, Validation 등 고급 기능 지원
+      # ----------------------------------------------------
+      post_deploy_tasks:
+        # Task 1: Manifests 타입 (YAML 파일 배포)
+        - type: manifests
+          name: deploy-phase2-cm
+          paths:
+            - manifests/configmap-phase2.yaml
+
+        # Task 2: Inline 타입 (파일 없이 YAML 직접 정의)
+        - type: inline
+          name: create-inline-cm
+          yaml: |
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: basic-inline-cm
+              namespace: hooks-test
+            data:
+              message: "This ConfigMap was created by Phase 2 Inline Task"
+              timestamp: "2025-10-31"
+
+        # Task 3: Command 타입 (Shell 명령어 실행)
+        - type: command
+          name: verify-deployment
+          command:
+            - bash
+            - -c
+            - |
+              echo "🔍 [Phase 2 Command] Verifying deployment..."
+              kubectl get configmap -n hooks-test basic-phase1-cm
+              kubectl get configmap -n hooks-test basic-phase2-cm
+              kubectl get configmap -n hooks-test basic-inline-cm
+              echo "✅ All ConfigMaps created successfully!"

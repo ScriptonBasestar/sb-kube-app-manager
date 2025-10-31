@@ -958,6 +958,123 @@ cat /tmp/test/[앱이름]/*.yaml
 
 ---
 
+## 🪝 Hooks 관련 문제
+
+### ❌ Hook 실행 실패
+
+#### 증상
+
+```
+Error: Hook execution failed
+Command: ./scripts/backup.sh
+Exit code: 127
+```
+
+#### 원인
+
+1. 스크립트 파일이 존재하지 않음
+2. 실행 권한 없음
+3. 환경 변수 미설정
+4. Working directory 오류
+
+#### 해결 방법
+
+```bash
+# 1. 파일 존재 확인
+ls -la ./scripts/backup.sh
+
+# 2. 실행 권한 부여
+chmod +x ./scripts/backup.sh
+
+# 3. 환경 변수 확인 (Hook 내에서)
+hooks:
+  post_deploy:
+    - |
+      echo "SBKUBE_APP_NAME: $SBKUBE_APP_NAME"
+      echo "SBKUBE_NAMESPACE: $SBKUBE_NAMESPACE"
+      env | grep SBKUBE
+
+# 4. Working directory 명시
+post_deploy_tasks:
+  - type: command
+    command: ["./backup.sh"]
+    working_dir: "./scripts"
+```
+
+### ❌ Manifests Hook 실패: 파일을 찾을 수 없음
+
+#### 증상
+
+```
+Error: Manifest file not found: manifests/cluster-issuer.yaml
+```
+
+#### 해결 방법
+
+```bash
+# 상대 경로 확인
+ls manifests/cluster-issuer.yaml
+
+# Phase 1 vs Phase 2 경로 차이 확인
+# Phase 1: app_dir 기준
+pre_deploy_manifests:
+  - path: manifests/cluster-issuer.yaml
+
+# Phase 2: working_dir 설정 가능
+pre_deploy_tasks:
+  - type: manifests
+    paths: ["cluster-issuer.yaml"]
+    working_dir: "./manifests"
+```
+
+### ❌ Task Validation 실패
+
+#### 증상
+
+```
+Error: Validation failed for task 'create-certificate'
+Resource certificate/my-cert not ready after 300s
+```
+
+#### 해결 방법
+
+```yaml
+# Timeout 연장
+post_deploy_tasks:
+  - type: manifests
+    name: create-certificate
+    paths: ["certificate.yaml"]
+    validation:
+      type: resource_ready
+      resource: certificate/my-cert
+      timeout: 600  # 10분으로 연장
+
+# 또는 on_failure를 warn으로 변경
+    on_failure: warn
+```
+
+### 🔍 Hooks 디버깅
+
+```bash
+# Verbose 모드로 실행
+sbkube deploy --app-dir config --verbose
+
+# Dry-run으로 Hook 명령어 확인
+sbkube deploy --app-dir config --dry-run
+
+# 특정 앱만 배포 (HookApp 포함)
+sbkube deploy --app-dir config --app setup-issuers
+```
+
+### 📚 Hooks 관련 문서
+
+- **[Hooks 레퍼런스](../02-features/hooks-reference.md)** - 전체 Hook 타입 및 환경 변수
+- **[Hooks 상세 가이드](../02-features/hooks.md)** - 실전 예제 및 Best Practices
+- **[Hooks 마이그레이션 가이드](../02-features/hooks-migration-guide.md)** - Phase 간 전환 방법
+- **[예제: hooks-error-handling/](../../examples/hooks-error-handling/)** - 에러 처리 예제
+
+---
+
 ## 📚 관련 문서
 
 - **[일반적인 문제들](common-issues.md)** - 구체적인 해결 사례

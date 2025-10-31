@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: pre-deploy-test
+data:
+  database.host: "postgres-postgresql"
+  database.port: "5432"
+  database.name: "appdb"

@@ -427,4 +427,81 @@ apps:
 
 ---
 
+### 6. `hook` - HookApp (Hook as First-Class App)
+
+**목적**: Hook을 독립된 앱으로 관리하여 재사용 가능한 초기화 작업 수행
+
+**워크플로우**: `deploy`만 실행 (`prepare`, `build`, `template` 건너뜀)
+
+**도입 버전**: v0.8.0 (Phase 4)
+
+#### 기본 사용법
+
+```yaml
+apps:
+  # 1. 기본 앱 배포
+  - name: cert-manager
+    type: helm
+    specs:
+      repo: jetstack
+      chart: cert-manager
+
+  # 2. HookApp으로 초기화 작업
+  - name: setup-cluster-issuers
+    type: hook  # Hook을 First-class App으로
+    enabled: true
+
+    hooks:
+      post_deploy_tasks:
+        - type: manifests
+          paths:
+            - manifests/letsencrypt-staging.yaml
+            - manifests/letsencrypt-prod.yaml
+```
+
+#### 특징
+
+| 특징 | 설명 |
+|------|------|
+| **독립된 앱** | 다른 앱과 동일하게 관리 |
+| **Lifecycle 간소화** | `prepare`, `build`, `template` 건너뜀, `deploy`만 실행 |
+| **재사용 가능** | 다른 프로젝트/환경에서도 사용 가능 |
+| **Enabled 플래그** | `enabled: false`로 쉽게 비활성화 |
+| **Dependency 지원** | 앱 간 의존성 관리 |
+
+#### 실행 순서
+
+```
+1. cert-manager (type: helm)
+   └─ prepare/build/template/deploy 모두 실행
+
+2. setup-cluster-issuers (type: hook)
+   └─ deploy만 실행 (post_deploy_tasks)
+```
+
+#### 사용 시나리오
+
+1. **초기화 작업**: ClusterIssuer, IngressClass 등 설정 리소스
+2. **데이터베이스 스키마**: Schema 생성, Seed 데이터
+3. **검증**: Health check, Smoke test
+4. **복잡한 체인**: 여러 HookApp을 순차 실행
+
+#### HookApp vs 일반 Hook
+
+| 항목 | 일반 Hook (앱에 종속) | HookApp |
+|------|---------------------|---------|
+| 정의 | 기존 앱의 `hooks:` 섹션 | 독립된 `type: hook` 앱 |
+| 재사용성 | ❌ 낮음 | ✅ 높음 |
+| Enabled 플래그 | ❌ 없음 | ✅ 있음 |
+| 개별 배포 | ❌ 불가 | ✅ 가능 |
+
+#### 참고 문서
+
+- **[Hooks 레퍼런스](./hooks-reference.md)** - HookApp 상세 설명
+- **[Hooks 마이그레이션 가이드](./hooks-migration-guide.md)** - Phase 3 → Phase 4 전환
+- **[예제: hooks-hookapp-simple/](../../examples/hooks-hookapp-simple/)** - HookApp 입문
+- **[예제: hooks-phase4/](../../examples/hooks-phase4/)** - 복잡한 HookApp 체인
+
+---
+
 *더 많은 예제는 [examples/](../../examples/) 디렉토리를 참조하세요.*

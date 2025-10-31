@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: basic-phase1-cm
+  namespace: hooks-test
+  labels:
+    phase: "phase1"
+    hook-type: "pre_deploy_manifests"
+data:
+  message: "This ConfigMap was created by Phase 1 pre_deploy_manifests"
+  description: "SBKube automatically runs 'kubectl apply' for Phase 1 manifests"
+  timestamp: "2025-10-31"

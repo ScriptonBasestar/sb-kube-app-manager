@@ -10,7 +10,9 @@ SBKube hooks 기능을 사용하면 명령어 실행 전후 및 앱 배포 전�
 - [실행 순서](#실행-순서)
 - [환경변수](#환경변수)
 - [실전 사용 사례](#실전-사용-사례)
+- [Phase 4: HookApp (Hook as First-Class App)](#phase-4-hookapp-hook-as-first-class-app)
 - [Helm Hooks와의 차이](#helm-hooks와의-차이)
+- [고급 기능 및 참고 자료](#고급-기능-및-참고-자료)
 
 ## 개요
 
@@ -409,6 +411,243 @@ apps:
         - pa11y https://staging.example.com
 ```
 
+## Phase 4: HookApp (Hook as First-Class App)
+
+> **도입 버전**: v0.8.0
+> **상태**: ✅ 안정
+
+### 개요
+
+Phase 4에서는 Hook 자체를 하나의 독립된 앱(`type: hook`)으로 정의할 수 있습니다. 이를 통해 Hook을 재사용 가능하고 독립적으로 관리할 수 있습니다.
+
+### 기존 방식의 한계
+
+기존에는 Hook이 특정 앱에 종속되어 있었습니다:
+
+```yaml
+apps:
+  - name: cert-manager
+    type: helm
+    hooks:
+      post_deploy_tasks:
+        # 이 Hook은 cert-manager에만 사용 가능
+        - type: manifests
+          paths: ["cluster-issuer.yaml"]
+```
+
+**문제점**:
+- Hook을 다른 환경이나 프로젝트에서 재사용하기 어려움
+- 복잡한 초기화 로직을 독립적으로 관리하기 어려움
+- `enabled: false`로 쉽게 비활성화할 수 없음
+
+### HookApp 방식
+
+```yaml
+apps:
+  # 1. cert-manager 설치 (Helm 앱)
+  - name: cert-manager
+    type: helm
+    specs:
+      repo: jetstack
+      chart: cert-manager
+      version: v1.13.0
+
+  # 2. ClusterIssuer 설정 (독립된 HookApp)
+  - name: setup-cluster-issuers
+    type: hook  # Phase 4: Hook이 First-class App
+    enabled: true
+
+    hooks:
+      post_deploy_tasks:
+        # ClusterIssuer 배포
+        - type: manifests
+          name: deploy-issuers
+          paths:
+            - manifests/letsencrypt-staging.yaml
+            - manifests/letsencrypt-prod.yaml
+
+        # 배포 검증
+        - type: command
+          name: verify-issuers
+          command:
+            - bash
+            - -c
+            - |
+              kubectl wait --for=condition=ready \
+                clusterissuer/letsencrypt-prod --timeout=60s
+          dependency:
+            wait_for_tasks: ["deploy-issuers"]
+```
+
+### HookApp의 특징
+
+| 특징 | 설명 | 장점 |
+|------|------|------|
+| **First-class App** | `type: hook`으로 독립된 앱 | 다른 앱과 동일하게 관리 |
+| **Lifecycle 간소화** | `prepare`, `build`, `template` 건너뜀 | `deploy`에서만 실행 |
+| **재사용 가능** | 다른 프로젝트에서도 사용 가능 | 중복 제거 |
+| **Enabled 플래그** | `enabled: false`로 비활성화 | 쉬운 On/Off |
+| **Dependency 지원** | 앱 간 의존성 관리 | 실행 순서 제어 |
+| **개별 배포 가능** | `sbkube deploy --app setup-issuers` | 독립적 관리 |
+
+### 실행 순서
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  sbkube deploy                                           │
+└─────────────────────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│  1. cert-manager (type: helm)                            │
+│     - prepare: Helm chart pull                           │
+│     - build: Chart build                                 │
+│     - template: Render templates                         │
+│     - deploy: Install Helm release                       │
+└─────────────────────────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│  2. setup-cluster-issuers (type: hook)                   │
+│     - prepare: ⏭️  SKIP                                  │
+│     - build: ⏭️  SKIP                                    │
+│     - template: ⏭️  SKIP                                 │
+│     - deploy: ✅ Execute post_deploy_tasks               │
+│       └─ Task 1: Deploy manifests                        │
+│       └─ Task 2: Verify (after Task 1)                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 실전 사용 사례
+
+#### 1. cert-manager 초기화
+
+```yaml
+apps:
+  - name: cert-manager
+    type: helm
+    specs:
+      repo: jetstack
+      chart: cert-manager
+
+  - name: setup-issuers
+    type: hook
+    hooks:
+      post_deploy_tasks:
+        - type: manifests
+          paths:
+            - manifests/letsencrypt-staging.yaml
+            - manifests/letsencrypt-prod.yaml
+```
+
+#### 2. Database Schema 초기화
+
+```yaml
+apps:
+  - name: postgres
+    type: helm
+    specs:
+      repo: bitnami
+      chart: postgresql
+
+  - name: init-database-schema
+    type: hook
+    hooks:
+      post_deploy_tasks:
+        # Schema 생성
+        - type: command
+          name: create-schema
+          command:
+            - kubectl
+            - exec
+            - deployment/postgres
+            - --
+            - psql
+            - -c
+            - "CREATE SCHEMA IF NOT EXISTS myapp;"
+
+        # Migration 실행
+        - type: command
+          name: run-migrations
+          command: ["./scripts/migrate.sh"]
+          dependency:
+            wait_for_tasks: ["create-schema"]
+```
+
+#### 3. 여러 HookApp 체인
+
+```yaml
+apps:
+  # 1. Keycloak 설치
+  - name: keycloak
+    type: helm
+    specs:
+      repo: bitnami
+      chart: keycloak
+
+  # 2. Realm 생성 (HookApp)
+  - name: create-realm
+    type: hook
+    hooks:
+      post_deploy_tasks:
+        - type: inline
+          yaml: |
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: keycloak-realm
+            data:
+              realm.json: |
+                {"realm": "myrealm", "enabled": true}
+
+  # 3. Client 생성 (HookApp, Realm 이후)
+  - name: create-clients
+    type: hook
+    hooks:
+      post_deploy_tasks:
+        - type: command
+          command: ["./scripts/create-keycloak-clients.sh"]
+
+  # 4. 실제 애플리케이션
+  - name: my-app
+    type: helm
+    specs:
+      chart: ./charts/myapp
+```
+
+**실행 순서**: keycloak → create-realm → create-clients → my-app
+
+### HookApp vs 일반 Hook
+
+| 항목 | 일반 Hook (앱에 종속) | HookApp (`type: hook`) |
+|------|---------------------|----------------------|
+| **정의 위치** | 기존 앱의 `hooks:` 섹션 | 독립된 앱 정의 |
+| **재사용성** | ❌ 낮음 (앱과 결합) | ✅ 높음 (독립적) |
+| **Lifecycle** | 앱과 동일 (prepare/build/template/deploy) | 간소화 (deploy만) |
+| **Enabled 플래그** | ❌ 없음 | ✅ 있음 |
+| **개별 배포** | ❌ 불가 | ✅ 가능 |
+| **사용 시나리오** | 특정 앱에만 필요한 작업 | 재사용 가능한 초기화 작업 |
+
+### 언제 HookApp을 사용할까?
+
+**HookApp 사용 권장**:
+- ✅ 여러 프로젝트/환경에서 재사용
+- ✅ 복잡한 초기화 로직 (여러 task 포함)
+- ✅ 독립적으로 On/Off 전환 필요
+- ✅ 다른 앱과 명확한 의존성 관계
+
+**일반 Hook 사용 권장**:
+- ✅ 특정 앱에만 종속된 작업
+- ✅ 간단한 Shell 명령어
+- ✅ 한 번만 사용
+
+### 추가 리소스
+
+- **[Hooks 레퍼런스](./hooks-reference.md)**: 전체 Hook 타입 및 환경 변수
+- **[Hooks 마이그레이션 가이드](./hooks-migration-guide.md)**: Phase 3 → Phase 4 전환 방법
+- **[예제: HookApp 기본](../../examples/hooks-hookapp-simple/)**: 간단한 HookApp 예제
+- **[예제: HookApp 고급](../../examples/hooks-phase4/)**: 복잡한 체인 예제
+
 ## Helm Hooks와의 차이
 
 SBKube hooks와 Helm hooks는 다른 개념입니다:
@@ -473,18 +712,52 @@ spec:
 4. Helm `post-install` 훅 (클러스터)
 5. SBKube `post_deploy` 훅 (로컬)
 
-## 고급 기능 (향후 지원 예정)
+## 고급 기능 및 참고 자료
+
+### 현재 지원되는 고급 기능
+
+- ✅ **Phase 1: Manifests Hooks** - YAML 파일 자동 배포
+- ✅ **Phase 2: Task 시스템** - manifests/inline/command 타입
+- ✅ **Phase 3: Validation, Dependency, Rollback** - 실행 결과 검증 및 자동 롤백
+- ✅ **Phase 4: HookApp** - Hook을 First-class App으로 관리
+- ✅ **Retry 로직** - Command Task에서 자동 재시도 지원
+- ✅ **에러 처리 모드** - fail/warn/ignore/manual
+
+### 향후 지원 예정 기능
 
 다음 기능들은 향후 버전에서 지원될 예정입니다:
 
-- 조건부 훅 실행 (`if` 조건)
-- 훅 타임아웃 커스터마이징
-- continue_on_error 플래그
-- 재시도 로직
-- 훅 템플릿 (변수 치환)
+- 조건부 훅 실행 (`if` 조건, 환경별 분기)
+- 훅 템플릿 (변수 치환, Jinja2/Go template)
+- 병렬 Task 실행 (현재는 dependency 기반 순차 실행)
+- Hook 실행 결과 캐싱
 
-## 참고 자료
+### 참고 문서
 
-- [예제: Hooks 기본 사용](../../examples/hooks/)
-- [예제: 고급 Hooks](../../examples/advanced-hooks/)
-- [Helm Hooks 문서](https://helm.sh/docs/topics/charts_hooks/)
+#### SBKube Hooks 문서
+
+- **[Hooks 레퍼런스](./hooks-reference.md)** - 모든 Hook 타입, 네이밍 컨벤션, 환경 변수 완전 가이드
+- **[Hooks 마이그레이션 가이드](./hooks-migration-guide.md)** - Phase 간 전환 및 업그레이드 방법
+- **[Application Types](./application-types.md)** - HookApp 타입 상세 설명
+
+#### 예제 코드
+
+**기본 예제**:
+- [examples/hooks/](../../examples/hooks/) - 기본 Hook 사용법
+- [examples/hooks-basic-all/](../../examples/hooks-basic-all/) - 모든 Hook 타입 종합 예제
+
+**Phase별 예제**:
+- [examples/hooks-manifests/](../../examples/hooks-manifests/) - Phase 1: Manifests
+- [examples/hooks-phase3/](../../examples/hooks-phase3/) - Phase 3: Validation/Dependency/Rollback
+- [examples/hooks-phase4/](../../examples/hooks-phase4/) - Phase 4: HookApp (복잡한 체인)
+
+**시나리오별 예제**:
+- [examples/hooks-pre-deploy-tasks/](../../examples/hooks-pre-deploy-tasks/) - 배포 전 검증
+- [examples/hooks-command-level/](../../examples/hooks-command-level/) - 전역 알림 및 로깅
+- [examples/hooks-error-handling/](../../examples/hooks-error-handling/) - 에러 처리 및 롤백
+- [examples/hooks-mixed-phases/](../../examples/hooks-mixed-phases/) - 여러 Phase 혼합 사용
+- [examples/hooks-hookapp-simple/](../../examples/hooks-hookapp-simple/) - HookApp 입문
+
+#### 외부 참고 자료
+
+- [Helm Hooks 문서](https://helm.sh/docs/topics/charts_hooks/) - Helm Hook과의 차이점 이해

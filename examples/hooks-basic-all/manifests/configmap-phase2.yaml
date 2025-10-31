@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: basic-phase2-cm
+  namespace: hooks-test
+  labels:
+    phase: "phase2"
+    hook-type: "post_deploy_tasks"
+    task-type: "manifests"
+data:
+  message: "This ConfigMap was created by Phase 2 post_deploy_tasks (manifests type)"
+  description: "Phase 2 supports manifests/inline/command task types"
+  timestamp: "2025-10-31"

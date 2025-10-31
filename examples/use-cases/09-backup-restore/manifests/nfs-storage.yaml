@@ -1,0 +1,64 @@
+---
+# NFS-based PersistentVolume for Velero backup storage
+#
+# ⚠️ IMPORTANT: NFS Server Configuration Required
+#
+# This manifest uses NFS for persistent backup storage.
+# You MUST update the NFS server configuration before deploying:
+#
+#   1. Replace 'nfs-server.example.com' with your actual NFS server address
+#   2. Ensure the NFS export path '/exports/velero-backups' exists and is accessible
+#   3. Verify NFS client packages are installed on all Kubernetes nodes
+#
+# For k3s Local Testing (without NFS):
+#   - Comment out lines 20-23 (nfs section)
+#   - Uncomment lines 24-26 (hostPath section)
+#   - This will use local node storage instead
+#
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: velero-nfs-pv
+  labels:
+    type: nfs
+    app: velero-backup
+spec:
+  storageClassName: nfs
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    # TODO: Replace with your actual NFS server address
+    server: nfs-server.example.com
+    path: "/exports/velero-backups"
+  # Alternative for local k3s testing (comment out 'nfs' section above):
+  # hostPath:
+  #   path: "/mnt/backups/velero"
+  #   type: DirectoryOrCreate
+---
+# PersistentVolumeClaim for Velero
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: velero-nfs-pvc
+  namespace: velero
+  labels:
+    app: velero-backup
+spec:
+  storageClassName: nfs
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+---
+# ConfigMap for NFS provisioner (optional, for dynamic provisioning)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nfs-config
+  namespace: velero
+data:
+  nfs-server: "nfs-server.example.com"
+  nfs-path: "/exports/velero-backups"

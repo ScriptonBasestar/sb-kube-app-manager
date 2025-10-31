@@ -230,16 +230,112 @@ sbkube delete --app-dir .
 kubectl delete namespace wiki-stack
 ```
 
+## ⚠️ 보안 경고 (Security Warning)
+
+**이 Wiki 스택 예제는 데모 목적으로 하드코딩된 인증 정보를 사용합니다.**
+
+**프로덕션 환경에서는 절대 사용하지 마세요!**
+
+### 예제에 포함된 하드코딩된 인증 정보
+
+**MySQL** (`manifests/mysql.yaml`):
+- Root Password: `rootpassword`
+- Database: `wikidb`
+- User: `wikiuser`
+- Password: `wikipassword`
+
+**MediaWiki** (`manifests/mediawiki.yaml`):
+- DB Connection: MySQL 인증 정보 환경 변수로 주입
+- Admin 계정: 초기 설정 시 생성
+
+### 프로덕션 환경 필수 보안 조치
+
+1. **Kubernetes Secrets 사용**:
+   ```bash
+   # MySQL 인증 정보를 Secret으로 생성
+   kubectl create secret generic mysql-credentials \
+     --namespace wiki-stack \
+     --from-literal=root-password=$(openssl rand -base64 32) \
+     --from-literal=username=wikiuser \
+     --from-literal=password=$(openssl rand -base64 32) \
+     --from-literal=database=wikidb
+
+   # MediaWiki에서 Secret 참조
+   env:
+   - name: MEDIAWIKI_DB_PASSWORD
+     valueFrom:
+       secretKeyRef:
+         name: mysql-credentials
+         key: password
+   ```
+
+2. **External Secrets Operator 사용**:
+   - AWS Secrets Manager
+   - GCP Secret Manager
+   - Azure Key Vault
+   - HashiCorp Vault
+
+3. **HTTPS 필수 적용**:
+   ```bash
+   # cert-manager 설치
+   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+   # Let's Encrypt 자동 인증서 발급
+   ```
+
+4. **네트워크 보안**:
+   ```yaml
+   # NetworkPolicy로 MySQL 접근 제한
+   apiVersion: networking.k8s.io/v1
+   kind: NetworkPolicy
+   metadata:
+     name: mysql-policy
+     namespace: wiki-stack
+   spec:
+     podSelector:
+       matchLabels:
+         app: mysql
+     policyTypes:
+     - Ingress
+     ingress:
+     - from:
+       - podSelector:
+           matchLabels:
+             app: mediawiki
+       ports:
+       - protocol: TCP
+         port: 3306
+   ```
+
+5. **정기 보안 업데이트**:
+   - MediaWiki 버전 업데이트
+   - MySQL 보안 패치 적용
+   - 취약점 스캔 정기 실행
+
+6. **백업 및 복구 전략**:
+   ```bash
+   # 정기 백업 CronJob 설정
+   # 백업 암호화
+   # 외부 스토리지 저장
+   ```
+
+자세한 내용은 다음 문서를 참조하세요:
+- [Kubernetes Secrets 문서](https://kubernetes.io/docs/concepts/configuration/secret/)
+- [MediaWiki Security](https://www.mediawiki.org/wiki/Manual:Security)
+- [MySQL Security Best Practices](https://dev.mysql.com/doc/refman/8.0/en/security-guidelines.html)
+
 ## 프로덕션 체크리스트
 
-- [ ] MySQL persistence 활성화
-- [ ] 강력한 비밀번호 사용
-- [ ] HTTPS 인증서 설정
+- [ ] **보안**: Kubernetes Secrets로 인증 정보 관리
+- [ ] **보안**: 강력한 비밀번호 생성 (최소 32자)
+- [ ] **보안**: HTTPS 인증서 설정 (Let's Encrypt)
+- [ ] **보안**: NetworkPolicy 적용
+- [ ] MySQL persistence 활성화 (최소 20Gi)
 - [ ] 리소스 제한 적절히 조정
-- [ ] 백업 정책 수립
-- [ ] 모니터링 설정
-- [ ] 로그 수집 설정
-- [ ] NetworkPolicy 적용
+- [ ] 백업 정책 수립 (일 1회 이상)
+- [ ] 모니터링 설정 (Prometheus, Grafana)
+- [ ] 로그 수집 설정 (ELK Stack)
+- [ ] 정기 보안 업데이트 계획
 
 ## 관련 예제
 

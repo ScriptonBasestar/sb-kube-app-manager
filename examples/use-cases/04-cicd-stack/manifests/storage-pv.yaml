@@ -1,0 +1,34 @@
+---
+# PersistentVolume for Docker Registry storage
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: registry-pv
+  labels:
+    type: local
+    app: docker-registry
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/registry"
+    type: DirectoryOrCreate
+---
+# PersistentVolumeClaim for Docker Registry
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-pvc
+  namespace: cicd
+  labels:
+    app: docker-registry
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

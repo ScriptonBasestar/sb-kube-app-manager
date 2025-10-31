@@ -1,0 +1,34 @@
+---
+# PersistentVolume for Kafka/Spark data storage
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: data-pipeline-pv
+  labels:
+    type: local
+    app: data-pipeline
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/data-pipeline"
+    type: DirectoryOrCreate
+---
+# PersistentVolumeClaim for storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-pipeline-pvc
+  namespace: data-pipeline
+  labels:
+    app: data-pipeline
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

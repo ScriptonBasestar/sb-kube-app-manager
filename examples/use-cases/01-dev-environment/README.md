@@ -173,6 +173,67 @@ resources:
 - Kubernetes Secret으로 민감 정보 관리
 - NetworkPolicy 적용
 
+## ⚠️ 보안 경고 (Security Warning)
+
+**이 개발 환경 예제는 데모 목적으로 하드코딩된 인증 정보를 사용합니다.**
+
+**프로덕션 환경에서는 절대 사용하지 마세요!**
+
+### 예제에 포함된 하드코딩된 인증 정보
+
+**Redis** (`manifests/redis.yaml`):
+- 비밀번호 없음 (기본 설정)
+
+**PostgreSQL** (`manifests/postgresql.yaml`):
+- Database: `devdb`
+- User: `devuser`
+- Password: `devpassword`
+
+**LocalStack** (`manifests/localstack.yaml`):
+- AWS 에뮬레이터 (인증 불필요)
+
+**Mailhog** (Helm chart):
+- 인증 불필요 (테스트 도구)
+
+### 프로덕션 환경 권장 사항
+
+1. **Kubernetes Secrets 사용**:
+   ```bash
+   # PostgreSQL 인증 정보를 Secret으로 생성
+   kubectl create secret generic postgresql-credentials \
+     --namespace dev-env \
+     --from-literal=username=produser \
+     --from-literal=password=$(openssl rand -base64 32) \
+     --from-literal=database=proddb
+
+   # Redis 비밀번호 Secret 생성
+   kubectl create secret generic redis-credentials \
+     --namespace dev-env \
+     --from-literal=password=$(openssl rand -base64 32)
+   ```
+
+2. **External Secrets Operator 사용**:
+   - AWS Secrets Manager 연동
+   - GCP Secret Manager 연동
+   - Azure Key Vault 연동
+   - HashiCorp Vault 연동
+
+3. **환경별 분리 및 보안 설정**:
+   - 개발/스테이징/프로덕션 별도 네임스페이스
+   - NetworkPolicy로 트래픽 제한
+   - RBAC로 접근 권한 관리
+   - 정기적인 비밀번호 로테이션
+
+4. **감사 및 모니터링**:
+   - 접근 로그 기록
+   - 이상 행위 탐지
+   - 보안 스캔 정기 실행
+
+자세한 내용은 다음 문서를 참조하세요:
+- [Kubernetes Secrets 문서](https://kubernetes.io/docs/concepts/configuration/secret/)
+- [External Secrets Operator](https://external-secrets.io/)
+- [Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+
 ## 관련 예제
 
 - [Use Case 02: Production Web Stack](../02-web-stack/)

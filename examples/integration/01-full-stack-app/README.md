@@ -101,6 +101,44 @@ stringData:
   password: secretpassword
 ```
 
+## ⚠️ 보안 경고 (Security Warning)
+
+**이 예제는 데모 목적으로 하드코딩된 인증 정보를 사용합니다.**
+
+**프로덕션 환경에서는 절대 사용하지 마세요!**
+
+### 예제에 포함된 하드코딩된 인증 정보
+
+**PostgreSQL** (`manifests/postgresql.yaml`):
+- Database: `fullstack_db`
+- User: `appuser`
+- Password: `apppassword`
+
+**Redis** (`manifests/redis.yaml`):
+- 비밀번호 없음 (기본 설정)
+
+### 프로덕션 환경 권장 사항
+
+1. **Kubernetes Secrets 사용**:
+   ```bash
+   kubectl create secret generic db-credentials \
+     --from-literal=username=appuser \
+     --from-literal=password=$(openssl rand -base64 32)
+   ```
+
+2. **External Secrets Operator**:
+   - AWS Secrets Manager
+   - GCP Secret Manager
+   - Azure Key Vault
+   - HashiCorp Vault
+
+3. **환경별 분리**:
+   - 개발/스테이징/프로덕션 별도 인증 정보
+   - 정기적인 비밀번호 로테이션
+   - 최소 권한 원칙 적용
+
+자세한 내용은 [Kubernetes Secrets 문서](https://kubernetes.io/docs/concepts/configuration/secret/)를 참조하세요.
+
 ## 🧹 정리
 
 ```bash

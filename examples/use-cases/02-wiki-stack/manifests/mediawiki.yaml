@@ -1,0 +1,100 @@
+---
+# MediaWiki Application
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mediawiki
+  namespace: wiki-stack
+  labels:
+    app: mediawiki
+    component: application
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mediawiki
+  template:
+    metadata:
+      labels:
+        app: mediawiki
+        component: application
+    spec:
+      containers:
+      - name: mediawiki
+        image: mediawiki:1.39
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: MEDIAWIKI_DB_HOST
+          value: "mysql"
+        - name: MEDIAWIKI_DB_PORT
+          value: "3306"
+        - name: MEDIAWIKI_DB_NAME
+          value: "wikidb"
+        - name: MEDIAWIKI_DB_USER
+          value: "wikiuser"
+        - name: MEDIAWIKI_DB_PASSWORD
+          value: "wikipassword"
+        - name: MEDIAWIKI_SITE_NAME
+          value: "My Wiki"
+        - name: MEDIAWIKI_SITE_LANG
+          value: "ko"
+        - name: MEDIAWIKI_SITE_SERVER
+          value: "http://wiki.local"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: mediawiki-data
+          mountPath: /var/www/html/images
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 5
+      volumes:
+      - name: mediawiki-data
+        persistentVolumeClaim:
+          claimName: mediawiki-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mediawiki-pvc
+  namespace: wiki-stack
+  labels:
+    app: mediawiki
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mediawiki
+  namespace: wiki-stack
+  labels:
+    app: mediawiki
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: http
+    name: http
+  selector:
+    app: mediawiki

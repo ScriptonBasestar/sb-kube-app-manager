@@ -1,0 +1,21 @@
+# Backend application configuration
+# Example values file
+
+app:
+  name: backend
+  version: "1.0.0"
+
+replicas: 2
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+database:
+  host: postgres-cluster-rw
+  port: 5432
+  name: app_db

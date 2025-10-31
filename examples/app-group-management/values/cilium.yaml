@@ -1,0 +1,28 @@
+# Cilium CNI configuration
+# Minimal configuration for demo purposes
+
+# IPsec encryption
+encryption:
+  enabled: false
+
+# Hubble observability
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+    replicas: 1
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# BGP control plane
+bgpControlPlane:
+  enabled: false

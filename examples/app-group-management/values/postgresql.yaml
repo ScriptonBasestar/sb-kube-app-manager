@@ -1,0 +1,24 @@
+# CloudNativePG Operator configuration
+# Minimal configuration for demo purposes
+
+# Monitoring
+monitoring:
+  enabled: true
+  podMonitorEnabled: true
+
+# Webhook
+webhook:
+  enabled: true
+  port: 9443
+
+# Resource limits
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Replica count
+replicaCount: 1

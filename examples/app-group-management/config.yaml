@@ -1,0 +1,58 @@
+# App-Group Management Example Configuration
+# Demonstrates Phase 1-7 features: app-group classification, dependency tracking, health monitoring
+
+namespace: demo
+
+apps:
+  # ===================================================================
+  # App-Group: app_000_infra_network
+  # Priority: 000 (highest - infrastructure)
+  # Category: infra
+  # Purpose: Network infrastructure (CNI)
+  # ===================================================================
+  - name: app_000_infra_network
+    type: helm
+    enabled: true
+    specs:
+      repo: cilium
+      chart: cilium
+      version: "1.14.5"
+      release_name: cilium
+      values:
+        - cilium.yaml
+    # No dependencies - root of dependency tree
+
+  # ===================================================================
+  # App-Group: app_010_data_postgresql
+  # Priority: 010 (data layer)
+  # Category: data
+  # Purpose: PostgreSQL operator for database management
+  # ===================================================================
+  - name: app_010_data_postgresql
+    type: helm
+    enabled: true
+    specs:
+      repo: cloudnative-pg
+      chart: cloudnative-pg
+      version: "0.20.0"
+      release_name: cloudnative-pg
+      values:
+        - postgresql.yaml
+    # Depends on network infrastructure
+    deps:
+      - app_000_infra_network
+
+  # ===================================================================
+  # App-Group: app_020_app_backend
+  # Priority: 020 (application layer)
+  # Category: app
+  # Purpose: Backend application (example)
+  # ===================================================================
+  - name: app_020_app_backend
+    type: yaml
+    enabled: true
+    specs:
+      path: manifests/backend
+    # Depends on data layer
+    deps:
+      - app_010_data_postgresql

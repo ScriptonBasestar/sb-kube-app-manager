@@ -1,0 +1,13 @@
+# External sources configuration for app-group-management example
+
+kubeconfig: ~/.kube/config
+kubeconfig_context: default
+cluster: demo-cluster
+
+# Helm repositories
+helm_repos:
+  - name: cilium
+    url: https://helm.cilium.io/
+
+  - name: cloudnative-pg
+    url: https://cloudnative-pg.github.io/charts

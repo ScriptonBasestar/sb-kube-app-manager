@@ -108,13 +108,14 @@ class TestValidateAppDir:
         assert "유효성 검사 완료" in result.output
 
     def test_validate_app_dir_custom_config(self, runner, temp_project):
-        """Test validate with --app-dir and --config-file."""
+        """Test validate with --app-dir and --config-file (non-standard filename)."""
         result = runner.invoke(
             main,
             [
                 "validate",
                 "--app-dir", "examples/custom",
                 "--config-file", "custom.yaml",
+                "--schema-type", "config",  # Required for non-standard filenames
                 "--base-dir", str(temp_project)
             ]
         )

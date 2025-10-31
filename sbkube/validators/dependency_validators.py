@@ -17,12 +17,9 @@ import yaml
 
 from sbkube.utils.diagnostic_system import DiagnosticLevel
 from sbkube.utils.logger import logger
-from sbkube.utils.validation_system import (
-    ValidationCheck,
-    ValidationContext,
-    ValidationResult,
-    ValidationSeverity,
-)
+from sbkube.utils.validation_system import (ValidationCheck, ValidationContext,
+                                            ValidationResult,
+                                            ValidationSeverity)
 
 
 class HelmChartValidator(ValidationCheck):

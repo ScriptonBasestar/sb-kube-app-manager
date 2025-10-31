@@ -59,9 +59,9 @@ class StepExecution:
             "name": self.name,
             "status": self.status.value,
             "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat()
-            if self.completed_at
-            else None,
+            "completed_at": (
+                self.completed_at.isoformat() if self.completed_at else None
+            ),
             "duration": self.duration,
             "error": self.error,
             "output": self.output,
@@ -153,9 +153,9 @@ class ExecutionState:
             "profile": self.profile,
             "namespace": self.namespace,
             "started_at": self.started_at.isoformat(),
-            "completed_at": self.completed_at.isoformat()
-            if self.completed_at
-            else None,
+            "completed_at": (
+                self.completed_at.isoformat() if self.completed_at else None
+            ),
             "status": self.status.value,
             "steps": {name: step.to_dict() for name, step in self.steps.items()},
             "config_hash": self.config_hash,

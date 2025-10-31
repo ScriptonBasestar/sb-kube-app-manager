@@ -7,7 +7,7 @@ SBKube Configuration Models
 - 의존성: depends_on 필드
 """
 
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator, model_validator
 
@@ -52,7 +52,9 @@ class ManifestsHookTask(ConfigBaseModel):
     files: list[str] = Field(
         ...,
         description="배포할 YAML manifest 파일 경로 리스트",
-        json_schema_extra={"examples": [["manifests/issuer1.yaml", "manifests/issuer2.yaml"]]},
+        json_schema_extra={
+            "examples": [["manifests/issuer1.yaml", "manifests/issuer2.yaml"]]
+        },
     )
     # Phase 3 fields (forward reference로 처리)
     validation: dict[str, Any] | None = Field(
@@ -171,7 +173,7 @@ class CommandHookTask(ConfigBaseModel):
 
 # Discriminated Union for HookTask
 HookTask = Annotated[
-    Union[ManifestsHookTask, InlineHookTask, CommandHookTask],
+    ManifestsHookTask | InlineHookTask | CommandHookTask,
     Field(discriminator="type"),
 ]
 
@@ -222,7 +224,10 @@ class ValidationRule(ConfigBaseModel):
         json_schema_extra={
             "examples": [
                 [{"type": "Ready", "status": "True"}],
-                [{"type": "Available", "status": "True"}, {"type": "Progressing", "status": "False"}],
+                [
+                    {"type": "Available", "status": "True"},
+                    {"type": "Progressing", "status": "False"},
+                ],
             ]
         },
     )
@@ -321,9 +326,7 @@ class CommandHooks(ConfigBaseModel):
 
     pre: list[str] = Field(default_factory=list, description="명령어 실행 전 훅")
     post: list[str] = Field(default_factory=list, description="명령어 실행 후 훅")
-    on_failure: list[str] = Field(
-        default_factory=list, description="명령어 실패 시 훅"
-    )
+    on_failure: list[str] = Field(default_factory=list, description="명령어 실패 시 훅")
 
 
 class AppHooks(ConfigBaseModel):
@@ -364,7 +367,9 @@ class AppHooks(ConfigBaseModel):
     post_prepare: list[str] = Field(
         default_factory=list, description="prepare 실행 후 훅 (shell 명령어)"
     )
-    pre_build: list[str] = Field(default_factory=list, description="build 실행 전 훅 (shell 명령어)")
+    pre_build: list[str] = Field(
+        default_factory=list, description="build 실행 전 훅 (shell 명령어)"
+    )
     post_build: list[str] = Field(
         default_factory=list, description="build 실행 후 훅 (shell 명령어)"
     )
@@ -389,11 +394,8 @@ class AppHooks(ConfigBaseModel):
         default_factory=list,
         description="deploy 실행 전 배포할 YAML manifests (sbkube가 직접 처리)",
         json_schema_extra={
-            "examples": [
-                ["manifests/pre-config.yaml"],
-                ["manifests/secrets/*.yaml"]
-            ]
-        }
+            "examples": [["manifests/pre-config.yaml"], ["manifests/secrets/*.yaml"]]
+        },
     )
     post_deploy_manifests: list[str] = Field(
         default_factory=list,
@@ -401,9 +403,9 @@ class AppHooks(ConfigBaseModel):
         json_schema_extra={
             "examples": [
                 ["manifests/issuers/cluster-issuer-letsencrypt-prd.yaml"],
-                ["manifests/post-config/*.yaml"]
+                ["manifests/post-config/*.yaml"],
             ]
-        }
+        },
     )
 
     # Hook Tasks (신규 - Phase 2: Type System)
@@ -413,11 +415,19 @@ class AppHooks(ConfigBaseModel):
         json_schema_extra={
             "examples": [
                 [
-                    {"type": "manifests", "name": "prepare-secrets", "files": ["manifests/secrets.yaml"]},
-                    {"type": "command", "name": "backup-db", "command": "./scripts/backup.sh"}
+                    {
+                        "type": "manifests",
+                        "name": "prepare-secrets",
+                        "files": ["manifests/secrets.yaml"],
+                    },
+                    {
+                        "type": "command",
+                        "name": "backup-db",
+                        "command": "./scripts/backup.sh",
+                    },
                 ]
             ]
-        }
+        },
     )
     post_deploy_tasks: list[HookTask] = Field(
         default_factory=list,
@@ -425,12 +435,25 @@ class AppHooks(ConfigBaseModel):
         json_schema_extra={
             "examples": [
                 [
-                    {"type": "manifests", "name": "deploy-issuers", "files": ["manifests/issuers/*.yaml"]},
-                    {"type": "inline", "name": "create-cert", "content": {"apiVersion": "v1", "kind": "Certificate"}},
-                    {"type": "command", "name": "verify-dns", "command": "dig +short example.com", "on_failure": "warn"}
+                    {
+                        "type": "manifests",
+                        "name": "deploy-issuers",
+                        "files": ["manifests/issuers/*.yaml"],
+                    },
+                    {
+                        "type": "inline",
+                        "name": "create-cert",
+                        "content": {"apiVersion": "v1", "kind": "Certificate"},
+                    },
+                    {
+                        "type": "command",
+                        "name": "verify-dns",
+                        "command": "dig +short example.com",
+                        "on_failure": "warn",
+                    },
                 ]
             ]
-        }
+        },
     )
 
 
@@ -491,9 +514,21 @@ class HookApp(ConfigBaseModel):
         json_schema_extra={
             "examples": [
                 [
-                    {"type": "manifests", "name": "deploy-config", "files": ["manifests/config.yaml"]},
-                    {"type": "inline", "name": "create-secret", "content": {"apiVersion": "v1", "kind": "Secret"}},
-                    {"type": "command", "name": "verify", "command": "kubectl get pods"},
+                    {
+                        "type": "manifests",
+                        "name": "deploy-config",
+                        "files": ["manifests/config.yaml"],
+                    },
+                    {
+                        "type": "inline",
+                        "name": "create-secret",
+                        "content": {"apiVersion": "v1", "kind": "Secret"},
+                    },
+                    {
+                        "type": "command",
+                        "name": "verify",
+                        "command": "kubectl get pods",
+                    },
                 ]
             ]
         },
@@ -580,48 +615,42 @@ class HelmApp(ConfigBaseModel):
         description="Helm chart in format 'repo/chart', './path', or '/abs/path'",
         json_schema_extra={
             "examples": ["grafana/grafana", "./charts/my-app", "/path/to/chart"]
-        }
+        },
     )
     version: str | None = Field(
         None,
         description="Chart version (for remote charts only)",
-        json_schema_extra={
-            "examples": ["6.50.0", "1.0.0"]
-        }
+        json_schema_extra={"examples": ["6.50.0", "1.0.0"]},
     )
     values: list[str] = Field(
         default_factory=list,
         description="Values file paths relative to app directory",
         json_schema_extra={
             "examples": [["values.yaml"], ["values.dev.yaml", "values.shared.yaml"]]
-        }
+        },
     )
 
     # 커스터마이징
     overrides: list[str] = Field(
         default_factory=list,
-        description="Chart customization files from overrides/ directory"
+        description="Chart customization files from overrides/ directory",
     )
     removes: list[str] = Field(
         default_factory=list,
-        description="File/directory patterns to remove during build"
+        description="File/directory patterns to remove during build",
     )
 
     # Helm 옵션
     set_values: dict[str, Any] = Field(
         default_factory=dict,
         description="Helm --set option values (key-value pairs)",
-        json_schema_extra={
-            "examples": [{"replicaCount": 3, "image.tag": "v1.2.3"}]
-        }
+        json_schema_extra={"examples": [{"replicaCount": 3, "image.tag": "v1.2.3"}]},
     )
     release_name: str | None = Field(
-        None,
-        description="Helm release name (defaults to app name)"
+        None, description="Helm release name (defaults to app name)"
     )
     namespace: str | None = Field(
-        None,
-        description="Namespace override (defaults to global namespace)"
+        None, description="Namespace override (defaults to global namespace)"
     )
     create_namespace: bool = False
     wait: bool = True
@@ -729,7 +758,7 @@ class YamlApp(ConfigBaseModel):
         description="YAML manifest files to deploy with kubectl apply",
         json_schema_extra={
             "examples": [["deployment.yaml", "service.yaml"], ["manifests/*.yaml"]]
-        }
+        },
     )
     namespace: str | None = None
     labels: dict[str, str] = Field(default_factory=dict)
@@ -825,21 +854,17 @@ class GitApp(ConfigBaseModel):
         description="Git repository URL",
         json_schema_extra={
             "examples": ["https://github.com/user/repo", "git@github.com:user/repo.git"]
-        }
+        },
     )
     path: str | None = Field(
         None,
         description="Path within repository (optional)",
-        json_schema_extra={
-            "examples": ["k8s/", "manifests/production/"]
-        }
+        json_schema_extra={"examples": ["k8s/", "manifests/production/"]},
     )
     branch: str = Field(
         "main",
         description="Git branch or tag",
-        json_schema_extra={
-            "examples": ["main", "develop", "v1.2.3"]
-        }
+        json_schema_extra={"examples": ["main", "develop", "v1.2.3"]},
     )
     ref: str | None = None  # 특정 commit/tag (branch보다 우선)
     namespace: str | None = None
@@ -897,15 +922,17 @@ class HttpApp(ConfigBaseModel):
         ...,
         description="HTTP(S) URL to download file from",
         json_schema_extra={
-            "examples": ["https://raw.githubusercontent.com/example/repo/main/manifest.yaml"]
-        }
+            "examples": [
+                "https://raw.githubusercontent.com/example/repo/main/manifest.yaml"
+            ]
+        },
     )
     dest: str = Field(
         ...,
         description="Destination file path relative to app directory",
         json_schema_extra={
             "examples": ["manifests/external.yaml", "config/downloaded.yaml"]
-        }
+        },
     )
     headers: dict[str, str] = Field(default_factory=dict)  # HTTP 헤더
     depends_on: list[str] = Field(default_factory=list)
@@ -953,7 +980,15 @@ class NoopApp(ConfigBaseModel):
 # ============================================================================
 
 AppConfig = Annotated[
-    HelmApp | YamlApp | ActionApp | ExecApp | GitApp | KustomizeApp | HttpApp | NoopApp | HookApp,
+    HelmApp
+    | YamlApp
+    | ActionApp
+    | ExecApp
+    | GitApp
+    | KustomizeApp
+    | HttpApp
+    | NoopApp
+    | HookApp,
     Field(discriminator="type"),
 ]
 

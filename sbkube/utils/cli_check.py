@@ -3,11 +3,8 @@ import shutil
 import subprocess
 import sys
 
-from sbkube.exceptions import (
-    CliToolExecutionError,
-    CliToolNotFoundError,
-    KubernetesConnectionError,
-)
+from sbkube.exceptions import (CliToolExecutionError, CliToolNotFoundError,
+                               KubernetesConnectionError)
 from sbkube.utils.logger import logger
 
 
@@ -293,7 +290,9 @@ def print_kube_connection_help():
     print("")
 
 
-def get_available_contexts(kubeconfig: str | None = None) -> tuple[list[str], str | None]:
+def get_available_contexts(
+    kubeconfig: str | None = None,
+) -> tuple[list[str], str | None]:
     """kubeconfig 파일에서 사용 가능한 contexts 목록을 가져옵니다.
 
     Args:

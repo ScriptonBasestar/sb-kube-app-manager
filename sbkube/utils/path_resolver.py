@@ -5,7 +5,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from sbkube.exceptions import SbkubeError
 
@@ -13,7 +13,7 @@ from sbkube.exceptions import SbkubeError
 def expand_repo_variables(
     manifest_path: str,
     repos_dir: Path,
-    apps_config: Dict[str, Any],
+    apps_config: dict[str, Any],
 ) -> str:
     """manifests 경로에서 ${repos.app-name} 변수를 실제 경로로 확장합니다.
 
@@ -109,9 +109,7 @@ def validate_variable_syntax(path: str) -> None:
 
         # 앱 이름이 비어있는 경우
         if not app_name:
-            raise SbkubeError(
-                f"Empty app name in variable '{match}' in path '{path}'"
-            )
+            raise SbkubeError(f"Empty app name in variable '{match}' in path '{path}'")
 
         # 올바른 형식인지 검증
         if not re.fullmatch(pattern, match):

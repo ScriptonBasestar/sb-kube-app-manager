@@ -16,14 +16,10 @@ from typing import Any
 
 import yaml
 
-from sbkube.models.deployment_state import (
-    AppDeploymentCreate,
-    DeploymentCreate,
-    DeploymentStatus,
-    HelmReleaseInfo,
-    ResourceAction,
-    ResourceInfo,
-)
+from sbkube.models.deployment_state import (AppDeploymentCreate,
+                                            DeploymentCreate, DeploymentStatus,
+                                            HelmReleaseInfo, ResourceAction,
+                                            ResourceInfo)
 from sbkube.state.database import DeploymentDatabase
 from sbkube.utils.logger import get_logger
 

@@ -25,7 +25,7 @@ ______________________________________________________________________
 - **제품**: SBKube - k3s용 Kubernetes 배포 자동화 CLI 도구
 - **아키텍처**: 모놀리식 Python CLI 애플리케이션
 - **기술 스택**: Python 3.12+, Click, Pydantic, SQLAlchemy, Rich
-- **개발 단계**: v0.2.1 (성숙기 - 기능 확장 중)
+- **개발 단계**: v0.6.0 (성숙기 - 기능 확장 중)
 - **목적**: Helm, YAML, Git 소스를 통합하여 Kubernetes 배포 자동화
 
 ### 1.2 핵심 가치
@@ -353,6 +353,13 @@ uv sync
 uv pip install -e .
 ```
 
+#### 개발 환경 세부사항
+
+- **Python 버전**: 3.12 (엄격한 요구사항)
+- **패키지 매니저**: uv (pip 직접 사용 금지)
+- **운영체제**: macOS, Linux (Manjaro 테스트 완료)
+- **중요**: requirements.txt 생성 금지 - `uv add` 명령어만 사용
+
 #### 필수 외부 도구
 
 - **Helm v3.x**: `helm version` 확인
@@ -361,22 +368,45 @@ uv pip install -e .
 
 ### 3.2 개발 워크플로우 명령어
 
+#### 빠른 참조 (Quick Reference)
+
+**가장 자주 사용하는 명령어**:
+
+```bash
+# 1. 개발 설치 (dev + test 의존성 포함)
+make install-all
+
+# 2. 빠른 테스트 (E2E 제외, 빠른 피드백)
+make test-quick
+
+# 3. 코드 품질 검사 및 자동 수정
+make lint-fix
+
+# 4. 전체 CI 체크 (lint + test + coverage)
+make ci
+
+# 5. 특정 테스트만 실행
+pytest tests/unit/commands/test_deploy.py -v
+```
+
 #### 코드 품질 검사
 
 ```bash
-# 린팅
+# 린팅 (읽기 전용, 변경사항 미리보기)
+make lint-check
+
+# 린팅 (자동 수정 포함)
+make lint-fix
+
+# 린팅 (위험한 자동 수정 포함)
+make lint-fix UNSAFE_FIXES=1
+
+# 엄격한 린팅 (모든 규칙 적용)
+make lint-strict
+
+# 개별 도구 실행
 uv run ruff check sbkube/
 uv run mypy sbkube/
-
-# 포맷팅 확인
-uv run black --check sbkube/
-
-# 자동 포맷팅
-uv run black sbkube/
-uv run isort sbkube/
-
-# 전체 품질 검사 (Makefile 사용)
-make lint
 ```
 
 #### 테스트 실행
@@ -479,6 +509,20 @@ uv run -m sbkube.cli deploy --base-dir examples/k3scode --app-dir memory --names
 # 클러스터 삭제
 kind delete cluster --name sbkube-test
 ```
+
+### 3.5 개발 효율성 가이드
+
+#### 작업 시작 시
+
+- **즉시 실행**: 변경사항 적용 후 바로 다음 단계 제안 (불필요한 확인 질문 지양)
+- **Indentation 주의**: Python과 YAML 파일 작업 시 indent 오류 방지
+- **최소 변경**: 필요한 라인만 수정하여 불필요한 변경 최소화
+
+#### 오류 수정 시
+
+- **테스트 동기화**: 오류 수정 시 관련 테스트도 함께 업데이트
+- **근본 원인**: 증상이 아닌 원인을 수정
+- **회귀 방지**: 버그가 발견된 시나리오를 예제와 테스트로 추가
 
 ______________________________________________________________________
 
@@ -660,10 +704,93 @@ console.print("[green]✅ Deployment successful[/green]")
 console.print_table(data)
 ```
 
+#### EnhancedBaseCommand 패턴 (v0.6.0+)
+
+v0.6.0부터 `EnhancedBaseCommand`가 도입되어 더 나은 설정 관리를 제공:
+
+```python
+# sbkube/utils/base_command.py
+class EnhancedBaseCommand:
+    def __init__(
+        self,
+        base_dir: str = ".",
+        app_config_dir: str = "config",
+        cli_namespace: str | None = None,
+        validate_on_load: bool = True,
+        use_inheritance: bool = True,
+    ):
+        self.BASE_DIR = Path(base_dir).resolve()
+        self.APP_CONFIG_DIR = self.BASE_DIR / app_config_dir
+        self.SBKUBE_WORK_DIR = self._determine_sbkube_dir()
+
+        # Configuration manager with inheritance support
+        self.config_manager = ConfigManager(
+            base_dir=self.BASE_DIR,
+            schema_dir=self.SCHEMA_DIR if self.SCHEMA_DIR.exists() else None,
+        )
+```
+
+**주요 기능**:
+- 설정 상속 지원 (Configuration inheritance)
+- 자동 검증 (Automatic validation)
+- sources.yaml 위치 기반 작업 디렉토리 결정
+
 ### 5.4 데이터 흐름
 
 ```
 설정 파일 → Pydantic 모델 → 검증 → 명령어 실행 → 상태 저장
+```
+
+### 5.5 App-Group 기반 관리 (v0.6.0+)
+
+애플리케이션을 논리적 그룹으로 관리:
+
+#### 네이밍 컨벤션
+
+`app_{priority}_{category}_{name}` 형식 사용:
+
+```yaml
+apps:
+  - name: app_000_infra_network  # priority: 000, category: infra
+    type: helm
+    chart: cilium/cilium
+
+  - name: app_010_data_postgresql  # priority: 010, category: data
+    type: helm
+    chart: cloudnative-pg/cloudnative-pg
+    deps:
+      - app_000_infra_network
+
+  - name: app_020_app_backend  # priority: 020, category: app
+    type: helm
+    chart: ./charts/backend
+    deps:
+      - app_010_data_postgresql
+```
+
+#### 새로운 상태 관리 명령어 (v0.6.0)
+
+```bash
+# 클러스터 상태 확인
+sbkube status
+
+# App-group별 그룹핑
+sbkube status --by-group
+
+# 특정 app-group 상세 조회
+sbkube status app_000_infra_network
+
+# 의존성 트리 시각화
+sbkube status --deps
+
+# 배포 히스토리
+sbkube history
+
+# 두 배포 비교
+sbkube history --diff dep_123,dep_456
+
+# 롤백
+sbkube rollback dep_123
 ```
 
 **상세 정보**: [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
@@ -740,11 +867,28 @@ ______________________________________________________________________
 1. **명령어 모듈 생성**
 
    - `sbkube/commands/` 디렉토리에 파일 생성
-   - `BaseCommand` 상속 클래스 작성
+   - `EnhancedBaseCommand` 또는 `BaseCommand` 상속 클래스 작성
 
 1. **CLI 등록**
 
    - `cli.py`에 Click 명령어 등록
+   - `SbkubeGroup.COMMAND_CATEGORIES`에 카테고리 등록
+
+#### 명령어 카테고리 시스템
+
+새 명령어는 적절한 카테고리에 등록:
+
+```python
+# sbkube/cli.py
+class SbkubeGroup(click.Group):
+    COMMAND_CATEGORIES = {
+        "핵심 워크플로우": ["prepare", "build", "template", "deploy"],
+        "통합 명령어": ["apply"],
+        "상태 관리": ["status", "history", "rollback"],
+        "업그레이드/삭제": ["upgrade", "delete"],
+        "유틸리티": ["init", "validate", "doctor", "version"],
+    }
+```
 
 1. **문서화**
 
@@ -1182,10 +1326,20 @@ ______________________________________________________________________
 
 ## 10. 버전 정보
 
-- **문서 버전**: 1.0
-- **마지막 업데이트**: 2025-10-20
-- **대상 SBKube 버전**: v0.2.1+
+- **문서 버전**: 1.1
+- **마지막 업데이트**: 2025-10-31
+- **대상 SBKube 버전**: v0.6.0+
 - **작성자**: archmagece@users.noreply.github.com
+
+### 변경 이력
+
+- **v1.1 (2025-10-31)**:
+  - v0.6.0 기능 반영 (app-group 기반 관리, 새로운 상태 관리 명령어)
+  - EnhancedBaseCommand 패턴 추가
+  - 개발 효율성 가이드 추가
+  - 빠른 참조 명령어 추가
+  - Cursor rules 반영 (uv 필수, Python 3.12 엄격 요구사항)
+- **v1.0 (2025-10-20)**: 초기 버전
 
 ______________________________________________________________________
 

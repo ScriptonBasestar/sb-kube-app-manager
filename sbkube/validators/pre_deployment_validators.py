@@ -15,12 +15,9 @@ import yaml
 
 from sbkube.utils.diagnostic_system import DiagnosticLevel
 from sbkube.utils.logger import logger
-from sbkube.utils.validation_system import (
-    ValidationCheck,
-    ValidationContext,
-    ValidationResult,
-    ValidationSeverity,
-)
+from sbkube.utils.validation_system import (ValidationCheck, ValidationContext,
+                                            ValidationResult,
+                                            ValidationSeverity)
 
 
 class DeploymentSimulator(ValidationCheck):
@@ -506,10 +503,12 @@ class RiskAssessmentValidator(ValidationCheck):
             level=level,
             severity=severity,
             message=f"배포 위험도: {risk_level} (점수: {risk_score}/100)",
-            details="위험 요소 분석:\n"
-            + "\n".join(f"• {factor}" for factor in risk_factors)
-            if risk_factors
-            else "식별된 위험 요소가 없습니다.",
+            details=(
+                "위험 요소 분석:\n"
+                + "\n".join(f"• {factor}" for factor in risk_factors)
+                if risk_factors
+                else "식별된 위험 요소가 없습니다."
+            ),
             recommendation=recommendation,
             risk_level=risk_level.lower(),
             metadata={

@@ -4,32 +4,13 @@ import sys
 
 import click
 
-from sbkube.commands import (
-    apply,
-    build,
-    delete,
-    deploy,
-    doctor,
-    history,
-    init,
-    prepare,
-    rollback,
-    status,
-    template,
-    upgrade,
-    validate,
-    version,
-)
-from sbkube.exceptions import (
-    CliToolExecutionError,
-    CliToolNotFoundError,
-    SbkubeError,
-    format_error_with_suggestions,
-)
-from sbkube.utils.cli_check import (
-    check_helm_installed_or_exit,
-    check_kubectl_installed_or_exit,
-)
+from sbkube.commands import (apply, build, delete, deploy, doctor, history,
+                             init, prepare, rollback, status, template,
+                             upgrade, validate, version)
+from sbkube.exceptions import (CliToolExecutionError, CliToolNotFoundError,
+                               SbkubeError, format_error_with_suggestions)
+from sbkube.utils.cli_check import (check_helm_installed_or_exit,
+                                    check_kubectl_installed_or_exit)
 from sbkube.utils.logger import logger
 
 
@@ -54,7 +35,9 @@ class SbkubeGroup(click.Group):
         "유틸리티": "🛠️",
     }
 
-    def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+    def format_commands(
+        self, ctx: click.Context, formatter: click.HelpFormatter
+    ) -> None:
         """Format commands by category."""
         commands = []
         for subcommand in self.list_commands(ctx):
@@ -229,10 +212,8 @@ def main_with_exception_handling() -> None:
     try:
         main()
     except SbkubeError as e:
-        from sbkube.utils.error_suggestions import (
-            get_quick_fix_command,
-            is_auto_recoverable,
-        )
+        from sbkube.utils.error_suggestions import (get_quick_fix_command,
+                                                    is_auto_recoverable)
 
         logger.error(format_error_with_suggestions(e))
 

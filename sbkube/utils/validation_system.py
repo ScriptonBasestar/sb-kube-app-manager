@@ -10,12 +10,8 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from sbkube.utils.diagnostic_system import (
-    DiagnosticCheck,
-    DiagnosticEngine,
-    DiagnosticLevel,
-    DiagnosticResult,
-)
+from sbkube.utils.diagnostic_system import (DiagnosticCheck, DiagnosticEngine,
+                                            DiagnosticLevel, DiagnosticResult)
 from sbkube.utils.logger import logger
 
 

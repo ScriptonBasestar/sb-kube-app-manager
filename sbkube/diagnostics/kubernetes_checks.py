@@ -5,11 +5,8 @@ from pathlib import Path
 import requests
 import yaml
 
-from sbkube.utils.diagnostic_system import (
-    DiagnosticCheck,
-    DiagnosticLevel,
-    DiagnosticResult,
-)
+from sbkube.utils.diagnostic_system import (DiagnosticCheck, DiagnosticLevel,
+                                            DiagnosticResult)
 
 
 class KubernetesConnectivityCheck(DiagnosticCheck):
@@ -72,7 +69,7 @@ class KubernetesConnectivityCheck(DiagnosticCheck):
         except Exception as e:
             return self.create_result(
                 DiagnosticLevel.ERROR,
-                f"Kubernetes 연결 검사 실패",
+                "Kubernetes 연결 검사 실패",
                 f"오류 상세: {str(e)}",
                 "kubectl version --client && kubectl cluster-info",
                 "kubectl 상태 확인",
@@ -217,7 +214,11 @@ class ConfigValidityCheck(DiagnosticCheck):
                 # deps (app-group dependencies) 검증
                 deps = config.get("deps", [])
                 if deps:
-                    base_dir = self.config_dir.parent if self.config_dir.name != "." else Path.cwd()
+                    base_dir = (
+                        self.config_dir.parent
+                        if self.config_dir.name != "."
+                        else Path.cwd()
+                    )
                     missing_deps = []
                     for dep in deps:
                         dep_path = base_dir / dep / "config.yaml"
@@ -228,7 +229,7 @@ class ConfigValidityCheck(DiagnosticCheck):
                         return self.create_result(
                             DiagnosticLevel.ERROR,
                             f"의존성 디렉토리를 찾을 수 없습니다: {', '.join(missing_deps)}",
-                            f"deps 필드에 명시된 app-group 디렉토리가 존재하지 않습니다",
+                            "deps 필드에 명시된 app-group 디렉토리가 존재하지 않습니다",
                         )
 
                 return self.create_result(
@@ -261,7 +262,11 @@ class NetworkAccessCheck(DiagnosticCheck):
             # 주요 서비스 연결 테스트
             test_urls = [
                 ("Docker Hub", "https://registry-1.docker.io/v2/", 5),
-                ("Grafana Charts", "https://grafana.github.io/helm-charts/index.yaml", 5),
+                (
+                    "Grafana Charts",
+                    "https://grafana.github.io/helm-charts/index.yaml",
+                    5,
+                ),
                 ("Kubernetes", "https://kubernetes.io/", 5),
             ]
 

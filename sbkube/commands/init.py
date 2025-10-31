@@ -389,9 +389,7 @@ sbkube validate
 
         except Exception as e:
             logger.warning(f"Failed to update .gitignore: {e}")
-            logger.info(
-                "💡 Please manually add '.sbkube/' to your .gitignore file"
-            )
+            logger.info("💡 Please manually add '.sbkube/' to your .gitignore file")
 
     def _get_template_dir(self) -> Path:
         """템플릿 디렉토리 경로 반환"""

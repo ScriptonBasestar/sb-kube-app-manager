@@ -37,7 +37,9 @@ class ClusterCache:
         self.cluster = cluster or "unknown"
         self.cache_file = self.cache_dir / f"{self.context}_{self.cluster}.yaml"
 
-    def save(self, data: dict[str, Any], ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS) -> None:
+    def save(
+        self, data: dict[str, Any], ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS
+    ) -> None:
         """Save cluster status data to cache file.
 
         Uses atomic write (temp file + rename) to prevent corruption.
@@ -117,7 +119,11 @@ class ClusterCache:
             current_time = datetime.now(UTC)
 
             # Use provided TTL or fall back to cached TTL
-            ttl = ttl_seconds if ttl_seconds is not None else data.get("ttl_seconds", DEFAULT_CACHE_TTL_SECONDS)
+            ttl = (
+                ttl_seconds
+                if ttl_seconds is not None
+                else data.get("ttl_seconds", DEFAULT_CACHE_TTL_SECONDS)
+            )
 
             elapsed_seconds = (current_time - cached_time).total_seconds()
             return elapsed_seconds < ttl

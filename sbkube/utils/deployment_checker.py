@@ -1,7 +1,6 @@
 """Deployment status checker utility for validating app-group dependencies."""
 
 from pathlib import Path
-from typing import Optional
 
 from sbkube.state.database import DeploymentDatabase, DeploymentStatus
 
@@ -42,8 +41,8 @@ class DeploymentChecker:
     def __init__(
         self,
         base_dir: Path,
-        cluster: Optional[str] = None,
-        namespace: Optional[str] = None,
+        cluster: str | None = None,
+        namespace: str | None = None,
     ):
         """
         Initialize DeploymentChecker.
@@ -59,7 +58,7 @@ class DeploymentChecker:
         self.db = DeploymentDatabase()
 
     def check_app_group_deployed(
-        self, app_config_dir: str, namespace: Optional[str] = None
+        self, app_config_dir: str, namespace: str | None = None
     ) -> tuple[bool, str]:
         """
         Check if an app-group is successfully deployed.
@@ -91,7 +90,10 @@ class DeploymentChecker:
                 if latest:
                     if latest.status != DeploymentStatus.SUCCESS:
                         return False, f"last status: {latest.status.value}"
-                    return True, f"deployed at {latest.timestamp} in namespace '{namespace}'"
+                    return (
+                        True,
+                        f"deployed at {latest.timestamp} in namespace '{namespace}'",
+                    )
             except Exception as e:
                 return False, f"database error: {e}"
 
@@ -116,9 +118,7 @@ class DeploymentChecker:
         deployed_ns = latest.namespace
         return True, f"deployed at {latest.timestamp} in namespace '{deployed_ns}'"
 
-    def check_dependencies(
-        self, deps: list[str], namespace: Optional[str] = None
-    ) -> dict:
+    def check_dependencies(self, deps: list[str], namespace: str | None = None) -> dict:
         """
         Check deployment status of multiple dependencies.
 
@@ -148,8 +148,8 @@ class DeploymentChecker:
         }
 
     def get_deployment_info(
-        self, app_config_dir: str, namespace: Optional[str] = None
-    ) -> Optional[dict]:
+        self, app_config_dir: str, namespace: str | None = None
+    ) -> dict | None:
         """
         Get detailed deployment information for an app-group.
 

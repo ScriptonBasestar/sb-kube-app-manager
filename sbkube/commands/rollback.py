@@ -42,7 +42,9 @@ from sbkube.utils.logger import logger
 @click.option("--app-dir", "-ad", default=".", help="App configuration directory")
 @click.option("--cluster", help="Cluster name (for --list)")
 @click.option("--namespace", "-n", help="Namespace (for --list)")
-@click.option("--limit", default=10, help="Maximum rollback points to show (for --list)")
+@click.option(
+    "--limit", default=10, help="Maximum rollback points to show (for --list)"
+)
 def cmd(
     deployment_id: str | None,
     target: str | None,

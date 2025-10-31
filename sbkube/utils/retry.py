@@ -12,13 +12,9 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any
 
-from sbkube.exceptions import (
-    CliToolExecutionError,
-    GitRepositoryError,
-    HelmError,
-    NetworkError,
-    RepositoryConnectionError,
-)
+from sbkube.exceptions import (CliToolExecutionError, GitRepositoryError,
+                               HelmError, NetworkError,
+                               RepositoryConnectionError)
 from sbkube.utils.logger import logger
 
 

@@ -19,10 +19,7 @@ from rich.text import Text
 
 from sbkube.utils.diagnostic_system import DiagnosticLevel
 from sbkube.utils.logger import logger
-from sbkube.utils.validation_system import (
-    ValidationReport,
-    ValidationResult,
-)
+from sbkube.utils.validation_system import ValidationReport, ValidationResult
 
 
 class ValidationReportManager:
@@ -83,9 +80,11 @@ class ValidationReportManager:
             report_id = str(uuid.uuid4())
             history_entry = {
                 "id": report_id,
-                "timestamp": report.start_time.isoformat()
-                if report.start_time
-                else datetime.now().isoformat(),
+                "timestamp": (
+                    report.start_time.isoformat()
+                    if report.start_time
+                    else datetime.now().isoformat()
+                ),
                 "validation_mode": report.validation_mode.value,
                 "context": {
                     "config_dir": report.context.config_dir,

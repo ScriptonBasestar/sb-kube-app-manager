@@ -17,11 +17,9 @@ from rich.tree import Tree
 from sbkube.models.config_manager import ConfigManager
 from sbkube.state.database import DeploymentDatabase
 from sbkube.utils.cluster_cache import ClusterCache
-from sbkube.utils.cluster_grouping import (
-    filter_by_app_group,
-    get_app_group_summary,
-    group_releases_by_app_group,
-)
+from sbkube.utils.cluster_grouping import (filter_by_app_group,
+                                           get_app_group_summary,
+                                           group_releases_by_app_group)
 from sbkube.utils.cluster_status import ClusterStatusCollector
 
 console = Console()
@@ -181,9 +179,7 @@ def cmd(
     if watch:
         import time
 
-        console.print(
-            "[cyan]Watching status (updates every 10 seconds)[/cyan]"
-        )
+        console.print("[cyan]Watching status (updates every 10 seconds)[/cyan]")
         console.print("[dim]Press Ctrl+C to stop[/dim]\n")
         try:
             while True:
@@ -240,21 +236,27 @@ def _collect_and_cache(
     except subprocess.TimeoutExpired:
         console.print("[yellow]⏱️ Command timeout - kubectl/helm took too long[/yellow]")
         if cache.exists():
-            console.print("[yellow]Using existing cache file (may be outdated)[/yellow]\n")
+            console.print(
+                "[yellow]Using existing cache file (may be outdated)[/yellow]\n"
+            )
         else:
             console.print("[red]No cache available to fall back on[/red]")
             sys.exit(1)
     except subprocess.CalledProcessError as e:
         console.print(f"[red]kubectl/helm error: {e.stderr if e.stderr else e}[/red]")
         if cache.exists():
-            console.print("[yellow]Using existing cache file (may be outdated)[/yellow]\n")
+            console.print(
+                "[yellow]Using existing cache file (may be outdated)[/yellow]\n"
+            )
         else:
             console.print("[red]No cache available to fall back on[/red]")
             sys.exit(1)
     except Exception as e:
         console.print(f"[red]Unexpected error: {e}[/red]")
         if cache.exists():
-            console.print("[yellow]Using existing cache file (may be outdated)[/yellow]\n")
+            console.print(
+                "[yellow]Using existing cache file (may be outdated)[/yellow]\n"
+            )
         else:
             console.print("[red]No cache available to fall back on[/red]")
             sys.exit(1)
@@ -279,7 +281,9 @@ def _display_status(
     # Header
     cluster_name = data.get("cluster_name", "unknown")
     context = data.get("context", "unknown")
-    console.print(f"[bold cyan]Status: {cluster_name}[/bold cyan] (context: {context})\n")
+    console.print(
+        f"[bold cyan]Status: {cluster_name}[/bold cyan] (context: {context})\n"
+    )
 
     # Get Helm releases
     helm_releases = data.get("helm_releases", [])
@@ -343,7 +347,9 @@ def _display_summary_status(
         # Filter unhealthy if requested
         if unhealthy:
             helm_releases = [
-                r for r in helm_releases if r.get("status") not in ["deployed", "superseded"]
+                r
+                for r in helm_releases
+                if r.get("status") not in ["deployed", "superseded"]
             ]
 
         status_count: dict[str, int] = {}
@@ -381,7 +387,9 @@ def _display_grouped_status(
         db = DeploymentDatabase()
     except Exception:
         db = None
-        console.print("[yellow]⚠️ Could not connect to State DB, grouping may be incomplete[/yellow]\n")
+        console.print(
+            "[yellow]⚠️ Could not connect to State DB, grouping may be incomplete[/yellow]\n"
+        )
 
     # Group releases
     grouped_data = group_releases_by_app_group(helm_releases, db)
@@ -411,7 +419,8 @@ def _display_grouped_status(
     # Filter unhealthy if requested
     if unhealthy:
         managed_groups = {
-            ag: gdata for ag, gdata in managed_groups.items()
+            ag: gdata
+            for ag, gdata in managed_groups.items()
             if gdata["summary"]["failed"] > 0
         }
 
@@ -419,8 +428,12 @@ def _display_grouped_status(
     console.print(f"[bold]App Groups:[/bold] {summary['total_app_groups']}")
     console.print(f"[bold]Managed Releases:[/bold] {summary['total_managed_releases']}")
     if not managed:
-        console.print(f"[bold]Unmanaged Releases:[/bold] {summary['total_unmanaged_releases']}")
-    console.print(f"[bold]Overall Health:[/bold] {_format_health(summary['overall_health'])}\n")
+        console.print(
+            f"[bold]Unmanaged Releases:[/bold] {summary['total_unmanaged_releases']}"
+        )
+    console.print(
+        f"[bold]Overall Health:[/bold] {_format_health(summary['overall_health'])}\n"
+    )
 
     # Display each app-group
     for ag_name in sorted(managed_groups.keys()):
@@ -608,7 +621,9 @@ def _display_dependency_tree(base_path: Path, app_group: str | None) -> None:
     # Statistics
     total_apps = len(apps_to_show)
     apps_with_deps = sum(1 for app in apps_to_show if dep_map.get(app.name))
-    console.print(f"[dim]Total: {total_apps} apps, {apps_with_deps} with dependencies[/dim]")
+    console.print(
+        f"[dim]Total: {total_apps} apps, {apps_with_deps} with dependencies[/dim]"
+    )
 
 
 def _build_dependency_map(apps: list) -> dict[str, list[str]]:
@@ -692,7 +707,9 @@ def _add_tree_node(
 
     deps = dep_map.get(app.name, [])
     if deps:
-        node = parent.add(f"[{color}]{app.name}[/{color}] [dim]→ {len(deps)} deps[/dim]")
+        node = parent.add(
+            f"[{color}]{app.name}[/{color}] [dim]→ {len(deps)} deps[/dim]"
+        )
         for dep_name in deps:
             # Find the dep app object
             dep_app = type("App", (), {"name": dep_name})()  # Mock app object
@@ -783,7 +800,9 @@ def _get_pod_health_status(pod: dict) -> str:
     elif phase == "Running":
         # Check if all containers are ready
         if ready_containers < total_containers:
-            issues.append(f"Only {ready_containers}/{total_containers} containers ready")
+            issues.append(
+                f"Only {ready_containers}/{total_containers} containers ready"
+            )
 
         # Check for high restart count
         if restart_count > 5:

@@ -54,7 +54,9 @@ class ClusterStatusCollector:
             cmd.extend(["--kube-context", self.context])
         return cmd
 
-    def _run_kubectl(self, args: list[str], timeout: int = KUBECTL_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
+    def _run_kubectl(
+        self, args: list[str], timeout: int = KUBECTL_TIMEOUT_SECONDS
+    ) -> subprocess.CompletedProcess:
         """Run kubectl command with error handling.
 
         Args:
@@ -77,7 +79,9 @@ class ClusterStatusCollector:
             check=True,
         )
 
-    def _run_helm(self, args: list[str], timeout: int = HELM_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
+    def _run_helm(
+        self, args: list[str], timeout: int = HELM_TIMEOUT_SECONDS
+    ) -> subprocess.CompletedProcess:
         """Run helm command with error handling.
 
         Args:
@@ -112,7 +116,9 @@ class ClusterStatusCollector:
         try:
             result["cluster_info"] = self._collect_cluster_info()
         except Exception as e:
-            console.print(f"[yellow]Warning: Failed to collect cluster info: {e}[/yellow]")
+            console.print(
+                f"[yellow]Warning: Failed to collect cluster info: {e}[/yellow]"
+            )
             result["cluster_info"] = {"error": str(e)}
 
         # Collect nodes (non-blocking on failure)
@@ -126,14 +132,18 @@ class ClusterStatusCollector:
         try:
             result["namespaces"] = self._collect_namespaces()
         except Exception as e:
-            console.print(f"[yellow]Warning: Failed to collect namespaces: {e}[/yellow]")
+            console.print(
+                f"[yellow]Warning: Failed to collect namespaces: {e}[/yellow]"
+            )
             result["namespaces"] = []
 
         # Collect Helm releases (non-blocking on failure)
         try:
             result["helm_releases"] = self._collect_helm_releases()
         except Exception as e:
-            console.print(f"[yellow]Warning: Failed to collect Helm releases: {e}[/yellow]")
+            console.print(
+                f"[yellow]Warning: Failed to collect Helm releases: {e}[/yellow]"
+            )
             result["helm_releases"] = []
 
         return result
@@ -159,7 +169,9 @@ class ClusterStatusCollector:
                         info["api_server"] = parts[1].strip()
                         break
         except Exception as e:
-            console.print(f"[dim]Debug: cluster-info failed: {e}[/dim]", highlight=False)
+            console.print(
+                f"[dim]Debug: cluster-info failed: {e}[/dim]", highlight=False
+            )
 
         # Get version
         try:
@@ -191,7 +203,9 @@ class ClusterStatusCollector:
             # Parse node status
             for condition in item.get("status", {}).get("conditions", []):
                 if condition.get("type") == "Ready":
-                    status = "Ready" if condition.get("status") == "True" else "NotReady"
+                    status = (
+                        "Ready" if condition.get("status") == "True" else "NotReady"
+                    )
                     break
 
             # Parse node roles from labels
@@ -202,7 +216,11 @@ class ClusterStatusCollector:
                     roles.append(role)
 
             # Get node version
-            version = item.get("status", {}).get("nodeInfo", {}).get("kubeletVersion", "unknown")
+            version = (
+                item.get("status", {})
+                .get("nodeInfo", {})
+                .get("kubeletVersion", "unknown")
+            )
 
             nodes.append(
                 {

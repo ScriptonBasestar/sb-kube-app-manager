@@ -228,9 +228,7 @@ def _print_deployment_detail(deployment):
             )
 
 
-def _show_deployment_diff(
-    db: DeploymentDatabase, diff_ids: str, format: str
-) -> None:
+def _show_deployment_diff(db: DeploymentDatabase, diff_ids: str, format: str) -> None:
     """Compare and show differences between two deployments."""
     try:
         id1, id2 = diff_ids.split(",")
@@ -272,7 +270,9 @@ def _print_deployment_diff(diff_result: dict) -> None:
     click.echo(f"\n{'Field':<20} {'Deployment 1':<30} {'Deployment 2':<30}")
     click.echo("-" * 80)
     click.echo(f"{'ID':<20} {dep1['id']:<30} {dep2['id']:<30}")
-    click.echo(f"{'Timestamp':<20} {str(dep1['timestamp']):<30} {str(dep2['timestamp']):<30}")
+    click.echo(
+        f"{'Timestamp':<20} {str(dep1['timestamp']):<30} {str(dep2['timestamp']):<30}"
+    )
     click.echo(f"{'Cluster':<20} {dep1['cluster']:<30} {dep2['cluster']:<30}")
     click.echo(f"{'Namespace':<20} {dep1['namespace']:<30} {dep2['namespace']:<30}")
     click.echo(f"{'Status':<20} {dep1['status']:<30} {dep2['status']:<30}")
@@ -399,6 +399,7 @@ def _print_values_diff(diff_result: dict) -> None:
             click.echo(f"\n➕ {release_name} (ADDED)")
             if diff.get("values"):
                 import yaml
+
                 values_str = yaml.dump(diff["values"], default_flow_style=False)
                 for line in values_str.splitlines()[:20]:
                     click.echo(click.style(f"  + {line}", fg="green"))
@@ -407,6 +408,7 @@ def _print_values_diff(diff_result: dict) -> None:
             click.echo(f"\n➖ {release_name} (REMOVED)")
             if diff.get("values"):
                 import yaml
+
                 values_str = yaml.dump(diff["values"], default_flow_style=False)
                 for line in values_str.splitlines()[:20]:
                     click.echo(click.style(f"  - {line}", fg="red"))
@@ -416,8 +418,16 @@ def _print_values_diff(diff_result: dict) -> None:
 
             import yaml
 
-            values1_str = yaml.dump(diff["values_before"], default_flow_style=False) if diff.get("values_before") else ""
-            values2_str = yaml.dump(diff["values_after"], default_flow_style=False) if diff.get("values_after") else ""
+            values1_str = (
+                yaml.dump(diff["values_before"], default_flow_style=False)
+                if diff.get("values_before")
+                else ""
+            )
+            values2_str = (
+                yaml.dump(diff["values_after"], default_flow_style=False)
+                if diff.get("values_after")
+                else ""
+            )
 
             diff_lines = difflib.unified_diff(
                 values1_str.splitlines(keepends=True),

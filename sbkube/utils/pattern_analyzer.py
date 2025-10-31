@@ -74,9 +74,9 @@ class ExecutionPatternAnalyzer:
 
         return {
             "total_failures": len(failed_executions),
-            "failure_rate": len(failed_executions) / len(self.history) * 100
-            if self.history
-            else 0,
+            "failure_rate": (
+                len(failed_executions) / len(self.history) * 100 if self.history else 0
+            ),
             "patterns": patterns,
             "failure_steps": dict(failure_steps),
             "failure_errors": dict(failure_errors),

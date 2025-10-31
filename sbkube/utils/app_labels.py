@@ -5,7 +5,7 @@ labels and annotations into Helm charts and Kubernetes resources.
 """
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def extract_app_group_from_name(app_name: str) -> str | None:
@@ -102,7 +102,7 @@ def build_sbkube_annotations(
         annotations["sbkube.io/deployment-id"] = deployment_id
 
     # Always add deployed-at timestamp
-    annotations["sbkube.io/deployed-at"] = datetime.now(timezone.utc).isoformat()
+    annotations["sbkube.io/deployed-at"] = datetime.now(UTC).isoformat()
 
     if operator:
         annotations["sbkube.io/deployed-by"] = operator
@@ -136,9 +136,7 @@ def build_helm_set_labels(labels: dict[str, str]) -> list[str]:
     for key, value in labels.items():
         # Escape dots in key (Helm requirement)
         escaped_key = key.replace(".", "\\.")
-        helm_args.extend(
-            ["--set-string", f"commonLabels.{escaped_key}={value}"]
-        )
+        helm_args.extend(["--set-string", f"commonLabels.{escaped_key}={value}"])
 
     return helm_args
 
@@ -163,8 +161,6 @@ def build_helm_set_annotations(annotations: dict[str, str]) -> list[str]:
 
     for key, value in annotations.items():
         escaped_key = key.replace(".", "\\.")
-        helm_args.extend(
-            ["--set-string", f"commonAnnotations.{escaped_key}={value}"]
-        )
+        helm_args.extend(["--set-string", f"commonAnnotations.{escaped_key}={value}"])
 
     return helm_args

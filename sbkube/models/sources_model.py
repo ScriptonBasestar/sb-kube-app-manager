@@ -263,13 +263,17 @@ class SourceScheme(InheritableConfigModel):
             raise ValueError("app_dirs must be a list of directory names")
 
         if len(v) == 0:
-            raise ValueError("app_dirs cannot be empty. Remove the field or provide directory names")
+            raise ValueError(
+                "app_dirs cannot be empty. Remove the field or provide directory names"
+            )
 
         # Validate each directory name
         validated = []
         for dir_name in v:
             if not isinstance(dir_name, str):
-                raise ValueError(f"app_dirs must contain strings, got: {type(dir_name).__name__}")
+                raise ValueError(
+                    f"app_dirs must contain strings, got: {type(dir_name).__name__}"
+                )
 
             dir_name = dir_name.strip()
             if not dir_name:
@@ -283,7 +287,9 @@ class SourceScheme(InheritableConfigModel):
                 )
 
             if dir_name.startswith("."):
-                raise ValueError(f"app_dirs cannot contain hidden directories: '{dir_name}'")
+                raise ValueError(
+                    f"app_dirs cannot contain hidden directories: '{dir_name}'"
+                )
 
             validated.append(dir_name)
 
@@ -348,13 +354,16 @@ class SourceScheme(InheritableConfigModel):
                 elif not dir_path.is_dir():
                     missing.append(f"Not a directory: {dir_name}")
                 elif not config_path.exists():
-                    missing.append(f"Config file not found: {dir_name}/{config_file_name}")
+                    missing.append(
+                        f"Config file not found: {dir_name}/{config_file_name}"
+                    )
                 else:
                     app_paths.append(dir_path)
 
             if missing:
                 raise ValueError(
-                    "Invalid app_dirs in sources.yaml:\n" + "\n".join(f"  - {msg}" for msg in missing)
+                    "Invalid app_dirs in sources.yaml:\n"
+                    + "\n".join(f"  - {msg}" for msg in missing)
                 )
 
             return sorted(app_paths)

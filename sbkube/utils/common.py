@@ -120,12 +120,10 @@ def check_required_cli_tools(app_info_list: list):
     """
     import click
 
-    from sbkube.utils.cli_check import (
-        CliToolExecutionError,
-        CliToolNotFoundError,
-        check_helm_installed,
-        check_kubectl_installed,
-    )
+    from sbkube.utils.cli_check import (CliToolExecutionError,
+                                        CliToolNotFoundError,
+                                        check_helm_installed,
+                                        check_kubectl_installed)
 
     needs_helm = any(app.type in ["helm", "helm", "helm-oci"] for app in app_info_list)
     needs_kubectl = any(
@@ -256,7 +254,9 @@ def check_resource_exists(
     return return_code == 0
 
 
-def find_all_app_dirs(base_dir: Path, config_file_name: str = "config.yaml") -> list[Path]:
+def find_all_app_dirs(
+    base_dir: Path, config_file_name: str = "config.yaml"
+) -> list[Path]:
     """
     base_dir 하위의 모든 앱 그룹 디렉토리를 찾습니다.
 
@@ -281,9 +281,19 @@ def find_all_app_dirs(base_dir: Path, config_file_name: str = "config.yaml") -> 
         [Path("/project/nginx"), Path("/project/postgres"), Path("/project/redis")]
     """
     excluded_dirs = {
-        "charts", "repos", "build", "rendered", "values",
-        ".git", ".venv", "__pycache__", "node_modules",
-        "schemas", "examples", "docs", "tests"
+        "charts",
+        "repos",
+        "build",
+        "rendered",
+        "values",
+        ".git",
+        ".venv",
+        "__pycache__",
+        "node_modules",
+        "schemas",
+        "examples",
+        "docs",
+        "tests",
     }
 
     app_dirs = []
@@ -297,7 +307,7 @@ def find_all_app_dirs(base_dir: Path, config_file_name: str = "config.yaml") -> 
             continue
 
         # 숨김 디렉토리 제외
-        if path.name.startswith('.'):
+        if path.name.startswith("."):
             continue
 
         # 시스템 디렉토리 제외

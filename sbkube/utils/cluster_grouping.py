@@ -124,9 +124,7 @@ def group_releases_by_app_group(
         apps = group_data["apps"]
         total = len(apps)
         healthy = sum(
-            1
-            for app in apps.values()
-            if app["status"] in ["deployed", "superseded"]
+            1 for app in apps.values() if app["status"] in ["deployed", "superseded"]
         )
         failed = sum(
             1
@@ -184,14 +182,8 @@ def get_app_group_summary(grouped_data: dict[str, Any]) -> dict[str, Any]:
     summary = grouped_data.get("summary", {})
     managed_groups = grouped_data.get("managed_app_groups", {})
 
-    total_healthy = sum(
-        g["summary"]["healthy"]
-        for g in managed_groups.values()
-    )
-    total_failed = sum(
-        g["summary"]["failed"]
-        for g in managed_groups.values()
-    )
+    total_healthy = sum(g["summary"]["healthy"] for g in managed_groups.values())
+    total_failed = sum(g["summary"]["failed"] for g in managed_groups.values())
 
     overall_health = "healthy" if total_failed == 0 else "degraded"
     if total_failed > total_healthy:

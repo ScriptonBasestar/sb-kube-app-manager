@@ -12,12 +12,9 @@ import yaml
 
 from sbkube.models.validators import ValidatorMixin
 from sbkube.utils.diagnostic_system import DiagnosticLevel
-from sbkube.utils.validation_system import (
-    ValidationCheck,
-    ValidationContext,
-    ValidationResult,
-    ValidationSeverity,
-)
+from sbkube.utils.validation_system import (ValidationCheck, ValidationContext,
+                                            ValidationResult,
+                                            ValidationSeverity)
 
 
 class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
@@ -743,9 +740,11 @@ class CrossReferenceValidator(ValidationCheck):
                 else ValidationSeverity.MEDIUM
             )
             return self.create_validation_result(
-                level=DiagnosticLevel.ERROR
-                if severity == ValidationSeverity.HIGH
-                else DiagnosticLevel.WARNING,
+                level=(
+                    DiagnosticLevel.ERROR
+                    if severity == ValidationSeverity.HIGH
+                    else DiagnosticLevel.WARNING
+                ),
                 severity=severity,
                 message=f"앱 간 의존성/충돌 문제가 발견되었습니다 ({len(issues)}개)",
                 details="다음 의존성/충돌 문제들이 발견되었습니다:\n"

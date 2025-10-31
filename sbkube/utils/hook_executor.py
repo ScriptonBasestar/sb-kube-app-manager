@@ -158,9 +158,7 @@ class HookExecutor:
         hook_env = self.env.copy()
         hook_env["SBKUBE_APP_NAME"] = app_name
         if context:
-            hook_env.update(
-                {f"SBKUBE_{k.upper()}": str(v) for k, v in context.items()}
-            )
+            hook_env.update({f"SBKUBE_{k.upper()}": str(v) for k, v in context.items()})
 
         for cmd in commands:
             if not self._execute_single_command(cmd, hook_type, hook_env):
@@ -534,10 +532,10 @@ class HookExecutor:
             return False
 
         if self.dry_run:
+            console.print("[yellow]🔍 [DRY-RUN] Would apply inline content[/yellow]")
             console.print(
-                f"[yellow]🔍 [DRY-RUN] Would apply inline content[/yellow]"
+                f"    [dim]{yaml.dump(content, default_flow_style=False)}[/dim]"
             )
-            console.print(f"    [dim]{yaml.dump(content, default_flow_style=False)}[/dim]")
             return True
 
         # 임시 파일 생성
@@ -552,7 +550,9 @@ class HookExecutor:
                 tmp_path = tmp_file.name
 
             # kubectl apply 실행
-            target_namespace = context.get("namespace") if context else None or self.namespace
+            target_namespace = (
+                context.get("namespace") if context else None or self.namespace
+            )
 
             cmd = ["kubectl", "apply", "-f", tmp_path]
             if target_namespace:
@@ -561,12 +561,12 @@ class HookExecutor:
             # Apply cluster configuration
             cmd = apply_cluster_config_to_command(cmd, self.kubeconfig, self.context)
 
-            console.print(f"    Applying inline content...")
+            console.print("    Applying inline content...")
 
             return_code, stdout, stderr = run_command(cmd)
 
             if return_code != 0:
-                console.print(f"[red]❌ Failed to apply inline content[/red]")
+                console.print("[red]❌ Failed to apply inline content[/red]")
                 if stderr:
                     console.print(f"[red]   Error: {stderr.strip()}[/red]")
                 return False
@@ -625,9 +625,7 @@ class HookExecutor:
         hook_env = self.env.copy()
         hook_env["SBKUBE_APP_NAME"] = app_name
         if context:
-            hook_env.update(
-                {f"SBKUBE_{k.upper()}": str(v) for k, v in context.items()}
-            )
+            hook_env.update({f"SBKUBE_{k.upper()}": str(v) for k, v in context.items()})
 
         # Retry 로직
         for attempt in range(1, max_attempts + 1):
@@ -648,16 +646,18 @@ class HookExecutor:
                 # 최종 실패
                 if on_failure == "warn":
                     console.print(
-                        f"[yellow]⚠️  Command failed but on_failure=warn, continuing...[/yellow]"
+                        "[yellow]⚠️  Command failed but on_failure=warn, continuing...[/yellow]"
                     )
                     return True
                 elif on_failure == "ignore":
                     console.print(
-                        f"[dim]ℹ️  Command failed but on_failure=ignore, skipping...[/dim]"
+                        "[dim]ℹ️  Command failed but on_failure=ignore, skipping...[/dim]"
                     )
                     return True
                 else:  # fail
-                    console.print(f"[red]❌ Command failed after {max_attempts} attempts[/red]")
+                    console.print(
+                        f"[red]❌ Command failed after {max_attempts} attempts[/red]"
+                    )
                     return False
 
         return False
@@ -687,17 +687,23 @@ class HookExecutor:
         if not validation:
             return True
 
-        console.print(f"  [cyan]🔍 Validating task result...[/cyan]")
+        console.print("  [cyan]🔍 Validating task result...[/cyan]")
 
         kind = validation.get("kind")
         name = validation.get("name")
-        namespace = validation.get("namespace") or (context.get("namespace") if context else None) or self.namespace
+        namespace = (
+            validation.get("namespace")
+            or (context.get("namespace") if context else None)
+            or self.namespace
+        )
         wait_for_ready = validation.get("wait_for_ready", False)
         timeout = validation.get("timeout", 60)
         conditions = validation.get("conditions")
 
         if not kind:
-            console.print("[yellow]⚠️  No kind specified in validation, skipping...[/yellow]")
+            console.print(
+                "[yellow]⚠️  No kind specified in validation, skipping...[/yellow]"
+            )
             return True
 
         if self.dry_run:
@@ -734,13 +740,19 @@ class HookExecutor:
                 wait_cmd.extend(["--namespace", namespace])
 
             wait_cmd.append(f"--timeout={timeout}s")
-            wait_cmd = apply_cluster_config_to_command(wait_cmd, self.kubeconfig, self.context)
+            wait_cmd = apply_cluster_config_to_command(
+                wait_cmd, self.kubeconfig, self.context
+            )
 
-            console.print(f"    Waiting for {kind} to be ready (timeout: {timeout}s)...")
+            console.print(
+                f"    Waiting for {kind} to be ready (timeout: {timeout}s)..."
+            )
 
             return_code, stdout, stderr = run_command(wait_cmd)
             if return_code != 0:
-                console.print(f"[red]❌ Validation failed: {kind} not ready within {timeout}s[/red]")
+                console.print(
+                    f"[red]❌ Validation failed: {kind} not ready within {timeout}s[/red]"
+                )
                 if stderr:
                     console.print(f"[red]   Error: {stderr.strip()}[/red]")
                 return False
@@ -795,7 +807,7 @@ class HookExecutor:
         # wait_for 검증
         wait_for = dependency.get("wait_for")
         if wait_for:
-            console.print(f"  [cyan]⏳ Waiting for external resources...[/cyan]")
+            console.print("  [cyan]⏳ Waiting for external resources...[/cyan]")
 
             for wait_config in wait_for:
                 kind = wait_config.get("kind")
@@ -803,14 +815,22 @@ class HookExecutor:
                 name = wait_config.get("name")
                 condition = wait_config.get("condition", "Ready")
                 timeout = wait_config.get("timeout", 60)
-                namespace = wait_config.get("namespace") or (context.get("namespace") if context else None) or self.namespace
+                namespace = (
+                    wait_config.get("namespace")
+                    or (context.get("namespace") if context else None)
+                    or self.namespace
+                )
 
                 if not kind:
-                    console.print("[yellow]⚠️  No kind specified in wait_for, skipping...[/yellow]")
+                    console.print(
+                        "[yellow]⚠️  No kind specified in wait_for, skipping...[/yellow]"
+                    )
                     continue
 
                 if self.dry_run:
-                    console.print(f"[yellow]🔍 [DRY-RUN] Would wait for {kind}[/yellow]")
+                    console.print(
+                        f"[yellow]🔍 [DRY-RUN] Would wait for {kind}[/yellow]"
+                    )
                     continue
 
                 # kubectl wait 명령어 구성
@@ -829,9 +849,13 @@ class HookExecutor:
                     wait_cmd.extend(["--namespace", namespace])
 
                 wait_cmd.append(f"--timeout={timeout}s")
-                wait_cmd = apply_cluster_config_to_command(wait_cmd, self.kubeconfig, self.context)
+                wait_cmd = apply_cluster_config_to_command(
+                    wait_cmd, self.kubeconfig, self.context
+                )
 
-                console.print(f"    Waiting for {kind} to satisfy condition '{condition}' (timeout: {timeout}s)...")
+                console.print(
+                    f"    Waiting for {kind} to satisfy condition '{condition}' (timeout: {timeout}s)..."
+                )
 
                 return_code, stdout, stderr = run_command(wait_cmd)
                 if return_code != 0:
@@ -842,7 +866,9 @@ class HookExecutor:
                         console.print(f"[red]   Error: {stderr.strip()}[/red]")
                     return False
 
-                console.print(f"[green]✅ {kind} condition '{condition}' satisfied[/green]")
+                console.print(
+                    f"[green]✅ {kind} condition '{condition}' satisfied[/green]"
+                )
 
         return True
 
@@ -875,18 +901,24 @@ class HookExecutor:
 
         # manual은 현재 자동 실행 안 함 (나중에 사용자 확인 추가 가능)
         if on_failure == "manual":
-            console.print("[yellow]⚠️  Rollback policy is 'manual', skipping automatic rollback[/yellow]")
+            console.print(
+                "[yellow]⚠️  Rollback policy is 'manual', skipping automatic rollback[/yellow]"
+            )
             return True
         elif on_failure == "never":
             return True
 
-        console.print(f"[yellow]🔄 Executing rollback for task '{task.get('name')}'...[/yellow]")
+        console.print(
+            f"[yellow]🔄 Executing rollback for task '{task.get('name')}'...[/yellow]"
+        )
 
         # Rollback manifests 적용
         rollback_manifests = rollback.get("manifests", [])
         if rollback_manifests:
-            console.print(f"  Applying rollback manifests...")
-            namespace = (context.get("namespace") if context else None) or self.namespace
+            console.print("  Applying rollback manifests...")
+            namespace = (
+                context.get("namespace") if context else None
+            ) or self.namespace
             if not self._deploy_manifests(app_name, rollback_manifests, namespace):
                 console.print("[red]❌ Rollback manifests failed[/red]")
                 return False
@@ -894,11 +926,11 @@ class HookExecutor:
         # Rollback commands 실행
         rollback_commands = rollback.get("commands", [])
         if rollback_commands:
-            console.print(f"  Executing rollback commands...")
+            console.print("  Executing rollback commands...")
             for cmd in rollback_commands:
                 if not self._execute_single_command(cmd, "rollback", self.env):
                     console.print(f"[red]❌ Rollback command failed: {cmd}[/red]")
                     return False
 
-        console.print(f"[green]✅ Rollback completed[/green]")
+        console.print("[green]✅ Rollback completed[/green]")
         return True

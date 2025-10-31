@@ -2,11 +2,8 @@ import json
 import subprocess
 from collections.abc import Iterable
 
-from sbkube.exceptions import (
-    CliToolExecutionError,
-    CliToolNotFoundError,
-    KubernetesConnectionError,
-)
+from sbkube.exceptions import (CliToolExecutionError, CliToolNotFoundError,
+                               KubernetesConnectionError)
 
 _CONNECTION_ERROR_KEYWORDS: tuple[str, ...] = (
     "kubernetes cluster unreachable",

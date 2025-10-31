@@ -34,6 +34,69 @@ from sbkube.utils.logger import logger
 
 
 class SbkubeGroup(click.Group):
+    """SBKube CLI 그룹 with categorized help display."""
+
+    # 명령어 카테고리 정의
+    COMMAND_CATEGORIES = {
+        "핵심 워크플로우": ["prepare", "build", "template", "deploy"],
+        "통합 명령어": ["apply"],
+        "상태 관리": ["status", "history", "rollback"],
+        "업그레이드/삭제": ["upgrade", "delete"],
+        "유틸리티": ["init", "validate", "doctor", "version"],
+    }
+
+    # 카테고리별 이모지
+    CATEGORY_LABELS = {
+        "핵심 워크플로우": "🔄",
+        "통합 명령어": "⚡",
+        "상태 관리": "📊",
+        "업그레이드/삭제": "🔧",
+        "유틸리티": "🛠️",
+    }
+
+    def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
+        """Format commands by category."""
+        commands = []
+        for subcommand in self.list_commands(ctx):
+            cmd = self.get_command(ctx, subcommand)
+            if cmd is None:
+                continue
+            if cmd.hidden:
+                continue
+            help_text = cmd.get_short_help_str(limit=100)
+            commands.append((subcommand, help_text))
+
+        if not commands:
+            return
+
+        # 카테고리별로 명령어 그룹화
+        categorized: dict[str, list[tuple[str, str]]] = {}
+        uncategorized: list[tuple[str, str]] = []
+
+        for cmd_name, help_text in commands:
+            found = False
+            for category, cmd_list in self.COMMAND_CATEGORIES.items():
+                if cmd_name in cmd_list:
+                    if category not in categorized:
+                        categorized[category] = []
+                    categorized[category].append((cmd_name, help_text))
+                    found = True
+                    break
+            if not found:
+                uncategorized.append((cmd_name, help_text))
+
+        # 카테고리 순서대로 출력
+        for category in self.COMMAND_CATEGORIES.keys():
+            if category in categorized:
+                emoji = self.CATEGORY_LABELS.get(category, "")
+                with formatter.section(f"{emoji} {category}"):
+                    formatter.write_dl(categorized[category])
+
+        # 미분류 명령어 (있는 경우)
+        if uncategorized:
+            with formatter.section("기타"):
+                formatter.write_dl(uncategorized)
+
     def invoke(self, ctx: click.Context) -> None:
         # 이 메소드는 invoke_without_command=True 와 main 콜백 로직에 의해
         # 실제 서브커맨드가 실행될 때만 호출됩니다.

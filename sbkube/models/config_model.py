@@ -124,9 +124,27 @@ class HelmApp(ConfigBaseModel):
     """
 
     type: Literal["helm"] = "helm"
-    chart: str  # "repo/chart", "./path", "/path" 형식
-    version: str | None = None  # chart version (remote chart만 해당)
-    values: list[str] = Field(default_factory=list)  # values 파일 목록
+    chart: str = Field(
+        ...,
+        description="Helm chart in format 'repo/chart', './path', or '/abs/path'",
+        json_schema_extra={
+            "examples": ["grafana/grafana", "./charts/my-app", "/path/to/chart"]
+        }
+    )
+    version: str | None = Field(
+        None,
+        description="Chart version (for remote charts only)",
+        json_schema_extra={
+            "examples": ["6.50.0", "1.0.0"]
+        }
+    )
+    values: list[str] = Field(
+        default_factory=list,
+        description="Values file paths relative to app directory",
+        json_schema_extra={
+            "examples": [["values.yaml"], ["values.dev.yaml", "values.shared.yaml"]]
+        }
+    )
 
     # 커스터마이징
     overrides: list[str] = Field(
@@ -139,9 +157,21 @@ class HelmApp(ConfigBaseModel):
     )
 
     # Helm 옵션
-    set_values: dict[str, Any] = Field(default_factory=dict)  # --set 옵션
-    release_name: str | None = None  # 릴리스 이름 (기본값: 앱 이름)
-    namespace: str | None = None  # 네임스페이스 오버라이드
+    set_values: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Helm --set option values (key-value pairs)",
+        json_schema_extra={
+            "examples": [{"replicaCount": 3, "image.tag": "v1.2.3"}]
+        }
+    )
+    release_name: str | None = Field(
+        None,
+        description="Helm release name (defaults to app name)"
+    )
+    namespace: str | None = Field(
+        None,
+        description="Namespace override (defaults to global namespace)"
+    )
     create_namespace: bool = False
     wait: bool = True
     timeout: str = "5m"
@@ -245,7 +275,10 @@ class YamlApp(ConfigBaseModel):
     type: Literal["yaml"] = "yaml"
     manifests: list[str] = Field(
         ...,
-        description="YAML manifest files to deploy with kubectl apply"
+        description="YAML manifest files to deploy with kubectl apply",
+        json_schema_extra={
+            "examples": [["deployment.yaml", "service.yaml"], ["manifests/*.yaml"]]
+        }
     )
     namespace: str | None = None
     labels: dict[str, str] = Field(default_factory=dict)
@@ -327,9 +360,27 @@ class GitApp(ConfigBaseModel):
     """
 
     type: Literal["git"] = "git"
-    repo: str  # Git repository URL
-    path: str | None = None  # 리포지토리 내 경로
-    branch: str = "main"  # Git branch/tag
+    repo: str = Field(
+        ...,
+        description="Git repository URL",
+        json_schema_extra={
+            "examples": ["https://github.com/user/repo", "git@github.com:user/repo.git"]
+        }
+    )
+    path: str | None = Field(
+        None,
+        description="Path within repository (optional)",
+        json_schema_extra={
+            "examples": ["k8s/", "manifests/production/"]
+        }
+    )
+    branch: str = Field(
+        "main",
+        description="Git branch or tag",
+        json_schema_extra={
+            "examples": ["main", "develop", "v1.2.3"]
+        }
+    )
     ref: str | None = None  # 특정 commit/tag (branch보다 우선)
     namespace: str | None = None
     depends_on: list[str] = Field(default_factory=list)
@@ -382,8 +433,20 @@ class HttpApp(ConfigBaseModel):
     """
 
     type: Literal["http"] = "http"
-    url: str  # HTTP(S) URL
-    dest: str  # 저장할 파일 경로 (app_dir 기준)
+    url: str = Field(
+        ...,
+        description="HTTP(S) URL to download file from",
+        json_schema_extra={
+            "examples": ["https://raw.githubusercontent.com/example/repo/main/manifest.yaml"]
+        }
+    )
+    dest: str = Field(
+        ...,
+        description="Destination file path relative to app directory",
+        json_schema_extra={
+            "examples": ["manifests/external.yaml", "config/downloaded.yaml"]
+        }
+    )
     headers: dict[str, str] = Field(default_factory=dict)  # HTTP 헤더
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True

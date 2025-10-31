@@ -5,6 +5,18 @@
 
 ## [Unreleased]
 
+### ✨ Improved
+
+**Help 화면 개선**
+- ✅ 명령어를 카테고리별로 그룹화하여 가독성 향상
+  - 🔄 핵심 워크플로우: prepare, build, template, deploy
+  - ⚡ 통합 명령어: apply
+  - 📊 상태 관리: status, history, rollback
+  - 🔧 업그레이드/삭제: upgrade, delete
+  - 🛠️ 유틸리티: init, validate, doctor, version
+- ✅ 카테고리별 이모지 추가로 시각적 구분 강화
+- ✅ 명령어 발견성 및 학습 곡선 개선
+
 ## [0.6.0] - 2025-10-31
 
 ### 🎯 New Features
@@ -22,7 +34,35 @@
 - ✅ Graceful fallback: namespace-specific query → any-namespace query
 - ✅ Deployment status messages now include actual deployed namespace
 
+**Validate Command Enhancement** (2025-10-31)
+- ✅ Added `--app-dir` option for directory-based validation
+- ✅ Added `--config-file` option (default: config.yaml)
+- ✅ 3-level file resolution priority:
+  1. Explicit file path (backward compatible)
+  2. `--app-dir` + `--config-file` combination
+  3. Current directory fallback (./config.yaml)
+- ✅ Clear error messages with actionable solutions
+- ✅ Comprehensive test suite added (15 test cases)
+
+**Doctor Command Safety Improvements** (2025-10-31)
+- ✅ Improved kubectl/helm detection using `shutil.which()` (fixes false negatives)
+- ✅ Changed messaging from "자동 수정 가능" to "권장 해결 방법"
+- ✅ Links to official documentation instead of shell commands
+- ✅ Added safety warnings: "위 명령어는 참고용입니다. 실행 전 반드시 확인하세요"
+
 ### 🗑️ Breaking Changes
+
+**Doctor Command** (2025-10-31):
+- ❌ `--fix` option removed (security improvement)
+  - **Reason**: Automatic system modifications can damage user environments
+  - **Alternative**: Follow suggested commands manually after verification
+
+### 🐛 Bug Fixes
+
+- ✅ Fixed `pyproject.toml`: Moved `dependencies` from `[project.urls]` to `[project]` section
+- ✅ Fixed kubectl detection false negative (kubectl exists but reported as missing)
+
+### 🗑️ Breaking Changes (Previous)
 
 **Removed Deprecated Commands**:
 - ❌ `sbkube cluster` command removed → Use `sbkube status` instead

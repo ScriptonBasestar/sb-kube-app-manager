@@ -24,11 +24,9 @@ def temp_project(tmp_path):
 apps:
   redis:
     type: helm
+    chart: bitnami/redis
+    version: "17.0.0"
     enabled: true
-    specs:
-      repo: bitnami
-      chart: redis
-      version: "17.0.0"
 """
     (basic_dir / "config.yaml").write_text(config_content)
 
@@ -276,3 +274,143 @@ class TestValidateIntegration:
             ["validate", str(temp_project / "sources.yaml")]
         )
         assert result3.exit_code == 0
+
+
+class TestValidateEdgeCases:
+    """Test edge cases and error conditions."""
+
+    def test_validate_empty_config(self, runner, tmp_path):
+        """Test validation with empty config file."""
+        empty_config = tmp_path / "empty.yaml"
+        empty_config.write_text("")
+
+        result = runner.invoke(
+            main,
+            ["validate", str(empty_config)]
+        )
+
+        # Should fail with clear error
+        assert result.exit_code != 0
+        # Error message may be in Korean: "파일 타입을 유추할 수 없습니다"
+        assert ("Configuration validation failed" in result.output or
+                "Empty" in result.output or
+                "유추할 수 없습니다" in result.output or
+                "schema-type" in result.output)
+
+    def test_validate_malformed_yaml(self, runner, tmp_path):
+        """Test validation with malformed YAML."""
+        bad_yaml = tmp_path / "bad.yaml"
+        bad_yaml.write_text("namespace: test\napps:\n  - invalid: [unclosed")
+
+        result = runner.invoke(
+            main,
+            ["validate", str(bad_yaml)]
+        )
+
+        # Should fail with YAML parse error
+        assert result.exit_code != 0
+
+    def test_validate_missing_required_fields(self, runner, tmp_path):
+        """Test validation with missing required fields."""
+        incomplete_config = tmp_path / "incomplete.yaml"
+        incomplete_config.write_text("""
+apps:
+  redis:
+    type: helm
+    # Missing 'chart' field - should fail validation
+""")
+
+        result = runner.invoke(
+            main,
+            ["validate", str(incomplete_config)]
+        )
+
+        # Should fail with field requirement error
+        assert result.exit_code != 0
+        assert "chart" in result.output.lower() or "required" in result.output.lower()
+
+    def test_validate_nonexistent_file(self, runner):
+        """Test validation with nonexistent file."""
+        result = runner.invoke(
+            main,
+            ["validate", "/nonexistent/config.yaml"]
+        )
+
+        # Should fail with file not found error
+        assert result.exit_code != 0
+        assert "not found" in result.output.lower() or "does not exist" in result.output.lower()
+
+    def test_validate_directory_instead_of_file(self, runner, tmp_path):
+        """Test validation when given a directory path."""
+        result = runner.invoke(
+            main,
+            ["validate", str(tmp_path)]
+        )
+
+        # Should fail with appropriate error
+        assert result.exit_code != 0
+
+    def test_validate_circular_dependency(self, runner, tmp_path):
+        """Test validation with circular dependency."""
+        circular_config = tmp_path / "circular.yaml"
+        circular_config.write_text("""namespace: test
+apps:
+  app-a:
+    type: helm
+    chart: example/app-a
+    depends_on:
+      - app-b
+  app-b:
+    type: helm
+    chart: example/app-b
+    depends_on:
+      - app-a
+""")
+
+        result = runner.invoke(
+            main,
+            ["validate", str(circular_config)]
+        )
+
+        # Should fail with circular dependency error
+        assert result.exit_code != 0
+        assert "circular" in result.output.lower() or "cycle" in result.output.lower()
+
+    def test_validate_invalid_app_name(self, runner, tmp_path):
+        """Test validation with invalid Kubernetes app name."""
+        invalid_name_config = tmp_path / "invalid_name.yaml"
+        invalid_name_config.write_text("""namespace: test
+apps:
+  Invalid_Name_With_Underscores:
+    type: helm
+    chart: example/test
+""")
+
+        result = runner.invoke(
+            main,
+            ["validate", str(invalid_name_config)]
+        )
+
+        # Should fail with naming validation error
+        assert result.exit_code != 0
+
+    def test_validate_nonexistent_dependency(self, runner, tmp_path):
+        """Test validation with dependency on nonexistent app."""
+        bad_dep_config = tmp_path / "bad_dep.yaml"
+        bad_dep_config.write_text("""namespace: test
+apps:
+  app-a:
+    type: helm
+    chart: example/app-a
+    depends_on:
+      - nonexistent-app
+""")
+
+        result = runner.invoke(
+            main,
+            ["validate", str(bad_dep_config)]
+        )
+
+        # Should fail with dependency validation error
+        assert result.exit_code != 0
+        assert "nonexistent" in result.output.lower() or "not found" in result.output.lower()

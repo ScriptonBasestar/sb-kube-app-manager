@@ -63,28 +63,40 @@ sbkube apply                  # 3. 재배포
 
 ### 명령어 카테고리
 
-**🎯 핵심 워크플로우**
+SBKube는 명령어를 사용 목적에 따라 5가지 카테고리로 구분합니다. `sbkube --help` 실행 시 카테고리별로 그룹화되어 표시됩니다.
 
-- `init` - 프로젝트 초기화
-- `apply` ⭐ - 통합 배포 (가장 많이 사용)
-- `prepare` / `build` / `template` / `deploy` - 단계별 실행
+#### 🔄 핵심 워크플로우
 
-**🛠️ 관리 및 유지보수**
+배포 프로세스의 4단계를 개별적으로 실행할 수 있습니다:
 
-- `upgrade` - 릴리스 업그레이드
+- `prepare` - 소스 다운로드 (Helm 차트, Git 리포지토리 등)
+- `build` - 애플리케이션 빌드 및 커스터마이징
+- `template` - Kubernetes YAML 렌더링
+- `deploy` - 클러스터 배포
+
+#### ⚡ 통합 명령어
+
+- `apply` ⭐ - 전체 워크플로우 자동 실행 (prepare → build → template → deploy)
+
+#### 📊 상태 관리 (v0.6.0+)
+
+배포 후 상태 확인 및 복구:
+
+- `status` ⭐ - 클러스터 및 앱 상태 확인 (실시간 + 캐싱)
+- `history` ⭐ - 배포 히스토리 조회 및 비교 (diff, values-diff)
+- `rollback` - 이전 배포로 롤백
+
+#### 🔧 업그레이드/삭제
+
+- `upgrade` - Helm 릴리스 업그레이드
 - `delete` - 리소스 삭제
-- `validate` - 설정 검증
 
-**📊 상태 및 모니터링 (v0.6.0+)**
+#### 🛠️ 유틸리티
 
-- `status` ⭐ - 통합 클러스터 상태 확인 (신규, 권장)
-- `history` ⭐ - 배포 히스토리 및 비교 (신규, 권장)
-- `rollback` - 이전 배포로 롤백 (신규)
-- `state` ⚠️ - 배포 상태 관리 (deprecated, `history` 사용 권장)
-
-**🏥 문제 해결**
-
-- `doctor` - 시스템 진단
+- `init` - 프로젝트 초기화 (최초 1회)
+- `validate` - 설정 파일 검증 (config.yaml, sources.yaml)
+- `doctor` - 시스템 종합 진단 (kubectl, helm, 네트워크 등)
+- `version` - 버전 정보
 
 ### 명령어 관계 다이어그램
 
@@ -168,18 +180,18 @@ validate
 
 prepare
  ├─ 입력: sources.yaml, config.yaml
- └─ 출력: charts/, repos/
+ └─ 출력: .sbkube/charts/, .sbkube/repos/
 
 build
- ├─ 입력: charts/, config.yaml (overrides, removes)
- └─ 출력: build/
+ ├─ 입력: .sbkube/charts/, config.yaml (overrides, removes)
+ └─ 출력: .sbkube/build/
 
 template
- ├─ 입력: build/, config.yaml (values)
- └─ 출력: rendered/
+ ├─ 입력: .sbkube/build/, config.yaml (values)
+ └─ 출력: .sbkube/rendered/
 
 deploy
- ├─ 입력: build/, rendered/, config.yaml
+ ├─ 입력: .sbkube/build/, .sbkube/rendered/, config.yaml
  ├─ 실행: helm install, kubectl apply
  └─ 기록: state (배포 상태)
 
@@ -390,8 +402,8 @@ sbkube prepare [옵션]
 
 ### 📁 생성되는 디렉토리
 
-- `charts/` - 다운로드된 Helm 차트
-- `repos/` - 클론된 Git 저장소
+- `.sbkube/charts/` - 다운로드된 Helm 차트
+- `.sbkube/repos/` - 클론된 Git 저장소
 
 ### 🔄 멱등성 (Idempotency)
 
@@ -407,7 +419,7 @@ sbkube prepare [옵션]
 # 첫 실행: 차트 다운로드
 $ sbkube prepare
 📦 Preparing Helm app: grafana
-  Pulling chart: grafana/grafana → charts/grafana
+  Pulling chart: grafana/grafana → .sbkube/charts/grafana
 ✅ Helm app prepared: grafana
 
 # 재실행: 기존 차트 skip
@@ -420,8 +432,8 @@ $ sbkube prepare
 # 강제 재다운로드
 $ sbkube prepare --force
 📦 Preparing Helm app: grafana
-⚠️  Removing existing chart (--force): charts/grafana
-  Pulling chart: grafana/grafana → charts/grafana
+⚠️  Removing existing chart (--force): .sbkube/charts/grafana
+  Pulling chart: grafana/grafana → .sbkube/charts/grafana
 ✅ Helm app prepared: grafana
 ```
 
@@ -465,7 +477,7 @@ sbkube build [옵션]
 
 ### 📁 생성되는 디렉토리
 
-- `build/` - 빌드된 애플리케이션 아티팩트
+- `.sbkube/build/` - 빌드된 애플리케이션 아티팩트
 
 ### 🎯 지원 앱 타입
 
@@ -536,11 +548,11 @@ apps:
       - files/custom-config.txt      # ✅ files 디렉토리도 포함
 ```
 
-**빌드 결과**: overrides가 build/ 디렉토리에 적용됨
+**빌드 결과**: overrides가 .sbkube/build/ 디렉토리에 적용됨
 
 ```
 🔨 Building Helm app: myapp
-  Copying chart: charts/nginx/nginx → build/myapp
+  Copying chart: .sbkube/charts/nginx/nginx → .sbkube/build/myapp
   Applying 2 overrides...
     ✓ Override: templates/configmap.yaml
     ✓ Override: files/custom-config.txt
@@ -599,7 +611,7 @@ apps:
 **2. 경로는 차트 루트 기준**
 
 ```
-build/myapp/                    # 차트 루트
+.sbkube/build/myapp/            # 차트 루트
   ├── Chart.yaml
   ├── templates/
   │   └── configmap.yaml        # .Files.Get을 사용하는 템플릿
@@ -619,14 +631,15 @@ app-dir/
 │       │   └── new-config.yaml      # 새 파일 추가
 │       └── files/
 │           └── custom-config.txt    # .Files.Get에서 참조
-└── build/                      # sbkube build 실행 후 생성
-    └── myapp/
-        ├── templates/
-        │   ├── deployment.yaml      # ✅ Override됨
-        │   ├── service.yaml         # (차트 원본 유지)
-        │   └── new-config.yaml      # ✅ 추가됨
-        └── files/
-            └── custom-config.txt    # ✅ 추가됨
+└── .sbkube/                    # sbkube 작업 디렉토리
+    └── build/                  # sbkube build 실행 후 생성
+        └── myapp/
+            ├── templates/
+            │   ├── deployment.yaml      # ✅ Override됨
+            │   ├── service.yaml         # (차트 원본 유지)
+            │   └── new-config.yaml      # ✅ 추가됨
+            └── files/
+                └── custom-config.txt    # ✅ 추가됨
 ```
 
 #### 🚫 자동 발견 없음
@@ -931,6 +944,63 @@ $ sbkube validate
    3. Ensure config.yaml exists in current directory
 ```
 
+### 🎯 실전 사용 시나리오
+
+#### 시나리오 1: 프로젝트 초기 검증
+```bash
+# 프로젝트 루트에서 전체 설정 검증
+cd myproject
+sbkube validate  # 현재 디렉토리의 config.yaml 검증
+```
+
+#### 시나리오 2: 앱 그룹별 검증
+```bash
+# 특정 앱 그룹만 검증 (권장 방식)
+sbkube validate --app-dir app_000_infra_network
+sbkube validate --app-dir app_010_data_postgresql
+sbkube validate --app-dir app_020_app_backend
+
+# 커스텀 설정 파일 검증
+sbkube validate --app-dir redis --config-file staging.yaml
+```
+
+#### 시나리오 3: CI/CD 파이프라인
+```bash
+# 배포 전 모든 앱 그룹 자동 검증
+#!/bin/bash
+for dir in app_*/; do
+  echo "Validating $dir..."
+  sbkube validate --app-dir "$dir" || exit 1
+done
+echo "✅ All app groups validated successfully"
+```
+
+#### 시나리오 4: Pre-commit Hook
+```bash
+# .git/hooks/pre-commit
+#!/bin/bash
+# 변경된 config.yaml 파일만 검증
+changed_configs=$(git diff --cached --name-only | grep 'config.yaml$')
+
+for config in $changed_configs; do
+  dir=$(dirname "$config")
+  echo "Validating $config..."
+  sbkube validate --app-dir "$dir" || {
+    echo "❌ Validation failed for $config"
+    echo "Fix errors before committing"
+    exit 1
+  }
+done
+```
+
+#### 시나리오 5: 다중 환경 설정 검증
+```bash
+# 개발/스테이징/프로덕션 환경별 검증
+sbkube validate --app-dir redis --config-file config.dev.yaml
+sbkube validate --app-dir redis --config-file config.staging.yaml
+sbkube validate --app-dir redis --config-file config.prod.yaml
+```
+
 ---
 
 ## 🏥 doctor - 시스템 종합 진단
@@ -946,7 +1016,6 @@ sbkube doctor [옵션]
 ### 🎛️ 옵션
 
 - `--detailed` - 상세한 진단 결과 표시
-- `--fix` - 자동 수정 가능한 문제들을 수정
 - `--check <검사명>` - 특정 검사만 실행 (예: `k8s_connectivity`)
 - `--config-dir <디렉토리>` - 설정 파일 디렉토리
 
@@ -985,9 +1054,6 @@ sbkube doctor
 
 # 상세 결과 표시
 sbkube doctor --detailed
-
-# 자동 수정 포함
-sbkube doctor --fix
 
 # 특정 검사만 실행
 sbkube doctor --check k8s_connectivity

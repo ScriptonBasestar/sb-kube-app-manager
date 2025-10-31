@@ -85,16 +85,15 @@ $RECYCLE.BIN/
 .nfs*
 
 # ───────────────
-# 📁 사용자 샘플/개발 환경
+# 📁 사용자 임시 설정
 # ───────────────
-charts/
-repos/
 *.local.yaml
 *.override.yaml
 
 # ───────────────
-# 🔧 SBKube runtime data
+# 🔧 SBKube 작업 디렉토리 (통합)
 # ───────────────
+# build/, charts/, repos/, rendered/ 모두 .sbkube/ 하위로 통합
 .sbkube/
 
 # sb-yesman-cli settings
@@ -118,3 +117,4 @@ data/
 lint-output.txt
 *-output.txt
 tmp/
+charts/

@@ -73,6 +73,12 @@ tests/
 ├── models/                   # 모델 검증 테스트
 ├── integration/              # 통합 테스트
 └── e2e/                      # E2E 테스트 (k3s)
+
+.sbkube/                      # SBKube 작업 디렉토리 (프로젝트별, .gitignore)
+├── charts/                   # Helm 차트 다운로드 (prepare)
+├── repos/                    # Git 리포지토리 clone (prepare)
+├── build/                    # 차트 빌드 결과 (build)
+└── rendered/                 # 템플릿 렌더링 결과 (template)
 ```
 
 ______________________________________________________________________

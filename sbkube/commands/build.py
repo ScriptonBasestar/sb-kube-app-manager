@@ -342,10 +342,12 @@ def cmd(
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
 
-    CHARTS_DIR = BASE_DIR / "charts"
-    BUILD_DIR = BASE_DIR / "build"
+    SBKUBE_WORK_DIR = BASE_DIR / ".sbkube"
+    CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
+    BUILD_DIR = SBKUBE_WORK_DIR / "build"
 
-    # build 디렉토리 생성
+    # 작업 디렉토리 생성
+    SBKUBE_WORK_DIR.mkdir(parents=True, exist_ok=True)
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
 
     # sources.yaml 로드 (app_dirs 확인용)

@@ -286,8 +286,8 @@ def template_http_app(
 @click.option(
     "--output-dir",
     "output_dir_name",
-    default="rendered",
-    help="렌더링된 YAML을 저장할 디렉토리 이름 (app-dir 기준)",
+    default=None,
+    help="렌더링된 YAML을 저장할 디렉토리 경로 (기본값: BASE_DIR/.sbkube/rendered)",
 )
 @click.option(
     "--app",
@@ -313,8 +313,8 @@ def cmd(
     SBKube template 명령어.
 
     빌드된 차트를 YAML로 렌더링:
-    - build/ 디렉토리의 차트를 helm template으로 렌더링
-    - 렌더링된 YAML을 rendered/ 디렉토리에 저장
+    - .sbkube/build/ 디렉토리의 차트를 helm template으로 렌더링
+    - 렌더링된 YAML을 .sbkube/rendered/ 디렉토리에 저장
     - 배포 전 미리보기 및 CI/CD 검증용
     """
     console.print("[bold blue]✨ SBKube `template` 시작 ✨[/bold blue]")
@@ -325,8 +325,9 @@ def cmd(
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
 
-    CHARTS_DIR = BASE_DIR / "charts"
-    BUILD_DIR = BASE_DIR / "build"
+    SBKUBE_WORK_DIR = BASE_DIR / ".sbkube"
+    CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
+    BUILD_DIR = SBKUBE_WORK_DIR / "build"
 
     # sources.yaml 로드 (app_dirs 확인용)
     sources_file_path = BASE_DIR / "sources.yaml"
@@ -366,17 +367,28 @@ def cmd(
         for app_dir in app_config_dirs:
             console.print(f"  - {app_dir.name}/")
 
+    # rendered 디렉토리 결정
+    if output_dir_name:
+        # 사용자가 명시적으로 지정한 경우
+        output_path = Path(output_dir_name)
+        if output_path.is_absolute():
+            RENDERED_DIR = output_path
+        else:
+            RENDERED_DIR = BASE_DIR / output_path
+    else:
+        # 기본값: .sbkube/rendered/
+        RENDERED_DIR = SBKUBE_WORK_DIR / "rendered"
+
+    # rendered 디렉토리 생성
+    RENDERED_DIR.mkdir(parents=True, exist_ok=True)
+    console.print(f"[cyan]📁 Output directory: {RENDERED_DIR}[/cyan]")
+
     # 각 앱 그룹 처리
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
         console.print(f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
 
         config_file_path = APP_CONFIG_DIR / config_file_name
-        RENDERED_DIR = APP_CONFIG_DIR / output_dir_name
-
-        # rendered 디렉토리 생성
-        RENDERED_DIR.mkdir(parents=True, exist_ok=True)
-        console.print(f"[cyan]📁 Output directory: {RENDERED_DIR}[/cyan]")
 
         # 설정 파일 로드
         if not config_file_path.exists():

@@ -673,12 +673,14 @@ def cmd(
             overall_success = False
             continue
 
-        # charts/repos 디렉토리는 sources.yaml이 있는 위치 기준
+        # .sbkube 작업 디렉토리는 sources.yaml이 있는 위치 기준
         SOURCES_BASE_DIR = sources_file_path.parent
-        CHARTS_DIR = SOURCES_BASE_DIR / "charts"
-        REPOS_DIR = SOURCES_BASE_DIR / "repos"
+        SBKUBE_WORK_DIR = SOURCES_BASE_DIR / ".sbkube"
+        CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
+        REPOS_DIR = SBKUBE_WORK_DIR / "repos"
 
         # 디렉토리 생성
+        SBKUBE_WORK_DIR.mkdir(parents=True, exist_ok=True)
         CHARTS_DIR.mkdir(parents=True, exist_ok=True)
         REPOS_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -71,8 +71,10 @@ def cmd(
     BASE_DIR = Path(base_dir).resolve()
     APP_CONFIG_DIR = BASE_DIR / app_config_dir_name
 
-    # 빌드된 차트가 위치한 디렉토리 (예: my_project/config/build/)
-    BUILD_DIR = APP_CONFIG_DIR / "build"
+    # .sbkube 작업 디렉토리
+    SBKUBE_WORK_DIR = BASE_DIR / ".sbkube"
+    # 빌드된 차트가 위치한 디렉토리 (예: my_project/.sbkube/build/)
+    BUILD_DIR = SBKUBE_WORK_DIR / "build"
     # Values 파일들이 위치할 수 있는 디렉토리 (예: my_project/config/values/)
     VALUES_DIR = APP_CONFIG_DIR / "values"
 

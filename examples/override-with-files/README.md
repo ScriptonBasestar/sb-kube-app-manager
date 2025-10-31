@@ -33,13 +33,14 @@ override-with-files/
 │       │   └── custom-configmap.yaml  # 새 템플릿 (차트에 없던 파일)
 │       └── files/
 │           └── index.html             # 커스텀 HTML (차트에 없던 파일)
-└── build/                             # sbkube build 실행 후 생성
-    └── nginx/
-        ├── templates/
-        │   ├── deployment.yaml        # (차트 원본)
-        │   ├── service.yaml           # (차트 원본)
-        │   └── custom-configmap.yaml  # ✅ 추가됨
-        └── files/
+└── .sbkube/                           # sbkube 작업 디렉토리
+    └── build/                         # sbkube build 실행 후 생성
+        └── nginx/
+            ├── templates/
+            │   ├── deployment.yaml        # (차트 원본)
+            │   ├── service.yaml           # (차트 원본)
+            │   └── custom-configmap.yaml  # ✅ 추가됨
+            └── files/
             └── index.html             # ✅ 추가됨
 ```
 
@@ -75,7 +76,7 @@ Override 파일이 어떻게 복사되는지 시각적으로 이해하기:
 │ 3. 빌드 결과 (sbkube build 후)                                   │
 └─────────────────────────────────────────────────────────────────┘
 
-  build/
+  .sbkube/build/
     nginx/                           ← 앱 이름
       ├── Chart.yaml                 ← (차트 원본)
       ├── templates/
@@ -86,16 +87,16 @@ Override 파일이 어떻게 복사되는지 시각적으로 이해하기:
           └── index.html             ← ✅ 복사됨
 
   📍 결과 경로:
-     build/[앱이름]/[config.yaml의 경로]
+     .sbkube/build/[앱이름]/[config.yaml의 경로]
 ```
 
 ### 경로 매핑 예시
 
 | 소스 파일 | config.yaml | 빌드 결과 | |-----------|-------------|-----------| |
 `overrides/nginx/templates/custom-configmap.yaml` | `templates/custom-configmap.yaml` |
-`build/nginx/templates/custom-configmap.yaml` | | `overrides/nginx/files/index.html` | `files/index.html` |
-`build/nginx/files/index.html` | | `overrides/nginx/templates/subdir/secret.yaml` | `templates/subdir/secret.yaml` |
-`build/nginx/templates/subdir/secret.yaml` |
+`.sbkube/build/nginx/templates/custom-configmap.yaml` | | `overrides/nginx/files/index.html` | `files/index.html` |
+`.sbkube/build/nginx/files/index.html` | | `overrides/nginx/templates/subdir/secret.yaml` | `templates/subdir/secret.yaml` |
+`.sbkube/build/nginx/templates/subdir/secret.yaml` |
 
 **핵심**: `overrides/[앱이름]/`을 제외한 나머지 경로가 그대로 유지됩니다.
 
@@ -146,7 +147,7 @@ data:
 **핵심 기능**:
 
 - `{{ .Files.Get "files/index.html" }}` - files 디렉토리의 파일 내용을 가져옴
-- 경로는 차트 루트 기준 (build/nginx/)
+- 경로는 차트 루트 기준 (.sbkube/build/nginx/)
 
 ### overrides/nginx/files/index.html
 
@@ -249,7 +250,7 @@ sbkube build --app-dir examples/override-with-files
 ✨ SBKube `build` 시작 ✨
 📄 Loading config: examples/override-with-files/config.yaml
 🔨 Building Helm app: nginx
-  Copying chart: charts/nginx/nginx → build/nginx
+  Copying chart: .sbkube/charts/nginx/nginx → .sbkube/build/nginx
   Applying 2 overrides...
     ✓ Override: templates/custom-configmap.yaml
     ✓ Override: files/index.html
@@ -260,9 +261,9 @@ sbkube build --app-dir examples/override-with-files
 ### 3. 검증 (빌드 결과 확인)
 
 ```bash
-# Override 파일들이 build/ 디렉토리에 복사되었는지 확인
-ls -la build/nginx/templates/custom-configmap.yaml
-ls -la build/nginx/files/index.html
+# Override 파일들이 .sbkube/build/ 디렉토리에 복사되었는지 확인
+ls -la .sbkube/build/nginx/templates/custom-configmap.yaml
+ls -la .sbkube/build/nginx/files/index.html
 
 # 템플릿 렌더링 테스트
 sbkube template --app-dir examples/override-with-files --output-dir /tmp/rendered
@@ -411,7 +412,7 @@ overrides:
 **2. 경로는 차트 루트 기준**
 
 ```
-build/nginx/               # ← 차트 루트 (.Files.Get의 기준)
+.sbkube/build/nginx/       # ← 차트 루트 (.Files.Get의 기준)
   ├── Chart.yaml
   ├── templates/
   │   └── custom-configmap.yaml  # .Files.Get "files/index.html" 호출

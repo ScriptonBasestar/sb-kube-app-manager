@@ -57,14 +57,15 @@ class TestK3scodeAIWorkflow:
         # Verify output
         assert "prepare" in result.output.lower() or "준비" in result.output
 
-        # Verify charts/repos were downloaded
-        # They are created in project_root, not tmp_path
-        charts_dir = project_root / "charts"
-        repos_dir = project_root / "repos"
+        # Verify .sbkube/charts/ and .sbkube/repos/ were created
+        # They are created in project_root/.sbkube/, not tmp_path
+        sbkube_dir = project_root / ".sbkube"
+        charts_dir = sbkube_dir / "charts"
+        repos_dir = sbkube_dir / "repos"
 
         # At least one of charts or repos should exist based on config.yaml
         assert charts_dir.exists() or repos_dir.exists(), (
-            f"Neither charts nor repos directory created in {project_root}\nContents: {list_directory_contents(project_root)}"
+            f"Neither .sbkube/charts nor .sbkube/repos directory created in {project_root}\nContents: {list_directory_contents(project_root)}"
         )
 
     def test_ai_build(self, runner, examples_dir, tmp_path, list_directory_contents):

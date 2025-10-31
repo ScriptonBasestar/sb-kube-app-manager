@@ -117,10 +117,10 @@ def deploy_helm_app(
     release_name = app.release_name or app_name
     namespace = app.namespace
 
-    # Chart 경로 결정 (build/ 우선, 없으면 charts/ 또는 로컬)
+    # Chart 경로 결정 (.sbkube/build/ 우선, 없으면 .sbkube/charts/ 또는 로컬)
     chart_path = None
 
-    # 1. build/ 디렉토리 확인 (overrides/removes 적용된 차트)
+    # 1. .sbkube/build/ 디렉토리 확인 (overrides/removes 적용된 차트)
     build_path = build_dir / app_name
     if build_path.exists() and build_path.is_dir():
         chart_path = build_path
@@ -128,9 +128,9 @@ def deploy_helm_app(
     else:
         # 2. build 없으면 원본 차트 사용
         if app.is_remote_chart():
-            # Remote chart: charts/ 디렉토리에서 찾기
+            # Remote chart: .sbkube/charts/ 디렉토리에서 찾기
             chart_name = app.get_chart_name()
-            source_path = charts_dir / chart_name / chart_name  # charts/redis/redis
+            source_path = charts_dir / chart_name / chart_name  # .sbkube/charts/redis/redis
 
             if not source_path.exists():
                 console.print(f"[red]❌ Chart not found: {source_path}[/red]")
@@ -596,8 +596,9 @@ def cmd(
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
 
-    CHARTS_DIR = BASE_DIR / "charts"
-    BUILD_DIR = BASE_DIR / "build"
+    SBKUBE_WORK_DIR = BASE_DIR / ".sbkube"
+    CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
+    BUILD_DIR = SBKUBE_WORK_DIR / "build"
 
     # sources.yaml 로드 (app_dirs 확인용)
     sources_file_path = BASE_DIR / "sources.yaml"

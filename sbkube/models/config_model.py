@@ -7,7 +7,7 @@ SBKube Configuration Models
 - 의존성: depends_on 필드
 """
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import Field, field_validator, model_validator
 
@@ -16,6 +16,291 @@ from .base_model import ConfigBaseModel
 # ============================================================================
 # Hook Models
 # ============================================================================
+
+
+# ----------------------------------------------------------------------------
+# Phase 2: Hook Task Models (Type System)
+# ----------------------------------------------------------------------------
+
+
+class ManifestsHookTask(ConfigBaseModel):
+    """
+    Manifests 타입 Hook Task.
+
+    YAML manifest 파일들을 배포합니다 (kubectl apply).
+
+    Examples:
+        - type: manifests
+          name: deploy-issuers
+          files:
+            - manifests/issuers/cluster-issuer-letsencrypt-prd.yaml
+            - manifests/issuers/cluster-issuer-letsencrypt-stg.yaml
+          validation:
+            kind: ClusterIssuer
+            wait_for_ready: true
+          dependency:
+            depends_on:
+              - deploy-secrets
+          rollback:
+            enabled: true
+            manifests:
+              - manifests/cleanup-issuers.yaml
+    """
+
+    type: Literal["manifests"] = "manifests"
+    name: str = Field(..., description="Task 이름 (식별용)")
+    files: list[str] = Field(
+        ...,
+        description="배포할 YAML manifest 파일 경로 리스트",
+        json_schema_extra={"examples": [["manifests/issuer1.yaml", "manifests/issuer2.yaml"]]},
+    )
+    # Phase 3 fields (forward reference로 처리)
+    validation: dict[str, Any] | None = Field(
+        default=None,
+        description="검증 설정 (ValidationRule 타입)",
+    )
+    dependency: dict[str, Any] | None = Field(
+        default=None,
+        description="의존성 설정 (DependencyConfig 타입)",
+    )
+    rollback: dict[str, Any] | None = Field(
+        default=None,
+        description="롤백 정책 (RollbackPolicy 타입)",
+    )
+
+
+class InlineHookTask(ConfigBaseModel):
+    """
+    Inline 타입 Hook Task.
+
+    YAML 콘텐츠를 인라인으로 배포합니다.
+
+    Examples:
+        - type: inline
+          name: create-certificate
+          content:
+            apiVersion: cert-manager.io/v1
+            kind: Certificate
+            metadata:
+              name: wildcard-cert
+            spec:
+              secretName: wildcard-cert-tls
+              issuerRef:
+                name: letsencrypt-prd
+                kind: ClusterIssuer
+          validation:
+            kind: Certificate
+            name: wildcard-cert
+            wait_for_ready: true
+          dependency:
+            depends_on:
+              - deploy-issuers
+    """
+
+    type: Literal["inline"] = "inline"
+    name: str = Field(..., description="Task 이름 (식별용)")
+    content: dict[str, Any] = Field(
+        ...,
+        description="배포할 YAML 콘텐츠 (dict 형태)",
+    )
+    # Phase 3 fields
+    validation: dict[str, Any] | None = Field(
+        default=None,
+        description="검증 설정 (ValidationRule 타입)",
+    )
+    dependency: dict[str, Any] | None = Field(
+        default=None,
+        description="의존성 설정 (DependencyConfig 타입)",
+    )
+    rollback: dict[str, Any] | None = Field(
+        default=None,
+        description="롤백 정책 (RollbackPolicy 타입)",
+    )
+
+
+class CommandHookTask(ConfigBaseModel):
+    """
+    Command 타입 Hook Task (개선된 shell 명령어 실행).
+
+    Shell 명령어를 실행하며, retry 및 on_failure 정책을 지원합니다.
+
+    Examples:
+        - type: command
+          name: verify-dns
+          command: |
+            dig +short letsencrypt.example.com @8.8.8.8
+          retry:
+            max_attempts: 3
+            delay: 5
+          on_failure: warn
+          dependency:
+            depends_on:
+              - deploy-issuers
+            wait_for:
+              - kind: Pod
+                label_selector: app=coredns
+                condition: Ready
+    """
+
+    type: Literal["command"] = "command"
+    name: str = Field(..., description="Task 이름 (식별용)")
+    command: str = Field(..., description="실행할 shell 명령어")
+    retry: dict[str, Any] | None = Field(
+        default=None,
+        description="재시도 설정 (max_attempts, delay)",
+        json_schema_extra={"examples": [{"max_attempts": 3, "delay": 5}]},
+    )
+    on_failure: Literal["fail", "warn", "ignore"] = Field(
+        default="fail",
+        description="실패 시 동작 (fail: 중단, warn: 경고만, ignore: 무시)",
+    )
+    # Phase 3 fields
+    validation: dict[str, Any] | None = Field(
+        default=None,
+        description="검증 설정 (ValidationRule 타입)",
+    )
+    dependency: dict[str, Any] | None = Field(
+        default=None,
+        description="의존성 설정 (DependencyConfig 타입)",
+    )
+    rollback: dict[str, Any] | None = Field(
+        default=None,
+        description="롤백 정책 (RollbackPolicy 타입)",
+    )
+
+
+# Discriminated Union for HookTask
+HookTask = Annotated[
+    Union[ManifestsHookTask, InlineHookTask, CommandHookTask],
+    Field(discriminator="type"),
+]
+
+
+# ----------------------------------------------------------------------------
+# Phase 3: Validation, Dependency, Rollback Models
+# ----------------------------------------------------------------------------
+
+
+class ValidationRule(ConfigBaseModel):
+    """
+    Hook Task 실행 후 검증 규칙.
+
+    Examples:
+        validation:
+          kind: ClusterIssuer
+          name: letsencrypt-prd
+          wait_for_ready: true
+          timeout: 120
+          conditions:
+            - type: Ready
+              status: "True"
+    """
+
+    kind: str | None = Field(
+        default=None,
+        description="검증할 리소스 Kind (예: Pod, ClusterIssuer)",
+    )
+    name: str | None = Field(
+        default=None,
+        description="검증할 리소스 이름 (지정하지 않으면 모든 리소스)",
+    )
+    namespace: str | None = Field(
+        default=None,
+        description="검증할 네임스페이스 (지정하지 않으면 전역 또는 기본 네임스페이스)",
+    )
+    wait_for_ready: bool = Field(
+        default=False,
+        description="리소스가 Ready 상태가 될 때까지 대기",
+    )
+    timeout: int = Field(
+        default=60,
+        description="검증 타임아웃 (초)",
+    )
+    conditions: list[dict[str, str]] | None = Field(
+        default=None,
+        description="검증할 Condition 리스트 (type, status 쌍)",
+        json_schema_extra={
+            "examples": [
+                [{"type": "Ready", "status": "True"}],
+                [{"type": "Available", "status": "True"}, {"type": "Progressing", "status": "False"}],
+            ]
+        },
+    )
+
+
+class DependencyConfig(ConfigBaseModel):
+    """
+    Hook Task 간 의존성 설정.
+
+    Examples:
+        depends_on:
+          - deploy-secrets
+          - verify-database
+        wait_for:
+          - kind: Pod
+            label_selector: app=database
+            condition: Ready
+            timeout: 180
+    """
+
+    depends_on: list[str] = Field(
+        default_factory=list,
+        description="선행되어야 하는 Task 이름 리스트 (같은 hook 내에서)",
+    )
+    wait_for: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="대기해야 하는 외부 리소스 조건",
+        json_schema_extra={
+            "examples": [
+                [
+                    {
+                        "kind": "Pod",
+                        "label_selector": "app=database",
+                        "condition": "Ready",
+                        "timeout": 180,
+                    }
+                ]
+            ]
+        },
+    )
+
+
+class RollbackPolicy(ConfigBaseModel):
+    """
+    실패 시 롤백 정책.
+
+    Examples:
+        rollback:
+          enabled: true
+          on_failure: always
+          manifests:
+            - manifests/cleanup.yaml
+          commands:
+            - kubectl delete certificate wildcard-cert
+            - ./scripts/restore-backup.sh
+    """
+
+    enabled: bool = Field(
+        default=False,
+        description="롤백 활성화 여부",
+    )
+    on_failure: Literal["always", "manual", "never"] = Field(
+        default="always",
+        description="롤백 실행 조건 (always: 자동, manual: 수동 확인, never: 비활성화)",
+    )
+    manifests: list[str] = Field(
+        default_factory=list,
+        description="롤백 시 적용할 manifest 파일들",
+    )
+    commands: list[str] = Field(
+        default_factory=list,
+        description="롤백 시 실행할 shell 명령어들",
+    )
+
+
+# ----------------------------------------------------------------------------
+# Command Hooks (전역 훅)
+# ----------------------------------------------------------------------------
 
 
 class CommandHooks(ConfigBaseModel):
@@ -46,6 +331,7 @@ class AppHooks(ConfigBaseModel):
     앱별 훅 설정.
 
     Examples:
+        # Shell 명령어 hooks (기존 방식)
         database:
           type: helm
           chart: bitnami/postgresql
@@ -60,32 +346,91 @@ class AppHooks(ConfigBaseModel):
               - kubectl wait --for=condition=ready pod -l app=postgresql
             on_deploy_failure:
               - ./scripts/restore-backup.sh
+
+        # Manifests hooks (신규 - Phase 1)
+        cert-manager:
+          type: helm
+          chart: jetstack/cert-manager
+          hooks:
+            post_deploy_manifests:
+              - manifests/issuers/cluster-issuer-letsencrypt-prd.yaml
+              - manifests/issuers/cluster-issuer-letsencrypt-stg.yaml
     """
 
+    # Shell command hooks (기존)
     pre_prepare: list[str] = Field(
-        default_factory=list, description="prepare 실행 전 훅"
+        default_factory=list, description="prepare 실행 전 훅 (shell 명령어)"
     )
     post_prepare: list[str] = Field(
-        default_factory=list, description="prepare 실행 후 훅"
+        default_factory=list, description="prepare 실행 후 훅 (shell 명령어)"
     )
-    pre_build: list[str] = Field(default_factory=list, description="build 실행 전 훅")
+    pre_build: list[str] = Field(default_factory=list, description="build 실행 전 훅 (shell 명령어)")
     post_build: list[str] = Field(
-        default_factory=list, description="build 실행 후 훅"
+        default_factory=list, description="build 실행 후 훅 (shell 명령어)"
     )
     pre_template: list[str] = Field(
-        default_factory=list, description="template 실행 전 훅"
+        default_factory=list, description="template 실행 전 훅 (shell 명령어)"
     )
     post_template: list[str] = Field(
-        default_factory=list, description="template 실행 후 훅"
+        default_factory=list, description="template 실행 후 훅 (shell 명령어)"
     )
     pre_deploy: list[str] = Field(
-        default_factory=list, description="deploy 실행 전 훅"
+        default_factory=list, description="deploy 실행 전 훅 (shell 명령어)"
     )
     post_deploy: list[str] = Field(
-        default_factory=list, description="deploy 실행 후 훅"
+        default_factory=list, description="deploy 실행 후 훅 (shell 명령어)"
     )
     on_deploy_failure: list[str] = Field(
-        default_factory=list, description="deploy 실패 시 훅"
+        default_factory=list, description="deploy 실패 시 훅 (shell 명령어)"
+    )
+
+    # Manifests hooks (신규 - Phase 1: Manifests 지원)
+    pre_deploy_manifests: list[str] = Field(
+        default_factory=list,
+        description="deploy 실행 전 배포할 YAML manifests (sbkube가 직접 처리)",
+        json_schema_extra={
+            "examples": [
+                ["manifests/pre-config.yaml"],
+                ["manifests/secrets/*.yaml"]
+            ]
+        }
+    )
+    post_deploy_manifests: list[str] = Field(
+        default_factory=list,
+        description="deploy 실행 후 배포할 YAML manifests (sbkube가 직접 처리)",
+        json_schema_extra={
+            "examples": [
+                ["manifests/issuers/cluster-issuer-letsencrypt-prd.yaml"],
+                ["manifests/post-config/*.yaml"]
+            ]
+        }
+    )
+
+    # Hook Tasks (신규 - Phase 2: Type System)
+    pre_deploy_tasks: list[HookTask] = Field(
+        default_factory=list,
+        description="deploy 실행 전 Hook Tasks (타입별 처리)",
+        json_schema_extra={
+            "examples": [
+                [
+                    {"type": "manifests", "name": "prepare-secrets", "files": ["manifests/secrets.yaml"]},
+                    {"type": "command", "name": "backup-db", "command": "./scripts/backup.sh"}
+                ]
+            ]
+        }
+    )
+    post_deploy_tasks: list[HookTask] = Field(
+        default_factory=list,
+        description="deploy 실행 후 Hook Tasks (타입별 처리)",
+        json_schema_extra={
+            "examples": [
+                [
+                    {"type": "manifests", "name": "deploy-issuers", "files": ["manifests/issuers/*.yaml"]},
+                    {"type": "inline", "name": "create-cert", "content": {"apiVersion": "v1", "kind": "Certificate"}},
+                    {"type": "command", "name": "verify-dns", "command": "dig +short example.com", "on_failure": "warn"}
+                ]
+            ]
+        }
     )
 
 
@@ -290,8 +635,17 @@ class YamlApp(ConfigBaseModel):
     @field_validator("manifests")
     @classmethod
     def validate_manifests(cls, v: list[str]) -> list[str]:
-        """파일 목록이 비어있지 않은지 확인."""
-        return cls.validate_non_empty_list(v, "manifests")
+        """파일 목록이 비어있지 않은지 확인하고 변수 구문을 검증."""
+        # 순환 import 방지를 위해 함수 내부에서 import
+        from sbkube.utils.path_resolver import validate_variable_syntax
+
+        v = cls.validate_non_empty_list(v, "manifests")
+
+        # 각 경로의 변수 구문 검증
+        for path in v:
+            validate_variable_syntax(path)
+
+        return v
 
 
 class ActionApp(ConfigBaseModel):

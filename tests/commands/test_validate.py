@@ -104,8 +104,9 @@ class TestValidateAppDir:
 
         # Should succeed
         assert result.exit_code == 0
-        assert "Using app directory" in result.output
+        assert "Validating app group: basic" in result.output
         assert "유효성 검사 완료" in result.output
+        assert "validated successfully" in result.output
 
     def test_validate_app_dir_custom_config(self, runner, temp_project):
         """Test validate with --app-dir and --config-file (non-standard filename)."""
@@ -122,8 +123,9 @@ class TestValidateAppDir:
 
         # Should succeed
         assert result.exit_code == 0
-        assert "Config file: custom.yaml" in result.output
+        assert "Validating app group: custom" in result.output
         assert "유효성 검사 완료" in result.output
+        assert "validated successfully" in result.output
 
     def test_validate_app_dir_nonexistent(self, runner, temp_project):
         """Test validate with non-existent app directory."""
@@ -151,22 +153,35 @@ class TestValidateAppDir:
         # Should fail with clear error message
         assert result.exit_code != 0
         assert "Config file not found" in result.output
-        assert "💡 Use --config-file" in result.output
+        assert "validation failed" in result.output or "Failed to validate" in result.output
 
 
 class TestValidateCurrentDir:
     """Test validate without arguments (current directory fallback)."""
 
     def test_validate_current_dir(self, runner, temp_project):
-        """Test validate without arguments uses current directory."""
+        """Test validate without arguments uses current directory (auto-discovery)."""
+        # Create app directories at root level (not under examples/)
+        app1_dir = temp_project / "app1"
+        app1_dir.mkdir()
+        config_content = """namespace: test
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    enabled: true
+"""
+        (app1_dir / "config.yaml").write_text(config_content)
+
         result = runner.invoke(
             main,
             ["validate", "--base-dir", str(temp_project)]
         )
 
-        # Should succeed (root config.yaml exists)
+        # Should succeed (auto-discovers app directories)
         assert result.exit_code == 0
-        assert "Using current directory" in result.output
+        assert "SBKube `validate` 시작" in result.output
+        assert "Found" in result.output or "Using app_dirs" in result.output
         assert "유효성 검사 완료" in result.output
 
     def test_validate_current_dir_missing_config(self, runner, tmp_path):
@@ -180,12 +195,10 @@ class TestValidateCurrentDir:
             ["validate", "--base-dir", str(empty_dir)]
         )
 
-        # Should fail with helpful error message
+        # Should fail with helpful error message (no app directories found)
         assert result.exit_code != 0
-        assert "Config file not found" in result.output
-        assert "💡 Solutions:" in result.output
-        assert "Provide explicit path" in result.output
-        assert "Use --app-dir" in result.output
+        assert "No app directories found" in result.output
+        assert "💡 Tip" in result.output
 
 
 class TestValidatePriorityLogic:
@@ -216,9 +229,10 @@ class TestValidatePriorityLogic:
             ["validate", "--app-dir", "examples/basic", "--base-dir", str(temp_project)]
         )
 
-        # Should use app-dir (not current dir)
+        # Should use app-dir (not current dir auto-discovery)
         assert result.exit_code == 0
-        assert "Using app directory" in result.output
+        assert "Validating app group: basic" in result.output
+        assert "validated successfully" in result.output
         assert "Using current directory" not in result.output
 
 

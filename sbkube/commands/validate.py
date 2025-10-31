@@ -212,13 +212,19 @@ class ValidateCommand:
     "--app-dir",
     "app_config_dir_name",
     default=None,
-    help="앱 설정 디렉토리 (config.yaml 자동 검색)",
+    help="앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
 )
 @click.option(
     "--config-file",
     "config_file_name",
     default="config.yaml",
     help="설정 파일 이름 (app-dir 내부, 기본값: config.yaml)",
+)
+@click.option(
+    "--source",
+    "sources_file_name",
+    default="sources.yaml",
+    help="소스 설정 파일 (base-dir 기준)",
 )
 @click.option(
     "--schema-type",
@@ -245,6 +251,7 @@ def cmd(
     target_file: str | None,
     app_config_dir_name: str | None,
     config_file_name: str,
+    sources_file_name: str,
     schema_type: str | None,
     base_dir: str,
     custom_schema_path: str | None,
@@ -256,17 +263,17 @@ def cmd(
 
     Examples:
 
+        # Validate all app groups (auto-discovery)
+        sbkube validate
+
+        # Validate specific app group
+        sbkube validate --app-dir redis
+
         # Explicit file path (backward compatible)
         sbkube validate /path/to/config.yaml
 
-        # Using --app-dir
-        sbkube validate --app-dir redis
-
         # Custom config file name
         sbkube validate --app-dir redis --config-file custom.yaml
-
-        # Current directory (default)
-        sbkube validate
     """
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
@@ -276,52 +283,131 @@ def cmd(
     # Resolve base directory
     BASE_DIR = Path(base_dir).resolve()
 
-    # Resolve target file path
+    # Case 1: Explicit file path provided (backward compatible)
     if target_file:
-        # Case 1: Explicit file path provided (backward compatible)
         target_path = Path(target_file)
         logger.info(f"Using explicit file path: {target_path}")
 
-    elif app_config_dir_name:
-        # Case 2: --app-dir specified
-        app_dir = BASE_DIR / app_config_dir_name
+        validate_cmd = ValidateCommand(
+            target_file=str(target_path),
+            schema_type=schema_type,
+            base_dir=str(BASE_DIR),
+            custom_schema_path=custom_schema_path,
+        )
+        validate_cmd.execute()
+        return
+
+    # Case 2 & 3: Auto-discovery or --app-dir specified
+    from rich.console import Console
+
+    from sbkube.utils.common import find_all_app_dirs
+
+    console = Console()
+    console.print("[bold blue]✨ SBKube `validate` 시작 ✨[/bold blue]")
+
+    # sources.yaml 로드 (app_dirs 확인용)
+    sources_file_path = BASE_DIR / sources_file_name
+    sources_config = None
+    if sources_file_path.exists():
+        from sbkube.models.sources_model import SourceScheme
+        from sbkube.utils.file_loader import load_config_file
+        try:
+            sources_data = load_config_file(sources_file_path)
+            sources_config = SourceScheme(**sources_data)
+        except Exception as e:
+            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
+
+    # 앱 그룹 디렉토리 결정
+    if app_config_dir_name:
+        # 특정 디렉토리 지정 (--app-dir 옵션)
+        app_config_dirs = [BASE_DIR / app_config_dir_name]
 
         # Validate app directory exists
-        if not app_dir.exists() or not app_dir.is_dir():
-            logger.error(f"App directory not found: {app_dir}")
-            logger.info("💡 Check directory path or use explicit file path")
+        if not app_config_dirs[0].exists() or not app_config_dirs[0].is_dir():
+            console.print(f"[red]❌ App directory not found: {app_config_dirs[0]}[/red]")
+            console.print("[yellow]💡 Check directory path[/yellow]")
             raise click.Abort()
 
-        # Construct config file path
-        target_path = app_dir / config_file_name
-        logger.info(f"Using app directory: {app_dir}")
-        logger.info(f"Config file: {config_file_name}")
-
-        # Validate config file exists
-        if not target_path.exists():
-            logger.error(f"Config file not found: {target_path}")
-            logger.info("💡 Use --config-file to specify different name")
+    elif sources_config and sources_config.app_dirs is not None:
+        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
+        try:
+            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
+            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
+            for app_dir in app_config_dirs:
+                console.print(f"  - {app_dir.name}/")
+        except ValueError as e:
+            console.print(f"[red]❌ {e}[/red]")
             raise click.Abort()
-
     else:
-        # Case 3: Current directory fallback
-        target_path = BASE_DIR / config_file_name
-        logger.info(f"Using current directory: {BASE_DIR}")
-
-        # Validate file exists
-        if not target_path.exists():
-            logger.error(f"Config file not found: {target_path}")
-            logger.info("💡 Solutions:")
-            logger.info("   1. Provide explicit path: sbkube validate path/to/config.yaml")
-            logger.info("   2. Use --app-dir: sbkube validate --app-dir <directory>")
-            logger.info("   3. Ensure config.yaml exists in current directory")
+        # 자동 탐색 (기존 동작)
+        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
+        if not app_config_dirs:
+            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
+            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
             raise click.Abort()
 
-    # Execute validation (existing logic)
-    validate_cmd = ValidateCommand(
-        target_file=str(target_path),
-        schema_type=schema_type,
-        base_dir=str(BASE_DIR),
-        custom_schema_path=custom_schema_path,
-    )
-    validate_cmd.execute()
+        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
+        for app_dir in app_config_dirs:
+            console.print(f"  - {app_dir.name}/")
+
+    # 각 앱 그룹 검증
+    overall_success = True
+    failed_apps = []
+    success_apps = []
+
+    for APP_CONFIG_DIR in app_config_dirs:
+        console.print(f"\n[bold cyan]━━━ Validating app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
+
+        config_file_path = APP_CONFIG_DIR / config_file_name
+
+        # 설정 파일 존재 확인
+        if not config_file_path.exists():
+            console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+            failed_apps.append(APP_CONFIG_DIR.name)
+            overall_success = False
+            continue
+
+        console.print(f"[cyan]📄 Validating config: {config_file_path}[/cyan]")
+
+        # 검증 실행
+        try:
+            validate_cmd = ValidateCommand(
+                target_file=str(config_file_path),
+                schema_type=schema_type,
+                base_dir=str(BASE_DIR),
+                custom_schema_path=custom_schema_path,
+            )
+            validate_cmd.execute()
+            console.print(f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' validated successfully![/bold green]")
+            success_apps.append(APP_CONFIG_DIR.name)
+        except click.Abort:
+            console.print(f"[red]❌ App group '{APP_CONFIG_DIR.name}' validation failed[/red]")
+            failed_apps.append(APP_CONFIG_DIR.name)
+            overall_success = False
+        except Exception as e:
+            console.print(f"[red]❌ App group '{APP_CONFIG_DIR.name}' validation failed: {e}[/red]")
+            failed_apps.append(APP_CONFIG_DIR.name)
+            overall_success = False
+
+    # 전체 결과 출력
+    console.print("\n[bold]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/bold]")
+    console.print("[bold cyan]📊 Validation Summary[/bold cyan]")
+    console.print(f"  Total: {len(app_config_dirs)} app group(s)")
+    console.print(f"  [green]✓ Success: {len(success_apps)}[/green]")
+    console.print(f"  [red]✗ Failed: {len(failed_apps)}[/red]")
+
+    if success_apps:
+        console.print("\n[green]✅ Successfully validated:[/green]")
+        for app in success_apps:
+            console.print(f"  ✓ {app}")
+
+    if failed_apps:
+        console.print("\n[red]❌ Failed to validate:[/red]")
+        for app in failed_apps:
+            console.print(f"  ✗ {app}")
+
+    if not overall_success:
+        console.print("\n[bold red]❌ Some app groups failed validation[/bold red]")
+        raise click.Abort()
+    else:
+        console.print("\n[bold green]🎉 All app groups validated successfully![/bold green]")

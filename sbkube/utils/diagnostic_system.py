@@ -199,17 +199,22 @@ class DiagnosticEngine:
                     self.console.print(f"│   {result.details}")
 
     def _display_fix_suggestions(self):
-        """자동 수정 제안 표시"""
+        """해결 방법 제안 표시"""
         fixable_results = [r for r in self.results if r.is_fixable]
 
-        self.console.print("\n🔧 자동 수정 가능한 문제:")
+        self.console.print("\n💡 권장 해결 방법:")
         for i, result in enumerate(fixable_results, 1):
-            self.console.print(f"  {i}. {result.message}")
+            self.console.print(f"  {i}. [bold]{result.message}[/bold]")
             if result.fix_description:
-                self.console.print(f"     → {result.fix_description}")
+                self.console.print(f"     ℹ️  {result.fix_description}")
+            if result.fix_command:
+                self.console.print(f"     📋 실행: [cyan]{result.fix_command}[/cyan]")
 
         self.console.print(
-            "\n💡 [bold]sbkube doctor --fix[/bold] 명령어로 자동 수정을 실행할 수 있습니다."
+            "\n⚠️  [bold yellow]주의:[/bold yellow] 위 명령어는 참고용입니다. 실행 전 반드시 확인하세요."
+        )
+        self.console.print(
+            "   자세한 내용은 [cyan]sbkube doctor --detailed[/cyan] 명령어로 확인할 수 있습니다."
         )
 
     def get_fixable_results(self) -> list[DiagnosticResult]:

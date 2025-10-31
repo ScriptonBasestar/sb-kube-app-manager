@@ -20,11 +20,10 @@ console = Console()
 
 @click.command(name="doctor")
 @click.option("--detailed", is_flag=True, help="상세한 진단 결과 표시")
-@click.option("--fix", is_flag=True, help="자동 수정 가능한 문제들을 수정")
 @click.option("--check", help="특정 검사만 실행 (예: k8s_connectivity)")
 @click.option("--config-dir", default=".", help="설정 파일 디렉토리")
 @click.pass_context
-def cmd(ctx, detailed, fix, check, config_dir):
+def cmd(ctx, detailed, check, config_dir):
     """SBKube 시스템 종합 진단
 
     Kubernetes 클러스터 연결, Helm 설치, 설정 파일 유효성 등을
@@ -34,7 +33,6 @@ def cmd(ctx, detailed, fix, check, config_dir):
     사용 예시:
         sbkube doctor                     # 기본 진단 실행
         sbkube doctor --detailed          # 상세 결과 표시
-        sbkube doctor --fix               # 자동 수정 실행
         sbkube doctor --check k8s_connectivity  # 특정 검사만 실행
     """
 
@@ -78,10 +76,6 @@ def cmd(ctx, detailed, fix, check, config_dir):
         # 결과 표시
         engine.display_results(detailed=detailed)
 
-        # 자동 수정 실행
-        if fix:
-            _run_auto_fixes(engine, results)
-
         # 종료 코드 결정
         summary = engine.get_summary()
         if summary["error"] > 0:
@@ -96,54 +90,6 @@ def cmd(ctx, detailed, fix, check, config_dir):
         sys.exit(1)
 
 
-def _run_auto_fixes(engine: DiagnosticEngine, results: list) -> None:
-    """자동 수정 실행"""
-    fixable_results = engine.get_fixable_results()
-
-    if not fixable_results:
-        console.print("🤷 자동 수정 가능한 문제가 없습니다.")
-        return
-
-    console.print(f"\n🔧 {len(fixable_results)}개 문제의 자동 수정을 시작합니다...")
-
-    success_count = 0
-
-    for result in fixable_results:
-        if not click.confirm(f"'{result.message}' 문제를 수정하시겠습니까?"):
-            continue
-
-        console.print(f"🔄 수정 중: {result.fix_description}")
-
-        try:
-            import shlex
-            import subprocess
-
-            # 명령어를 안전하게 파싱
-            fix_command = shlex.split(result.fix_command)
-
-            fix_result = subprocess.run(
-                fix_command, capture_output=True, text=True, timeout=60
-            )
-
-            if fix_result.returncode == 0:
-                console.print(f"✅ 수정 완료: {result.message}")
-                success_count += 1
-            else:
-                console.print(f"❌ 수정 실패: {fix_result.stderr}")
-                console.print(f"💡 수동 실행: {result.fix_command}")
-
-        except subprocess.TimeoutExpired:
-            console.print(f"⏰ 수정 시간 초과: {result.message}")
-            console.print(f"💡 수동 실행: {result.fix_command}")
-        except Exception as e:
-            console.print(f"❌ 수정 중 오류 발생: {e}")
-            console.print(f"💡 수동 실행: {result.fix_command}")
-
-    console.print(f"\n📊 자동 수정 완료: {success_count}/{len(fixable_results)}개 성공")
-
-    if success_count < len(fixable_results):
-        console.print("💡 일부 문제는 수동으로 해결해야 합니다.")
-        console.print("   sbkube doctor --detailed 로 상세 정보를 확인하세요.")
 
 
 # 사용 가능한 체크 목록 함수

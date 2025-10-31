@@ -20,21 +20,15 @@ class KubernetesConnectivityCheck(DiagnosticCheck):
 
     async def run(self) -> DiagnosticResult:
         try:
-            # kubectl 설치 확인
-            result = subprocess.run(
-                ["kubectl", "version", "--client=true", "--short"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-
-            if result.returncode != 0:
+            # kubectl 설치 확인 (shutil.which로 먼저 체크)
+            kubectl_path = shutil.which("kubectl")
+            if not kubectl_path:
                 return self.create_result(
                     DiagnosticLevel.ERROR,
                     "kubectl이 설치되지 않았습니다",
-                    "Kubernetes CLI 도구가 필요합니다",
-                    "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/$(uname -s | tr '[:upper:]' '[:lower:]')/$(uname -m)/kubectl\" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/",
-                    "kubectl 최신 버전 설치",
+                    "Kubernetes CLI 도구가 필요합니다. PATH에서 kubectl을 찾을 수 없습니다.",
+                    "공식 문서를 참고하여 설치하세요: https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/",
+                    "kubectl 설치 가이드 참조",
                 )
 
             # 클러스터 연결 확인
@@ -71,19 +65,17 @@ class KubernetesConnectivityCheck(DiagnosticCheck):
             return self.create_result(
                 DiagnosticLevel.ERROR,
                 "Kubernetes 연결 시간 초과",
-                "클러스터 응답이 너무 느립니다",
-            )
-        except FileNotFoundError:
-            return self.create_result(
-                DiagnosticLevel.ERROR,
-                "kubectl 명령어를 찾을 수 없습니다",
-                "kubectl이 설치되지 않았거나 PATH에 없습니다",
-                "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/$(uname -s | tr '[:upper:]' '[:lower:]')/$(uname -m)/kubectl\" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/",
-                "kubectl 설치",
+                "클러스터 응답이 너무 느립니다. 네트워크 연결을 확인하세요.",
+                "kubectl config get-contexts",
+                "현재 kubeconfig 컨텍스트 확인",
             )
         except Exception as e:
             return self.create_result(
-                DiagnosticLevel.ERROR, f"Kubernetes 연결 검사 실패: {str(e)}"
+                DiagnosticLevel.ERROR,
+                f"Kubernetes 연결 검사 실패",
+                f"오류 상세: {str(e)}",
+                "kubectl version --client && kubectl cluster-info",
+                "kubectl 상태 확인",
             )
 
 
@@ -95,7 +87,18 @@ class HelmInstallationCheck(DiagnosticCheck):
 
     async def run(self) -> DiagnosticResult:
         try:
-            # Helm 설치 확인
+            # Helm 설치 확인 (shutil.which로 먼저 체크)
+            helm_path = shutil.which("helm")
+            if not helm_path:
+                return self.create_result(
+                    DiagnosticLevel.ERROR,
+                    "Helm이 설치되지 않았습니다",
+                    "Kubernetes 패키지 매니저가 필요합니다. PATH에서 helm을 찾을 수 없습니다.",
+                    "공식 문서를 참고하여 설치하세요: https://helm.sh/docs/intro/install/",
+                    "Helm 설치 가이드 참조",
+                )
+
+            # Helm 버전 확인
             result = subprocess.run(
                 ["helm", "version", "--short"],
                 capture_output=True,
@@ -106,10 +109,10 @@ class HelmInstallationCheck(DiagnosticCheck):
             if result.returncode != 0:
                 return self.create_result(
                     DiagnosticLevel.ERROR,
-                    "Helm이 설치되지 않았습니다",
-                    "Kubernetes 패키지 매니저가 필요합니다",
-                    "curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash",
-                    "Helm 3 최신 버전 설치",
+                    "Helm 실행 오류",
+                    f"helm 명령어 실행 중 오류 발생: {result.stderr.strip()}",
+                    "helm version --short",
+                    "Helm 상태 확인",
                 )
 
             # 버전 확인
@@ -118,23 +121,15 @@ class HelmInstallationCheck(DiagnosticCheck):
                 return self.create_result(
                     DiagnosticLevel.WARNING,
                     "Helm v2가 설치되어 있습니다",
-                    "Helm v3 사용을 권장합니다",
-                    "curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash",
-                    "Helm v3로 업그레이드",
+                    "Helm v3 사용을 권장합니다. 공식 문서를 참고하여 업그레이드하세요.",
+                    "https://helm.sh/docs/intro/install/",
+                    "Helm v3 업그레이드 가이드",
                 )
 
             return self.create_result(
                 DiagnosticLevel.SUCCESS, f"Helm 설치 상태 정상: {version_output}"
             )
 
-        except FileNotFoundError:
-            return self.create_result(
-                DiagnosticLevel.ERROR,
-                "Helm이 설치되지 않았습니다",
-                "PATH에서 helm 명령어를 찾을 수 없습니다",
-                "curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash",
-                "Helm 3 설치",
-            )
         except Exception as e:
             return self.create_result(
                 DiagnosticLevel.ERROR, f"Helm 설치 확인 실패: {str(e)}"

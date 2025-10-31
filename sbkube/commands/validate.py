@@ -184,9 +184,7 @@ class ValidateCommand:
             # Validate app-group dependencies (deps field)
             deps_valid = self.validate_dependencies(config)
             if not deps_valid:
-                logger.warning(
-                    "의존성 검증 실패 (논-블로킹) - 배포 시 실패할 수 있음"
-                )
+                logger.warning("의존성 검증 실패 (논-블로킹) - 배포 시 실패할 수 있음")
         elif file_type == "sources":
             try:
                 logger.info("Pydantic 모델 검증 중 (SourceScheme)...")
@@ -300,55 +298,18 @@ def cmd(
     # Case 2 & 3: Auto-discovery or --app-dir specified
     from rich.console import Console
 
-    from sbkube.utils.common import find_all_app_dirs
+    from sbkube.utils.app_dir_resolver import resolve_app_dirs
 
     console = Console()
     console.print("[bold blue]✨ SBKube `validate` 시작 ✨[/bold blue]")
 
-    # sources.yaml 로드 (app_dirs 확인용)
-    sources_file_path = BASE_DIR / sources_file_name
-    sources_config = None
-    if sources_file_path.exists():
-        from sbkube.models.sources_model import SourceScheme
-        from sbkube.utils.file_loader import load_config_file
-        try:
-            sources_data = load_config_file(sources_file_path)
-            sources_config = SourceScheme(**sources_data)
-        except Exception as e:
-            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
-
-    # 앱 그룹 디렉토리 결정
-    if app_config_dir_name:
-        # 특정 디렉토리 지정 (--app-dir 옵션)
-        app_config_dirs = [BASE_DIR / app_config_dir_name]
-
-        # Validate app directory exists
-        if not app_config_dirs[0].exists() or not app_config_dirs[0].is_dir():
-            console.print(f"[red]❌ App directory not found: {app_config_dirs[0]}[/red]")
-            console.print("[yellow]💡 Check directory path[/yellow]")
-            raise click.Abort()
-
-    elif sources_config and sources_config.app_dirs is not None:
-        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
-        try:
-            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
-            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
-            for app_dir in app_config_dirs:
-                console.print(f"  - {app_dir.name}/")
-        except ValueError as e:
-            console.print(f"[red]❌ {e}[/red]")
-            raise click.Abort()
-    else:
-        # 자동 탐색 (기존 동작)
-        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
-        if not app_config_dirs:
-            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
-            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
-            raise click.Abort()
-
-        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
-        for app_dir in app_config_dirs:
-            console.print(f"  - {app_dir.name}/")
+    # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
+    try:
+        app_config_dirs = resolve_app_dirs(
+            BASE_DIR, app_config_dir_name, config_file_name
+        )
+    except ValueError:
+        raise click.Abort()
 
     # 각 앱 그룹 검증
     overall_success = True
@@ -356,7 +317,9 @@ def cmd(
     success_apps = []
 
     for APP_CONFIG_DIR in app_config_dirs:
-        console.print(f"\n[bold cyan]━━━ Validating app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
+        console.print(
+            f"\n[bold cyan]━━━ Validating app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
+        )
 
         config_file_path = APP_CONFIG_DIR / config_file_name
 
@@ -378,14 +341,20 @@ def cmd(
                 custom_schema_path=custom_schema_path,
             )
             validate_cmd.execute()
-            console.print(f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' validated successfully![/bold green]")
+            console.print(
+                f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' validated successfully![/bold green]"
+            )
             success_apps.append(APP_CONFIG_DIR.name)
         except click.Abort:
-            console.print(f"[red]❌ App group '{APP_CONFIG_DIR.name}' validation failed[/red]")
+            console.print(
+                f"[red]❌ App group '{APP_CONFIG_DIR.name}' validation failed[/red]"
+            )
             failed_apps.append(APP_CONFIG_DIR.name)
             overall_success = False
         except Exception as e:
-            console.print(f"[red]❌ App group '{APP_CONFIG_DIR.name}' validation failed: {e}[/red]")
+            console.print(
+                f"[red]❌ App group '{APP_CONFIG_DIR.name}' validation failed: {e}[/red]"
+            )
             failed_apps.append(APP_CONFIG_DIR.name)
             overall_success = False
 
@@ -410,4 +379,6 @@ def cmd(
         console.print("\n[bold red]❌ Some app groups failed validation[/bold red]")
         raise click.Abort()
     else:
-        console.print("\n[bold green]🎉 All app groups validated successfully![/bold green]")
+        console.print(
+            "\n[bold green]🎉 All app groups validated successfully![/bold green]"
+        )

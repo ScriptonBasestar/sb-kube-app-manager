@@ -11,8 +11,9 @@ import click
 from rich.console import Console
 
 from sbkube.models.config_model import SBKubeConfig
-from sbkube.utils.common import find_all_app_dirs
+from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.deployment_checker import DeploymentChecker
+from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
@@ -104,48 +105,20 @@ def cmd(
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
 
-    # sources.yaml 로드 (app_dirs 확인용)
-    sources_file_path = BASE_DIR / sources_file_name
-    sources_config = None
-    if sources_file_path.exists():
-        from sbkube.models.sources_model import SourceScheme
-        from sbkube.utils.file_loader import load_config_file
-        try:
-            sources_data = load_config_file(sources_file_path)
-            sources_config = SourceScheme(**sources_data)
-        except Exception as e:
-            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
-
-    # 앱 그룹 디렉토리 결정
-    if app_config_dir_name:
-        # 특정 디렉토리 지정 (--app-dir 옵션)
-        app_config_dirs = [BASE_DIR / app_config_dir_name]
-    elif sources_config and sources_config.app_dirs is not None:
-        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
-        try:
-            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
-            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
-            for app_dir in app_config_dirs:
-                console.print(f"  - {app_dir.name}/")
-        except ValueError as e:
-            console.print(f"[red]❌ {e}[/red]")
-            raise click.Abort()
-    else:
-        # 자동 탐색 (기존 동작)
-        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
-        if not app_config_dirs:
-            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
-            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
-            raise click.Abort()
-
-        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
-        for app_dir in app_config_dirs:
-            console.print(f"  - {app_dir.name}/")
+    # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
+    try:
+        app_config_dirs = resolve_app_dirs(
+            BASE_DIR, app_config_dir_name, config_file_name, sources_file_name
+        )
+    except ValueError:
+        raise click.Abort()
 
     # 각 앱 그룹 처리
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
-        console.print(f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
+        console.print(
+            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
+        )
 
         # app_config_dir_name을 현재 앱 그룹 이름으로 설정
         current_app_dir = str(APP_CONFIG_DIR.relative_to(BASE_DIR))
@@ -188,7 +161,9 @@ def cmd(
                     _, status_msg = dep_check_result["details"][dep]
                     console.print(f"  - {dep} ({status_msg})")
 
-                console.print("\n[yellow]💡 Deploy missing dependencies first:[/yellow]")
+                console.print(
+                    "\n[yellow]💡 Deploy missing dependencies first:[/yellow]"
+                )
                 for dep in dep_check_result["missing"]:
                     console.print(f"  sbkube apply --app-dir {dep}")
 
@@ -247,16 +222,16 @@ def cmd(
             visited = set()
 
             def collect_dependencies(name: str):
-                if name in visited:
+                if name in visited:  # noqa: B023
                     return
-                visited.add(name)
+                visited.add(name)  # noqa: B023
 
-                app_cfg = config.apps[name]
+                app_cfg = config.apps[name]  # noqa: B023
                 if hasattr(app_cfg, "depends_on"):
                     for dep in app_cfg.depends_on:
                         collect_dependencies(dep)
 
-                apps_to_apply.append(name)
+                apps_to_apply.append(name)  # noqa: B023
 
             collect_dependencies(app_name)
             console.print(
@@ -330,7 +305,9 @@ def cmd(
             if config.hooks and "apply" in config.hooks:
                 apply_hooks = config.hooks["apply"].model_dump()
                 console.print("[cyan]🪝 Executing global post-apply hooks...[/cyan]")
-                if not hook_executor.execute_command_hooks(apply_hooks, "post", "apply"):
+                if not hook_executor.execute_command_hooks(
+                    apply_hooks, "post", "apply"
+                ):
                     console.print("[red]❌ Post-apply hook failed[/red]")
                     failed = True
 
@@ -339,26 +316,36 @@ def cmd(
             # 글로벌 on_failure 훅 실행
             if config.hooks and "apply" in config.hooks:
                 apply_hooks = config.hooks["apply"].model_dump()
-                console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
+                console.print(
+                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]"
+                )
                 hook_executor.execute_command_hooks(apply_hooks, "on_failure", "apply")
             overall_success = False
-            console.print(f"[red]❌ App group '{APP_CONFIG_DIR.name}' failed: {e}[/red]")
+            console.print(
+                f"[red]❌ App group '{APP_CONFIG_DIR.name}' failed: {e}[/red]"
+            )
             continue
 
         # 실패 시 on_failure 훅 실행
         if failed:
             if config.hooks and "apply" in config.hooks:
                 apply_hooks = config.hooks["apply"].model_dump()
-                console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
+                console.print(
+                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]"
+                )
                 hook_executor.execute_command_hooks(apply_hooks, "on_failure", "apply")
             overall_success = False
             console.print(f"[red]❌ App group '{APP_CONFIG_DIR.name}' failed[/red]")
         else:
-            console.print(f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' applied successfully![/bold green]")
+            console.print(
+                f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' applied successfully![/bold green]"
+            )
 
     # 전체 결과
     if not overall_success:
         console.print("\n[bold red]❌ Some app groups failed to apply[/bold red]")
         raise click.Abort()
     else:
-        console.print("\n[bold green]🎉 All app groups applied successfully![/bold green]")
+        console.print(
+            "\n[bold green]🎉 All app groups applied successfully![/bold green]"
+        )

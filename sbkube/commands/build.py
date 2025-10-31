@@ -15,7 +15,8 @@ import click
 from rich.console import Console
 
 from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig
-from sbkube.utils.common import find_all_app_dirs
+from sbkube.utils.app_dir_resolver import resolve_app_dirs
+from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
@@ -350,48 +351,20 @@ def cmd(
     SBKUBE_WORK_DIR.mkdir(parents=True, exist_ok=True)
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
 
-    # sources.yaml 로드 (app_dirs 확인용)
-    sources_file_path = BASE_DIR / "sources.yaml"
-    sources_config = None
-    if sources_file_path.exists():
-        from sbkube.models.sources_model import SourceScheme
-        from sbkube.utils.file_loader import load_config_file
-        try:
-            sources_data = load_config_file(sources_file_path)
-            sources_config = SourceScheme(**sources_data)
-        except Exception as e:
-            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
-
-    # 앱 그룹 디렉토리 결정
-    if app_config_dir_name:
-        # 특정 디렉토리 지정 (--app-dir 옵션)
-        app_config_dirs = [BASE_DIR / app_config_dir_name]
-    elif sources_config and sources_config.app_dirs is not None:
-        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
-        try:
-            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
-            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
-            for app_dir in app_config_dirs:
-                console.print(f"  - {app_dir.name}/")
-        except ValueError as e:
-            console.print(f"[red]❌ {e}[/red]")
-            raise click.Abort()
-    else:
-        # 자동 탐색 (기존 동작)
-        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
-        if not app_config_dirs:
-            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
-            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
-            raise click.Abort()
-
-        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
-        for app_dir in app_config_dirs:
-            console.print(f"  - {app_dir.name}/")
+    # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
+    try:
+        app_config_dirs = resolve_app_dirs(
+            BASE_DIR, app_config_dir_name, config_file_name
+        )
+    except ValueError:
+        raise click.Abort()
 
     # 각 앱 그룹 처리
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
-        console.print(f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
+        console.print(
+            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
+        )
 
         config_file_path = APP_CONFIG_DIR / config_file_name
 
@@ -453,7 +426,9 @@ def cmd(
             app = config.apps[app_name_iter]
 
             if not app.enabled:
-                console.print(f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]")
+                console.print(
+                    f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]"
+                )
                 continue
 
             # ========== 앱별 pre-build 훅 실행 ==========
@@ -465,7 +440,9 @@ def cmd(
                     hook_type="pre_build",
                     context={},
                 ):
-                    console.print(f"[red]❌ Pre-build hook failed for app: {app_name_iter}[/red]")
+                    console.print(
+                        f"[red]❌ Pre-build hook failed for app: {app_name_iter}[/red]"
+                    )
                     build_failed = True
                     continue
 
@@ -555,4 +532,6 @@ def cmd(
         console.print("\n[bold red]❌ Some app groups failed to build[/bold red]")
         raise click.Abort()
     else:
-        console.print("\n[bold green]🎉 All app groups built successfully![/bold green]")
+        console.print(
+            "\n[bold green]🎉 All app groups built successfully![/bold green]"
+        )

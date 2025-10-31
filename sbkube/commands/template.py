@@ -13,8 +13,11 @@ from pathlib import Path
 import click
 from rich.console import Console
 
-from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig, YamlApp
-from sbkube.utils.common import find_all_app_dirs, run_command
+from sbkube.models.config_model import (HelmApp, HookApp, HttpApp,
+                                        SBKubeConfig, YamlApp)
+from sbkube.utils.app_dir_resolver import resolve_app_dirs
+from sbkube.utils.common import run_command
+from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
@@ -329,43 +332,13 @@ def cmd(
     CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
     BUILD_DIR = SBKUBE_WORK_DIR / "build"
 
-    # sources.yaml 로드 (app_dirs 확인용)
-    sources_file_path = BASE_DIR / "sources.yaml"
-    sources_config = None
-    if sources_file_path.exists():
-        from sbkube.models.sources_model import SourceScheme
-        from sbkube.utils.file_loader import load_config_file
-        try:
-            sources_data = load_config_file(sources_file_path)
-            sources_config = SourceScheme(**sources_data)
-        except Exception as e:
-            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
-
-    # 앱 그룹 디렉토리 결정
-    if app_config_dir_name:
-        # 특정 디렉토리 지정 (--app-dir 옵션)
-        app_config_dirs = [BASE_DIR / app_config_dir_name]
-    elif sources_config and sources_config.app_dirs is not None:
-        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
-        try:
-            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
-            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
-            for app_dir in app_config_dirs:
-                console.print(f"  - {app_dir.name}/")
-        except ValueError as e:
-            console.print(f"[red]❌ {e}[/red]")
-            raise click.Abort()
-    else:
-        # 자동 탐색 (기존 동작)
-        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
-        if not app_config_dirs:
-            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
-            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
-            raise click.Abort()
-
-        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
-        for app_dir in app_config_dirs:
-            console.print(f"  - {app_dir.name}/")
+    # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
+    try:
+        app_config_dirs = resolve_app_dirs(
+            BASE_DIR, app_config_dir_name, config_file_name
+        )
+    except ValueError:
+        raise click.Abort()
 
     # rendered 디렉토리 결정
     if output_dir_name:
@@ -386,7 +359,9 @@ def cmd(
     # 각 앱 그룹 처리
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
-        console.print(f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
+        console.print(
+            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
+        )
 
         config_file_path = APP_CONFIG_DIR / config_file_name
 
@@ -448,19 +423,25 @@ def cmd(
                 app = config.apps[app_name_iter]
 
                 if not app.enabled:
-                    console.print(f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]")
+                    console.print(
+                        f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]"
+                    )
                     continue
 
                 # 앱별 pre-template 훅 실행
                 if hasattr(app, "hooks") and app.hooks:
-                    console.print(f"[cyan]🪝 Executing pre-template hook for {app_name_iter}...[/cyan]")
+                    console.print(
+                        f"[cyan]🪝 Executing pre-template hook for {app_name_iter}...[/cyan]"
+                    )
                     if not hook_executor.execute_app_hook(
                         app_name_iter,
                         app.hooks.model_dump() if app.hooks else None,
                         "pre_template",
                         context={"namespace": config.namespace},
                     ):
-                        console.print(f"[red]❌ Pre-template hook failed for {app_name_iter}[/red]")
+                        console.print(
+                            f"[red]❌ Pre-template hook failed for {app_name_iter}[/red]"
+                        )
                         failed = True
                         break
 
@@ -484,11 +465,21 @@ def cmd(
                     )
                 elif isinstance(app, YamlApp):
                     success = template_yaml_app(
-                        app_name_iter, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, RENDERED_DIR
+                        app_name_iter,
+                        app,
+                        BASE_DIR,
+                        BUILD_DIR,
+                        APP_CONFIG_DIR,
+                        RENDERED_DIR,
                     )
                 elif isinstance(app, HttpApp):
                     success = template_http_app(
-                        app_name_iter, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, RENDERED_DIR
+                        app_name_iter,
+                        app,
+                        BASE_DIR,
+                        BUILD_DIR,
+                        APP_CONFIG_DIR,
+                        RENDERED_DIR,
                     )
                 else:
                     console.print(
@@ -500,7 +491,9 @@ def cmd(
                     failed = True
                     # 앱별 on_template_failure 훅 실행
                     if hasattr(app, "hooks") and app.hooks:
-                        console.print(f"[yellow]🪝 Executing on-failure hook for {app_name_iter}...[/yellow]")
+                        console.print(
+                            f"[yellow]🪝 Executing on-failure hook for {app_name_iter}...[/yellow]"
+                        )
                         hook_executor.execute_app_hook(
                             app_name_iter,
                             app.hooks.model_dump() if app.hooks else None,
@@ -511,14 +504,18 @@ def cmd(
 
                 # 앱별 post-template 훅 실행
                 if hasattr(app, "hooks") and app.hooks:
-                    console.print(f"[cyan]🪝 Executing post-template hook for {app_name_iter}...[/cyan]")
+                    console.print(
+                        f"[cyan]🪝 Executing post-template hook for {app_name_iter}...[/cyan]"
+                    )
                     if not hook_executor.execute_app_hook(
                         app_name_iter,
                         app.hooks.model_dump() if app.hooks else None,
                         "post_template",
                         context={"namespace": config.namespace},
                     ):
-                        console.print(f"[red]❌ Post-template hook failed for {app_name_iter}[/red]")
+                        console.print(
+                            f"[red]❌ Post-template hook failed for {app_name_iter}[/red]"
+                        )
                         failed = True
                         break
 
@@ -539,7 +536,9 @@ def cmd(
             # 글로벌 on_failure 훅 실행
             if config.hooks and "template" in config.hooks:
                 template_hooks = config.hooks["template"].model_dump()
-                console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
+                console.print(
+                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]"
+                )
                 hook_executor.execute_command_hooks(
                     template_hooks, "on_failure", "template"
                 )
@@ -549,7 +548,9 @@ def cmd(
         if failed:
             if config.hooks and "template" in config.hooks:
                 template_hooks = config.hooks["template"].model_dump()
-                console.print("[yellow]🪝 Executing global on-failure hooks...[/yellow]")
+                console.print(
+                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]"
+                )
                 hook_executor.execute_command_hooks(
                     template_hooks, "on_failure", "template"
                 )
@@ -568,4 +569,6 @@ def cmd(
         console.print("\n[bold red]❌ Some app groups failed to template[/bold red]")
         raise click.Abort()
     else:
-        console.print("\n[bold green]🎉 All app groups templated successfully![/bold green]")
+        console.print(
+            "\n[bold green]🎉 All app groups templated successfully![/bold green]"
+        )

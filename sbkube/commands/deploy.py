@@ -15,34 +15,23 @@ import click
 from rich.console import Console
 
 from sbkube.exceptions import KubernetesConnectionError
-from sbkube.models.config_model import (
-    ActionApp,
-    ExecApp,
-    HelmApp,
-    HookApp,
-    KustomizeApp,
-    NoopApp,
-    SBKubeConfig,
-    YamlApp,
-)
-from sbkube.utils.app_labels import (
-    build_helm_set_annotations,
-    build_helm_set_labels,
-    build_sbkube_annotations,
-    build_sbkube_labels,
-    extract_app_group_from_name,
-)
-from sbkube.utils.cli_check import (
-    check_cluster_connectivity_or_exit,
-    check_helm_installed_or_exit,
-    check_kubectl_installed_or_exit,
-)
-from sbkube.utils.cluster_config import (
-    ClusterConfigError,
-    apply_cluster_config_to_command,
-    resolve_cluster_config,
-)
-from sbkube.utils.common import find_all_app_dirs, find_sources_file, run_command
+from sbkube.models.config_model import (ActionApp, ExecApp, HelmApp, HookApp,
+                                        KustomizeApp, NoopApp, SBKubeConfig,
+                                        YamlApp)
+from sbkube.utils.app_dir_resolver import resolve_app_dirs
+from sbkube.utils.app_labels import (build_helm_set_annotations,
+                                     build_helm_set_labels,
+                                     build_sbkube_annotations,
+                                     build_sbkube_labels,
+                                     extract_app_group_from_name)
+from sbkube.utils.cli_check import (check_cluster_connectivity_or_exit,
+                                    check_helm_installed_or_exit,
+                                    check_kubectl_installed_or_exit)
+from sbkube.utils.cluster_config import (ClusterConfigError,
+                                         apply_cluster_config_to_command,
+                                         resolve_cluster_config)
+from sbkube.utils.common import find_sources_file, run_command
+from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
@@ -131,7 +120,9 @@ def deploy_helm_app(
         if app.is_remote_chart():
             # Remote chart: .sbkube/charts/ 디렉토리에서 찾기
             chart_name = app.get_chart_name()
-            source_path = charts_dir / chart_name / chart_name  # .sbkube/charts/redis/redis
+            source_path = (
+                charts_dir / chart_name / chart_name
+            )  # .sbkube/charts/redis/redis
 
             if not source_path.exists():
                 console.print(f"[red]❌ Chart not found: {source_path}[/red]")
@@ -328,9 +319,13 @@ def deploy_yaml_app(
                 expanded_file = expand_repo_variables(yaml_file, repos_dir, apps_config)
                 # 변수 확장 성공 로그
                 if expanded_file != yaml_file:
-                    console.print(f"  [dim]Variable expanded: {yaml_file} → {expanded_file}[/dim]")
+                    console.print(
+                        f"  [dim]Variable expanded: {yaml_file} → {expanded_file}[/dim]"
+                    )
             except Exception as e:
-                console.print(f"[red]❌ Failed to expand variable in '{yaml_file}': {e}[/red]")
+                console.print(
+                    f"[red]❌ Failed to expand variable in '{yaml_file}': {e}[/red]"
+                )
                 return False
 
         # 경로 해석: 절대경로면 그대로, 상대경로면 app_config_dir 기준
@@ -705,54 +700,28 @@ def cmd(
     CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
     BUILD_DIR = SBKUBE_WORK_DIR / "build"
 
-    # sources.yaml 로드 (app_dirs 확인용)
-    sources_file_path = BASE_DIR / "sources.yaml"
-    sources_config = None
-    if sources_file_path.exists():
-        from sbkube.models.sources_model import SourceScheme
-        from sbkube.utils.file_loader import load_config_file
-        try:
-            sources_data = load_config_file(sources_file_path)
-            sources_config = SourceScheme(**sources_data)
-        except Exception as e:
-            console.print(f"[yellow]⚠️  Warning: Could not load sources.yaml: {e}[/yellow]")
-
-    # 앱 그룹 디렉토리 결정
-    if app_config_dir_name:
-        # 특정 디렉토리 지정 (--app-dir 옵션)
-        app_config_dirs = [BASE_DIR / app_config_dir_name]
-    elif sources_config and sources_config.app_dirs is not None:
-        # sources.yaml에 명시적 app_dirs 목록이 있는 경우
-        try:
-            app_config_dirs = sources_config.get_app_dirs(BASE_DIR, config_file_name)
-            console.print(f"[cyan]📂 Using app_dirs from sources.yaml ({len(app_config_dirs)} group(s)):[/cyan]")
-            for app_dir in app_config_dirs:
-                console.print(f"  - {app_dir.name}/")
-        except ValueError as e:
-            console.print(f"[red]❌ {e}[/red]")
-            raise click.Abort()
-    else:
-        # 자동 탐색 (기존 동작)
-        app_config_dirs = find_all_app_dirs(BASE_DIR, config_file_name)
-        if not app_config_dirs:
-            console.print(f"[red]❌ No app directories found in: {BASE_DIR}[/red]")
-            console.print("[yellow]💡 Tip: Create directories with config.yaml or use --app-dir[/yellow]")
-            raise click.Abort()
-
-        console.print(f"[cyan]📂 Found {len(app_config_dirs)} app group(s) (auto-discovery):[/cyan]")
-        for app_dir in app_config_dirs:
-            console.print(f"  - {app_dir.name}/")
+    # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
+    try:
+        app_config_dirs = resolve_app_dirs(
+            BASE_DIR, app_config_dir_name, config_file_name
+        )
+    except ValueError:
+        raise click.Abort()
 
     # 각 앱 그룹 처리
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
-        console.print(f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]")
+        console.print(
+            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
+        )
 
         config_file_path = APP_CONFIG_DIR / config_file_name
 
         # Load sources and resolve cluster configuration
         sources_file_name = ctx.obj.get("sources_file", "sources.yaml")
-        sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
+        sources_file_path = find_sources_file(
+            BASE_DIR, APP_CONFIG_DIR, sources_file_name
+        )
 
         sources = None
         if sources_file_path and sources_file_path.exists():
@@ -816,7 +785,7 @@ def cmd(
             dry_run=dry_run,
             kubeconfig=kubeconfig,
             context=context,
-            namespace=namespace,
+            namespace=config.namespace,  # config에서 namespace 가져옴
         )
 
         # ========== 전역 pre-deploy 훅 실행 ==========
@@ -840,14 +809,18 @@ def cmd(
             app = config.apps[app_name_iter]
 
             if not app.enabled:
-                console.print(f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]")
+                console.print(
+                    f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]"
+                )
                 continue
 
             # ========== 앱별 pre-deploy 훅 실행 ==========
             if hasattr(app, "hooks") and app.hooks:
                 app_hooks = app.hooks.model_dump()
                 hook_context = {
-                    "namespace": app.namespace if hasattr(app, "namespace") else config.namespace,
+                    "namespace": (
+                        app.namespace if hasattr(app, "namespace") else config.namespace
+                    ),
                     "release_name": getattr(app, "release_name", None) or app_name_iter,
                 }
 
@@ -859,7 +832,9 @@ def cmd(
                         hook_type="pre_deploy",
                         context=hook_context,
                     ):
-                        console.print(f"[red]❌ Pre-deploy tasks failed for app: {app_name_iter}[/red]")
+                        console.print(
+                            f"[red]❌ Pre-deploy tasks failed for app: {app_name_iter}[/red]"
+                        )
                         deployment_failed = True
                         continue
 
@@ -870,7 +845,9 @@ def cmd(
                     hook_type="pre_deploy",
                     context=hook_context,
                 ):
-                    console.print(f"[red]❌ Pre-deploy hook failed for app: {app_name_iter}[/red]")
+                    console.print(
+                        f"[red]❌ Pre-deploy hook failed for app: {app_name_iter}[/red]"
+                    )
                     deployment_failed = True
                     continue
 
@@ -892,7 +869,10 @@ def cmd(
                     )
                 elif isinstance(app, YamlApp):
                     # apps_config를 딕셔너리로 변환 (Pydantic 모델 → dict)
-                    apps_config_dict = {name: app_obj.model_dump() for name, app_obj in config.apps.items()}
+                    apps_config_dict = {
+                        name: app_obj.model_dump()
+                        for name, app_obj in config.apps.items()
+                    }
                     success = deploy_yaml_app(
                         app_name_iter,
                         app,
@@ -938,7 +918,7 @@ def cmd(
                         APP_CONFIG_DIR,
                         kubeconfig,
                         context,
-                        namespace,
+                        config.namespace,  # config에서 namespace 가져옴
                         dry_run,
                     )
                 else:
@@ -963,7 +943,9 @@ def cmd(
             if hasattr(app, "hooks") and app.hooks:
                 app_hooks = app.hooks.model_dump()
                 hook_context = {
-                    "namespace": app.namespace if hasattr(app, "namespace") else config.namespace,
+                    "namespace": (
+                        app.namespace if hasattr(app, "namespace") else config.namespace
+                    ),
                     "release_name": getattr(app, "release_name", None) or app_name_iter,
                 }
 
@@ -978,7 +960,10 @@ def cmd(
                     )
 
                     # Phase 2: tasks (우선순위: tasks > manifests > commands)
-                    if "post_deploy_tasks" in app_hooks and app_hooks["post_deploy_tasks"]:
+                    if (
+                        "post_deploy_tasks" in app_hooks
+                        and app_hooks["post_deploy_tasks"]
+                    ):
                         hook_executor.execute_hook_tasks(
                             app_name=app_name_iter,
                             tasks=app_hooks["post_deploy_tasks"],
@@ -1032,4 +1017,6 @@ def cmd(
         console.print("\n[bold red]❌ Some app groups failed to deploy[/bold red]")
         raise click.Abort()
     else:
-        console.print("\n[bold green]🎉 All app groups deployed successfully![/bold green]")
+        console.print(
+            "\n[bold green]🎉 All app groups deployed successfully![/bold green]"
+        )

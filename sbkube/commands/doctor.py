@@ -4,14 +4,12 @@ import sys
 import click
 from rich.console import Console
 
-from sbkube.diagnostics.kubernetes_checks import (
-    ConfigValidityCheck,
-    HelmInstallationCheck,
-    KubernetesConnectivityCheck,
-    NetworkAccessCheck,
-    PermissionsCheck,
-    ResourceAvailabilityCheck,
-)
+from sbkube.diagnostics.kubernetes_checks import (ConfigValidityCheck,
+                                                  HelmInstallationCheck,
+                                                  KubernetesConnectivityCheck,
+                                                  NetworkAccessCheck,
+                                                  PermissionsCheck,
+                                                  ResourceAvailabilityCheck)
 from sbkube.utils.diagnostic_system import DiagnosticEngine
 from sbkube.utils.logger import logger
 
@@ -71,7 +69,7 @@ def cmd(ctx, detailed, check, config_dir):
             engine.register_check(diagnostic_check)
 
         # 진단 실행
-        results = asyncio.run(engine.run_all_checks())
+        asyncio.run(engine.run_all_checks())
 
         # 결과 표시
         engine.display_results(detailed=detailed)
@@ -88,52 +86,3 @@ def cmd(ctx, detailed, check, config_dir):
     except Exception as e:
         logger.error(f"❌ 진단 실행 실패: {e}")
         sys.exit(1)
-
-
-
-
-# Public API for testing and extension
-def get_available_checks():
-    """사용 가능한 진단 체크 목록 반환 (Public API for testing/extension)
-
-    Returns:
-        list[DiagnosticCheck]: 모든 사용 가능한 진단 체크 인스턴스 목록
-
-    Example:
-        >>> checks = get_available_checks()
-        >>> for check in checks:
-        ...     print(f"{check.name}: {check.description}")
-    """
-    return [
-        KubernetesConnectivityCheck(),
-        HelmInstallationCheck(),
-        ConfigValidityCheck(),
-        NetworkAccessCheck(),
-        PermissionsCheck(),
-        ResourceAvailabilityCheck(),
-    ]
-
-
-def get_check_info(check_name: str):
-    """특정 체크의 정보 반환 (Public API for testing/extension)
-
-    Args:
-        check_name: 체크 이름 (예: "k8s_connectivity", "helm_installation")
-
-    Returns:
-        dict | None: 체크 정보 딕셔너리 또는 None (체크를 찾지 못한 경우)
-
-    Example:
-        >>> info = get_check_info("k8s_connectivity")
-        >>> print(info["description"])
-        Kubernetes 클러스터 연결
-    """
-    checks = get_available_checks()
-    for check in checks:
-        if check.name == check_name:
-            return {
-                "name": check.name,
-                "description": check.description,
-                "class": check.__class__.__name__,
-            }
-    return None

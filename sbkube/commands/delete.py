@@ -5,28 +5,13 @@ from pydantic import ValidationError as PydanticValidationError
 from rich.console import Console
 
 from sbkube.models.config_model import ActionApp, SBKubeConfig, YamlApp
-from sbkube.utils.cli_check import (
-    check_helm_installed_or_exit,
-    check_kubectl_installed_or_exit,
-)
+from sbkube.utils.cli_check import (check_helm_installed_or_exit,
+                                    check_kubectl_installed_or_exit)
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts
 
 console = Console()
-
-
-def check_resource_exists(
-    resource_type: str,
-    resource_name: str,
-    namespace: str | None,
-) -> bool:
-    """지정된 리소스가 Kubernetes 클러스터에 존재하는지 확인합니다."""
-    cmd = ["kubectl", "get", resource_type, resource_name]
-    if namespace:
-        cmd.extend(["--namespace", namespace])
-    return_code, stdout, _ = run_command(cmd, check=False, timeout=10)
-    return return_code == 0 and resource_name in stdout
 
 
 @click.command(name="delete")

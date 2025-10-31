@@ -12,6 +12,7 @@ from rich.console import Console
 
 from sbkube.models.config_model import SBKubeConfig
 from sbkube.utils.common import find_all_app_dirs
+from sbkube.utils.deployment_checker import DeploymentChecker
 from sbkube.utils.hook_executor import HookExecutor
 
 console = Console()
@@ -66,6 +67,12 @@ console = Console()
     default=False,
     help="build 단계 건너뛰기 (overrides/removes가 없는 경우)",
 )
+@click.option(
+    "--skip-deps-check",
+    is_flag=True,
+    default=False,
+    help="앱 그룹 의존성 검증 건너뛰기 (강제 배포 시)",
+)
 @click.pass_context
 def cmd(
     ctx: click.Context,
@@ -77,6 +84,7 @@ def cmd(
     dry_run: bool,
     skip_prepare: bool,
     skip_build: bool,
+    skip_deps_check: bool,
 ):
     """
     SBKube apply 명령어.
@@ -158,6 +166,49 @@ def cmd(
             console.print(f"[red]❌ Invalid config file: {e}[/red]")
             overall_success = False
             continue
+
+        # deps (app-group dependencies) 배포 상태 검증
+        if config.deps and not skip_deps_check:
+            console.print("[cyan]🔍 Checking app-group dependencies...[/cyan]")
+            deployment_checker = DeploymentChecker(
+                base_dir=BASE_DIR,
+                namespace=None,  # Auto-detect from deployment history
+            )
+
+            dep_check_result = deployment_checker.check_dependencies(
+                deps=config.deps,
+                namespace=None,  # Auto-detect namespace for each dependency
+            )
+
+            if not dep_check_result["all_deployed"]:
+                console.print(
+                    f"[red]❌ Error: {len(dep_check_result['missing'])} dependencies not deployed:[/red]"
+                )
+                for dep in dep_check_result["missing"]:
+                    _, status_msg = dep_check_result["details"][dep]
+                    console.print(f"  - {dep} ({status_msg})")
+
+                console.print("\n[yellow]💡 Deploy missing dependencies first:[/yellow]")
+                for dep in dep_check_result["missing"]:
+                    console.print(f"  sbkube apply --app-dir {dep}")
+
+                console.print(
+                    "\n[dim]Tip: Use --skip-deps-check to override this check[/dim]"
+                )
+
+                overall_success = False
+                continue
+
+            # All deps are deployed
+            console.print(
+                f"[green]✅ All {len(config.deps)} dependencies are deployed:[/green]"
+            )
+            for dep, (deployed, msg) in dep_check_result["details"].items():
+                console.print(f"  - {dep}: {msg}")
+        elif config.deps and skip_deps_check:
+            console.print(
+                f"[yellow]⚠️  Skipping dependency check ({len(config.deps)} deps declared)[/yellow]"
+            )
 
         # Hook executor 초기화
         hook_executor = HookExecutor(

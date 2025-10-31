@@ -219,6 +219,23 @@ class ConfigValidityCheck(DiagnosticCheck):
                             "앱 타입(helm, yaml, action 등)을 지정해주세요",
                         )
 
+                # deps (app-group dependencies) 검증
+                deps = config.get("deps", [])
+                if deps:
+                    base_dir = self.config_dir.parent if self.config_dir.name != "." else Path.cwd()
+                    missing_deps = []
+                    for dep in deps:
+                        dep_path = base_dir / dep / "config.yaml"
+                        if not dep_path.exists():
+                            missing_deps.append(dep)
+
+                    if missing_deps:
+                        return self.create_result(
+                            DiagnosticLevel.ERROR,
+                            f"의존성 디렉토리를 찾을 수 없습니다: {', '.join(missing_deps)}",
+                            f"deps 필드에 명시된 app-group 디렉토리가 존재하지 않습니다",
+                        )
+
                 return self.create_result(
                     DiagnosticLevel.SUCCESS,
                     f"설정 파일 유효성 검사 통과 ({len(apps)}개 앱 정의됨)",

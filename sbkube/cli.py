@@ -7,13 +7,14 @@ import click
 from sbkube.commands import (
     apply,
     build,
-    cluster,
     delete,
     deploy,
     doctor,
+    history,
     init,
     prepare,
-    state,
+    rollback,
+    status,
     template,
     upgrade,
     validate,
@@ -46,7 +47,6 @@ class SbkubeGroup(click.Group):
                 "delete",
                 "prepare",
                 "apply",
-                "cluster",
             ]
             commands_requiring_helm = [
                 "template",
@@ -56,7 +56,6 @@ class SbkubeGroup(click.Group):
                 "prepare",
                 "build",
                 "apply",
-                "cluster",
             ]
 
             try:
@@ -148,15 +147,18 @@ main.add_command(template.cmd)
 main.add_command(deploy.cmd)
 main.add_command(apply.cmd)
 
+# 상태 및 히스토리 명령어 (NEW)
+main.add_command(status.cmd)
+main.add_command(history.cmd)
+main.add_command(rollback.cmd)
+
 # 기타 명령어
 main.add_command(init.cmd)
 main.add_command(upgrade.cmd)
 main.add_command(delete.cmd)
 main.add_command(validate.cmd)
 main.add_command(version.cmd)
-main.add_command(state.state)
 main.add_command(doctor.cmd)
-main.add_command(cluster.cluster)
 
 
 def main_with_exception_handling() -> None:

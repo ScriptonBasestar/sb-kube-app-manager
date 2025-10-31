@@ -414,6 +414,7 @@ class DeploymentDatabase:
         self,
         cluster: str | None = None,
         namespace: str | None = None,
+        app_group: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[DeploymentSummary]:
@@ -423,6 +424,7 @@ class DeploymentDatabase:
         Args:
             cluster: Filter by cluster
             namespace: Filter by namespace
+            app_group: Filter by app-group (Phase 5)
             limit: Maximum number of results
             offset: Result offset for pagination
 
@@ -436,6 +438,12 @@ class DeploymentDatabase:
                 query = query.filter_by(cluster=cluster)
             if namespace:
                 query = query.filter_by(namespace=namespace)
+
+            # Phase 5: Filter by app-group
+            if app_group:
+                query = query.join(AppDeployment).filter(
+                    AppDeployment.app_group == app_group
+                )
 
             query = query.order_by(Deployment.timestamp.desc())
             query = query.limit(limit).offset(offset)
@@ -498,6 +506,40 @@ class DeploymentDatabase:
                 .filter_by(
                     cluster=cluster,
                     namespace=namespace,
+                    app_config_dir=app_config_dir,
+                )
+                .order_by(Deployment.timestamp.desc())
+                .first()
+            )
+
+            if deployment:
+                return self.get_deployment(deployment.deployment_id)
+
+            return None
+
+    def get_latest_deployment_any_namespace(
+        self,
+        cluster: str,
+        app_config_dir: str,
+    ) -> DeploymentDetail | None:
+        """
+        Get the latest deployment for an app regardless of namespace.
+
+        Useful for dependency validation where the dependency may be
+        deployed in a different namespace than the current app.
+
+        Args:
+            cluster: Cluster name
+            app_config_dir: Application configuration directory (absolute path)
+
+        Returns:
+            Latest deployment details or None if never deployed
+        """
+        with self.get_session() as session:
+            deployment = (
+                session.query(Deployment)
+                .filter_by(
+                    cluster=cluster,
                     app_config_dir=app_config_dir,
                 )
                 .order_by(Deployment.timestamp.desc())
@@ -580,3 +622,130 @@ class DeploymentDatabase:
         # Compute checksum
         json_str = json.dumps(data_copy, sort_keys=True)
         return hashlib.sha256(json_str.encode()).hexdigest()
+
+    def get_deployment_diff(
+        self,
+        deployment_id1: str,
+        deployment_id2: str,
+    ) -> dict[str, Any] | None:
+        """
+        Compare two deployments and return differences.
+
+        Args:
+            deployment_id1: First deployment ID
+            deployment_id2: Second deployment ID
+
+        Returns:
+            Dictionary containing comparison results or None if either deployment not found
+        """
+        deployment1 = self.get_deployment(deployment_id1)
+        deployment2 = self.get_deployment(deployment_id2)
+
+        if not deployment1 or not deployment2:
+            return None
+
+        return {
+            "deployment1": {
+                "id": deployment1.deployment_id,
+                "timestamp": deployment1.timestamp,
+                "cluster": deployment1.cluster,
+                "namespace": deployment1.namespace,
+                "status": deployment1.status.value,
+                "app_count": len(deployment1.apps),
+                "config_snapshot": deployment1.config_snapshot,
+            },
+            "deployment2": {
+                "id": deployment2.deployment_id,
+                "timestamp": deployment2.timestamp,
+                "cluster": deployment2.cluster,
+                "namespace": deployment2.namespace,
+                "status": deployment2.status.value,
+                "app_count": len(deployment2.apps),
+                "config_snapshot": deployment2.config_snapshot,
+            },
+            "apps_diff": {
+                "added": [
+                    app["name"]
+                    for app in deployment2.apps
+                    if app["name"] not in {a["name"] for a in deployment1.apps}
+                ],
+                "removed": [
+                    app["name"]
+                    for app in deployment1.apps
+                    if app["name"] not in {a["name"] for a in deployment2.apps}
+                ],
+                "modified": [
+                    app["name"]
+                    for app in deployment2.apps
+                    if app["name"] in {a["name"] for a in deployment1.apps}
+                    and app["config"] != next(
+                        (a["config"] for a in deployment1.apps if a["name"] == app["name"]),
+                        None,
+                    )
+                ],
+            },
+        }
+
+    def get_deployment_values_diff(
+        self,
+        deployment_id1: str,
+        deployment_id2: str,
+    ) -> dict[str, Any] | None:
+        """
+        Compare Helm values between two deployments.
+
+        Args:
+            deployment_id1: First deployment ID
+            deployment_id2: Second deployment ID
+
+        Returns:
+            Dictionary containing Helm values comparison or None if either deployment not found
+        """
+        deployment1 = self.get_deployment(deployment_id1)
+        deployment2 = self.get_deployment(deployment_id2)
+
+        if not deployment1 or not deployment2:
+            return None
+
+        # Extract Helm releases from both deployments
+        helm1 = {
+            release.release_name: release.values
+            for release in deployment1.helm_releases
+        }
+        helm2 = {
+            release.release_name: release.values
+            for release in deployment2.helm_releases
+        }
+
+        # Find common releases and changes
+        all_releases = set(helm1.keys()) | set(helm2.keys())
+        values_diff = {}
+
+        for release_name in all_releases:
+            values1 = helm1.get(release_name)
+            values2 = helm2.get(release_name)
+
+            if values1 is None and values2 is not None:
+                values_diff[release_name] = {"status": "added", "values": values2}
+            elif values1 is not None and values2 is None:
+                values_diff[release_name] = {"status": "removed", "values": values1}
+            elif values1 != values2:
+                values_diff[release_name] = {
+                    "status": "modified",
+                    "values_before": values1,
+                    "values_after": values2,
+                }
+            else:
+                values_diff[release_name] = {"status": "unchanged"}
+
+        return {
+            "deployment1": {
+                "id": deployment1.deployment_id,
+                "timestamp": deployment1.timestamp,
+            },
+            "deployment2": {
+                "id": deployment2.deployment_id,
+                "timestamp": deployment2.timestamp,
+            },
+            "values_diff": values_diff,
+        }

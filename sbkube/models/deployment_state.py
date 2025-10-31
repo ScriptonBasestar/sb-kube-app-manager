@@ -107,6 +107,7 @@ class AppDeployment(Base):
     # App info
     app_name = Column(String(255), nullable=False)
     app_type = Column(String(50), nullable=False)
+    app_group = Column(String(255), nullable=True)  # Phase 2: app-group tracking
     namespace = Column(String(255), nullable=True)
 
     # State
@@ -133,6 +134,7 @@ class AppDeployment(Base):
     __table_args__ = (
         Index("idx_app_deployment_name", "app_name"),
         Index("idx_app_deployment_type", "app_type"),
+        Index("idx_app_deployment_group", "app_group"),  # Phase 2: app-group index
     )
 
 
@@ -241,6 +243,7 @@ class AppDeploymentCreate(BaseModel):
 
     app_name: str
     app_type: str
+    app_group: str | None = None  # Phase 2: app-group tracking
     namespace: str | None = None
     app_config: dict[str, Any]
     deployment_metadata: dict[str, Any] | None = None

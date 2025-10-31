@@ -24,6 +24,13 @@ from sbkube.models.config_model import (
     SBKubeConfig,
     YamlApp,
 )
+from sbkube.utils.app_labels import (
+    build_helm_set_annotations,
+    build_helm_set_labels,
+    build_sbkube_annotations,
+    build_sbkube_labels,
+    extract_app_group_from_name,
+)
 from sbkube.utils.cli_check import (
     check_cluster_connectivity_or_exit,
     check_helm_installed_or_exit,
@@ -83,6 +90,8 @@ def deploy_helm_app(
     kubeconfig: str | None = None,
     context: str | None = None,
     dry_run: bool = False,
+    deployment_id: str | None = None,
+    operator: str | None = None,
 ) -> bool:
     """
     Helm 앱 배포 (install/upgrade).
@@ -97,6 +106,8 @@ def deploy_helm_app(
         kubeconfig: kubeconfig 파일 경로
         context: kubectl context 이름
         dry_run: dry-run 모드
+        deployment_id: 배포 ID (Phase 2)
+        operator: 배포자 이름 (Phase 2)
 
     Returns:
         성공 여부
@@ -203,6 +214,39 @@ def deploy_helm_app(
     # --set 옵션
     for key, value in app.set_values.items():
         cmd.extend(["--set", f"{key}={value}"])
+
+    # Phase 2: Inject sbkube labels and annotations
+    # Extract app-group from app_config_dir path
+    app_group = extract_app_group_from_name(app_config_dir.name)
+    if not app_group:
+        # Try parent directory (for nested apps)
+        app_group = extract_app_group_from_name(app_config_dir.parent.name)
+
+    if app_group:
+        # Build labels
+        labels = build_sbkube_labels(
+            app_name=app_name,
+            app_group=app_group,
+            deployment_id=deployment_id,
+        )
+        label_args = build_helm_set_labels(labels)
+        cmd.extend(label_args)
+        console.print(f"  [dim]Injecting labels: app-group={app_group}[/dim]")
+
+        # Build annotations
+        annotations = build_sbkube_annotations(
+            deployment_id=deployment_id,
+            operator=operator,
+        )
+        annotation_args = build_helm_set_annotations(annotations)
+        cmd.extend(annotation_args)
+    else:
+        console.print(
+            f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
+        )
+        console.print(
+            "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
+        )
 
     if dry_run:
         cmd.append("--dry-run")

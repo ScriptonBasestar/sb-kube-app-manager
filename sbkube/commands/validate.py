@@ -43,6 +43,54 @@ class ValidateCommand:
         self.schema_type = schema_type
         self.custom_schema_path = custom_schema_path
 
+    def validate_dependencies(self, config: SBKubeConfig) -> bool:
+        """
+        Validate app-group dependencies declared in config.deps.
+
+        Args:
+            config: Validated SBKubeConfig instance
+
+        Returns:
+            bool: True if all dependencies are deployed, False otherwise
+        """
+        if not config.deps:
+            logger.info("앱 그룹 의존성 없음 (config.deps) - 검증 건너뜀")
+            return True
+
+        logger.heading("앱 그룹 의존성 검증")
+
+        from sbkube.utils.deployment_checker import DeploymentChecker
+
+        # Get target file's parent directory as base
+        target_path = Path(self.target_file)
+        app_dir = target_path.parent
+        parent_dir = app_dir.parent if app_dir.name != "." else Path.cwd()
+
+        checker = DeploymentChecker(
+            base_dir=parent_dir,
+            cluster=None,  # Uses current kubectl context
+            namespace=None,  # Auto-detect from deployment history
+        )
+
+        result = checker.check_dependencies(config.deps, namespace=None)
+
+        if result["all_deployed"]:
+            logger.success(f"✅ 모든 의존성 배포됨 ({len(config.deps)}개)")
+            for dep, (deployed, msg) in result["details"].items():
+                logger.info(f"  ✓ {dep}: {msg}")
+            return True
+        else:
+            logger.error(f"❌ {len(result['missing'])}개 의존성이 배포되지 않음:")
+            for dep in result["missing"]:
+                _, msg = result["details"][dep]
+                logger.error(f"  ✗ {dep}: {msg}")
+
+            logger.warning("배포가 실패할 수 있습니다. 의존성을 먼저 배포하세요:")
+            for dep in result["missing"]:
+                logger.info(f"  sbkube deploy --app-dir {dep}")
+
+            return False
+
     def execute(self):
         """validate 명령 실행"""
         logger.heading(f"Validate 시작 - 파일: {self.target_file}")
@@ -132,6 +180,13 @@ class ValidateCommand:
                     loc = " -> ".join(str(x) for x in error["loc"])
                     logger.error(f"  - {loc}: {error['msg']}")
                 raise click.Abort()
+
+            # Validate app-group dependencies (deps field)
+            deps_valid = self.validate_dependencies(config)
+            if not deps_valid:
+                logger.warning(
+                    "의존성 검증 실패 (논-블로킹) - 배포 시 실패할 수 있음"
+                )
         elif file_type == "sources":
             try:
                 logger.info("Pydantic 모델 검증 중 (SourceScheme)...")

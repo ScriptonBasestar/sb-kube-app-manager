@@ -245,7 +245,7 @@ sbkube apply
 kubectl get all -n web-stack
 
 # 배포 상태
-sbkube state list
+sbkube history
 
 # 예상 출력:
 # App Name        Type   Status     Namespace

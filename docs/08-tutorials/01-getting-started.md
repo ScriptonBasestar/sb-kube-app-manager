@@ -243,14 +243,14 @@ helm list -n tutorial-demo
 
 ```bash
 # 배포 상태 조회
-sbkube state list
+sbkube history
 
 # 예상 출력:
 # App Name    Type    Status      Release Name              Namespace
 # grafana     helm    deployed    grafana-tutorial-demo     tutorial-demo
 
 # 배포 히스토리 확인
-sbkube state history --namespace tutorial-demo
+sbkube history --namespace tutorial-demo
 
 # 예상 출력:
 # Deployment History for namespace: tutorial-demo
@@ -307,7 +307,7 @@ kubectl get pods -n tutorial-demo -w
 
 ```bash
 # 히스토리 확인
-sbkube state history --namespace tutorial-demo
+sbkube history --namespace tutorial-demo
 
 # 예상 출력:
 # ID  App      Version  Status    Deployed At

@@ -239,7 +239,10 @@ apps:  # 앱 정의 (dict 형식, key = 앱 이름)
     type: <string>   # 앱 타입 (helm, yaml, action, exec, git, http, kustomize)
     enabled: <bool>  # 활성화 여부 (기본: true)
     depends_on: [<string>]  # 의존성 (다른 앱 이름 목록)
-    deps: [<string>]        # 앱 그룹 의존성 (v0.4.9+, depends_on의 별칭)
+    deps: [<string>]        # 앱 그룹 의존성 (v0.4.9+)
+                            # - 다른 앱 그룹 디렉토리 이름 목록 (예: ["a000_infra"])
+                            # - validate/apply 명령어 실행 시 배포 상태 검증
+                            # - 네임스페이스 자동 감지 (v0.6.0+)
     # ... 타입별 추가 필드 (평탄화됨, specs 래퍼 없음)
 ```
 
@@ -392,7 +395,7 @@ CREATE TABLE deployment_history (
 
 ### 4.2 히스토리 조회
 
-**명령어**: `sbkube state history`
+**명령어**: `sbkube history`
 
 **필터링 옵션**:
 
@@ -414,7 +417,7 @@ CREATE TABLE deployment_history (
 
 ### 4.3 롤백 지원
 
-**명령어**: `sbkube state rollback --deployment-id <ID>`
+**명령어**: `sbkube rollback --deployment-id <ID>`
 
 **롤백 프로세스**:
 
@@ -433,6 +436,20 @@ CREATE TABLE deployment_history (
 - **스키마 검증**: Pydantic 모델 일치성
 - **논리 검증**: 앱 이름 중복, 순환 의존성
 - **리소스 검증**: Helm 저장소/차트 존재 여부 (선택)
+- **앱 그룹 의존성 검증**: deps 필드에 선언된 의존 앱 그룹 배포 상태 확인 (v0.6.0+)
+
+**앱 그룹 의존성 검증**:
+
+`deps` 필드에 선언된 의존 앱 그룹이 실제로 배포되었는지 확인합니다. 이 검증은 배포 히스토리 데이터베이스(`.sbkube/deployments.db`)를 조회하여 수행됩니다.
+
+**네임스페이스 자동 감지** (v0.6.0+):
+- 의존 앱 그룹이 어떤 네임스페이스에 배포되었는지 자동으로 감지
+- 현재 앱과 다른 네임스페이스에 배포된 의존성도 올바르게 감지
+- 예: 인프라 앱(`a000_infra`)은 `infra` 네임스페이스에, 데이터베이스 앱(`a101_data_rdb`)은 `postgresql` 네임스페이스에 배포된 경우에도 정상 작동
+
+**검증 동작**:
+- `validate` 명령어: 경고 출력 (non-blocking, 배포는 차단하지 않음)
+- `apply` 명령어: 오류 출력 및 배포 차단 (blocking)
 
 **사용자 시나리오**:
 
@@ -442,6 +459,12 @@ CREATE TABLE deployment_history (
 → 오류 발견: apps[2].type: 'helmm' (오타)
 2. 수정 후 재검증
 → ✅ All configurations are valid
+→ ⚠️ Dependency check: a000_infra is not deployed
+
+# 의존성이 다른 네임스페이스에 배포된 경우 (v0.6.0+):
+3. sbkube validate --app-dir a101_data_rdb
+→ ✅ Pydantic validation passed
+→ ✅ Dependency check: a000_infra deployed at 2025-10-30T10:00:00 in namespace 'infra'
 ```
 
 ### 5.2 배포 전 검증 (pre-deployment)
@@ -766,9 +789,9 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 
 **Acceptance Criteria**:
 
-- [ ] sbkube state history로 배포 기록 조회
+- [ ] sbkube history로 배포 기록 조회
 - [ ] 클러스터, 네임스페이스, 앱별 필터링
-- [ ] sbkube state rollback으로 이전 배포로 복원
+- [ ] sbkube rollback으로 이전 배포로 복원
 - [ ] 롤백도 히스토리에 기록됨
 
 ---

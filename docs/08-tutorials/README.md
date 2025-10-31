@@ -50,7 +50,7 @@
 - `sbkube init` - 프로젝트 초기화
 - `sbkube apply` - 통합 배포 워크플로우
 - `config.yaml`, `sources.yaml` 설정 파일 구조
-- `sbkube state` - 배포 상태 관리
+- `sbkube history`, `sbkube rollback` - 배포 상태 관리
 
 **시작하기**:
 

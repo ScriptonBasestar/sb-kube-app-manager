@@ -180,7 +180,7 @@ kubectl logs -n production -l app=webapp --tail=50
 
 ```bash
 # SBKube 히스토리
-sbkube state history --namespace production
+sbkube history --namespace production
 
 # Helm 히스토리
 helm history webapp -n production
@@ -197,7 +197,7 @@ helm rollback webapp 1 -n production
 
 # 롤백 확인
 kubectl get pods -n production
-sbkube state list
+sbkube history
 ```
 
 ---
@@ -298,7 +298,7 @@ jobs:
       - name: Verify
         run: |
           kubectl get pods -n production
-          sbkube state list
+          sbkube history
 ```
 
 ---

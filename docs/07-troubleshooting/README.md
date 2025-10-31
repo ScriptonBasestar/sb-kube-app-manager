@@ -487,20 +487,20 @@ ls -la ~/.sbkube/
 # 잠금 파일 제거 (안전한 경우에만)
 rm ~/.sbkube/deployment.db-lock
 
-# 데이터베이스 재생성
-sbkube state reset  # (향후 기능)
+# 데이터베이스 재생성 (향후 기능 예정)
+# sbkube reset-db
 ```
 
 ### 상태 정보 불일치
 
 ```bash
-# 실제 클러스터와 상태 DB 동기화
-sbkube state sync  # (향후 기능)
+# 실제 클러스터와 상태 DB 동기화 (향후 기능 예정)
+# sbkube sync-state
 
 # 수동으로 상태 확인
 kubectl get all -A
 helm list -A
-sbkube state list
+sbkube history
 ```
 
 ---

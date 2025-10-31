@@ -183,7 +183,7 @@ kubectl get pods,svc -n ingress-nginx
 kubectl get pods,svc -n default
 
 # SBKube 배포 상태 확인 (신규 기능)
-sbkube state list
+sbkube history
 ```
 
 ### 로그 및 디버깅

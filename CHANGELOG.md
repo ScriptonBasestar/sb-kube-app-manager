@@ -1,14 +1,194 @@
 # Changelog - SBKube
 
 > **참고**: 이 문서의 과거 버전 예제에는 Bitnami 차트 참조가 포함되어 있습니다.
-> 현재 버전(v0.5.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
+> 현재 버전(v0.6.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
 
 ## [Unreleased]
 
-### Planned
-- State management improvements (rollback command)
+## [0.6.0] - 2025-10-31
+
+### 🎯 New Features
+
+**App-Group Dependency Validation**
+- ✅ Automatic namespace detection for `deps` field validation
+- ✅ Cross-namespace dependency checking (e.g., infra apps in `infra` namespace, data apps in `postgresql` namespace)
+- ✅ Integration with `validate` command (non-blocking warnings)
+- ✅ Integration with `apply` command (blocking errors)
+- ✅ State-first approach using `.sbkube/deployments.db` for reliable dependency tracking
+- ✅ New database method: `get_latest_deployment_any_namespace()` for namespace-agnostic queries
+
+**Deployment Checker Enhancement**
+- ✅ Automatic namespace detection in `DeploymentChecker.check_app_group_deployed()`
+- ✅ Graceful fallback: namespace-specific query → any-namespace query
+- ✅ Deployment status messages now include actual deployed namespace
+
+### 🗑️ Breaking Changes
+
+**Removed Deprecated Commands**:
+- ❌ `sbkube cluster` command removed → Use `sbkube status` instead
+- ❌ `sbkube state` command removed → Use `sbkube history` and `sbkube rollback` instead
+
+**Migration Guide**:
+
+```bash
+# Old commands (REMOVED in v0.6.0)
+sbkube cluster status              # ❌ No longer available
+sbkube state list                  # ❌ No longer available
+sbkube state show dep_123          # ❌ No longer available
+sbkube state rollback dep_123      # ❌ No longer available
+
+# New commands (use these instead)
+sbkube status                      # ✅ Cluster and app status
+sbkube history                     # ✅ Deployment history
+sbkube history --show dep_123      # ✅ Show specific deployment
+sbkube rollback dep_123            # ✅ Rollback to deployment
+```
+
+### 📝 Documentation
+
+- ✅ Updated `product-spec.md` with namespace auto-detection feature
+- ✅ Added comprehensive validation examples in documentation
+- ✅ Updated all command references from deprecated to new commands
+
+### 🧪 Testing
+
+- ✅ Added 3 new unit tests for namespace auto-detection
+- ✅ Fixed 6 existing tests for new mock patterns
+- ✅ All 19 tests passing in `test_deployment_checker.py`
+
+---
+
+## [0.5.1] - 2025-10-30
+
+### Previous Features
+
+**Simplified Command Structure**
+- ✅ `sbkube status` - Unified cluster and app status (replaces `sbkube cluster status`)
+- ✅ `sbkube history` - Deployment history (replaces `sbkube state list/show`)
+- ✅ `sbkube rollback` - Rollback operations (replaces `sbkube state rollback`)
+
+**App-Group Tracking (Phase 2)**
+- ✅ Automatic label injection: `sbkube.io/app-group`, `sbkube.io/app-name`
+- ✅ State DB enhancement: `app_group` column added to `AppDeployment` model
+- ✅ Grouping utilities: `cluster_grouping.py` for app-group classification
+
+**Label Injection System**
+- ✅ Auto-inject sbkube labels during Helm deployments
+- ✅ Labels: `app.kubernetes.io/managed-by=sbkube`, `sbkube.io/app-group`, `sbkube.io/app-name`
+- ✅ Annotations: `sbkube.io/deployment-id`, `sbkube.io/deployed-at`, `sbkube.io/deployed-by`
+
+**Phase 4 Complete - Advanced Features**
+- ✅ `sbkube status --by-group` - Group apps by app-group
+- ✅ `sbkube status <app-group>` - Show specific app-group details
+- ✅ `sbkube status --managed` - Show only sbkube-managed apps
+- ✅ `sbkube status --unhealthy` - Show only problematic resources
+- ✅ Rich formatted output with colors and tables
+
+**Phase 5 Complete - Deployment History Enhancement**
+- ✅ `sbkube history <app-group>` - Filter history by app-group
+- ✅ `sbkube history --diff ID1,ID2` - Compare two deployments
+- ✅ `sbkube history --values-diff ID1,ID2` - Compare Helm values between deployments
+- ✅ State DB enhancement: app_group filtering in `list_deployments()`
+- ✅ YAML diff visualization using Python difflib
+- ✅ Support for JSON/YAML output formats
+
+**Phase 6 Complete - Dependency Tree Visualization**
+- ✅ `sbkube status --deps` - Display dependency tree for all applications
+- ✅ `sbkube status <app-group> --deps` - Show dependencies for specific app-group
+- ✅ Circular dependency detection with DFS algorithm
+- ✅ Rich Tree widget for hierarchical visualization
+- ✅ Root application detection (apps with no dependencies)
+- ✅ Color-coded output (green: normal, red: circular dependency)
+
+**Phase 7 Complete - Health Check Integration**
+- ✅ `sbkube status --health-check` - Display detailed pod health information
+- ✅ Pod condition analysis (Ready, PodScheduled, etc.)
+- ✅ Container readiness and restart count tracking
+- ✅ Health status classification (Healthy, Waiting, Failed, etc.)
+- ✅ Namespace-grouped health check tables
+- ✅ Icon-coded health indicators (✅ Healthy, ⚠️ Warning, ❌ Failed, 🔄 Restarting)
+
+### 📚 Usage Examples
+
+```bash
+# Standard summary view
+sbkube status
+
+# Group by app-group
+sbkube status --by-group
+
+# Show specific app-group details
+sbkube status app_000_infra_network
+
+# Show only sbkube-managed apps
+sbkube status --managed
+
+# Show only unhealthy resources
+sbkube status --unhealthy
+
+# Show dependency tree (Phase 6)
+sbkube status --deps
+
+# Show dependency tree for specific app-group (Phase 6)
+sbkube status app_000_infra_network --deps
+
+# Show health check details (Phase 7)
+sbkube status --health-check
+
+# Combine options (Phase 7)
+sbkube status --by-group --health-check
+
+# Deployment history
+sbkube history
+sbkube history --show dep_20250131_143022
+
+# Filter history by app-group (Phase 5)
+sbkube history app_000_infra_network
+
+# Compare two deployments (Phase 5)
+sbkube history --diff dep_20250131_143022,dep_20250131_150000
+
+# Compare Helm values (Phase 5)
+sbkube history --values-diff dep_20250131_143022,dep_20250131_150000
+
+# Export comparison as JSON
+sbkube history --diff dep_20250131_143022,dep_20250131_150000 --format json
+
+# Rollback
+sbkube rollback dep_20250131_143022
+sbkube rollback --dry-run dep_20250131_143022
+```
+
+### Planned for Future Releases
 - Enhanced validation with pre/post deployment checks
 - Interactive CLI wizard for initialization
+- Resource usage metrics and cost estimation
+
+---
+
+## [0.5.1] - 2025-10-31
+
+### 🔧 Improvements
+
+- **예제 개선**: Bitnami Redis 차트를 OpsTree Redis Operator로 교체
+  - 17개 예제 파일 업데이트 (config.yaml, sources.yaml)
+  - 벤더 중립적 오픈소스 차트 사용
+  - Kubernetes Operator 패턴 적용
+  - HA 구성 기본 지원
+
+### 📚 Documentation
+
+- Helm 저장소 설정 업데이트 (bitnami → ot-helm)
+- Redis 설정 값 매핑 문서화
+  - `architecture=standalone` → `redisCluster.clusterSize=1`
+  - `auth.enabled=false` → (operator 기본값 사용)
+  - `master.resources` → `kubernetesConfig.resources`
+
+### ⚠️ Notes
+
+- 기존 코드 호환성 완전 유지
+- 새 프로젝트는 OpsTree Redis Operator 사용 권장
+- 기존 Bitnami Redis 차트도 계속 사용 가능
 
 ---
 

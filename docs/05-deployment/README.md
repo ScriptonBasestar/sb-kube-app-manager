@@ -342,10 +342,10 @@ deploy-production:
 
 ```bash
 # 배포 상태 확인
-sbkube state list
+sbkube history
 
 # 특정 클러스터 모니터링
-sbkube state list --cluster production
+sbkube history --cluster production
 
 # 상세 로그로 배포
 sbkube --verbose deploy

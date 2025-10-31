@@ -31,7 +31,7 @@ apps:
     version: "10.1.2"
 ```
 
-**After (v0.5.0+)**:
+**After (v0.6.0+)**:
 ```yaml
 apps:
   grafana:
@@ -46,7 +46,7 @@ apps:
 
 #### 2. CLI Options Renamed
 
-| v0.2.x | v0.5.0+ | Purpose |
+| v0.2.x | v0.6.0+ | Purpose |
 |--------|---------|---------|
 | `--env` | `--profile` | Environment profile selection |
 | `--sources` | `--source` | Source configuration file |
@@ -57,7 +57,7 @@ apps:
 # Before (v0.2.x)
 sbkube deploy --env production --sources sources.yaml
 
-# After (v0.5.0+)
+# After (v0.6.0+)
 sbkube deploy --profile production --source sources.yaml
 ```
 
@@ -275,7 +275,7 @@ apps:
 Error: No such command 'migrate'
 ```
 
-**Solution**: You're running an older version of SBKube. Update to v0.5.0+:
+**Solution**: You're running an older version of SBKube. Update to v0.6.0+:
 
 ```bash
 # Using uv
@@ -300,7 +300,7 @@ apps:
     chart: browserless-chrome
 ```
 
-**After (v0.5.0+)**:
+**After (v0.6.0+)**:
 ```yaml
 apps:
   browserless:
@@ -353,4 +353,4 @@ No issues here - SBKube distinguishes apps by their key (`redis-cache`, `redis-q
 ---
 
 **Last Updated**: 2025-10-31
-**Target Version**: v0.5.0+
+**Target Version**: v0.6.0+

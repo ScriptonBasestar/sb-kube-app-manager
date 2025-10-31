@@ -35,7 +35,7 @@ sbkube deploy --namespace staging --dry-run
 sbkube deploy --namespace staging
 
 # 주간 작업
-sbkube state history --namespace staging
+sbkube history --namespace staging
 sbkube validate --app-dir config/production
 ```
 
@@ -119,11 +119,11 @@ sbkube deploy --namespace production --dry-run
 sbkube deploy --namespace production
 
 # 배포 모니터링
-sbkube state list --namespace production
-sbkube state history --app critical-service
+sbkube history --namespace production
+sbkube history --app critical-service
 
 # 문제 발생 시 롤백
-sbkube state rollback --deployment-id 12345
+sbkube rollback --deployment-id 12345
 ```
 
 **성공 지표**:
@@ -164,7 +164,7 @@ sbkube build
 sbkube deploy --namespace hosting
 
 # 상태 확인
-sbkube state list
+sbkube history
 ```
 
 **성공 지표**:
@@ -194,7 +194,7 @@ sbkube state list
 1. **검증**: `sbkube validate`
 1. **테스트**: `sbkube deploy --dry-run`
 1. **배포**: `sbkube deploy --namespace staging`
-1. **확인**: `sbkube state history`
+1. **확인**: `sbkube history`
 
 **터치포인트**:
 
@@ -217,9 +217,9 @@ sbkube state list
 **단계**:
 
 1. **문제 발견**: 모니터링 알림 수신
-1. **히스토리 조회**: `sbkube state history --namespace production`
+1. **히스토리 조회**: `sbkube history --namespace production`
 1. **이전 배포 ID 확인**: 가장 최근 성공 배포
-1. **롤백 실행**: `sbkube state rollback --deployment-id 12345`
+1. **롤백 실행**: `sbkube rollback --deployment-id 12345`
 1. **상태 확인**: `kubectl get pods -n production`
 1. **근본 원인 분석**: 배포 로그 검토
 

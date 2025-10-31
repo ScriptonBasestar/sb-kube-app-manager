@@ -205,13 +205,13 @@ sbkube deploy \
 
 ```bash
 # 전체 배포 히스토리
-sbkube state list
+sbkube history
 
 # 특정 네임스페이스
-sbkube state history --namespace production
+sbkube history --namespace production
 
 # 상세 정보
-sbkube state show <deployment-id>
+sbkube history --show <deployment-id>
 ```
 
 ---

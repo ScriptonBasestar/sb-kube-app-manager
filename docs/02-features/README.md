@@ -164,10 +164,10 @@ sbkube prepare && sbkube build && sbkube template --output-dir ./rendered
 
 ```bash
 # 배포 상태 확인
-sbkube state list
+sbkube history
 
 # 특정 배포 롤백
-sbkube state rollback --deployment-id <id>
+sbkube rollback --deployment-id <id>
 ```
 
 ---

@@ -68,7 +68,7 @@ sudo chown -R $USER:$USER ~/.sbkube/
 
 # 또는 디렉토리 재생성
 rm -rf ~/.sbkube/
-sbkube state list  # 자동으로 디렉토리 생성
+sbkube history  # 자동으로 디렉토리 생성
 ```
 
 ### 문제 3: Kubernetes 클러스터 연결 실패
@@ -810,7 +810,7 @@ kubectl get nodes
 helm version
 
 # 현재 상태
-sbkube state list
+sbkube history
 kubectl get all -n <namespace>
 ```
 

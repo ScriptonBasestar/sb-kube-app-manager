@@ -74,17 +74,50 @@ apps:
     chart: harbor/harbor
 ```
 
-**동작 방식** (v0.4.10):
+**동작 방식** (v0.6.0+):
 
 - **파싱**: 설정 파일에서 `deps` 필드를 읽어들임
 - **문서화**: 의존성 정보를 config.yaml에 명시적으로 기록
-- **검증**: 현재 버전에서는 검증 없음 (문서화 목적)
+- **디렉토리 검증** (`sbkube doctor`): deps에 명시된 앱 그룹 디렉토리가 실제로 존재하는지 확인
+- **배포 상태 검증** (`sbkube apply`): deps에 명시된 앱 그룹이 실제로 배포되었는지 확인하여 미배포 시 배포 중단
+
+**검증 동작**:
+
+```bash
+# 1. sbkube doctor: 디렉토리 존재 여부 확인
+$ sbkube doctor
+✅ Config Validity
+   - namespace: harbor ✓
+   - apps: 3 apps defined ✓
+   - deps: a000_infra_network ✓
+   - deps: a101_data_rdb ✗ (directory not found)  # 에러 발생
+
+# 2. sbkube apply: 배포 상태 확인
+$ sbkube apply --app-dir a302_devops
+🔍 Checking app-group dependencies...
+❌ Error: 2 dependencies not deployed:
+  - a101_data_rdb (never deployed)
+  - a100_data_memory (last status: failed)
+
+💡 Deploy missing dependencies first:
+  sbkube apply --app-dir a101_data_rdb
+  sbkube apply --app-dir a100_data_memory
+
+Tip: Use --skip-deps-check to override this check
+```
+
+**강제 배포**:
+
+```bash
+# 의존성 검증을 건너뛰고 강제로 배포 (CI/CD 등)
+sbkube apply --app-dir a302_devops --skip-deps-check
+```
 
 **향후 기능** (예정):
 
-- 배포 전 의존성 검증
 - 자동 배포 순서 결정 (`--recursive`)
 - 의존성 그래프 시각화
+- 순환 의존성 감지
 
 **사용 사례**:
 

@@ -75,12 +75,10 @@ sbkube apply                  # 3. 재배포
 - `delete` - 리소스 삭제
 - `validate` - 설정 검증
 
-**📊 상태 및 모니터링 (v0.6.0+)**
+**📊 상태 및 이력**
 
-- `status` ⭐ - 통합 클러스터 상태 확인 (신규, 권장)
-- `history` ⭐ - 배포 히스토리 및 비교 (신규, 권장)
-- `rollback` - 이전 배포로 롤백 (신규)
-- `state` ⚠️ - 배포 상태 관리 (deprecated, `history` 사용 권장)
+- `state` - 배포 상태 관리
+- `history` - 실행 히스토리
 
 **🏥 문제 해결**
 
@@ -952,6 +950,41 @@ sbkube doctor --check helm_installation
 
 ---
 
+## 📊 state - 배포 상태 관리
+
+배포 상태를 추적하고 롤백 기능을 제공합니다. *(신규 기능)*
+
+### 📋 사용법
+
+```bash
+sbkube state <하위명령어> [옵션]
+```
+
+### 🎛️ 하위 명령어
+
+- `list` - 배포 상태 목록 조회
+- `rollback` - 특정 배포로 롤백
+- `history` - 배포 히스토리 조회
+
+### 🎛️ 옵션
+
+- `--cluster <이름>` - 클러스터별 필터링
+- `--deployment-id <ID>` - 특정 배포 ID 지정
+
+### 💡 사용 예제
+
+```bash
+# 배포 상태 목록 확인
+sbkube state list
+
+# 특정 클러스터 상태 확인
+sbkube state list --cluster production
+
+# 롤백 실행
+sbkube state rollback --deployment-id <id>
+```
+
+---
 
 ## ℹ️ version - 버전 정보
 
@@ -1050,379 +1083,138 @@ sbkube apply --retry-failed
 
 ---
 
-## 📊 `sbkube status` - 클러스터 상태 확인
+## 10. `cluster` - 클러스터 상태 관리
 
-### 개요
+**카테고리**: 유틸리티
 
-클러스터의 현재 상태를 확인하는 통합 명령어입니다. (v0.6.0+)
+Kubernetes 클러스터의 전체 상태를 수집하고 로컬에 캐싱합니다.
 
-**기존 `sbkube cluster status` 대체** - 더 직관적이고 강력한 기능 제공
+### 주요 기능
 
-### 기본 사용법
+- 클러스터 정보 수집 (API 서버, 버전)
+- 노드 상태 및 역할 조회
+- 네임스페이스 목록 수집
+- Helm 릴리스 상태 조회
+- YAML 형식으로 로컬 캐싱 (TTL: 5분)
 
-```bash
-# 전체 상태 요약
-sbkube status
-
-# App-group별 그룹핑
-sbkube status --by-group
-
-# 특정 app-group 상세 조회
-sbkube status app_000_infra_network
-
-# sbkube 관리 앱만 표시
-sbkube status --managed
-
-# 문제있는 리소스만 표시
-sbkube status --unhealthy
-```
-
-### 고급 기능 (Phase 4-7)
+### 사용법
 
 ```bash
-# 의존성 트리 시각화 (Phase 6)
-sbkube status --deps
-sbkube status app_000_infra_network --deps
-
-# Pod 헬스체크 상세 정보 (Phase 7)
-sbkube status --health-check
-
-# 옵션 조합
-sbkube status --by-group --health-check
-sbkube status --managed --unhealthy --health-check
-```
-
-### 옵션 상세
-
-| 옵션 | 설명 | 예제 |
-|------|------|------|
-| `--by-group` | App-group별로 그룹핑하여 표시 | `sbkube status --by-group` |
-| `--managed` | sbkube가 관리하는 앱만 표시 | `sbkube status --managed` |
-| `--unhealthy` | 문제있는 리소스만 표시 | `sbkube status --unhealthy` |
-| `--deps` | 의존성 트리 시각화 (Phase 6) | `sbkube status --deps` |
-| `--health-check` | Pod 헬스체크 상세 (Phase 7) | `sbkube status --health-check` |
-| `--refresh` | 캐시 강제 갱신 | `sbkube status --refresh` |
-| `--watch` | 10초마다 자동 갱신 | `sbkube status --watch` |
-
-### App-Group 기반 관리
-
-**App-group 네이밍 컨벤션**: `app_{priority}_{category}_{name}`
-
-```yaml
-apps:
-  - name: app_000_infra_network     # Priority: 000, Category: infra
-  - name: app_010_data_postgresql   # Priority: 010, Category: data
-  - name: app_020_app_backend       # Priority: 020, Category: app
-```
-
-**그룹핑 우선순위**:
-1. Kubernetes Labels (`sbkube.io/app-group`)
-2. State DB 기록
-3. 이름 패턴 매칭
-
-### 출력 예시
-
-**기본 상태**:
-```
-Status: my-cluster (context: k3s-prod)
-
-Resource            Status
-─────────────────────────────────────────────
-API Server          https://10.0.0.1:6443
-Kubernetes Version  v1.28.0
-Nodes               3 nodes (3 Ready)
-Namespaces          12 namespaces
-Pods                42 (40 Running, 2 Pending)
-Deployments         15 (15 Ready)
-StatefulSets        3 (3 Ready)
-Services            20
-Helm Releases       8 (7 deployed, 1 failed)
-```
-
-**App-Group별 그룹핑** (`--by-group`):
-```
-Managed App-Groups
-
-  app_000_infra_network (1 app)
-    ✅ cilium (deployed, rev: 3)
-
-  app_010_data_postgresql (1 app)
-    ✅ cloudnative-pg (deployed, rev: 2)
-
-  app_020_app_backend (1 app)
-    ⚠️ backend (failed, rev: 1)
-```
-
-**의존성 트리** (`--deps`):
-```
-🔗 Dependency Tree
-
-📦 Applications
-├── app_000_infra_network (no deps)
-├── app_010_data_postgresql → 1 deps
-│   └── app_000_infra_network (already shown)
-└── app_020_app_backend → 2 deps
-    ├── app_010_data_postgresql (already shown)
-    └── app_000_infra_network (already shown)
-
-Total: 3 apps, 2 with dependencies
-```
-
-**헬스체크** (`--health-check`):
-```
-💊 Health Check Details
-
-Namespace: default
-┌───────────────┬─────────┬───────┬──────────┬──────────────────┐
-│ Pod           │ Phase   │ Ready │ Restarts │ Health           │
-├───────────────┼─────────┼───────┼──────────┼──────────────────┤
-│ redis-0       │ Running │ 1/1   │ 0        │ ✅ Healthy       │
-│ postgres-0    │ Running │ 1/1   │ 2        │ 🔄 Restarted 2   │
-│ backend-abc   │ Pending │ 0/1   │ 0        │ ⏳ Waiting       │
-└───────────────┴─────────┴───────┴──────────┴──────────────────┘
-```
-
-### 실전 사용 시나리오
-
-**시나리오 1: 배포 후 전체 상태 확인**
-```bash
-sbkube apply
-sbkube status --by-group
-```
-
-**시나리오 2: 특정 그룹 문제 해결**
-```bash
-sbkube status --unhealthy
-sbkube status app_020_app_backend --health-check
-```
-
-**시나리오 3: 의존성 검증**
-```bash
-sbkube status --deps
-# 순환 의존성 있으면 빨간색으로 표시
-```
-
-**시나리오 4: 실시간 모니터링**
-```bash
-sbkube status --watch --unhealthy
-# 문제있는 리소스만 10초마다 갱신
-```
-
----
-
-## 📜 `sbkube history` - 배포 히스토리 및 비교
-
-### 개요
-
-배포 히스토리를 조회하고 비교하는 명령어입니다. (v0.6.0+)
-
-**기존 `sbkube state list/show` 대체** - 더 직관적이고 강력한 비교 기능 제공
-
-### 기본 사용법
-
-```bash
-# 최근 배포 목록
-sbkube history
-
-# 특정 배포 상세 조회
-sbkube history --show dep_20250131_143022
-
-# App-group별 필터링 (Phase 5)
-sbkube history app_000_infra_network
-```
-
-### 비교 기능 (Phase 5)
-
-```bash
-# 두 배포 비교
-sbkube history --diff dep_123,dep_456
-
-# Helm values 비교
-sbkube history --values-diff dep_123,dep_456
-
-# JSON 형식으로 출력
-sbkube history --diff dep_123,dep_456 --format json
-```
-
-### 옵션 상세
-
-| 옵션 | 설명 | 예제 |
-|------|------|------|
-| `--show <id>` | 특정 배포 상세 조회 | `sbkube history --show dep_123` |
-| `--diff <id1>,<id2>` | 두 배포 비교 (Phase 5) | `sbkube history --diff dep_123,dep_456` |
-| `--values-diff <id1>,<id2>` | Helm values 비교 (Phase 5) | `sbkube history --values-diff dep_123,dep_456` |
-| `--cluster <name>` | 클러스터별 필터링 | `sbkube history --cluster prod` |
-| `--namespace <ns>` | 네임스페이스별 필터링 | `sbkube history -n default` |
-| `--limit <n>` | 최대 개수 제한 | `sbkube history --limit 50` |
-| `--format <type>` | 출력 형식 (table/json/yaml) | `sbkube history --format json` |
-
-### 출력 예시
-
-**배포 목록**:
-```
-Deployment History
-
-ID                    Timestamp             Status     Apps  Namespace
-──────────────────────────────────────────────────────────────────────
-dep_20250131_150000   2025-01-31 15:00:00   success    5     prod
-dep_20250131_143022   2025-01-31 14:30:22   success    5     prod
-dep_20250130_120000   2025-01-30 12:00:00   failed     5     prod
-```
-
-**배포 비교** (`--diff`):
-```
-Deployment Comparison
-
-Field                Deployment 1            Deployment 2
-─────────────────────────────────────────────────────────────────
-ID                   dep_123                 dep_456
-Timestamp            2025-01-31 14:30:22     2025-01-31 15:00:00
-Status               success                 success
-App Count            5                       6
-
-📦 Application Changes:
-  ➕ Added (1):
-     • app_030_monitoring_grafana
-
-  ➖ Removed (0):
-
-  📝 Modified (2):
-     • app_010_data_postgresql
-     • app_020_app_backend
-
-📄 Configuration Changes:
---- dep_123 config
-+++ dep_456 config
-@@ -10,7 +10,7 @@
-   - name: app_010_data_postgresql
-     type: helm
--    version: 1.0.0
-+    version: 1.1.0
-```
-
-**Helm Values 비교** (`--values-diff`):
-```
-Helm Values Comparison
-
-Deployment 1: dep_123 (2025-01-31 14:30:22)
-Deployment 2: dep_456 (2025-01-31 15:00:00)
-
-📊 Summary:
-  ➕ Added: 1
-  ➖ Removed: 0
-  📝 Modified: 1
-  ✅ Unchanged: 3
-
-📝 cloudnative-pg (MODIFIED)
-  --- dep_123
-  +++ dep_456
-  @@ -1,5 +1,5 @@
-   replicas: 2
-  -storage: 10Gi
-  +storage: 20Gi
-   backup:
-     enabled: true
-```
-
-### 실전 사용 시나리오
-
-**시나리오 1: 최근 배포 확인**
-```bash
-sbkube history --limit 10
-```
-
-**시나리오 2: 배포 실패 원인 분석**
-```bash
-sbkube history --show dep_failed_123
-sbkube history --diff dep_success_122,dep_failed_123
-```
-
-**시나리오 3: 설정 변경 추적**
-```bash
-sbkube history --diff dep_prod_old,dep_prod_new
-# 무엇이 변경되었는지 확인
-```
-
-**시나리오 4: Helm values 변경 검토**
-```bash
-sbkube history --values-diff dep_old,dep_new
-# 각 릴리스의 values 차이 확인
-```
-
----
-
-## ♻️ `sbkube rollback` - 배포 롤백
-
-### 개요
-
-이전 배포 상태로 롤백하는 명령어입니다. (v0.6.0+)
-
-**기존 `sbkube state rollback` 대체**
-
-### 기본 사용법
-
-```bash
-# 특정 배포로 롤백
-sbkube rollback dep_20250131_143022
-
-# Dry-run (실제 롤백 없이 계획만 확인)
-sbkube rollback dep_20250131_143022 --dry-run
-
-# 강제 롤백 (확인 없이)
-sbkube rollback dep_20250131_143022 --force
-```
-
-### 옵션 상세
-
-| 옵션 | 설명 | 예제 |
-|------|------|------|
-| `--dry-run` | 실제 롤백 없이 계획만 표시 | `sbkube rollback dep_123 --dry-run` |
-| `--force` | 확인 없이 강제 롤백 | `sbkube rollback dep_123 --force` |
-| `--list` | 롤백 가능한 배포 목록 | `sbkube rollback --list` |
-
-### 실전 사용 시나리오
-
-**시나리오 1: 안전한 롤백**
-```bash
-# 1. 롤백 가능한 배포 확인
-sbkube rollback --list
-
-# 2. 롤백 계획 확인
-sbkube rollback dep_success_old --dry-run
-
-# 3. 실제 롤백
-sbkube rollback dep_success_old
-```
-
-**시나리오 2: 긴급 롤백**
-```bash
-sbkube rollback dep_last_good --force
-```
-
----
-
-## 🚨 Deprecated 명령어
-
-다음 명령어는 v1.0.0에서 제거될 예정입니다:
-
-### `sbkube cluster status` → `sbkube status`
-
-```bash
-# 이전 (deprecated)
+# 캐시된 상태 표시 (TTL 만료 시 자동 갱신)
 sbkube cluster status
 
-# 새로운 (권장)
-sbkube status
+# 특정 디렉토리의 sources.yaml 사용
+sbkube cluster status --base-dir /path/to/config
+
+# 강제 갱신 (캐시 무시하고 실시간 수집)
+sbkube cluster status --refresh
+
+# 10초마다 자동 갱신 (Ctrl+C로 종료)
+sbkube cluster status --watch
 ```
 
-### `sbkube state` → `sbkube history` / `sbkube rollback`
+### 캐시 파일 위치
+
+캐시 파일은 `sources.yaml`이 있는 디렉토리 아래에 저장됩니다:
+
+```
+{base-dir}/.sbkube/cluster_status/{context}_{cluster}.yaml
+```
+
+**예시:**
+- `sources.yaml` 위치: `/home/user/project/config/sources.yaml`
+- `kubeconfig_context`: `default`
+- `cluster`: `production-k3s`
+- 캐시 파일: `/home/user/project/config/.sbkube/cluster_status/default_production-k3s.yaml`
+
+### 캐시 파일 형식
+
+```yaml
+# 메타데이터
+context: default
+cluster_name: production-k3s
+timestamp: "2025-10-30T10:30:00Z"
+ttl_seconds: 300
+
+# 클러스터 정보
+cluster_info:
+  api_server: https://127.0.0.1:6443
+  version: v1.27.3
+
+# 노드 목록
+nodes:
+  - name: node1
+    status: Ready
+    roles:
+      - control-plane
+    version: v1.27.3
+
+# 네임스페이스 목록
+namespaces:
+  - default
+  - kube-system
+  - my-app
+
+# Helm 릴리스 목록
+helm_releases:
+  - name: redis
+    namespace: data
+    status: deployed
+    chart: redis-18.0.0
+    app_version: 7.2.0
+    revision: 1
+```
+
+### 출력 예시
 
 ```bash
-# 이전 (deprecated)          # 새로운 (권장)
-sbkube state list          → sbkube history
-sbkube state show <id>     → sbkube history --show <id>
-sbkube state rollback <id> → sbkube rollback <id>
+$ sbkube cluster status
+
+Using cached data (collected 1m 23s ago)
+
+Cluster Status: production-k3s (context: default)
+┌─────────────────┬────────────────────────────────┐
+│ Resource        │ Status                         │
+├─────────────────┼────────────────────────────────┤
+│ API Server      │ https://127.0.0.1:6443         │
+│ Kubernetes      │ v1.27.3                        │
+│ Nodes           │ 3 Ready / 3 Total              │
+│ Namespaces      │ 12                             │
+│ Helm Releases   │ 5 (4 deployed, 1 pending)      │
+└─────────────────┴────────────────────────────────┘
+
+Cache file: .sbkube/cluster_status/default_production-k3s.yaml
+Last updated: 1 minute ago
+Cache expires in: 3m 37s
 ```
+
+### 옵션
+
+- `--base-dir PATH`: sources.yaml이 있는 디렉토리 (기본값: 현재 디렉토리)
+- `--refresh`: 캐시를 무시하고 강제로 새로 수집
+- `--watch`: 10초마다 자동 갱신 (백그라운드)
+
+### 에러 처리
+
+- `sources.yaml` 파일이 없으면 에러 종료
+- kubectl/helm 명령어 실행 실패 시:
+  - 기존 캐시 파일이 있으면 유지
+  - 경고 메시지 출력 후 기존 캐시 사용
+  - 캐시가 없으면 에러 종료
+
+### 권장 사항
+
+**`.gitignore` 설정:**
+
+캐시 디렉토리는 Git에 포함하지 않는 것을 권장합니다:
+
+```gitignore
+# SBKube cache directory
+.sbkube/
+```
+
+`sbkube init` 명령어를 사용하면 자동으로 추가됩니다.
 
 ---
 
+*각 명령어의 더 자세한 사용법은 `sbkube <명령어> --help`를 통해 확인할 수 있습니다.*

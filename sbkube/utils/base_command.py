@@ -57,9 +57,19 @@ class EnhancedBaseCommand:
         # Common directories (명령어들과 일관성을 위해 대문자 상수 사용)
         self.BUILD_DIR = self.APP_CONFIG_DIR / "build"
         self.VALUES_DIR = self.APP_CONFIG_DIR / "values"
-        self.CHARTS_DIR = self.BASE_DIR / "charts"
-        self.REPOS_DIR = self.BASE_DIR / "repos"
         self.SCHEMA_DIR = self.BASE_DIR / "schemas"
+
+        # .sbkube 작업 디렉토리 결정
+        # sources.yaml 위치를 기준으로 .sbkube 디렉토리 결정
+        sources_path = self._find_sources_file()
+        if sources_path:
+            self.SBKUBE_WORK_DIR = sources_path.parent / ".sbkube"
+        else:
+            # sources.yaml이 없으면 BASE_DIR 기준
+            self.SBKUBE_WORK_DIR = self.BASE_DIR / ".sbkube"
+
+        self.CHARTS_DIR = self.SBKUBE_WORK_DIR / "charts"
+        self.REPOS_DIR = self.SBKUBE_WORK_DIR / "repos"
 
         # Configuration manager
         self.config_manager = ConfigManager(
@@ -308,6 +318,25 @@ class EnhancedBaseCommand:
 
         if self.app_group and self.app_group.namespace:
             return self.app_group.namespace
+
+        return None
+
+    def _find_sources_file(self) -> Path | None:
+        """
+        Find sources file for determining .sbkube directory location.
+
+        Returns:
+            Path to sources.yaml if found, None otherwise
+        """
+        # Try APP_CONFIG_DIR first
+        sources_path = self.APP_CONFIG_DIR / self.sources_file
+        if sources_path.exists():
+            return sources_path
+
+        # Try BASE_DIR
+        sources_path = self.BASE_DIR / self.sources_file
+        if sources_path.exists():
+            return sources_path
 
         return None
 

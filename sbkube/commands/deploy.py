@@ -282,6 +282,8 @@ def deploy_yaml_app(
     kubeconfig: str | None = None,
     context: str | None = None,
     dry_run: bool = False,
+    apps_config: dict | None = None,
+    sbkube_work_dir: Path | None = None,
 ) -> bool:
     """
     YAML 앱 배포 (kubectl apply).
@@ -294,16 +296,46 @@ def deploy_yaml_app(
         kubeconfig: kubeconfig 파일 경로
         context: kubectl context 이름
         dry_run: dry-run 모드
+        apps_config: 전체 앱 설정 (변수 확장용)
+        sbkube_work_dir: .sbkube 작업 디렉토리 경로
 
     Returns:
         성공 여부
     """
+    # 순환 import 방지를 위해 함수 내부에서 import
+    from sbkube.utils.path_resolver import expand_repo_variables
+
     console.print(f"[cyan]🚀 Deploying YAML app: {app_name}[/cyan]")
 
     namespace = app.namespace
 
+    # .sbkube 디렉토리 결정 (기본값: base_dir/.sbkube)
+    if sbkube_work_dir is None:
+        sbkube_work_dir = base_dir / ".sbkube"
+    repos_dir = sbkube_work_dir / "repos"
+
     for yaml_file in app.manifests:
-        yaml_path = app_config_dir / yaml_file
+        # ${repos.app-name} 변수 확장
+        expanded_file = yaml_file
+        if "${repos." in yaml_file:
+            if apps_config is None:
+                console.print(
+                    f"[red]❌ Cannot expand variable '{yaml_file}': apps_config not provided[/red]"
+                )
+                return False
+            try:
+                expanded_file = expand_repo_variables(yaml_file, repos_dir, apps_config)
+                # 변수 확장 성공 로그
+                if expanded_file != yaml_file:
+                    console.print(f"  [dim]Variable expanded: {yaml_file} → {expanded_file}[/dim]")
+            except Exception as e:
+                console.print(f"[red]❌ Failed to expand variable in '{yaml_file}': {e}[/red]")
+                return False
+
+        # 경로 해석: 절대경로면 그대로, 상대경로면 app_config_dir 기준
+        yaml_path = Path(expanded_file)
+        if not yaml_path.is_absolute():
+            yaml_path = app_config_dir / expanded_file
 
         if not yaml_path.exists():
             console.print(f"[red]❌ YAML file not found: {yaml_path}[/red]")
@@ -704,11 +736,14 @@ def cmd(
             # 모든 앱 배포 (의존성 순서대로)
             apps_to_deploy = deployment_order
 
-        # Hook executor 초기화
+        # Hook executor 초기화 (Phase 1: kubeconfig, context, namespace 추가)
         hook_executor = HookExecutor(
             base_dir=BASE_DIR,
             work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
             dry_run=dry_run,
+            kubeconfig=kubeconfig,
+            context=context,
+            namespace=namespace,
         )
 
         # ========== 전역 pre-deploy 훅 실행 ==========
@@ -742,7 +777,21 @@ def cmd(
                     "namespace": app.namespace if hasattr(app, "namespace") else config.namespace,
                     "release_name": getattr(app, "release_name", None) or app_name_iter,
                 }
-                if not hook_executor.execute_app_hook(
+
+                # Phase 2: pre_deploy_tasks 우선 실행
+                if "pre_deploy_tasks" in app_hooks and app_hooks["pre_deploy_tasks"]:
+                    if not hook_executor.execute_hook_tasks(
+                        app_name=app_name_iter,
+                        tasks=app_hooks["pre_deploy_tasks"],
+                        hook_type="pre_deploy",
+                        context=hook_context,
+                    ):
+                        console.print(f"[red]❌ Pre-deploy tasks failed for app: {app_name_iter}[/red]")
+                        deployment_failed = True
+                        continue
+
+                # Phase 1: shell 명령어 + manifests
+                if not hook_executor.execute_app_hook_with_manifests(
                     app_name=app_name_iter,
                     app_hooks=app_hooks,
                     hook_type="pre_deploy",
@@ -769,6 +818,8 @@ def cmd(
                         dry_run,
                     )
                 elif isinstance(app, YamlApp):
+                    # apps_config를 딕셔너리로 변환 (Pydantic 모델 → dict)
+                    apps_config_dict = {name: app_obj.model_dump() for name, app_obj in config.apps.items()}
                     success = deploy_yaml_app(
                         app_name_iter,
                         app,
@@ -777,6 +828,8 @@ def cmd(
                         kubeconfig,
                         context,
                         dry_run,
+                        apps_config=apps_config_dict,
+                        sbkube_work_dir=SBKUBE_WORK_DIR,
                     )
                 elif isinstance(app, ActionApp):
                     success = deploy_action_app(
@@ -832,12 +885,22 @@ def cmd(
 
                 if success:
                     # 배포 성공 시 post_deploy 훅 실행
-                    hook_executor.execute_app_hook(
+                    # Phase 1: shell 명령어 + manifests
+                    hook_executor.execute_app_hook_with_manifests(
                         app_name=app_name_iter,
                         app_hooks=app_hooks,
                         hook_type="post_deploy",
                         context=hook_context,
                     )
+
+                    # Phase 2: tasks (우선순위: tasks > manifests > commands)
+                    if "post_deploy_tasks" in app_hooks and app_hooks["post_deploy_tasks"]:
+                        hook_executor.execute_hook_tasks(
+                            app_name=app_name_iter,
+                            tasks=app_hooks["post_deploy_tasks"],
+                            hook_type="post_deploy",
+                            context=hook_context,
+                        )
                 else:
                     # 배포 실패 시 on_deploy_failure 훅 실행
                     hook_executor.execute_app_hook(

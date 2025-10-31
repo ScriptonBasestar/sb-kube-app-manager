@@ -1,0 +1,36 @@
+# Hooks Manifests 예제: cert-manager + ClusterIssuers
+#
+# Phase 1 기능 시연:
+# - cert-manager를 Helm으로 배포
+# - 배포 후 ClusterIssuer 리소스를 hooks로 자동 배포
+#
+# 기존 방식 (kubectl 직접 호출):
+#   hooks:
+#     post_deploy:
+#       - kubectl apply -f manifests/issuers/cluster-issuer-letsencrypt-prd.yaml
+#       - kubectl apply -f manifests/issuers/cluster-issuer-letsencrypt-stg.yaml
+#
+# 개선된 방식 (sbkube가 직접 처리):
+#   hooks:
+#     post_deploy_manifests:
+#       - manifests/issuers/cluster-issuer-letsencrypt-prd.yaml
+#       - manifests/issuers/cluster-issuer-letsencrypt-stg.yaml
+
+namespace: cert-manager
+
+apps:
+  cert-manager:
+    type: helm
+    chart: jetstack/cert-manager
+    version: v1.13.2
+    values:
+      - installCRDs: true
+        global:
+          leaderElection:
+            namespace: cert-manager
+    hooks:
+      # Phase 1: Manifests 지원
+      # cert-manager 배포 후 ClusterIssuers 자동 배포
+      post_deploy_manifests:
+        - manifests/issuers/cluster-issuer-letsencrypt-prd.yaml
+        - manifests/issuers/cluster-issuer-letsencrypt-stg.yaml

@@ -1,0 +1,6 @@
+# Git 리포지토리 소스 정의
+
+cluster: dev
+
+repos:
+  olm: https://github.com/operator-framework/operator-lifecycle-manager.git

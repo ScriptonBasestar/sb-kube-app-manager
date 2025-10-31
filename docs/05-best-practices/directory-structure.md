@@ -127,7 +127,10 @@ app_XXX_category_name/
 │   ├── redis.yaml                  # 앱별 values 파일
 │   ├── memcached.yaml
 │   └── valkey.yaml
-├── static-manifests/               # 선택: Static YAML manifests (yaml 타입)
+├── manifests/                      # 선택: 템플릿 처리가 필요한 manifests (helm/yaml 타입)
+│   ├── deployment.yaml             # Go 템플릿 변수 포함 가능
+│   └── service.yaml
+├── static-manifests/               # 선택: 템플릿 처리 없이 바로 배포할 manifests (yaml 타입)
 │   ├── k3s/
 │   │   └── storage-class.yaml
 │   └── nfs-storage/
@@ -310,6 +313,77 @@ values/
 - Git diff 명확
 - 앱별 책임 분리
 
+#### `manifests/` (선택)
+
+템플릿 처리가 필요한 Kubernetes 매니페스트 파일:
+
+```
+manifests/
+├── deployment.yaml      # Go 템플릿 변수 포함
+├── service.yaml
+├── configmap.yaml
+└── ingress.yaml
+```
+
+**특징**:
+- **Go 템플릿 변수 사용 가능**: `{{ .Values.image }}`, `{{ .Release.Name }}`
+- **Helm 차트 템플릿**: Helm 차트의 `templates/` 디렉토리와 동일한 형식
+- **sbkube template으로 렌더링**: `.sbkube/rendered/`에 최종 YAML 생성
+- **환경별 커스터마이징**: values 파일로 동적 값 주입
+
+**사용 예시**:
+
+`manifests/deployment.yaml`:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    spec:
+      containers:
+      - name: app
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        env:
+        - name: DATABASE_URL
+          value: {{ .Values.database.url }}
+```
+
+`values/myapp.yaml`:
+```yaml
+name: myapp
+replicaCount: 3
+image:
+  repository: myregistry/myapp
+  tag: "1.0.0"
+database:
+  url: "postgresql://db:5432"
+```
+
+`config.yaml`:
+```yaml
+apps:
+  myapp:
+    type: yaml
+    enabled: true
+    manifests:
+      - manifests/deployment.yaml
+      - manifests/service.yaml
+    values:
+      - values/myapp.yaml
+```
+
+**렌더링 과정**:
+```bash
+# 템플릿 렌더링
+sbkube template --app-dir app_myapp --output-dir app_myapp/rendered
+
+# 결과: app_myapp/rendered/myapp.yaml
+# 모든 템플릿 변수가 values로 치환됨
+```
+
 #### `static-manifests/` (선택)
 
 Static YAML manifests (yaml 타입 앱용):
@@ -336,6 +410,56 @@ apps:
     manifests:
       - static-manifests/k3s/storage-class.yaml
       - static-manifests/k3s/volume-snapshot-class.yaml
+```
+
+#### `manifests/` vs `static-manifests/` 비교
+
+두 디렉토리의 핵심 차이점:
+
+| 항목 | `manifests/` | `static-manifests/` |
+|------|-------------|---------------------|
+| **템플릿 처리** | ✅ 필요 (Go 템플릿) | ❌ 불필요 (완성된 YAML) |
+| **변수 사용** | `{{ .Values.* }}` | 불가능 |
+| **렌더링** | `sbkube template` 실행 | 그대로 사용 |
+| **환경별 다른 값** | values 파일로 가능 | 파일 자체를 환경별로 분리 |
+| **용도** | 동적 설정, 환경별 차이 | 고정 설정, 모든 환경 동일 |
+| **예시** | Deployment, StatefulSet | StorageClass, ConfigMap |
+
+**언제 어느 것을 사용하나?**
+
+**`manifests/` 사용 (동적 매니페스트)**:
+- 환경별로 다른 값이 필요한 경우
+  - 예: 개발(1 replica) vs 프로덕션(3 replicas)
+- 이미지 태그, 리소스 제한이 자주 변경되는 경우
+- Helm values로 커스터마이징하고 싶은 경우
+- 복잡한 Deployment, StatefulSet, DaemonSet
+
+**`static-manifests/` 사용 (정적 매니페스트)**:
+- 모든 환경에서 동일한 값을 사용하는 경우
+  - 예: StorageClass, VolumeSnapshotClass
+- 간단한 ConfigMap, Secret (하드코딩된 값)
+- Namespace, ServiceAccount 등 기본 리소스
+- 변경이 거의 없는 설정
+
+**실전 예시**:
+
+```yaml
+# config.yaml
+apps:
+  # 동적: 환경별 다른 설정
+  myapp:
+    type: yaml
+    manifests:
+      - manifests/deployment.yaml    # 템플릿 변수 사용
+      - manifests/service.yaml
+    values:
+      - values/myapp-prod.yaml       # 프로덕션 값
+
+  # 정적: 모든 환경 동일
+  k3s-storage:
+    type: yaml
+    manifests:
+      - static-manifests/k3s/storage-class.yaml  # 고정 값
 ```
 
 #### `overrides/` (선택)

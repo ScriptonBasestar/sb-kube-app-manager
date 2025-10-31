@@ -4,6 +4,26 @@
 
 ## [Unreleased]
 
+## [0.6.1] - 2025-10-31
+
+### 🎨 Code Quality
+
+**Linting and Formatting**
+
+- ✅ Fixed 63 import formatting errors with ruff auto-fix
+- ✅ Standardized multi-line import syntax across codebase
+- ✅ Organized import order (stdlib → third-party → local)
+- ✅ Removed unused imports
+- ✅ Reformatted 16 files (88 files already compliant)
+- ✅ Applied mdformat to markdown documentation
+
+**Verification**
+
+- ✅ ruff check: 0 errors remaining
+- ✅ mypy: Type checking passed on 61 source files
+- ✅ bandit: Security checks passed
+- ✅ All critical module imports tested successfully
+
 ### ✨ Improved
 
 **Help 화면 개선**

@@ -240,66 +240,75 @@ def cmd(
         else:
             apps_to_apply = deployment_order
 
-        # Step 1: Prepare
+        # Import commands
+        from sbkube.commands.build import cmd as build_cmd
+        from sbkube.commands.deploy import cmd as deploy_cmd
+        from sbkube.commands.prepare import cmd as prepare_cmd
+
+        # Process each app in dependency order
         failed = False
         try:
-            if not skip_prepare:
-                console.print("\n[bold cyan]📦 Step 1: Prepare[/bold cyan]")
+            for app_name_iter in apps_to_apply:
+                app_config = config.apps[app_name_iter]
 
-                from sbkube.commands.prepare import cmd as prepare_cmd
+                if not app_config.enabled:
+                    console.print(
+                        f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]"
+                    )
+                    continue
+
+                console.print(
+                    f"\n[bold cyan]━━━ Processing app: {app_name_iter} ({app_config.type}) ━━━[/bold cyan]"
+                )
+
+                # Step 1: Prepare this app
+                if not skip_prepare:
+                    console.print(f"[cyan]📦 Step 1: Prepare {app_name_iter}[/cyan]")
+
+                    # Create new context with parent's obj for kubeconfig/context/sources_file
+                    prepare_ctx = click.Context(prepare_cmd, parent=ctx)
+                    prepare_ctx.obj = ctx.obj  # Pass parent context object
+                    prepare_ctx.invoke(
+                        prepare_cmd,
+                        app_config_dir_name=current_app_dir,
+                        base_dir=base_dir,
+                        config_file_name=config_file_name,
+                        sources_file_name=sources_file_name,
+                        app_name=app_name_iter,  # 현재 처리 중인 앱
+                        force=False,
+                        dry_run=dry_run,
+                    )
+
+                # Step 2: Build this app
+                if not skip_build:
+                    console.print(f"[cyan]🔨 Step 2: Build {app_name_iter}[/cyan]")
+
+                    # Create new context with parent's obj
+                    build_ctx = click.Context(build_cmd, parent=ctx)
+                    build_ctx.obj = ctx.obj  # Pass parent context object
+                    build_ctx.invoke(
+                        build_cmd,
+                        app_config_dir_name=current_app_dir,
+                        base_dir=base_dir,
+                        config_file_name=config_file_name,
+                        app_name=app_name_iter,  # 현재 처리 중인 앱
+                        dry_run=dry_run,
+                    )
+
+                # Step 3: Deploy this app
+                console.print(f"[cyan]🚀 Step 3: Deploy {app_name_iter}[/cyan]")
 
                 # Create new context with parent's obj for kubeconfig/context/sources_file
-                prepare_ctx = click.Context(prepare_cmd, parent=ctx)
-                prepare_ctx.obj = ctx.obj  # Pass parent context object
-                prepare_ctx.invoke(
-                    prepare_cmd,
+                deploy_ctx = click.Context(deploy_cmd, parent=ctx)
+                deploy_ctx.obj = ctx.obj  # Pass parent context object
+                deploy_ctx.invoke(
+                    deploy_cmd,
                     app_config_dir_name=current_app_dir,
                     base_dir=base_dir,
                     config_file_name=config_file_name,
-                    sources_file_name=sources_file_name,
-                    app_name=None,  # prepare all (의존성 때문에)
-                    force=False,
+                    app_name=app_name_iter,  # 현재 처리 중인 앱
                     dry_run=dry_run,
                 )
-            else:
-                console.print("\n[yellow]⏭️  Skipping prepare step[/yellow]")
-
-            # Step 2: Build
-            if not skip_build:
-                console.print("\n[bold cyan]🔨 Step 2: Build[/bold cyan]")
-
-                from sbkube.commands.build import cmd as build_cmd
-
-                # Create new context with parent's obj
-                build_ctx = click.Context(build_cmd, parent=ctx)
-                build_ctx.obj = ctx.obj  # Pass parent context object
-                build_ctx.invoke(
-                    build_cmd,
-                    app_config_dir_name=current_app_dir,
-                    base_dir=base_dir,
-                    config_file_name=config_file_name,
-                    app_name=None,  # build all
-                    dry_run=dry_run,
-                )
-            else:
-                console.print("\n[yellow]⏭️  Skipping build step[/yellow]")
-
-            # Step 3: Deploy
-            console.print("\n[bold cyan]🚀 Step 3: Deploy[/bold cyan]")
-
-            from sbkube.commands.deploy import cmd as deploy_cmd
-
-            # Create new context with parent's obj for kubeconfig/context/sources_file
-            deploy_ctx = click.Context(deploy_cmd, parent=ctx)
-            deploy_ctx.obj = ctx.obj  # Pass parent context object
-            deploy_ctx.invoke(
-                deploy_cmd,
-                app_config_dir_name=current_app_dir,
-                base_dir=base_dir,
-                config_file_name=config_file_name,
-                app_name=None if not app_name else app_name,  # 지정한 앱만
-                dry_run=dry_run,
-            )
 
             # 글로벌 post-apply 훅 실행
             if config.hooks and "apply" in config.hooks:

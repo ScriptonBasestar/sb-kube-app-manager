@@ -652,6 +652,9 @@ class HelmApp(ConfigBaseModel):
     namespace: str | None = Field(
         None, description="Namespace override (defaults to global namespace)"
     )
+    context: str | None = Field(
+        None, description="Kubernetes context to use (defaults to current context)"
+    )
     create_namespace: bool = False
     wait: bool = True
     timeout: str = "5m"
@@ -761,6 +764,9 @@ class YamlApp(ConfigBaseModel):
         },
     )
     namespace: str | None = None
+    context: str | None = Field(
+        None, description="Kubernetes context to use (defaults to current context)"
+    )
     labels: dict[str, str] = Field(default_factory=dict)
     annotations: dict[str, str] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
@@ -800,6 +806,9 @@ class ActionApp(ConfigBaseModel):
     type: Literal["action"] = "action"
     actions: list[dict[str, Any]]  # FileActionSpec 형태
     namespace: str | None = None
+    context: str | None = Field(
+        None, description="Kubernetes context to use (defaults to current context)"
+    )
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
     hooks: AppHooks | None = None

@@ -24,8 +24,14 @@ def _matches_any_keyword(message: str, keywords: Iterable[str]) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
-def get_installed_charts(namespace: str) -> dict:
+def get_installed_charts(
+    namespace: str, context: str | None = None, kubeconfig: str | None = None
+) -> dict:
     cmd = ["helm", "list", "-o", "json", "-n", namespace]
+    if kubeconfig:
+        cmd.extend(["--kubeconfig", kubeconfig])
+    if context:
+        cmd.extend(["--kube-context", context])
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
     except FileNotFoundError as exc:

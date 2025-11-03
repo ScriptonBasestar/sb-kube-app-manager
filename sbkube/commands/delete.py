@@ -9,7 +9,8 @@ from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
 )
-from sbkube.utils.common import run_command
+from sbkube.utils.cluster_config import resolve_cluster_config
+from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts
 
@@ -81,6 +82,38 @@ def cmd(
             f"[red]❌ 앱 설정 디렉토리가 존재하지 않습니다: {APP_CONFIG_DIR}[/red]",
         )
         raise click.Abort()
+
+    # Load sources.yaml and resolve cluster configuration
+    sources_file_name = ctx.obj.get("sources_file", "sources.yaml")
+    sources_file_path = find_sources_file(
+        BASE_DIR, APP_CONFIG_DIR, sources_file_name
+    )
+
+    sources = None
+    if sources_file_path and sources_file_path.exists():
+        console.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
+        try:
+            from sbkube.models.sources_model import SourceScheme
+
+            sources_data = load_config_file(sources_file_path)
+            sources = SourceScheme(**sources_data)
+        except Exception as e:
+            console.print(f"[red]❌ Invalid sources file: {e}[/red]")
+            raise click.Abort()
+
+    # Resolve cluster configuration (kubeconfig + context)
+    kubeconfig = None
+    context = None
+    if sources:
+        try:
+            kubeconfig, context = resolve_cluster_config(
+                cli_kubeconfig=ctx.obj.get("kubeconfig"),
+                cli_context=ctx.obj.get("context"),
+                sources=sources,
+            )
+        except Exception as e:
+            console.print(f"[red]❌ Cluster configuration error: {e}[/red]")
+            raise click.Abort()
 
     config_file_path = None
     if config_file_name:
@@ -196,7 +229,22 @@ def cmd(
 
         if app_type == "helm":
             check_helm_installed_or_exit()
-            installed_charts = get_installed_charts(current_namespace)
+
+            # Context Priority Resolution:
+            # 1. app.context (app-level): Highest priority - specified in config.yaml per app
+            # 2. sources.yaml context: Middle priority - project-level default
+            # 3. Current kubectl context: Lowest priority - system default
+            #
+            # Note: When using app.context, we don't use sources.yaml's kubeconfig
+            # because app.context might refer to a context in the default kubeconfig (~/.kube/config)
+            # or another kubeconfig file that the user has already configured in their environment.
+            app_context = getattr(app_config, "context", None)
+            effective_context = app_context or context
+            effective_kubeconfig = kubeconfig if not app_context else None
+
+            installed_charts = get_installed_charts(
+                current_namespace, context=effective_context, kubeconfig=effective_kubeconfig
+            )
             if app_release_name not in installed_charts:
                 console.print(
                     f"[yellow]⚠️ Helm 릴리스 '{app_release_name}'(네임스페이스: {current_namespace or '-'})가 설치되어 있지 않습니다.[/yellow]",
@@ -216,6 +264,10 @@ def cmd(
             helm_cmd = ["helm", "uninstall", app_release_name]
             if current_namespace:
                 helm_cmd.extend(["--namespace", current_namespace])
+            if effective_kubeconfig:
+                helm_cmd.extend(["--kubeconfig", effective_kubeconfig])
+            if effective_context:
+                helm_cmd.extend(["--kube-context", effective_context])
             if dry_run:
                 helm_cmd.append("--dry-run")
 
@@ -259,6 +311,12 @@ def cmd(
                 console.print("")
                 continue
 
+            # Context Priority Resolution (same as helm):
+            # 1. app.context > 2. sources.yaml context > 3. current kubectl context
+            app_context = getattr(app_config, "context", None)
+            effective_context = app_context or context
+            effective_kubeconfig = kubeconfig if not app_context else None
+
             if not app_config.files:
                 console.print(
                     f"[yellow]⚠️ 앱 '{app_name}': 삭제할 YAML 파일이 지정되지 않았습니다. 건너뜁니다.[/yellow]",
@@ -287,6 +345,10 @@ def cmd(
                 kubectl_cmd = ["kubectl", "delete", "-f", str(abs_yaml_path)]
                 if current_namespace:
                     kubectl_cmd.extend(["--namespace", current_namespace])
+                if effective_kubeconfig:
+                    kubectl_cmd.extend(["--kubeconfig", effective_kubeconfig])
+                if effective_context:
+                    kubectl_cmd.extend(["--context", effective_context])
                 if skip_not_found:
                     kubectl_cmd.append("--ignore-not-found=true")
                 if dry_run:

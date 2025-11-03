@@ -120,6 +120,11 @@ def deploy_helm_app(
     release_name = app.release_name or app_name
     namespace = app.namespace
 
+    # App-level context overrides CLI/sources.yaml context
+    if hasattr(app, "context") and app.context:
+        context = app.context
+        console.print(f"  [yellow]Using app-specific context: {context}[/yellow]")
+
     # Chart 경로 결정 (.sbkube/build/ 우선, 없으면 .sbkube/charts/ 또는 로컬)
     chart_path = None
 
@@ -313,6 +318,11 @@ def deploy_yaml_app(
     console.print(f"[cyan]🚀 Deploying YAML app: {app_name}[/cyan]")
 
     namespace = app.namespace
+
+    # App-level context overrides CLI/sources.yaml context
+    if hasattr(app, "context") and app.context:
+        context = app.context
+        console.print(f"  [yellow]Using app-specific context: {context}[/yellow]")
 
     # .sbkube 디렉토리 결정 (기본값: base_dir/.sbkube)
     if sbkube_work_dir is None:

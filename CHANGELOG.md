@@ -4,6 +4,37 @@
 
 ## [Unreleased]
 
+### ✨ New Features
+
+**Multi-Cluster Context Support** (2025-11-03)
+
+- ✅ Added `context` field to HelmApp, YamlApp, and ActionApp models
+- ✅ `delete` command now reads sources.yaml for cluster configuration (consistent with deploy)
+- ✅ App-level context override: config.yaml context > sources.yaml context > current kubectl context
+- ✅ Enhanced `get_installed_charts()` to support kubeconfig parameter
+- ✅ Full support for multi-cluster deployments in a single config.yaml
+
+**Context Priority**:
+1. **app.context** (highest): Per-app context in config.yaml
+2. **sources.yaml context**: Project-level default (kubeconfig_context)
+3. **current context** (lowest): System kubectl context
+
+**Example**:
+```yaml
+apps:
+  prod-app:
+    type: helm
+    chart: myapp/app
+    context: prod-cluster      # Deploy to prod-cluster
+    namespace: production
+
+  staging-app:
+    type: helm
+    chart: myapp/app
+    context: staging-cluster   # Deploy to staging-cluster
+    namespace: staging
+```
+
 ## [0.6.1] - 2025-10-31
 
 ### 🎨 Code Quality

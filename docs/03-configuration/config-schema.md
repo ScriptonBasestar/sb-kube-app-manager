@@ -296,6 +296,7 @@ apps:
       - templates/serviceaccount.yaml
       - templates/tests/
     namespace: monitoring      # 선택: 네임스페이스
+    context: prod-cluster      # 선택: Kubernetes context (v0.6.1+)
     release_name: my-grafana   # 선택: 릴리스 이름 (기본: 앱 이름)
 ```
 
@@ -347,6 +348,39 @@ app-dir/
 - 와일드카드 지원 (예: `templates/tests/`)
 - `build` 단계에서 적용
 
+**context** (선택, v0.6.1+):
+
+앱을 배포할 Kubernetes 컨텍스트를 지정합니다.
+
+```yaml
+apps:
+  prod-app:
+    type: helm
+    chart: myapp/app
+    context: prod-cluster      # 이 앱은 prod-cluster에 배포
+    namespace: production
+
+  staging-app:
+    type: helm
+    chart: myapp/app
+    context: staging-cluster   # 이 앱은 staging-cluster에 배포
+    namespace: staging
+```
+
+**Context 우선순위**:
+1. **app.context** (최우선): config.yaml의 앱별 context 필드
+2. **sources.yaml context**: 프로젝트 기본 context (kubeconfig_context)
+3. **현재 context**: kubectl의 현재 활성 context
+
+**사용 사례**:
+- 멀티 클러스터 관리: 하나의 config.yaml로 여러 클러스터에 배포
+- 개발/스테이징/프로덕션 분리: 앱별로 다른 클러스터 지정
+- 마이그레이션: 일부 앱만 새 클러스터로 이동
+
+**주의사항**:
+- context는 ~/.kube/config 또는 KUBECONFIG 환경변수의 kubeconfig 파일에 정의되어 있어야 합니다
+- app.context 지정 시 sources.yaml의 kubeconfig는 사용되지 않습니다 (시스템 기본 kubeconfig 사용)
+
 ______________________________________________________________________
 
 ### 2. yaml - YAML 매니페스트
@@ -375,6 +409,7 @@ apps:
       - manifests/service.yaml
       - manifests/ingress.yaml
     namespace: web             # 선택: 네임스페이스
+    context: prod-cluster      # 선택: Kubernetes context (v0.6.1+)
 ```
 
 #### 변수 치환 (v0.6.0+)

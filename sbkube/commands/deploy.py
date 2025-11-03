@@ -712,9 +712,8 @@ def cmd(
     """
     console.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]")
 
-    # kubectl 설치 확인
+    # kubectl 설치 확인 (cluster connectivity는 나중에 확인)
     check_kubectl_installed_or_exit()
-    check_cluster_connectivity_or_exit()
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
@@ -770,6 +769,12 @@ def cmd(
             console.print(f"[red]{e}[/red]")
             overall_success = False
             continue
+
+        # Check cluster connectivity with resolved kubeconfig and context
+        check_cluster_connectivity_or_exit(
+            kubeconfig=kubeconfig,
+            kubecontext=context,
+        )
 
         # 설정 파일 로드
         if not config_file_path.exists():

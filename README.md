@@ -89,6 +89,14 @@ Complete product definition and specifications: **[PRODUCT.md](PRODUCT.md)**
 - 🏗️ [Architecture](docs/10-modules/sbkube/ARCHITECTURE.md) - Detailed architecture design
 - 📄 [API Contract](docs/10-modules/sbkube/API_CONTRACT.md) - API reference
 
+### AI Integration
+
+- 🤖 [LLM Guide](LLM_GUIDE.md) - AI-optimized reference for using SBKube in other projects
+  - Quick commands reference
+  - Configuration examples
+  - Common patterns and troubleshooting
+  - Designed for AI assistants (Claude, ChatGPT, etc.)
+
 Full documentation index: **[docs/INDEX.md](docs/INDEX.md)**
 
 ## ⚙️ Key Features
@@ -286,7 +294,7 @@ v0.2.x에서 현재 버전으로 업그레이드하는 경우, 자동 마이그�
 sbkube migrate old-config.yaml -o config.yaml
 ```
 
-자세한 내용은 [CHANGELOG.md](CHANGELOG.md) 및 [Migration Guide](docs/MIGRATION.md)를 참조하세요.
+자세한 내용은 [CHANGELOG.md](CHANGELOG.md) 및 [Migration Guide](docs/03-configuration/migration-guide.md)를 참조하세요.
 
 ## 💬 지원
 

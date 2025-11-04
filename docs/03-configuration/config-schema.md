@@ -1,4 +1,23 @@
+---
+type: API Reference
+audience: End User
+topics: [configuration, schema, yaml, validation, apps]
+llm_priority: high
+last_updated: 2025-01-04
+---
+
 # 📋 config.yaml 스키마 가이드
+
+## TL;DR
+- **Purpose**: Complete schema reference for SBKube's main configuration file (config.yaml)
+- **Key Points**:
+  - Apps use dictionary structure with name as key (not list)
+  - Support 7 app types: helm, yaml, git, http, kustomize, local-chart, oci
+  - Global namespace with per-app overrides
+  - Strong validation with Pydantic models
+  - Dependency management at both global and app level
+- **Quick Reference**: See "📂 파일 구조 개요" for basic structure
+- **Related**: [sources.yaml](sources-schema.md), [commands.md](../02-features/commands.md), [examples/](../../examples/)
 
 SBKube의 메인 설정 파일인 `config.yaml`의 완전한 스키마 문서입니다.
 

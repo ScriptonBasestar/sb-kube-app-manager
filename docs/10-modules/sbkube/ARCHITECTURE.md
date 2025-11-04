@@ -1,4 +1,23 @@
+---
+type: Technical Documentation
+audience: Developer
+topics: [architecture, design, patterns, modules, implementation]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # SBKube 모듈 아키텍처
+
+## TL;DR
+- **Purpose**: Technical architecture and design patterns for SBKube module implementation
+- **Key Points**:
+  - Monolithic architecture with clear layer separation
+  - BaseCommand pattern for command extensibility
+  - Pydantic for strong typing and validation
+  - SQLAlchemy for state persistence
+  - Rich console for enhanced UX
+- **Quick Reference**: Layer architecture diagram shows CLI→Command→Model→State flow
+- **Related**: [PRODUCT.md](../../PRODUCT.md), [product-spec.md](../../00-product/product-spec.md), [API_CONTRACT.md](API_CONTRACT.md)
 
 ## 개요
 

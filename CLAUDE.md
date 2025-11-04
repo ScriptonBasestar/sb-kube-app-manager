@@ -18,7 +18,11 @@ ______________________________________________________________________
 - Commands reference → [Makefile](Makefile) (`make help`) or [Quick Commands](docs/04-development/quick-commands.md)
 - Coding standards → [docs/04-development/coding-standards.md](docs/04-development/coding-standards.md)
 - Architecture patterns → [docs/04-development/architecture-patterns.md](docs/04-development/architecture-patterns.md)
+- Hooks documentation → [docs/02-features/hooks-guide.md](docs/02-features/hooks-guide.md)
+- Migration guide → [docs/03-configuration/migration-guide.md](docs/03-configuration/migration-guide.md)
+- Deployment → [docs/06-deployment/deployment-guide.md](docs/06-deployment/deployment-guide.md)
 - Troubleshooting → [docs/07-troubleshooting/common-dev-issues.md](docs/07-troubleshooting/common-dev-issues.md)
+- **External AI Reference** → [LLM_GUIDE.md](LLM_GUIDE.md) (for using SBKube in other projects)
 
 ______________________________________________________________________
 
@@ -93,7 +97,11 @@ Level 4 (Implementation):
 | **Testing** | [docs/04-development/testing.md](docs/04-development/testing.md) | [Makefile](Makefile) |
 | **Troubleshooting** | [docs/07-troubleshooting/common-dev-issues.md](docs/07-troubleshooting/common-dev-issues.md) | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) |
 | **Configuration** | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) | [examples/](examples/) |
+| **Migration** | [docs/03-configuration/migration-guide.md](docs/03-configuration/migration-guide.md) | [CHANGELOG.md](CHANGELOG.md) |
+| **Hooks** | [docs/02-features/hooks-guide.md](docs/02-features/hooks-guide.md) | [docs/02-features/hooks-reference.md](docs/02-features/hooks-reference.md) |
 | **LLM Integration** | [docs/02-features/llm-friendly-output.md](docs/02-features/llm-friendly-output.md) | [sbkube/utils/output_formatter.py](sbkube/utils/output_formatter.py) |
+| **Deployment** | [docs/06-deployment/deployment-guide.md](docs/06-deployment/deployment-guide.md) | [Makefile](Makefile) |
+| **External AI Reference** | [LLM_GUIDE.md](LLM_GUIDE.md) | For using SBKube in other projects |
 
 ### 2.3 Context Priority Rules
 

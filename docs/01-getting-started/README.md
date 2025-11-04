@@ -1,39 +1,59 @@
-# 🚀 SBKube 시작하기
+---
+type: User Guide
+audience: End User
+topics: [installation, quickstart, first-deployment]
+llm_priority: high
+last_updated: 2025-01-04
+---
 
-SBKube을 처음 사용하는 분들을 위한 빠른 시작 가이드입니다.
+# 🚀 Getting Started with SBKube
 
-> **주요 기능**: 간소화된 설정 구조, 통합된 Helm 타입, 차트 커스터마이징 기능 추가
+Your quickstart guide to deploying applications with SBKube.
+
+> **Key Features**: Simplified configuration, unified Helm types, chart customization
 >
-> 이전 버전 사용자는 [마이그레이션 가이드](../MIGRATION_V3.md)를 참조하세요.
+> Previous version users: See the [Migration Guide](../MIGRATION_V3.md)
 
 ______________________________________________________________________
 
-## 📦 설치
+## TL;DR
 
-### 요구사항
+- **Install**: `pip install sbkube` or `uv pip install sbkube`
+- **Quick Deploy**: Create `sources.yaml` → `sbkube apply`
+- **First Steps**: init → validate → apply
+- **Related**: [Commands Reference](../02-features/commands.md)
 
-- **Python 3.12** 이상
-- **kubectl** - Kubernetes 클러스터 접근용
-- **helm** - Helm 차트 관리용
+______________________________________________________________________
 
-### PyPI를 통한 설치
+## 📦 Installation
+
+### Requirements
+
+- **Python 3.12+**
+- **kubectl** - Kubernetes cluster access
+- **helm** - Helm chart management
+
+### Install from PyPI
 
 ```bash
-# 최신 안정 버전 설치
+# Install latest stable version
 pip install sbkube
 
-# 설치 확인
-sbkube version
+# Or using uv (recommended)
+uv tool install sbkube
+
+# Verify installation
+sbkube --version
 ```
 
-### 개발 환경 설치 (소스코드)
+### Development Installation
 
 ```bash
-# 저장소 클론
-git clone https://github.com/ScriptonBasestar/kube-app-manaer.git
+# Clone repository
+git clone https://github.com/ScriptonBasestar/kube-app-manager.git
 cd sb-kube-app-manager
 
-# uv를 사용한 설치 (권장)
+# Install with uv (recommended)
 uv venv
 source .venv/bin/activate
 uv pip install -e .
@@ -41,182 +61,245 @@ uv pip install -e .
 
 ______________________________________________________________________
 
-## ⚙️ 기본 설정
+## 🎯 Quick Start
 
-### 1. Kubernetes 클러스터 연결 확인
+### Minimal Example
 
-```bash
-# kubeconfig 정보 확인
-sbkube
+Create two files and deploy in minutes:
 
-# 특정 컨텍스트 사용
-sbkube --context my-cluster --namespace my-namespace
-```
-
-### 2. 필수 도구 확인
-
-SBKube는 다음 도구들이 설치되어 있는지 자동으로 확인합니다:
-
-- `kubectl` - Kubernetes 클러스터 관리
-- `helm` - Helm 차트 관리
-
-______________________________________________________________________
-
-## 🎯 첫 번째 배포
-
-### Step 1: 프로젝트 디렉토리 생성
-
-```bash
-mkdir my-sbkube-project
-cd my-sbkube-project
-```
-
-### Step 2: 소스 설정 파일 생성
-
-`sources.yaml` 파일을 생성하세요:
+**`sources.yaml`** - Define external sources:
 
 ```yaml
-# sources.yaml - 외부 소스 정의
-
-# 클러스터 설정 (필수, v0.4.10+)
+# Cluster configuration (required since v0.4.10)
 kubeconfig: ~/.kube/config
-kubeconfig_context: my-k3s-cluster
-cluster: my-cluster  # 선택, 문서화 목적
+kubeconfig_context: my-cluster
 
-# Helm 리포지토리
+# Helm repositories
 helm_repos:
-  grafana: https://grafana.github.io/helm-charts
   nginx: https://kubernetes.github.io/ingress-nginx
-
-# Git 리포지토리 (선택)
-git_repos:
-  my-app-repo:
-    url: https://github.com/example/my-app.git
-    branch: main
 ```
 
-### Step 3: 앱 설정 파일 생성
-
-`config/config.yaml` 파일을 생성하세요 :
+**`config.yaml`** - Define applications:
 
 ```yaml
-# config/config.yaml - 애플리케이션 정의
 namespace: default
 
 apps:
-  # Helm 차트 배포 예제 (간소화됨!)
   nginx-ingress:
     type: helm
     chart: nginx/ingress-nginx
     namespace: ingress-nginx
     release_name: my-nginx
-
-  # YAML 매니페스트 배포 예제
-  simple-app:
-    type: yaml
-    files:
-      - manifests/deployment.yaml
-      - manifests/service.yaml
-
-  # 또는 커스텀 액션 사용
-  custom-setup:
-    type: action
-    actions:
-      - type: apply
-        path: manifests/configmap.yaml
-      - type: apply
-        path: manifests/deployment.yaml
 ```
 
-**SBKube의 주요 개선사항**:
-
-- `helm` + `helm` → 단일 `helm` 타입
-- `yaml` → `yaml` 타입 (간소화)
-- `action` → `action` 타입
-- Apps는 이름을 key로 사용 (list → dict)
-- `specs` 제거 (필드 평탄화)
-
-### Step 4: 워크플로우 실행
-
-**권장 방법** - 통합 실행:
+**Deploy**:
 
 ```bash
-# 모든 단계 자동 실행 (prepare → build → deploy)
-sbkube apply --app-dir config --namespace default
-```
+# Single command deployment
+sbkube apply
 
-**또는 단계별 실행**:
-
-```bash
-# 1. 외부 소스 준비 (Helm 차트 다운로드)
-sbkube prepare --app-dir config
-
-# 2. 앱 빌드 (차트 커스터마이징 적용)
-sbkube build --app-dir config
-
-# 3. 템플릿 렌더링 (YAML 미리보기)
-sbkube template --app-dir config  # 기본값: .sbkube/rendered/
-
-# 4. 실제 배포
-sbkube deploy --app-dir config --namespace default
-```
-
-**빠른 배포** (커스터마이징 없는 경우):
-
-```bash
-# build 단계 건너뛰기
-sbkube apply --app-dir config --namespace default --skip-build
+# Or with options
+sbkube apply --app-dir . --namespace default
 ```
 
 ______________________________________________________________________
 
-## 🔍 배포 확인
+## 🚀 First Deployment - Step by Step
 
-### 배포 상태 확인
+### Step 1: Prepare Your Environment
 
-```bash
-# Helm 릴리스 확인
-helm list -A
-
-# Kubernetes 리소스 확인
-kubectl get pods,svc -n ingress-nginx
-kubectl get pods,svc -n default
-
-# SBKube 배포 상태 확인 (신규 기능)
-sbkube history
-```
-
-### 로그 및 디버깅
+**Create a test cluster** (if needed):
 
 ```bash
-# 상세 로그와 함께 실행
-sbkube --verbose deploy
+# Using Kind (recommended)
+kind create cluster --name sbkube-tutorial
 
-# Dry-run으로 미리 확인
-sbkube deploy --dry-run
+# Or using Minikube
+minikube start --profile sbkube-tutorial
+
+# Verify cluster
+kubectl cluster-info
 ```
 
-______________________________________________________________________
+### Step 2: Initialize Project
 
-## 🛠️ 주요 사용 패턴
+```bash
+# Create project directory
+mkdir my-sbkube-project
+cd my-sbkube-project
 
-### 패턴 1: 원격 Helm 차트 배포
+# Interactive initialization
+sbkube init
+
+# Or non-interactive
+sbkube init --name my-app --template basic --non-interactive
+```
+
+This creates:
+
+```
+my-sbkube-project/
+├── config.yaml       # Application definitions
+└── sources.yaml      # External sources
+```
+
+### Step 3: Configure Your First App
+
+**Edit `sources.yaml`**:
 
 ```yaml
+# Cluster settings
+kubeconfig: ~/.kube/config
+kubeconfig_context: kind-sbkube-tutorial
+cluster: tutorial  # Optional, for documentation
+
+# Helm repositories
+helm_repos:
+  grafana: https://grafana.github.io/helm-charts
+```
+
+**Edit `config.yaml`**:
+
+```yaml
+namespace: tutorial
+
 apps:
   grafana:
     type: helm
     chart: grafana/grafana
     version: 6.50.0
     values:
-      - grafana.yaml
+      - values/grafana.yaml
 ```
+
+**Create `values/grafana.yaml`**:
+
+```yaml
+replicas: 1
+adminPassword: "admin"
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+```
+
+### Step 4: Validate Configuration
 
 ```bash
-sbkube apply --app-dir config --namespace data
+# Validate configuration files
+sbkube validate
+
+# Expected output:
+# ✅ Config file validation passed
+# ✅ All required fields present
+# ✅ No validation errors found
 ```
 
-### 패턴 2: 로컬 Helm 차트 배포
+### Step 5: Deploy
+
+**Option A - Single Command** (Recommended):
+
+```bash
+# Deploy everything
+sbkube apply
+
+# With dry-run to preview
+sbkube apply --dry-run
+```
+
+**Option B - Step by Step**:
+
+```bash
+# 1. Prepare external sources
+sbkube prepare
+
+# 2. Build (if customization needed)
+sbkube build
+
+# 3. Preview generated manifests
+sbkube template
+
+# 4. Deploy to cluster
+sbkube deploy
+```
+
+### Step 6: Verify Deployment
+
+```bash
+# Check pods
+kubectl get pods -n tutorial
+
+# Check Helm releases
+helm list -n tutorial
+
+# Check deployment history
+sbkube history
+
+# Access Grafana
+kubectl port-forward -n tutorial svc/grafana 3000:80
+# Open http://localhost:3000 (admin/admin)
+```
+
+______________________________________________________________________
+
+## 🔄 Managing Applications
+
+### Update Application
+
+```bash
+# Edit values/grafana.yaml
+# Then apply changes
+sbkube apply
+
+# Or use upgrade command
+sbkube upgrade --namespace tutorial
+```
+
+### View History
+
+```bash
+# View deployment history
+sbkube history --namespace tutorial
+
+# Example output:
+# ID  App      Version  Status    Deployed At
+# 2   grafana  6.50.0   success   2025-01-04 10:35:20
+# 1   grafana  6.50.0   success   2025-01-04 10:30:45
+```
+
+### Delete Application
+
+```bash
+# Preview deletion
+sbkube delete --dry-run
+
+# Delete application
+sbkube delete
+
+# Clean up namespace
+kubectl delete namespace tutorial
+```
+
+______________________________________________________________________
+
+## 📚 Common Deployment Patterns
+
+### Pattern 1: Remote Helm Chart
+
+```yaml
+apps:
+  prometheus:
+    type: helm
+    chart: prometheus-community/prometheus
+    version: 25.0.0
+    values:
+      - values/prometheus.yaml
+```
+
+### Pattern 2: Local Helm Chart
 
 ```yaml
 apps:
@@ -224,93 +307,130 @@ apps:
     type: helm
     chart: ./charts/my-app
     values:
-      - values.yaml
+      - values/my-app.yaml
 ```
 
-### 패턴 3: YAML 매니페스트 배포
+### Pattern 3: YAML Manifests
 
 ```yaml
 apps:
-  nginx:
+  simple-app:
     type: yaml
     files:
       - manifests/deployment.yaml
       - manifests/service.yaml
 ```
 
-### 패턴 4: Git 리포지토리 사용
+### Pattern 4: Git Repository
 
 ```yaml
+# In sources.yaml
+git_repos:
+  my-repo:
+    url: https://github.com/example/charts.git
+    branch: main
+
+# In config.yaml
 apps:
-  source-code:
+  from-git:
     type: git
-    repo: my-app-repo
+    repo: my-repo
     path: charts/app
 ```
 
-### 패턴 5: 차트 커스터마이징
+### Pattern 5: Chart Customization
 
 ```yaml
 apps:
-  cnpg:
+  custom-app:
     type: helm
-    chart: cloudnative-pg/cloudnative-pg
+    chart: bitnami/postgresql
     overrides:
-      templates/secret.yaml: custom-secret.yaml
+      templates/secret.yaml: custom/secret.yaml
     removes:
-      - templates/serviceaccount.yaml
+      - templates/networkpolicy.yaml
 ```
 
 ______________________________________________________________________
 
-## 📚 다음 단계
+## 💡 Tips and Best Practices
 
-### 더 자세한 학습
-
-- **[명령어 가이드](../02-features/commands.md)** - 각 명령어의 상세 옵션
-- **[앱 타입 가이드](../02-features/application-types.md)** - 지원하는 10가지 앱 타입
-- **[설정 가이드](../03-configuration/)** - 설정 파일 작성법
-
-### 실제 예제 확인
-
-- **[기본 예제](../06-examples/)** - 다양한 배포 시나리오
-- **[examples/ 디렉토리](../../examples/)** - 실행 가능한 예제들
-
-### 문제 해결
-
-- **[문제 해결 가이드](../07-troubleshooting/)** - 일반적인 문제들
-- **[FAQ](../07-troubleshooting/faq.md)** - 자주 묻는 질문
-
-______________________________________________________________________
-
-## 💡 팁과 모범 사례
-
-### 🎯 효율적인 개발 워크플로우
+### Development Workflow
 
 ```bash
-# 특정 앱만 처리하여 빠른 개발
-sbkube build --app my-app
-sbkube deploy --app my-app
+# Deploy specific app only
+sbkube apply --app grafana
 
-# 설정 검증 먼저 실행
+# Always validate first
 sbkube validate
 
-# Dry-run으로 안전하게 확인
+# Use dry-run for safety
 sbkube deploy --dry-run
+
+# Skip build when not needed
+sbkube apply --skip-build
 ```
 
-### 🔧 설정 관리 팁
+### Configuration Management
 
-- **환경별 설정**: 개발/스테이징/프로덕션 환경별로 별도 config 디렉토리 사용
-- **값 파일 분리**: Helm values 파일을 환경별로 분리 관리
-- **네임스페이스 관리**: 앱별로 적절한 네임스페이스 설정
+- **Environment Separation**: Use different config directories for dev/staging/prod
+- **Values Organization**: Keep Helm values in `values/` directory
+- **Namespace Strategy**: Use meaningful namespaces for logical separation
+- **Version Pinning**: Always specify chart versions for reproducibility
 
-### 🚨 주의사항
+### Troubleshooting Quick Fixes
 
-- **백업**: 중요한 클러스터에 배포하기 전 항상 백업 확인
-- **권한**: 적절한 RBAC 권한 설정 확인
-- **리소스**: 클러스터 리소스 여유분 확인
+| Problem | Solution |
+|---------|----------|
+| Helm repo unreachable | Run `helm repo add` manually |
+| Pod not starting | Check `kubectl describe pod` for events |
+| sbkube apply fails | Run `sbkube doctor` for diagnostics |
+| Permission denied | Verify RBAC with `kubectl auth can-i` |
 
 ______________________________________________________________________
 
-*SBKube를 사용해 주셔서 감사합니다! 문제가 있으시면 [이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)에 신고해 주세요.*
+## 📖 Next Steps
+
+### Learn More
+
+- **[Commands Reference](../02-features/commands.md)** - Detailed command options
+- **[Application Types](../02-features/application-types.md)** - All 10 supported app types
+- **[Configuration Guide](../03-configuration/)** - Advanced configuration
+
+### Explore Examples
+
+- **[Example Scenarios](../06-examples/)** - Real-world deployment patterns
+- **[examples/ Directory](../../examples/)** - Runnable examples
+
+### Get Help
+
+- **[Troubleshooting Guide](../07-troubleshooting/)** - Common issues and solutions
+- **[FAQ](../07-troubleshooting/faq.md)** - Frequently asked questions
+- **[GitHub Issues](https://github.com/ScriptonBasestar/kube-app-manager/issues)** - Report bugs
+
+______________________________________________________________________
+
+## 🚨 Important Notes
+
+### Security
+
+- Always review Helm values before deployment
+- Use RBAC to limit permissions
+- Store secrets securely (not in Git)
+
+### Production Readiness
+
+- Test in staging environment first
+- Set resource limits appropriately
+- Configure health checks and probes
+- Plan for backup and disaster recovery
+
+### Resource Management
+
+- Monitor cluster resources before deployment
+- Set appropriate requests and limits
+- Use horizontal pod autoscaling when needed
+
+______________________________________________________________________
+
+*Thank you for using SBKube! For issues or questions, visit our [GitHub repository](https://github.com/ScriptonBasestar/kube-app-manager).*

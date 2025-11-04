@@ -1,6 +1,14 @@
+---
+type: Reference
+audience: Developer
+topics: [hooks, api, reference]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # SBKube Hooks 통합 레퍼런스
 
-> **마지막 업데이트**: 2025-10-31 **대상 버전**: SBKube v0.8.0+
+> **마지막 업데이트**: 2025-01-04 **대상 버전**: SBKube v0.8.0+
 
 ## 목차
 

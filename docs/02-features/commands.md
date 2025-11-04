@@ -1,4 +1,23 @@
+---
+type: API Reference
+audience: End User
+topics: [commands, cli, workflow, deployment, kubernetes]
+llm_priority: high
+last_updated: 2025-01-04
+---
+
 # 📋 SBKube 명령어 상세 가이드
+
+## TL;DR
+- **Purpose**: Complete reference for all SBKube CLI commands and their options
+- **Key Points**:
+  - Main workflow: `sbkube apply` (runs prepare→build→template→deploy)
+  - Quick start: `sbkube init` → `sbkube doctor` → `sbkube apply`
+  - Validation: `sbkube validate` for config checks, `--dry-run` for safe testing
+  - Troubleshooting: `sbkube doctor` for comprehensive system diagnostics
+  - All commands support `--format` option for LLM-friendly output
+- **Quick Reference**: See section "🚀 빠른 참조 (Quick Reference)" below
+- **Related**: [PRODUCT.md](../../PRODUCT.md), [config-schema.md](../03-configuration/config-schema.md), [llm-friendly-output.md](llm-friendly-output.md)
 
 SBKube의 모든 명령어에 대한 상세한 사용법과 옵션을 설명합니다.
 

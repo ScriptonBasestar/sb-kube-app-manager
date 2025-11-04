@@ -1,148 +1,191 @@
-# 🔍 SBKube 문제 해결 가이드
+---
+type: User Guide
+audience: End User, Developer
+topics: [troubleshooting, debugging, common-errors]
+llm_priority: high
+last_updated: 2025-01-04
+---
 
-SBKube 사용 중 발생할 수 있는 일반적인 문제들과 해결 방법을 제공합니다.
+# 🔍 SBKube Troubleshooting Guide
+
+Comprehensive troubleshooting guide for common issues encountered with SBKube.
+
+## TL;DR
+
+- **Quick Fixes**: Check kubectl, Helm, sources.yaml syntax
+- **Commands**: `sbkube doctor`, `sbkube validate`
+- **Common Errors**: Network, permissions, config validation
+- **Related**: [Common Dev Issues](common-dev-issues.md), [Deployment Failures](deployment-failures.md)
 
 ______________________________________________________________________
 
-## 📚 트러블슈팅 문서
+## 📚 Quick Navigation
 
-### 개발 환경 문제
-- **[Common Dev Issues](common-dev-issues.md)** - 개발 중 자주 발생하는 문제 (테스트 실패, 타입 오류, import 오류, uv 문제 등)
-
-### 사용자 문제
-- 아래 섹션 참조 (설치, Helm, kubectl, 배포 등)
+### Troubleshooting Documents
+- **[Common Dev Issues](common-dev-issues.md)** - Development environment problems (test failures, type errors, import errors, uv issues)
+- **[Deployment Failures](deployment-failures.md)** - Production deployment specific issues
+- **[FAQ](faq.md)** - Frequently asked questions
 
 ______________________________________________________________________
 
-## 🚨 일반적인 문제들
-
-### 1. 설치 및 환경 문제
-
-#### ❌ Python 버전 호환성 오류
+## 🚨 Quick Diagnostic Commands
 
 ```bash
-# 오류 메시지
+# System check
+sbkube doctor                      # Check all dependencies (future feature)
+sbkube validate                     # Validate configuration files
+
+# Version information
+sbkube --version                    # SBKube version
+python --version                    # Python version
+kubectl version --client            # kubectl version
+helm version                        # Helm version
+
+# Status checks
+kubectl cluster-info                # Kubernetes cluster status
+kubectl get nodes                    # Node status
+helm list -A                        # All Helm releases
+sbkube history                      # Deployment history
+
+# Verbose debugging
+sbkube --verbose deploy             # Detailed logging
+sbkube template --output-dir debug  # Render templates for inspection
+```
+
+______________________________________________________________________
+
+## 📋 Common Error Categories
+
+### 1. Installation and Environment Issues
+
+#### ❌ Python Version Compatibility
+
+```bash
+# Error
 ERROR: Python 3.12 is required, but you have 3.11
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# Python 버전 확인
-python --version
-
-# Python 3.12 이상 설치
+# Install Python 3.12+
 # Ubuntu/Debian
 sudo apt update && sudo apt install python3.12
 
 # macOS (Homebrew)
 brew install python@3.12
 
-# pyenv 사용
+# pyenv
 pyenv install 3.12.0
 pyenv global 3.12.0
 ```
 
-#### ❌ 의존성 설치 실패
+#### ❌ Command Not Found
 
 ```bash
-# 오류 메시지
-ERROR: Could not find a version that satisfies the requirement sbkube
+# Error
+bash: sbkube: command not found
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# pip 업그레이드
-pip install --upgrade pip setuptools wheel
-
-# 캐시 클리어 후 재설치
-pip cache purge
+# Install SBKube
 pip install sbkube
 
-# 사용자 디렉토리에 설치
-pip install --user sbkube
+# Or using uv
+uv tool install sbkube
+
+# Check PATH
+echo $PATH
+export PATH=$PATH:~/.local/bin
+```
+
+#### ❌ Permission Denied
+
+```bash
+# Error
+Error: Permission denied: '/home/user/.sbkube/state.db'
+```
+
+**Solution:**
+
+```bash
+# Fix ownership
+sudo chown -R $USER:$USER ~/.sbkube/
+
+# Or recreate directory
+rm -rf ~/.sbkube/
+sbkube history  # Auto-creates directory
 ```
 
 ______________________________________________________________________
 
-### 2. CLI 도구 관련 문제
+### 2. CLI Tools Issues
 
-#### ❌ kubectl 명령어를 찾을 수 없음
+#### ❌ kubectl Not Found
 
 ```bash
-# 오류 메시지
-❌ 'kubectl' 명령을 찾을 수 없습니다
+# Error
+❌ 'kubectl' command not found
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# kubectl 설치 확인
-which kubectl
-
-# kubectl 설치 (Linux)
+# Install kubectl (Linux)
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-# PATH 환경 변수 확인
-echo $PATH
-export PATH=$PATH:/usr/local/bin
+# Verify installation
+kubectl version --client
 ```
 
-#### ❌ Helm 명령어를 찾을 수 없음
+#### ❌ Helm Not Found
 
 ```bash
-# 오류 메시지
-❌ 'helm' 명령을 사용할 수 없습니다
+# Error
+❌ 'helm' command not available
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# Helm 설치
+# Install Helm
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-# Helm 버전 확인
+# Verify installation
 helm version
-
-# PATH에 추가 (필요시)
-export PATH=$PATH:/usr/local/bin
 ```
 
 ______________________________________________________________________
 
-### 3. Kubernetes 연결 문제
+### 3. Kubernetes Connection Issues
 
-#### ❌ kubeconfig 파일을 찾을 수 없음
+#### ❌ Kubeconfig Not Found
 
 ```bash
-# 오류 메시지
-Kubeconfig 파일을 로드할 수 없습니다 (경로: ~/.kube/config)
+# Error
+Kubeconfig file not found (path: ~/.kube/config)
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# kubeconfig 파일 존재 확인
+# Check kubeconfig existence
 ls -la ~/.kube/config
 
-# 환경 변수로 경로 지정
+# Set environment variable
 export KUBECONFIG=/path/to/your/kubeconfig
 
-# SBKube에서 직접 지정
+# Or specify in SBKube
 sbkube --kubeconfig /path/to/kubeconfig deploy
-
-# 클러스터 연결 테스트
-kubectl cluster-info
 ```
 
-______________________________________________________________________
-
-#### ❌ Context를 찾을 수 없음
+#### ❌ Context Not Found
 
 ```bash
-# 오류 메시지
+# Error
 ❌ Kubernetes context 'my-context' not found in kubeconfig: ~/.kube/config
 
 Available contexts in this kubeconfig:
@@ -153,66 +196,47 @@ Available contexts in this kubeconfig:
   kubeconfig_context: <valid-context-name>
 ```
 
-**원인**: sources.yaml의 `kubeconfig_context`가 kubeconfig 파일에 존재하지 않음
-
-**해결 방법**:
+**Solution:**
 
 ```bash
-# 1. 사용 가능한 contexts 확인
+# 1. List available contexts
 kubectl config get-contexts
 
-# 출력 예시:
-# CURRENT   NAME                  CLUSTER               AUTHINFO
-# *         k3d-cwrapper-local    k3d-cwrapper-local    admin@k3d-cwrapper-local
-#           minikube              minikube              minikube
-
-# 2. sources.yaml 수정
+# 2. Update sources.yaml
 cat > config/sources.yaml <<EOF
 cluster: my-cluster
 kubeconfig: ~/.kube/config
-kubeconfig_context: k3d-cwrapper-local  # ← NAME 컬럼 값 사용
+kubeconfig_context: k3d-cwrapper-local  # Use NAME column value
 helm_repos: {}
 EOF
 
-# 3. 배포 재시도
+# 3. Retry deployment
 sbkube deploy --app-dir config --namespace test
 ```
 
-**주의사항**:
+**Important:**
+- `cluster` field: Human-readable label (any name)
+- `kubeconfig_context`: Actual kubectl context name (must match exactly)
+- Context names are case-sensitive
 
-- `cluster` 필드는 **사람용 레이블**이며, 아무 이름이나 사용 가능
-- `kubeconfig_context`는 **kubectl의 실제 context 이름**이며, 정확히 일치해야 함
-- context 이름은 대소문자를 구분함
-
-**특정 kubeconfig 파일의 contexts 확인**:
-
-```bash
-kubectl config get-contexts --kubeconfig ~/.kube/my-cluster-config
-```
-
-**관련 FAQ**:
-[cluster vs kubeconfig_context](faq.md#q1-cluster%EC%99%80-kubeconfig_context%EC%9D%98-%EC%B0%A8%EC%9D%B4%EB%8A%94-%EB%AC%B4%EC%97%87%EC%9D%B8%EA%B0%80%EC%9A%94)
-
-______________________________________________________________________
-
-#### ❌ 클러스터 접근 권한 부족
+#### ❌ Access Forbidden
 
 ```bash
-# 오류 메시지
+# Error
 Error: Forbidden (403): User cannot access resource
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# 현재 사용자 확인
+# Check current user
 kubectl auth whoami
 
-# 권한 확인
+# Verify permissions
 kubectl auth can-i create deployments
 kubectl auth can-i create services
 
-# RBAC 설정 (클러스터 관리자 권한 필요)
+# Grant permissions (requires admin)
 kubectl create clusterrolebinding sbkube-admin \
   --clusterrole=cluster-admin \
   --user=$(kubectl config current-context)
@@ -220,90 +244,140 @@ kubectl create clusterrolebinding sbkube-admin \
 
 ______________________________________________________________________
 
-### 4. 설정 파일 문제
+### 4. Configuration File Issues
 
-#### ❌ YAML 구문 오류
+#### ❌ YAML Syntax Error
 
 ```bash
-# 오류 메시지
+# Error
 yaml.scanner.ScannerError: found character '\t' that cannot start any token
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# YAML 파일 검증
+# Validate YAML syntax
 python -c "import yaml; yaml.safe_load(open('config.yaml'))"
 
-# 온라인 YAML 검증기 사용
-# https://yamlchecker.com/
+# Check for tabs (should use spaces)
+cat -A config.yaml  # Shows tab characters
 
-# 들여쓰기 확인 (탭 대신 스페이스 사용)
-cat -A config.yaml  # 탭 문자 확인
+# Use online validators
+# https://yamlchecker.com/
 ```
 
-#### ❌ 설정 스키마 검증 실패
+#### ❌ Schema Validation Failed
 
 ```bash
-# 오류 메시지
+# Error
 ValidationError: 'invalid-type' is not one of ['exec', 'helm', ...]
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# 설정 파일 검증
+# Validate configuration
 sbkube validate
 
-# 지원되는 앱 타입 확인
+# Check supported app types
 sbkube --help
 
-# 올바른 타입으로 수정
-# 지원 타입: helm, git, http, kustomize
-#           helm, yaml, action, exec, noop
+# Supported types: helm, git, http, kustomize, yaml, action, exec, noop
+```
+
+#### ❌ sources.yaml Not Found
+
+```bash
+# Error
+Error: sources.yaml not found in: ./sources.yaml, ../sources.yaml, ./sources.yaml
+```
+
+**Solution (v0.4.7+):**
+
+```bash
+# Search order (automatic):
+# 1. Current directory (.)
+# 2. Parent directory (..)
+# 3. base-dir (--base-dir option)
+
+# Create sources.yaml
+cat > sources.yaml << 'EOF'
+kubeconfig: ~/.kube/config
+kubeconfig_context: my-cluster
+cluster: production
+
+helm_repos:
+  grafana:
+    url: https://grafana.github.io/helm-charts
+EOF
+```
+
+#### ❌ Circular Dependency
+
+```bash
+# Error
+Error: Circular dependency detected: app-a → app-b → app-a
+```
+
+**Solution:**
+
+```yaml
+# Wrong configuration
+apps:
+  app-a:
+    depends_on: [app-b]
+  app-b:
+    depends_on: [app-a]  # Circular!
+
+# Fixed configuration
+apps:
+  app-a:
+    # Remove depends_on or adjust
+  app-b:
+    depends_on: [app-a]
 ```
 
 ______________________________________________________________________
 
-### 5. 배포 관련 문제
+### 5. Deployment Issues
 
-#### ❌ Helm 차트를 찾을 수 없음
+#### ❌ Helm Chart Not Found
 
 ```bash
-# 오류 메시지
+# Error
 Error: failed to download chart: chart not found
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# Helm 저장소 업데이트
+# Update Helm repositories
 helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
 
-# 차트 존재 확인
+# Verify chart exists
 helm search repo grafana/grafana
 
-# sources.yaml 설정 확인
+# Check sources.yaml configuration
 cat sources.yaml
 ```
 
-#### ❌ Helm repo가 sources.yaml에 없음
+#### ❌ Helm Repository Not in sources.yaml
 
 ```bash
-# 오류 메시지
+# Error
 ❌ Helm repo 'browserless' not found in sources.yaml
 ```
 
-**원인:**
+**Common Causes:**
 
-1. **OCI 레지스트리 사용 시**: `helm_repos` 대신 `oci_registries`에 있어야 함
-1. **레포지토리 이름 오타**: sources.yaml과 config.yaml의 이름 불일치
-1. **Deprecated 저장소 사용**: 더 이상 지원되지 않는 Helm 저장소
+1. **OCI Registry**: Should be in `oci_registries` not `helm_repos`
+2. **Name Mismatch**: Typo between sources.yaml and config.yaml
+3. **Deprecated Repository**: Using old/unsupported repositories
 
-**해결 방법:**
+**Solutions:**
 
-**케이스 1: OCI 레지스트리 차트**
+**Case 1: OCI Registry Chart**
 
 ```yaml
 # sources.yaml
@@ -320,20 +394,10 @@ apps:
     chart: browserless/browserless-chrome
 ```
 
-**케이스 2: 레포지토리 이름 오타**
+**Case 2: Repository Name Typo**
 
 ```yaml
-# ❌ 잘못된 예시
-# sources.yaml
-helm_repos:
-  corecentric: https://codecentric.github.io/helm-charts  # 오타
-
-# config.yaml
-apps:
-  mailhog:
-    chart: codecentric/mailhog  # 철자 다름
-
-# ✅ 올바른 예시
+# ✅ Correct - names match
 # sources.yaml
 helm_repos:
   codecentric: https://codecentric.github.io/helm-charts
@@ -344,719 +408,376 @@ apps:
     chart: codecentric/mailhog
 ```
 
-**케이스 3: Deprecated 저장소**
+**Case 3: Deprecated Repository**
 
 ```yaml
-# ❌ 잘못된 예시 (Helm Stable은 2020년에 deprecated)
+# ❌ Wrong - Helm Stable deprecated in 2020
 helm_repos:
   kubernetes-charts: https://charts.helm.sh/stable
 
-apps:
-  descheduler:
-    chart: kubernetes-charts/descheduler
-
-# ✅ 올바른 예시
+# ✅ Correct - Use official repository
 helm_repos:
   descheduler: https://kubernetes-sigs.github.io/descheduler/
-
-apps:
-  descheduler:
-    chart: descheduler/descheduler
 ```
 
-**검증 명령어:**
+**Verification:**
 
 ```bash
-# 1. OCI 레지스트리 확인
-helm pull oci://tccr.io/truecharts/browserless-chrome --version 1.0.0 --untar
+# Check OCI registry
+helm pull oci://tccr.io/truecharts/browserless-chrome --version 1.0.0
 
-# 2. Helm 저장소 확인
+# Check Helm repository
 helm repo add codecentric https://codecentric.github.io/helm-charts
 helm repo update
 helm search repo codecentric/
 
-# 3. sources.yaml 구조 확인
+# Verify sources.yaml structure
 cat sources.yaml | grep -A 5 "oci_registries:"
 cat sources.yaml | grep -A 5 "helm_repos:"
 ```
 
-**참고:**
-
-- OCI 레지스트리는 `helm repo add` 없이 직접 pull 가능
-- 2020년 이후 Helm Stable (kubernetes-charts)은 사용 불가
-- 차트별 공식 저장소는 [Artifact Hub](https://artifacthub.io/)에서 확인
-
-#### ❌ 네임스페이스가 존재하지 않음
+#### ❌ Namespace Not Found
 
 ```bash
-# 오류 메시지
+# Error
 Error: namespaces "my-namespace" not found
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# 네임스페이스 생성
+# Create namespace
 kubectl create namespace my-namespace
 
-# 또는 설정에서 기본 네임스페이스 사용
-# config.yaml에서 namespace: default 설정
+# Or use YAML
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: my-namespace
+EOF
 ```
 
-#### ❌ 리소스 충돌
+#### ❌ Helm Release Conflict
 
 ```bash
-# 오류 메시지
-Error: Operation cannot be fulfilled: the object has been modified
+# Error
+Error: cannot re-use a name that is still in use
 ```
 
-**해결 방법:**
+**Solution:**
 
 ```bash
-# 기존 리소스 확인
-kubectl get all -n your-namespace
+# List existing releases
+helm list -n my-namespace
 
-# 기존 Helm 릴리스 확인
-helm list -A
+# Delete existing release
+helm uninstall grafana-my-namespace -n my-namespace
 
-# 강제 업데이트 (주의!)
-helm upgrade --force my-release ./chart
+# Or use sbkube delete
+sbkube delete --namespace my-namespace
 
-# 또는 기존 리소스 삭제 후 재배포
-sbkube delete
+# Redeploy
 sbkube deploy
 ```
 
 ______________________________________________________________________
 
-## 🔧 디버깅 방법
+### 6. Command-Specific Issues
 
-### 1. 상세 로그 활성화
+#### prepare Command Errors
 
-```bash
-# 상세 로그로 실행
-sbkube --verbose deploy
-
-# 특정 앱만 디버깅
-sbkube --verbose build --app problematic-app
-sbkube --verbose deploy --app problematic-app
-```
-
-### 2. Dry-run으로 테스트
+##### ❌ Chart Pull Failed
 
 ```bash
-# 실제 배포 없이 테스트
-sbkube deploy --dry-run
-
-# 템플릿 결과 확인
-sbkube template --output-dir debug-output
-cat debug-output/*/manifests.yaml
+# Error
+Error: chart 'grafana/grafana' version '6.50.0' not found
 ```
 
-### 3. 단계별 실행
+**Solution:**
 
 ```bash
-# 각 단계별로 분리 실행
-sbkube validate       # 설정 검증
-sbkube prepare        # 소스 준비
-sbkube build          # 앱 빌드
-sbkube template       # 템플릿 생성
-sbkube deploy         # 배포 실행
+# Check available versions
+helm search repo grafana/grafana --versions | head -20
+
+# Update config.yaml with valid version
+apps:
+  grafana:
+    chart: grafana/grafana
+    version: 6.60.0  # Or remove for latest
 ```
 
-### 4. 설정 파일 검증
+##### ❌ Git Clone Failed
 
 ```bash
-# 설정 파일 구문 검사
-sbkube validate
-
-# 특정 설정 파일 검사
-sbkube validate --config-file custom-config.yaml
-
-# JSON 스키마로 검증
-python -c "
-import json, yaml, jsonschema
-with open('schemas/config.schema.json') as f:
-    schema = json.load(f)
-with open('config/config.yaml') as f:
-    config = yaml.safe_load(f)
-jsonschema.validate(config, schema)
-"
+# Error
+Error: failed to clone repository: Authentication required
 ```
 
-______________________________________________________________________
-
-## 📊 상태 관리 문제
-
-### ❌ 배포 상태 데이터베이스 오류
+**Solution:**
 
 ```bash
-# 오류 메시지
-sqlite3.OperationalError: database is locked
+# Use SSH URL in sources.yaml
+git_repos:
+  my-repo:
+    url: git@github.com:user/repo.git
+
+# Or use Personal Access Token
+git_repos:
+  my-repo:
+    url: https://oauth2:TOKEN@github.com/user/repo.git
+
+# Configure git credentials
+git config --global credential.helper store
 ```
 
-**해결 방법:**
+##### ❌ Chart Already Exists (v0.4.6+)
 
 ```bash
-# 상태 데이터베이스 위치 확인
-ls -la ~/.sbkube/
-
-# 잠금 파일 제거 (안전한 경우에만)
-rm ~/.sbkube/deployment.db-lock
-
-# 데이터베이스 재생성 (향후 기능 예정)
-# sbkube reset-db
+# Info
+⏭️  Chart already exists, skipping: grafana
+    Use --force to re-download
 ```
 
-### 상태 정보 불일치
+**Solution:**
 
 ```bash
-# 실제 클러스터와 상태 DB 동기화 (향후 기능 예정)
-# sbkube sync-state
-
-# 수동으로 상태 확인
-kubectl get all -A
-helm list -A
-sbkube history
+# Force re-download
+sbkube prepare --force
 ```
 
-______________________________________________________________________
+#### build Command Errors
 
-## 🌐 네트워크 관련 문제
-
-### ❌ Git 저장소 접근 실패
+##### ❌ Override Not Applied
 
 ```bash
-# 오류 메시지
-fatal: unable to access 'https://github.com/...': SSL certificate problem
+# Warning
+⚠️  Override directory found but not configured: myapp
 ```
 
-**해결 방법:**
-
-```bash
-# Git SSL 검증 비활성화 (임시)
-git config --global http.sslVerify false
-
-# 올바른 Git 자격증명 설정
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
-
-# SSH 키 사용 (권장)
-ssh-keygen -t rsa -b 4096 -C "your.email@example.com"
-# GitHub에 공개키 등록 후 SSH URL 사용
-```
-
-### ❌ Helm 저장소 접근 실패
-
-```bash
-# 오류 메시지
-Error: failed to fetch https://grafana.github.io/helm-charts/index.yaml
-```
-
-**해결 방법:**
-
-```bash
-# 네트워크 연결 확인
-curl -I https://grafana.github.io/helm-charts/index.yaml
-
-# 프록시 설정 (필요한 경우)
-export HTTP_PROXY=http://proxy.company.com:8080
-export HTTPS_PROXY=http://proxy.company.com:8080
-
-# Helm 저장소 재추가
-helm repo remove grafana
-helm repo add grafana https://grafana.github.io/helm-charts
-helm repo update
-```
-
-______________________________________________________________________
-
-## 🚀 성능 관련 문제
-
-### 배포 속도가 느림
-
-```bash
-# 병렬 처리 최적화
-export SBKUBE_MAX_WORKERS=8
-
-# 불필요한 앱 비활성화
-# config.yaml에서 enabled: false 설정
-
-# 캐시 활용
-export HELM_CACHE_HOME=/tmp/helm-cache
-```
-
-### 메모리 사용량 과다
-
-```bash
-# 메모리 사용량 모니터링
-top -p $(pgrep -f sbkube)
-
-# 큰 차트 처리 시 메모리 제한
-ulimit -v 2097152  # 2GB 제한
-
-# 배치 처리로 분할
-sbkube build --app app1
-sbkube build --app app2
-```
-
-______________________________________________________________________
-
-## 📱 플랫폼별 문제
-
-### Windows 환경
-
-```bash
-# PowerShell에서 실행
-python -m sbkube.cli deploy
-
-# 경로 구분자 문제
-# Windows에서는 '/' 대신 '\' 사용할 수 있지만
-# YAML에서는 항상 '/' 사용 권장
-
-# 권한 문제
-# PowerShell을 관리자 권한으로 실행
-```
-
-### macOS 환경
-
-```bash
-# Homebrew 권한 문제
-sudo chown -R $(whoami) /usr/local/Homebrew
-
-# PATH 설정 문제
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-______________________________________________________________________
-
-## 📞 추가 지원
-
-### 로그 수집
-
-문제 신고 시 다음 정보를 포함해 주세요:
-
-```bash
-# 환경 정보 수집
-sbkube version
-python --version
-kubectl version --client
-helm version
-
-# 상세 로그
-sbkube --verbose deploy > sbkube.log 2>&1
-
-# 설정 파일 (민감 정보 제거 후)
-cat config.yaml
-cat sources.yaml
-```
-
-### 커뮤니티 지원
-
-- **[이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)** - 버그 신고 및 기능 요청
-- **[FAQ](faq.md)** - 자주 묻는 질문들
-- **[GitHub Discussions](https://github.com/ScriptonBasestar/kube-app-manaer/discussions)** - 사용법 질문
-
-______________________________________________________________________
-
-## 🔧 빌드 및 Override 문제
-
-### ❌ Override 파일이 적용되지 않음
-
-#### 증상
-
-- `overrides/` 디렉토리에 파일을 넣었지만 빌드 결과에 반영되지 않음
-- `build/` 디렉토리에 override 파일이 없음
-- 경고 메시지 표시:
-  ```
-  ⚠️  Override directory found but not configured: myapp
-  ```
-
-#### 원인
-
-`config.yaml`에 `overrides` 필드를 명시하지 않음
-
-#### 해결 방법
-
-**1. config.yaml 확인**
+**Solution:**
 
 ```yaml
-# ❌ 잘못된 설정 (overrides 필드 없음)
+# config.yaml - Add overrides field
 apps:
   myapp:
     type: helm
     chart: ingress-nginx/ingress-nginx
-    # overrides 필드가 없음!
-```
-
-**2. overrides 필드 추가**
-
-```yaml
-# ✅ 올바른 설정
-apps:
-  myapp:
-    type: helm
-    chart: ingress-nginx/ingress-nginx
-    overrides:
+    overrides:  # Required!
       - templates/configmap.yaml
       - files/config.txt
 ```
 
-**3. 빌드 재실행**
+##### ❌ Build Directory Empty
 
 ```bash
-sbkube build --app-dir .
-
-# 성공 메시지 확인:
-# 🔨 Building Helm app: myapp
-#   Copying chart: .sbkube/charts/nginx/nginx → .sbkube/build/myapp
-#   Applying 2 overrides...
-#     ✓ Override: templates/configmap.yaml
-#     ✓ Override: files/config.txt
-# ✅ Helm app built: myapp
+# Info
+⏭️ Skipping Helm app (no customization): myapp
 ```
 
-**4. 결과 검증**
+**Explanation:** SBKube skips building when:
+- Using local chart (`chart: ./charts/myapp`)
+- No `overrides` configured
+- No `removes` configured
 
-```bash
-# Override 파일들이 build/ 디렉토리에 복사되었는지 확인
-ls -la build/myapp/templates/configmap.yaml
-ls -la build/myapp/files/config.txt
-```
+This is **normal behavior** for optimization.
 
-#### 예방
-
-- **v0.4.8+**: override 디렉토리가 있지만 설정되지 않은 경우 경고 메시지 자동 표시
-- **체크리스트**:
-  1. `overrides/[앱이름]/` 디렉토리 존재 확인
-  1. `config.yaml`의 해당 앱에 `overrides:` 필드 추가
-  1. 모든 override 파일을 리스트로 명시
-
-### ❌ build 디렉토리가 비어있음
-
-#### 증상
-
-- `sbkube build` 실행 후 `build/` 디렉토리가 비어있거나 일부 앱만 생성됨
-- 메시지: `⏭️ Skipping Helm app (no customization): myapp`
-
-#### 원인
-
-sbkube는 다음 조건일 때 **빌드를 건너뜁니다** (의도된 최적화):
-
-- 로컬 차트 (`chart: ./charts/myapp`)
-- `overrides` 없음
-- `removes` 없음
-
-이는 불필요한 파일 복사를 방지하기 위한 **정상 동작**입니다.
-
-#### 해결 방법
-
-**방법 1: Override 또는 Remove 추가** (커스터마이징 필요 시)
+**Solutions:**
 
 ```yaml
+# Option 1: Add overrides
 myapp:
   type: helm
   chart: ./charts/myapp
   overrides:
-    - templates/configmap.yaml  # 커스터마이징 추가
-```
+    - templates/configmap.yaml
 
-**방법 2: 원격 차트 사용**
-
-```yaml
+# Option 2: Use remote chart (always built)
 myapp:
   type: helm
-  chart: ingress-nginx/ingress-nginx  # 원격 차트는 항상 빌드됨
-  version: "4.0.0"
-```
-
-**방법 3: 빌드 없이 배포** (로컬 차트 + 커스터마이징 없음)
-
-```bash
-# build 건너뛰고 바로 template/deploy
-sbkube template --app-dir .
-sbkube deploy --app-dir .
-```
-
-**방법 4: 차트 변경**
-
-```yaml
-myapp:
-  type: helm
-  chart: grafana/grafana  # 원격 차트는 항상 빌드됨
+  chart: grafana/grafana
   version: "6.50.0"
 ```
 
-#### 확인
+##### ❌ .Files.Get Returns Empty
 
 ```bash
-sbkube build --app-dir . --verbose
-
-# 출력 예시:
-# ⏭️ Skipping Helm app (no customization): myapp
-# 또는
-# 🔨 Building Helm app: myapp
+# Error
+Error: template: ... error calling Get: file not found
 ```
 
-### ❌ .Files.Get 파일을 찾을 수 없음
-
-#### 증상
-
-- Helm 템플릿에서 `{{ .Files.Get "files/config.toml" }}` 사용 시 빈 문자열 반환
-- ConfigMap이나 Secret의 data가 비어있음
-- 로그: `Error: template: ... error calling Get: file not found`
-
-#### 원인
-
-`files/` 디렉토리가 build/ 디렉토리에 복사되지 않음
-
-#### 해결 방법
-
-**1. files 디렉토리를 overrides에 추가**
+**Solution:**
 
 ```yaml
-# overrides/myapp/templates/configmap.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: my-config
-data:
-  config.toml: |-
-{{ .Files.Get "files/config.toml" | indent 4 }}  # ← files/ 참조
-```
-
-```yaml
-# config.yaml
+# config.yaml - Include files directory
 apps:
   myapp:
     type: helm
     chart: my-chart
     overrides:
       - templates/configmap.yaml
-      - files/config.toml          # ← 필수! files도 명시
+      - files/config.toml  # Must include files!
 ```
 
-**2. 디렉토리 구조 확인**
+#### deploy Command Errors
 
-```
-overrides/
-  myapp/
-    ├── templates/
-    │   └── configmap.yaml
-    └── files/
-        └── config.toml       # ← 파일 존재 확인
-```
-
-**3. 빌드 후 검증**
+##### ❌ Pod Stuck in Pending
 
 ```bash
-sbkube build --app-dir .
-
-# build 디렉토리 확인
-ls -la build/myapp/files/config.toml
-
-# 템플릿 렌더링 테스트
-sbkube template --app-dir . --output-dir /tmp/rendered
-cat /tmp/rendered/myapp/configmap.yaml
+# Status
+NAME                       READY   STATUS    RESTARTS   AGE
+grafana-5f7b4c5d9-abcde    0/1     Pending   0          2m
 ```
 
-#### 참고
-
-- `.Files.Get`의 경로는 **차트 루트 기준** 상대 경로입니다
-- `files/` 디렉토리는 자동으로 복사되지 않으므로 명시적으로 override에 포함해야 합니다
-
-### ❌ Override 파일을 찾을 수 없음
-
-#### 증상
-
-- 빌드 중 경고 메시지:
-  ```
-  ⚠️ Override file not found: overrides/myapp/templates/configmap.yaml
-  ```
-
-#### 원인
-
-1. config.yaml에 명시된 파일이 실제로 존재하지 않음
-1. 파일 경로가 잘못됨
-1. 파일명 오타
-
-#### 해결 방법
-
-**1. 파일 존재 확인**
+**Diagnosis:**
 
 ```bash
-# config.yaml에 명시된 경로로 확인
-ls -la overrides/myapp/templates/configmap.yaml
+# Check pod events
+kubectl describe pod grafana-5f7b4c5d9-abcde -n test-namespace
+
+# Common causes:
+# 1. Resource shortage
+kubectl top nodes
+kubectl describe nodes
+
+# 2. PVC mount failure
+kubectl get pvc -n test-namespace
+kubectl describe pvc <pvc-name> -n test-namespace
+
+# 3. Node selector mismatch
+kubectl get nodes --show-labels
 ```
 
-**2. 경로 확인**
-
-```yaml
-# ❌ 잘못된 경로 (절대 경로 또는 ../ 사용)
-overrides:
-  - /absolute/path/configmap.yaml          # 잘못됨
-  - ../other-app/templates/configmap.yaml  # 잘못됨
-
-# ✅ 올바른 경로 (overrides/[앱이름]/ 기준 상대 경로)
-overrides:
-  - templates/configmap.yaml               # 올바름
-  - files/config.txt                       # 올바름
-```
-
-**3. 파일 생성 또는 경로 수정**
+##### ❌ ImagePullBackOff
 
 ```bash
-# 파일 생성
-mkdir -p overrides/myapp/templates
-cat > overrides/myapp/templates/configmap.yaml <<'EOF'
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: my-config
-data:
-  key: value
-EOF
-
-# 또는 config.yaml 경로 수정
+# Status
+NAME                       READY   STATUS             RESTARTS   AGE
+grafana-5f7b4c5d9-abcde    0/1     ImagePullBackOff   0          1m
 ```
 
-**4. 재빌드**
+**Solution:**
 
 ```bash
-sbkube build --app-dir .
+# Check events
+kubectl describe pod grafana-5f7b4c5d9-abcde -n test-namespace
+
+# Verify image name/tag in values.yaml
+image:
+  repository: grafana/grafana
+  tag: 9.5.3  # Correct tag?
+
+# For private registry, create secret
+kubectl create secret docker-registry regcred \
+  --docker-server=<registry-url> \
+  --docker-username=<username> \
+  --docker-password=<password> \
+  -n test-namespace
+
+# Add to values.yaml
+imagePullSecrets:
+  - name: regcred
 ```
 
-### 🔍 빌드 문제 진단 체크리스트
-
-빌드 관련 문제 발생 시 다음 순서로 확인하세요:
-
-**1. 디렉토리 구조 확인**
+##### ❌ CrashLoopBackOff
 
 ```bash
-ls -la overrides/
-ls -la overrides/[앱이름]/
-ls -la build/
+# Status
+NAME                       READY   STATUS             RESTARTS   AGE
+grafana-5f7b4c5d9-abcde    0/1     CrashLoopBackOff   5          3m
 ```
 
-**2. config.yaml 검증**
+**Solution:**
 
 ```bash
-cat config.yaml | grep -A 10 "앱이름:"
-# overrides 필드가 있는지 확인
+# Check logs
+kubectl logs grafana-5f7b4c5d9-abcde -n test-namespace
+kubectl logs grafana-5f7b4c5d9-abcde -n test-namespace --previous
+
+# Common issues:
+# 1. Check environment variables
+kubectl describe pod grafana-5f7b4c5d9-abcde -n test-namespace | grep -A 10 "Environment:"
+
+# 2. Verify secrets/configmaps exist
+kubectl get secrets -n test-namespace
+kubectl get configmaps -n test-namespace
+
+# 3. Debug with ephemeral container
+kubectl debug grafana-5f7b4c5d9-abcde -n test-namespace -it --image=busybox
 ```
-
-**3. 빌드 실행 (verbose 모드)**
-
-```bash
-sbkube build --app-dir . --verbose
-```
-
-**4. 빌드 결과 확인**
-
-```bash
-# Override된 파일이 build/에 있는지 확인
-ls -la build/[앱이름]/templates/
-ls -la build/[앱이름]/files/
-```
-
-**5. 템플릿 렌더링 테스트**
-
-```bash
-sbkube template --app-dir . --output-dir /tmp/test
-cat /tmp/test/[앱이름]/*.yaml
-```
-
-### 📚 관련 문서
-
-- [commands.md - Override 사용법](../02-features/commands.md#-override-%EB%94%94%EB%A0%89%ED%86%A0%EB%A6%AC-%EC%82%AC%EC%9A%A9-%EC%8B%9C-%EC%A3%BC%EC%9D%98%EC%82%AC%ED%95%AD)
-- [config-schema.md - overrides 필드](../03-configuration/config-schema.md)
-- [examples/override-with-files/](../../examples/override-with-files/) - 실전 예제
 
 ______________________________________________________________________
 
-## 🪝 Hooks 관련 문제
+### 7. Hooks Related Issues
 
-### ❌ Hook 실행 실패
+#### ❌ Hook Execution Failed
 
-#### 증상
-
-```
+```bash
+# Error
 Error: Hook execution failed
 Command: ./scripts/backup.sh
 Exit code: 127
 ```
 
-#### 원인
-
-1. 스크립트 파일이 존재하지 않음
-1. 실행 권한 없음
-1. 환경 변수 미설정
-1. Working directory 오류
-
-#### 해결 방법
+**Solution:**
 
 ```bash
-# 1. 파일 존재 확인
+# 1. Check file exists
 ls -la ./scripts/backup.sh
 
-# 2. 실행 권한 부여
+# 2. Grant execute permission
 chmod +x ./scripts/backup.sh
 
-# 3. 환경 변수 확인 (Hook 내에서)
+# 3. Verify environment variables
 hooks:
   post_deploy:
     - |
       echo "SBKUBE_APP_NAME: $SBKUBE_APP_NAME"
       echo "SBKUBE_NAMESPACE: $SBKUBE_NAMESPACE"
-      env | grep SBKUBE
 
-# 4. Working directory 명시
+# 4. Specify working directory
 post_deploy_tasks:
   - type: command
     command: ["./backup.sh"]
     working_dir: "./scripts"
 ```
 
-### ❌ Manifests Hook 실패: 파일을 찾을 수 없음
+#### ❌ Manifests Hook File Not Found
 
-#### 증상
-
-```
+```bash
+# Error
 Error: Manifest file not found: manifests/cluster-issuer.yaml
 ```
 
-#### 해결 방법
+**Solution:**
 
 ```bash
-# 상대 경로 확인
+# Check relative path
 ls manifests/cluster-issuer.yaml
 
-# Phase 1 vs Phase 2 경로 차이 확인
-# Phase 1: app_dir 기준
+# Phase 1: app_dir relative
 pre_deploy_manifests:
   - path: manifests/cluster-issuer.yaml
 
-# Phase 2: working_dir 설정 가능
+# Phase 2: working_dir configurable
 pre_deploy_tasks:
   - type: manifests
     paths: ["cluster-issuer.yaml"]
     working_dir: "./manifests"
 ```
 
-### ❌ Task Validation 실패
+#### ❌ Task Validation Timeout
 
-#### 증상
-
-```
+```bash
+# Error
 Error: Validation failed for task 'create-certificate'
 Resource certificate/my-cert not ready after 300s
 ```
 
-#### 해결 방법
+**Solution:**
 
 ```yaml
-# Timeout 연장
+# Extend timeout
 post_deploy_tasks:
   - type: manifests
     name: create-certificate
@@ -1064,42 +785,293 @@ post_deploy_tasks:
     validation:
       type: resource_ready
       resource: certificate/my-cert
-      timeout: 600  # 10분으로 연장
+      timeout: 600  # 10 minutes
 
-# 또는 on_failure를 warn으로 변경
+# Or change failure handling
     on_failure: warn
 ```
 
-### 🔍 Hooks 디버깅
+**Related Documentation:**
+- **[Hooks Reference](../02-features/hooks-reference.md)** - All hook types and environment variables
+- **[Hooks Guide](../02-features/hooks.md)** - Practical examples and best practices
+- **[Hooks Migration Guide](../02-features/hooks-migration-guide.md)** - Phase transition guide
+
+______________________________________________________________________
+
+### 8. Network Related Issues
+
+#### ❌ Git SSL Certificate Problem
 
 ```bash
-# Verbose 모드로 실행
-sbkube deploy --app-dir config --verbose
-
-# Dry-run으로 Hook 명령어 확인
-sbkube deploy --app-dir config --dry-run
-
-# 특정 앱만 배포 (HookApp 포함)
-sbkube deploy --app-dir config --app setup-issuers
+# Error
+fatal: unable to access 'https://github.com/...': SSL certificate problem
 ```
 
-### 📚 Hooks 관련 문서
+**Solution:**
 
-- **[Hooks 레퍼런스](../02-features/hooks-reference.md)** - 전체 Hook 타입 및 환경 변수
-- **[Hooks 상세 가이드](../02-features/hooks.md)** - 실전 예제 및 Best Practices
-- **[Hooks 마이그레이션 가이드](../02-features/hooks-migration-guide.md)** - Phase 간 전환 방법
-- **[예제: hooks-error-handling/](../../examples/hooks-error-handling/)** - 에러 처리 예제
+```bash
+# Temporary: Disable SSL verification
+git config --global http.sslVerify false
+
+# Better: Use SSH keys
+ssh-keygen -t rsa -b 4096 -C "your.email@example.com"
+# Add public key to GitHub and use SSH URLs
+```
+
+#### ❌ Helm Repository Unreachable
+
+```bash
+# Error
+Error: failed to fetch https://grafana.github.io/helm-charts/index.yaml
+```
+
+**Solution:**
+
+```bash
+# Test connectivity
+curl -I https://grafana.github.io/helm-charts/index.yaml
+
+# Configure proxy if needed
+export HTTP_PROXY=http://proxy.company.com:8080
+export HTTPS_PROXY=http://proxy.company.com:8080
+
+# Re-add repository
+helm repo remove grafana
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+```
 
 ______________________________________________________________________
 
-## 📚 관련 문서
+### 9. State Management Issues
 
-- **[일반적인 문제들](common-issues.md)** - 구체적인 해결 사례
-- **[FAQ](faq.md)** - 자주 묻는 질문들
-- **[디버깅 가이드](debugging.md)** - 심화 디버깅 방법
-- **[설정 가이드](../03-configuration/)** - 올바른 설정 방법
+#### ❌ Database Locked
+
+```bash
+# Error
+sqlite3.OperationalError: database is locked
+```
+
+**Solution:**
+
+```bash
+# Check state database location
+ls -la ~/.sbkube/
+
+# Remove lock file (if safe)
+rm ~/.sbkube/deployment.db-lock
+
+# Future feature: Reset database
+# sbkube reset-db
+```
+
+#### ❌ State Inconsistency
+
+```bash
+# Manual state verification
+kubectl get all -A
+helm list -A
+sbkube history
+
+# Future feature: Sync state
+# sbkube sync-state
+```
 
 ______________________________________________________________________
 
-*문제가 해결되지 않으시면 언제든지 [이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)에 문의해 주세요. 가능한 한 빠르게 도움을
-드리겠습니다!*
+## 🔧 Advanced Debugging
+
+### Step-by-Step Execution
+
+```bash
+# Execute each phase individually
+sbkube validate       # Configuration validation
+sbkube prepare        # Source preparation
+sbkube build          # App building
+sbkube template       # Template generation
+sbkube deploy         # Deployment execution
+```
+
+### Template Rendering
+
+```bash
+# Render templates for inspection
+sbkube template --output-dir /tmp/rendered
+
+# Specific app only
+sbkube template --app redis --output-dir /tmp/rendered
+
+# Direct Helm template
+helm template test-release charts-built/redis \
+  --namespace test-namespace \
+  --values redis-values.yaml \
+  --debug
+```
+
+### Kubernetes Debugging
+
+```bash
+# Dry-run resource creation
+kubectl apply -f manifest.yaml --dry-run=client
+kubectl apply -f manifest.yaml --dry-run=server
+
+# Watch namespace events
+kubectl get events -n test-namespace --sort-by='.lastTimestamp'
+
+# Real-time logs
+kubectl logs -f <pod-name> -n test-namespace
+
+# Previous logs (after restart)
+kubectl logs --previous <pod-name> -n test-namespace
+
+# All containers in pod
+kubectl logs <pod-name> -n test-namespace --all-containers
+
+# Debug container
+kubectl debug <pod-name> -n test-namespace -it --image=busybox
+
+# Node debugging
+kubectl debug node/<node-name> -it --image=busybox
+```
+
+______________________________________________________________________
+
+## 🚀 Performance Issues
+
+### Slow Deployments
+
+```bash
+# Optimize parallelization
+export SBKUBE_MAX_WORKERS=8
+
+# Disable unnecessary apps in config.yaml
+apps:
+  unused-app:
+    enabled: false
+
+# Use Helm cache
+export HELM_CACHE_HOME=/tmp/helm-cache
+```
+
+### High Memory Usage
+
+```bash
+# Monitor memory
+top -p $(pgrep -f sbkube)
+
+# Set memory limit
+ulimit -v 2097152  # 2GB limit
+
+# Process in batches
+sbkube build --app app1
+sbkube build --app app2
+```
+
+______________________________________________________________________
+
+## 📱 Platform-Specific Issues
+
+### Windows Environment
+
+```powershell
+# Run in PowerShell
+python -m sbkube.cli deploy
+
+# Use forward slashes in YAML
+# paths: "config/app.yaml"  # Good
+# paths: "config\\app.yaml" # Avoid
+
+# Run PowerShell as Administrator for permissions
+```
+
+### macOS Environment
+
+```bash
+# Fix Homebrew permissions
+sudo chown -R $(whoami) /usr/local/Homebrew
+
+# Update PATH
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+______________________________________________________________________
+
+## 📊 Troubleshooting Checklist
+
+### General Resolution Order
+
+1. **Information Gathering**
+   ```bash
+   sbkube --version
+   kubectl cluster-info
+   kubectl get nodes
+   helm version
+   sbkube history
+   ```
+
+2. **Log Analysis**
+   ```bash
+   sbkube --verbose <command>
+   kubectl logs <pod-name> -n <namespace>
+   kubectl describe <resource> <name> -n <namespace>
+   ```
+
+3. **Configuration Validation**
+   ```bash
+   sbkube validate
+   yamllint config.yaml
+   helm lint charts-built/<chart>
+   ```
+
+4. **Step-by-Step Testing**
+   ```bash
+   sbkube prepare
+   sbkube build
+   sbkube template --output-dir /tmp/test
+   sbkube deploy --dry-run
+   sbkube deploy
+   ```
+
+______________________________________________________________________
+
+## 📞 Support and Resources
+
+### Collecting Debug Information
+
+When reporting issues, include:
+
+```bash
+# Environment information
+sbkube version
+python --version
+kubectl version --client
+helm version
+
+# Detailed logs
+sbkube --verbose deploy > sbkube.log 2>&1
+
+# Configuration files (remove sensitive data)
+cat config.yaml
+cat sources.yaml
+```
+
+### Community Support
+
+- **[Issue Tracker](https://github.com/ScriptonBasestar/kube-app-manager/issues)** - Bug reports and feature requests
+- **[FAQ](faq.md)** - Frequently asked questions
+- **[GitHub Discussions](https://github.com/ScriptonBasestar/kube-app-manager/discussions)** - Usage questions
+
+______________________________________________________________________
+
+## 📚 Related Documentation
+
+- **[Common Issues](common-issues.md)** - Specific resolution cases
+- **[FAQ](faq.md)** - Frequently asked questions
+- **[Debugging Guide](debugging.md)** - Advanced debugging methods
+- **[Configuration Guide](../03-configuration/)** - Proper configuration methods
+- **[Commands Reference](../02-features/commands.md)** - Command usage and examples
+
+______________________________________________________________________
+
+*If your issue is not resolved, please feel free to contact us via the [issue tracker](https://github.com/ScriptonBasestar/kube-app-manager/issues). We'll help you as soon as possible!*

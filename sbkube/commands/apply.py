@@ -8,7 +8,6 @@ SBKube apply 명령어.
 from pathlib import Path
 
 import click
-from rich.console import Console
 
 from sbkube.models.config_model import SBKubeConfig
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
@@ -16,7 +15,7 @@ from sbkube.utils.deployment_checker import DeploymentChecker
 from sbkube.utils.error_formatter import format_deployment_error
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
-from sbkube.utils.output_formatter import OutputFormatter
+from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.progress_tracker import ProgressTracker
 
 
@@ -105,18 +104,14 @@ def cmd(
 
     의존성(depends_on)을 자동으로 해결하여 올바른 순서로 배포합니다.
     """
-    # Get output format from context
+    # Initialize OutputManager
     output_format = ctx.obj.get("format", "human")
-    formatter = OutputFormatter(format_type=output_format)
+    output = OutputManager(format_type=output_format)
 
-    # LLM 모드에서는 Rich Console 출력 억제
-    console = Console(quiet=(output_format != "human"))
+    output.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]", level="info")
 
-    if output_format == "human":
-        console.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]")
-
-        if dry_run:
-            console.print("[yellow]🔍 Dry-run mode enabled[/yellow]")
+    if dry_run:
+        output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="info")
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
@@ -132,9 +127,7 @@ def cmd(
     # 각 앱 그룹 처리
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
-        console.print(
-            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
-        )
+        output.print_section(f"Processing app group: {APP_CONFIG_DIR.name}")
 
         # app_config_dir_name을 현재 앱 그룹 이름으로 설정
         current_app_dir = str(APP_CONFIG_DIR.relative_to(BASE_DIR))
@@ -142,23 +135,26 @@ def cmd(
 
         # 설정 파일 로드
         if not config_file_path.exists():
-            console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+            output.print_error(
+                f"Config file not found: {config_file_path}",
+                config_path=str(config_file_path),
+            )
             overall_success = False
             continue
 
-        console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info")
         config_data = load_config_file(config_file_path)
 
         try:
             config = SBKubeConfig(**config_data)
         except Exception as e:
-            console.print(f"[red]❌ Invalid config file: {e}[/red]")
+            output.print_error(f"Invalid config file: {e}", error=str(e))
             overall_success = False
             continue
 
         # deps (app-group dependencies) 배포 상태 검증
         if config.deps and not skip_deps_check:
-            console.print("[cyan]🔍 Checking app-group dependencies...[/cyan]")
+            output.print("[cyan]🔍 Checking app-group dependencies...[/cyan]", level="info")
             deployment_checker = DeploymentChecker(
                 base_dir=BASE_DIR,
                 namespace=None,  # Auto-detect from deployment history
@@ -170,35 +166,41 @@ def cmd(
             )
 
             if not dep_check_result["all_deployed"]:
-                console.print(
-                    f"[red]❌ Error: {len(dep_check_result['missing'])} dependencies not deployed:[/red]"
+                output.print_error(
+                    f"Error: {len(dep_check_result['missing'])} dependencies not deployed:",
+                    missing_count=len(dep_check_result["missing"]),
                 )
+                missing_deps = []
                 for dep in dep_check_result["missing"]:
                     _, status_msg = dep_check_result["details"][dep]
-                    console.print(f"  - {dep} ({status_msg})")
+                    missing_deps.append(f"{dep} ({status_msg})")
+                    output.print(f"  - {dep} ({status_msg})", level="error")
 
-                console.print(
-                    "\n[yellow]💡 Deploy missing dependencies first:[/yellow]"
+                output.print(
+                    "\n[yellow]💡 Deploy missing dependencies first:[/yellow]", level="warning"
                 )
                 for dep in dep_check_result["missing"]:
-                    console.print(f"  sbkube apply --app-dir {dep}")
+                    output.print(f"  sbkube apply --app-dir {dep}", level="info")
 
-                console.print(
-                    "\n[dim]Tip: Use --skip-deps-check to override this check[/dim]"
+                output.print(
+                    "\n[dim]Tip: Use --skip-deps-check to override this check[/dim]",
+                    level="info",
                 )
 
                 overall_success = False
                 continue
 
             # All deps are deployed
-            console.print(
-                f"[green]✅ All {len(config.deps)} dependencies are deployed:[/green]"
+            output.print_success(
+                f"All {len(config.deps)} dependencies are deployed:",
+                deps_count=len(config.deps),
             )
             for dep, (deployed, msg) in dep_check_result["details"].items():
-                console.print(f"  - {dep}: {msg}")
+                output.print(f"  - {dep}: {msg}", level="success")
         elif config.deps and skip_deps_check:
-            console.print(
-                f"[yellow]⚠️  Skipping dependency check ({len(config.deps)} deps declared)[/yellow]"
+            output.print_warning(
+                f"Skipping dependency check ({len(config.deps)} deps declared)",
+                deps_count=len(config.deps),
             )
 
         # Hook executor 초기화
@@ -211,25 +213,27 @@ def cmd(
         # 글로벌 pre-apply 훅 실행
         if config.hooks and "apply" in config.hooks:
             apply_hooks = config.hooks["apply"].model_dump()
-            console.print("[cyan]🪝 Executing global pre-apply hooks...[/cyan]")
+            output.print("[cyan]🪝 Executing global pre-apply hooks...[/cyan]", level="info")
             if not hook_executor.execute_command_hooks(apply_hooks, "pre", "apply"):
-                console.print("[red]❌ Pre-apply hook failed[/red]")
+                output.print_error("Pre-apply hook failed")
                 overall_success = False
                 continue
 
         # 배포 순서 출력
         deployment_order = config.get_deployment_order()
-        console.print("\n[cyan]📋 Deployment order (based on dependencies):[/cyan]")
+        output.print("\n[cyan]📋 Deployment order (based on dependencies):[/cyan]", level="info")
+        deployment_list = []
         for idx, app in enumerate(deployment_order, 1):
             app_config = config.apps[app]
             deps = getattr(app_config, "depends_on", [])
             deps_str = f" [depends on: {', '.join(deps)}]" if deps else ""
-            console.print(f"  {idx}. {app} ({app_config.type}){deps_str}")
+            deployment_list.append(f"{idx}. {app} ({app_config.type}){deps_str}")
+            output.print(f"  {idx}. {app} ({app_config.type}){deps_str}", level="info")
 
         # 적용할 앱 필터링
         if app_name:
             if app_name not in config.apps:
-                console.print(f"[red]❌ App not found: {app_name}[/red]")
+                output.print_error(f"App not found: {app_name}", app_name=app_name)
                 overall_success = False
                 continue
 
@@ -250,8 +254,9 @@ def cmd(
                 apps_to_apply.append(name)  # noqa: B023
 
             collect_dependencies(app_name)
-            console.print(
-                f"\n[yellow]ℹ️  Including dependencies: {', '.join(apps_to_apply)}[/yellow]"
+            output.print(
+                f"\n[yellow]ℹ️  Including dependencies: {', '.join(apps_to_apply)}[/yellow]",
+                level="info",
             )
         else:
             apps_to_apply = deployment_order
@@ -264,7 +269,8 @@ def cmd(
         # Process each app in dependency order
         failed = False
 
-        # Progress tracking setup
+        # Progress tracking setup (get console from OutputManager)
+        console = output.get_console()
         progress_tracker = ProgressTracker(console=console, disable=(dry_run or no_progress))
 
         try:
@@ -272,19 +278,18 @@ def cmd(
                 app_config = config.apps[app_name_iter]
 
                 if not app_config.enabled:
-                    console.print(
-                        f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]"
+                    output.print(
+                        f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]",
+                        level="info",
                     )
                     continue
 
                 if not no_progress:
                     # Progress 모드: 앱 헤더를 간단하게
-                    console.print(f"\n[bold cyan]━━━ {app_name_iter} ({app_config.type}) ━━━[/bold cyan]")
+                    output.print_section(f"{app_name_iter} ({app_config.type})")
                 else:
                     # 일반 모드: 기존 동작 유지
-                    console.print(
-                        f"\n[bold cyan]━━━ Processing app: {app_name_iter} ({app_config.type}) ━━━[/bold cyan]"
-                    )
+                    output.print_section(f"Processing app: {app_name_iter} ({app_config.type})")
 
                 # Determine total steps (considering skip flags)
                 total_steps = 3
@@ -306,7 +311,7 @@ def cmd(
                         if use_progress:
                             progress_tracker.update(task_id, description=f"📦 Prepare {app_name_iter}")
                         else:
-                            console.print(f"[cyan]📦 Step 1: Prepare {app_name_iter}[/cyan]")
+                            output.print(f"[cyan]📦 Step 1: Prepare {app_name_iter}[/cyan]", level="info")
 
                         try:
                             # Create new context with parent's obj for kubeconfig/context/sources_file
@@ -341,8 +346,9 @@ def cmd(
                         if use_progress:
                             progress_tracker.update(task_id, description=f"🔨 Build {app_name_iter}")
                         else:
-                            console.print(
-                                f"[cyan]🔨 Step {step_number}: Build {app_name_iter}[/cyan]"
+                            output.print(
+                                f"[cyan]🔨 Step {step_number}: Build {app_name_iter}[/cyan]",
+                                level="info",
                             )
 
                         try:
@@ -380,8 +386,9 @@ def cmd(
                     if use_progress:
                         progress_tracker.update(task_id, description=f"🚀 Deploy {app_name_iter}")
                     else:
-                        console.print(
-                            f"[cyan]🚀 Step {step_number}: Deploy {app_name_iter}[/cyan]"
+                        output.print(
+                            f"[cyan]🚀 Step {step_number}: Deploy {app_name_iter}[/cyan]",
+                            level="info",
                         )
 
                     try:
@@ -415,11 +422,11 @@ def cmd(
             # 글로벌 post-apply 훅 실행
             if config.hooks and "apply" in config.hooks:
                 apply_hooks = config.hooks["apply"].model_dump()
-                console.print("[cyan]🪝 Executing global post-apply hooks...[/cyan]")
+                output.print("[cyan]🪝 Executing global post-apply hooks...[/cyan]", level="info")
                 if not hook_executor.execute_command_hooks(
                     apply_hooks, "post", "apply"
                 ):
-                    console.print("[red]❌ Post-apply hook failed[/red]")
+                    output.print_error("Post-apply hook failed")
                     failed = True
 
         except Exception:
@@ -427,66 +434,57 @@ def cmd(
             # 글로벌 on_failure 훅 실행
             if config.hooks and "apply" in config.hooks:
                 apply_hooks = config.hooks["apply"].model_dump()
-                console.print(
-                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]"
+                output.print(
+                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]",
+                    level="warning",
                 )
                 hook_executor.execute_command_hooks(apply_hooks, "on_failure", "apply")
             overall_success = False
             # Note: Detailed error already printed by format_deployment_error in inner try-except
             # Just print summary here
-            console.print(
-                f"\n[red]━━━ App group '{APP_CONFIG_DIR.name}' 처리 실패 ━━━[/red]"
-            )
+            output.print_error(f"App group '{APP_CONFIG_DIR.name}' 처리 실패")
             continue
 
         # 실패 시 on_failure 훅 실행
         if failed:
             if config.hooks and "apply" in config.hooks:
                 apply_hooks = config.hooks["apply"].model_dump()
-                console.print(
-                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]"
+                output.print(
+                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]",
+                    level="warning",
                 )
                 hook_executor.execute_command_hooks(apply_hooks, "on_failure", "apply")
             overall_success = False
-            console.print(f"[red]❌ App group '{APP_CONFIG_DIR.name}' failed[/red]")
+            output.print_error(f"App group '{APP_CONFIG_DIR.name}' failed")
         else:
-            console.print(
-                f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' applied successfully![/bold green]"
+            output.print_success(
+                f"App group '{APP_CONFIG_DIR.name}' applied successfully!",
+                app_group=APP_CONFIG_DIR.name,
             )
 
     # 전체 결과
-    if output_format == "human":
-        if not overall_success:
-            console.print("\n[bold red]❌ Some app groups failed to apply[/bold red]")
-            raise click.Abort()
-        else:
-            console.print(
-                "\n[bold green]🎉 All app groups applied successfully![/bold green]"
-            )
+    if not overall_success:
+        output.print("\n[bold red]❌ Some app groups failed to apply[/bold red]", level="error")
+        output.finalize(
+            status="failed",
+            summary={
+                "app_groups_processed": len(app_config_dirs),
+                "status": "failed",
+            },
+            next_steps=["Check error messages above", "Fix issues and retry"],
+            errors=["Some app groups failed to apply"],
+        )
+        raise click.Abort()
     else:
-        # LLM/JSON/YAML 출력
-        if not overall_success:
-            result = formatter.format_deployment_result(
-                status="failed",
-                summary={
-                    "app_groups_processed": len(app_config_dirs),
-                    "status": "failed",
-                },
-                deployments=[],
-                next_steps=["Check error messages above", "Fix issues and retry"],
-                errors=["Some app groups failed to apply"],
-            )
-            formatter.print_output(result)
-            raise click.Abort()
-        else:
-            result = formatter.format_deployment_result(
-                status="success",
-                summary={
-                    "app_groups_processed": len(app_config_dirs),
-                    "status": "success",
-                },
-                deployments=[],
-                next_steps=["Verify deployment with: kubectl get pods"],
-                errors=[],
-            )
-            formatter.print_output(result)
+        output.print(
+            "\n[bold green]🎉 All app groups applied successfully![/bold green]",
+            level="success",
+        )
+        output.finalize(
+            status="success",
+            summary={
+                "app_groups_processed": len(app_config_dirs),
+                "status": "success",
+            },
+            next_steps=["Verify deployment with: kubectl get pods"],
+        )

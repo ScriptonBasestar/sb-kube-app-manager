@@ -457,13 +457,10 @@ def deploy_action_app(
     namespace = app.namespace or config_namespace
 
     for action in app.actions:
-        action_type = action.get("type", "apply")
-        action_path = action.get("path")
-        action_namespace = action.get("namespace", namespace)
-
-        if not action_path:
-            console.print("[red]❌ Action path not specified[/red]")
-            return False
+        # ActionSpec은 이제 타입이 있는 객체입니다
+        action_type = action.type
+        action_path = action.path
+        action_namespace = action.namespace or namespace
 
         # 경로 해석 (URL 또는 로컬 파일)
         if action_path.startswith("http://") or action_path.startswith("https://"):

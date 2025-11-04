@@ -789,9 +789,59 @@ class YamlApp(ConfigBaseModel):
         return v
 
 
+class ActionSpec(ConfigBaseModel):
+    """
+    Action specification for ActionApp.
+
+    Defines a single action to be executed during deployment.
+    Supported action types: apply, delete.
+
+    Examples:
+        - type: apply
+          path: manifests/deployment.yaml
+          namespace: default
+        - type: delete
+          path: manifests/old-resource.yaml
+    """
+
+    type: Literal["apply", "delete"] = Field(
+        default="apply",
+        description="Action type: 'apply' to create/update resources, 'delete' to remove resources",
+    )
+    path: str = Field(
+        ..., description="Path to the YAML manifest file (relative to app directory)"
+    )
+    namespace: str | None = Field(
+        None, description="Namespace for this action (overrides app-level namespace)"
+    )
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, v: str) -> str:
+        """Validate that path is not empty and has reasonable format."""
+        if not v or not v.strip():
+            raise ValueError("Action path cannot be empty")
+
+        # Validate variable syntax if present
+        validate_variable_syntax(v)
+
+        # Check for common mistakes
+        if v.startswith("kubectl ") or v.startswith("helm "):
+            raise ValueError(
+                "Action 'path' should be a file path, not a command. "
+                "For executing commands, use 'type: exec' instead of 'type: action'. "
+                f"Invalid path: '{v}'"
+            )
+
+        return v.strip()
+
+
 class ActionApp(ConfigBaseModel):
     """
-    커스텀 액션 실행 앱 (apply/create/delete).
+    커스텀 액션 실행 앱 (apply/delete).
+
+    Actions are a list of ActionSpec objects that define individual
+    kubectl apply/delete operations to be executed in sequence.
 
     Examples:
         setup:
@@ -799,12 +849,17 @@ class ActionApp(ConfigBaseModel):
           actions:
             - type: apply
               path: setup.yaml
-            - type: create
+            - type: apply
               path: configmap.yaml
+              namespace: default
+            - type: delete
+              path: old-resource.yaml
     """
 
     type: Literal["action"] = "action"
-    actions: list[dict[str, Any]]  # FileActionSpec 형태
+    actions: list[ActionSpec] = Field(
+        ..., description="List of actions to execute (apply/delete operations)"
+    )
     namespace: str | None = None
     context: str | None = Field(
         None, description="Kubernetes context to use (defaults to current context)"
@@ -815,9 +870,14 @@ class ActionApp(ConfigBaseModel):
 
     @field_validator("actions")
     @classmethod
-    def validate_actions(cls, v: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def validate_actions(cls, v: list[ActionSpec]) -> list[ActionSpec]:
         """액션 목록이 비어있지 않은지 확인."""
-        return cls.validate_non_empty_list(v, "actions")
+        if not v:
+            raise ValueError(
+                "ActionApp must have at least one action. "
+                "Add actions with 'type' (apply/delete) and 'path' fields."
+            )
+        return v
 
 
 class ExecApp(ConfigBaseModel):

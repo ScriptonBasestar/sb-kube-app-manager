@@ -325,6 +325,44 @@ apps:
         path: manifests/crd.yaml
 ```
 
+**Troubleshooting**:
+
+**문제**: `❌ Action path not specified` 에러 발생
+
+**원인**: `actions` 리스트의 각 항목에 `path` 필드가 없거나, 잘못된 형식을 사용했습니다.
+
+**해결 방법**:
+
+1. **올바른 형식 확인**: 각 action에 반드시 `path` 필드가 있어야 합니다:
+   ```yaml
+   # ✅ 올바른 형식
+   actions:
+     - type: apply
+       path: manifests/deployment.yaml
+
+   # ❌ 잘못된 형식 (path 없음)
+   actions:
+     - type: apply
+   ```
+
+2. **명령어 vs 파일 경로**: `action` 타입은 YAML 파일 경로를 사용합니다. 명령어를 실행하려면 `exec` 타입을 사용하세요:
+   ```yaml
+   # ❌ 잘못된 사용 (명령어를 path에 넣음)
+   monitoring-setup:
+     type: action
+     actions:
+       - type: apply
+         path: kubectl label node polypia-sheepdog1 topology.kubernetes.io/zone=polypia-sheepdog1
+
+   # ✅ 올바른 사용 (exec 타입 사용)
+   monitoring-setup:
+     type: exec
+     commands:
+       - kubectl label node polypia-sheepdog1 topology.kubernetes.io/zone=polypia-sheepdog1 --overwrite
+   ```
+
+3. **지원되는 action type**: `apply`와 `delete`만 지원됩니다 (`create`는 v0.6.1부터 지원하지 않음)
+
 ______________________________________________________________________
 
 ### 6. `exec` - 커스텀 명령어 실행

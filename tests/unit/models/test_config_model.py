@@ -9,6 +9,7 @@ import pytest
 from sbkube.exceptions import ConfigValidationError
 from sbkube.models.config_model import (
     ActionApp,
+    ActionSpec,
     ExecApp,
     GitApp,
     HelmApp,
@@ -198,6 +199,68 @@ class TestYamlApp:
 # ============================================================================
 
 
+class TestActionSpec:
+    """Tests for ActionSpec model."""
+
+    def test_action_spec_apply_basic(self):
+        """Test ActionSpec with apply type."""
+        action = ActionSpec(type="apply", path="manifests/deployment.yaml")
+        assert action.type == "apply"
+        assert action.path == "manifests/deployment.yaml"
+        assert action.namespace is None
+
+    def test_action_spec_delete_basic(self):
+        """Test ActionSpec with delete type."""
+        action = ActionSpec(type="delete", path="manifests/old-resource.yaml")
+        assert action.type == "delete"
+        assert action.path == "manifests/old-resource.yaml"
+
+    def test_action_spec_with_namespace(self):
+        """Test ActionSpec with custom namespace."""
+        action = ActionSpec(
+            type="apply", path="manifests/service.yaml", namespace="custom-ns"
+        )
+        assert action.namespace == "custom-ns"
+
+    def test_action_spec_default_type(self):
+        """Test ActionSpec defaults to 'apply' type."""
+        action = ActionSpec(path="manifests/configmap.yaml")
+        assert action.type == "apply"
+
+    def test_action_spec_empty_path_validation(self):
+        """Test that empty path raises validation error."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            ActionSpec(type="apply", path="")
+        assert "path cannot be empty" in str(exc_info.value).lower()
+
+    def test_action_spec_whitespace_path_validation(self):
+        """Test that whitespace-only path raises validation error."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            ActionSpec(type="apply", path="   ")
+        assert "path cannot be empty" in str(exc_info.value).lower()
+
+    def test_action_spec_kubectl_command_validation(self):
+        """Test that kubectl command in path raises validation error."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            ActionSpec(
+                type="apply",
+                path="kubectl label node polypia-sheepdog1 topology.kubernetes.io/zone=polypia-sheepdog1",
+            )
+        assert "should be a file path, not a command" in str(exc_info.value).lower()
+        assert "type: exec" in str(exc_info.value).lower()
+
+    def test_action_spec_helm_command_validation(self):
+        """Test that helm command in path raises validation error."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            ActionSpec(type="apply", path="helm install myapp charts/myapp")
+        assert "should be a file path, not a command" in str(exc_info.value).lower()
+
+    def test_action_spec_path_trimming(self):
+        """Test that path is trimmed of whitespace."""
+        action = ActionSpec(type="apply", path="  manifests/deployment.yaml  ")
+        assert action.path == "manifests/deployment.yaml"
+
+
 class TestActionApp:
     """Tests for ActionApp model."""
 
@@ -207,12 +270,14 @@ class TestActionApp:
             type="action",
             actions=[
                 {"type": "apply", "path": "setup.yaml"},
-                {"type": "create", "path": "configmap.yaml"},
+                {"type": "delete", "path": "configmap.yaml"},
             ],
         )
         assert app.type == "action"
         assert len(app.actions) == 2
-        assert app.actions[0]["type"] == "apply"
+        assert app.actions[0].type == "apply"
+        assert app.actions[0].path == "setup.yaml"
+        assert app.actions[1].type == "delete"
 
     def test_action_app_with_namespace(self):
         """Test ActionApp with custom namespace."""
@@ -236,7 +301,45 @@ class TestActionApp:
         """Test that empty actions list raises validation error."""
         with pytest.raises(ConfigValidationError) as exc_info:
             ActionApp(type="action", actions=[])
-        assert "actions cannot be empty" in str(exc_info.value)
+        assert "must have at least one action" in str(exc_info.value).lower()
+
+    def test_action_app_action_with_namespace_override(self):
+        """Test ActionApp with action-level namespace override."""
+        app = ActionApp(
+            type="action",
+            actions=[
+                {"type": "apply", "path": "app.yaml", "namespace": "app-ns"},
+                {"type": "apply", "path": "db.yaml", "namespace": "db-ns"},
+            ],
+            namespace="default-ns",
+        )
+        assert app.namespace == "default-ns"
+        assert app.actions[0].namespace == "app-ns"
+        assert app.actions[1].namespace == "db-ns"
+
+    def test_action_app_invalid_action_missing_path(self):
+        """Test that action without path raises validation error."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            ActionApp(
+                type="action",
+                actions=[{"type": "apply"}],  # Missing 'path'
+            )
+        assert "path" in str(exc_info.value).lower()
+
+    def test_action_app_invalid_action_wrong_command(self):
+        """Test that action with command instead of path raises validation error."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            ActionApp(
+                type="action",
+                actions=[
+                    {
+                        "type": "apply",
+                        "path": "kubectl label node polypia-sheepdog1 topology.kubernetes.io/zone=polypia-sheepdog1",
+                    }
+                ],
+            )
+        assert "should be a file path, not a command" in str(exc_info.value).lower()
+        assert "type: exec" in str(exc_info.value).lower()
 
 
 # ============================================================================

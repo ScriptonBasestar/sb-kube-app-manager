@@ -70,6 +70,55 @@
 
 **Reference**: Issue - Airflow deployment failure with PostgreSQL authentication error
 
+---
+
+**Real-time Progress Tracking for Deployments** (2025-01-04)
+
+- ✅ **NEW**: Rich Progress 바 기반 실시간 진행 상황 표시
+- ✅ **NEW**: `ProgressTracker` 유틸리티 클래스
+- ✅ **NEW**: `--no-progress` 옵션으로 기존 모드 사용 가능
+- ✅ **ENHANCED**: apply 명령어에 progress 바 완전 통합
+- ✅ **ENHANCED**: deploy_helm_app에 progress 지원 추가
+
+**Progress 바 표시**:
+```
+━━━ myapp (helm) ━━━
+⠋ Deploying myapp ━━━━━━━━━━ 1/3 • 0:00:05
+📦 Prepare myapp
+```
+
+**Features**:
+- 각 앱 배포 시 prepare/build/deploy 단계별 진행 상황
+- 스피너 애니메이션으로 작업 진행 표시
+- 경과 시간 표시 (TimeElapsedColumn)
+- M/N 진행률 표시 (1/3, 2/3, 3/3)
+- dry-run 시 자동 비활성화
+
+**New CLI Options**:
+- `sbkube apply --no-progress`: Progress 바 비활성화 (기존 모드)
+
+**New Files**:
+- `sbkube/utils/progress_tracker.py` - Progress tracking utilities
+
+**Updated Files**:
+- `sbkube/commands/apply.py` - Progress 바 통합 + --no-progress 옵션
+- `sbkube/commands/deploy.py` - deploy_helm_app에 progress_tracker 파라미터
+
+**Technical Details**:
+- Rich Progress 라이브러리 활용
+- SpinnerColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn
+- disable 플래그로 CI/CD 환경 지원
+- console_print() 메서드로 progress 중 출력 지원
+- 컨텍스트 매니저 패턴 (track_task)
+
+**User Impact**:
+- 실시간 진행 상황 확인으로 더 나은 UX
+- 여러 앱 배포 시 특히 유용
+- 각 단계 소요 시간 파악 가능
+- 하위 호환성 유지 (--no-progress)
+
+**Reference**: Phase 2 - Real-time deployment progress tracking
+
 ### 🐛 Fixed
 
 **Namespace Inheritance Bug** (2025-11-04)

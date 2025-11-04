@@ -51,9 +51,19 @@ class OutputManager:
 
         Returns:
             마크업이 제거된 순수 텍스트
+
+        Examples:
+            >>> OutputManager._strip_markup("[bold]Hello[/bold]")
+            'Hello'
+            >>> OutputManager._strip_markup("[bold cyan]Title[/bold cyan]")
+            'Title'
+            >>> OutputManager._strip_markup("[dim red]Error[/dim red]")
+            'Error'
         """
-        # Remove Rich markup like [bold], [/bold], [red], [cyan], etc.
-        return re.sub(r"\[/?[a-z_\s]+\]", "", text)
+        # Remove Rich markup including complex styles like [bold cyan], [dim red], RGB colors, etc.
+        # Supports: colors, styles, closing tags, combinations with spaces, RGB, hex colors
+        # Pattern matches [tag], [/tag], [tag with spaces], [RGB(...)], [#hex], etc.
+        return re.sub(r"\[/?[^\]]+\]", "", text)
 
     def print(
         self,

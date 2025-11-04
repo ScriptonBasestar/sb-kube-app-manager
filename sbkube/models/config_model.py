@@ -819,6 +819,8 @@ class ActionSpec(ConfigBaseModel):
     @classmethod
     def validate_path(cls, v: str) -> str:
         """Validate that path is not empty and has reasonable format."""
+        from sbkube.utils.path_resolver import validate_variable_syntax
+
         if not v or not v.strip():
             raise ValueError("Action path cannot be empty")
 

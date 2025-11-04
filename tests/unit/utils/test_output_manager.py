@@ -31,16 +31,36 @@ class TestOutputManager:
 
     def test_strip_markup(self):
         """Test Rich markup removal."""
-        # Test various Rich markup patterns
+        # Test simple markup
         assert OutputManager._strip_markup("[bold]Hello[/bold]") == "Hello"
         assert OutputManager._strip_markup("[red]Error[/red]") == "Error"
+
+        # Test complex composite markup (with spaces)
         assert (
             OutputManager._strip_markup("[bold cyan]━━━ Title ━━━[/bold cyan]")
             == "━━━ Title ━━━"
         )
         assert (
+            OutputManager._strip_markup("[dim red]Critical Error[/dim red]")
+            == "Critical Error"
+        )
+
+        # Test warnings
+        assert (
             OutputManager._strip_markup("[yellow]Warning: test[/yellow]")
             == "Warning: test"
+        )
+
+        # Test markup with uppercase and numbers
+        assert OutputManager._strip_markup("[RGB(255,0,0)]Red Text[/RGB(255,0,0)]") == "Red Text"
+
+        # Test hex colors
+        assert OutputManager._strip_markup("[#FF0000]Red[/#FF0000]") == "Red"
+
+        # Test mixed content
+        assert (
+            OutputManager._strip_markup("[bold]Start[/bold] middle [cyan]end[/cyan]")
+            == "Start middle end"
         )
 
     @patch("sys.stdout", new_callable=StringIO)

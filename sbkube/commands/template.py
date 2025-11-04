@@ -11,16 +11,13 @@ import shutil
 from pathlib import Path
 
 import click
-from rich.console import Console
 
 from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig, YamlApp
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
-from sbkube.utils.output_formatter import OutputFormatter
-
-console = Console()
+from sbkube.utils.output_manager import OutputManager
 
 
 def template_helm_app(
@@ -31,6 +28,7 @@ def template_helm_app(
     build_dir: Path,
     app_config_dir: Path,
     rendered_dir: Path,
+    output: OutputManager,
 ) -> bool:
     """
     Helm 앱을 YAML로 렌더링 (helm template).
@@ -43,11 +41,12 @@ def template_helm_app(
         build_dir: build 디렉토리
         app_config_dir: 앱 설정 디렉토리
         rendered_dir: 렌더링 결과 디렉토리
+        output: OutputManager instance
 
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]📄 Rendering Helm app: {app_name}[/cyan]")
+    output.print(f"[cyan]📄 Rendering Helm app: {app_name}[/cyan]", level="info")
 
     # 1. 차트 경로 결정 (build/ 우선, 없으면 charts/ 또는 로컬)
     chart_path = None
@@ -56,7 +55,7 @@ def template_helm_app(
     build_path = build_dir / app_name
     if build_path.exists() and build_path.is_dir():
         chart_path = build_path
-        console.print(f"  Using built chart: {chart_path}")
+        output.print(f"  Using built chart: {chart_path}", level="info")
     else:
         # build 없으면 원본 차트 사용
         if app.is_remote_chart():
@@ -64,7 +63,7 @@ def template_helm_app(
             source_path = charts_dir / chart_name / chart_name
             if source_path.exists():
                 chart_path = source_path
-                console.print(f"  Using remote chart: {chart_path}")
+                output.print(f"  Using remote chart: {chart_path}", level="info")
         else:
             # 로컬 차트
             if app.chart.startswith("./"):
@@ -76,13 +75,14 @@ def template_helm_app(
 
             if source_path.exists():
                 chart_path = source_path
-                console.print(f"  Using local chart: {chart_path}")
+                output.print(f"  Using local chart: {chart_path}", level="info")
 
     if not chart_path or not chart_path.exists():
-        console.print(f"[red]❌ Chart not found for app: {app_name}[/red]")
-        console.print(
-            "[yellow]💡 Run 'sbkube prepare' and 'sbkube build' first[/yellow]"
+        output.print_error(
+            f"Chart not found for app: {app_name}",
+            app_name=app_name,
         )
+        output.print_warning("Run 'sbkube prepare' and 'sbkube build' first")
         return False
 
     # 2. helm template 명령어 구성
@@ -95,50 +95,49 @@ def template_helm_app(
 
     # values 파일 추가
     if app.values:
-        console.print(f"  Applying {len(app.values)} values files...")
+        output.print(f"  Applying {len(app.values)} values files...", level="info")
         for values_file in app.values:
             values_path = app_config_dir / values_file
             if values_path.exists():
                 helm_cmd.extend(["--values", str(values_path)])
-                console.print(f"    ✓ {values_file}")
+                output.print(f"    ✓ {values_file}", level="info")
             else:
-                console.print(
-                    f"[yellow]    ⚠️ Values file not found: {values_file}[/yellow]"
-                )
+                output.print_warning(f"Values file not found: {values_file}")
 
     # --set 옵션 추가
     if app.set_values:
-        console.print(f"  Applying {len(app.set_values)} set values...")
+        output.print(f"  Applying {len(app.set_values)} set values...", level="info")
         for key, value in app.set_values.items():
             helm_cmd.extend(["--set", f"{key}={value}"])
-            console.print(f"    ✓ {key}={value}")
+            output.print(f"    ✓ {key}={value}", level="info")
 
     # 3. helm template 실행
-    console.print(f"  $ {' '.join(helm_cmd)}")
+    output.print(f"  $ {' '.join(helm_cmd)}", level="info")
     try:
         return_code, stdout, stderr = run_command(helm_cmd, check=False, timeout=60)
 
         if return_code != 0:
-            console.print(
-                f"[red]❌ helm template failed (exit code: {return_code})[/red]"
+            output.print_error(
+                f"helm template failed (exit code: {return_code})",
+                exit_code=return_code,
             )
             if stdout:
-                console.print(f"  [blue]STDOUT:[/blue] {stdout.strip()}")
+                output.print(f"  [blue]STDOUT:[/blue] {stdout.strip()}", level="error")
             if stderr:
-                console.print(f"  [red]STDERR:[/red] {stderr.strip()}")
+                output.print(f"  [red]STDERR:[/red] {stderr.strip()}", level="error")
             return False
 
         # 4. 렌더링된 YAML 저장
         output_file = rendered_dir / f"{app_name}.yaml"
         output_file.write_text(stdout, encoding="utf-8")
-        console.print(f"[green]✅ Rendered YAML saved: {output_file}[/green]")
+        output.print_success(f"Rendered YAML saved: {output_file}")
         return True
 
     except Exception as e:
-        console.print(f"[red]❌ Template rendering failed: {e}[/red]")
+        output.print_error(f"Template rendering failed: {e}", error=str(e))
         import traceback
 
-        console.print(f"[grey]{traceback.format_exc()}[/grey]")
+        output.print(f"[grey]{traceback.format_exc()}[/grey]", level="error")
         return False
 
 
@@ -149,6 +148,7 @@ def template_yaml_app(
     build_dir: Path,
     app_config_dir: Path,
     rendered_dir: Path,
+    output: OutputManager,
 ) -> bool:
     """
     YAML 앱 렌더링 (빌드 디렉토리에서 복사).
@@ -160,19 +160,18 @@ def template_yaml_app(
         build_dir: build 디렉토리
         app_config_dir: 앱 설정 디렉토리
         rendered_dir: 렌더링 결과 디렉토리
+        output: OutputManager instance
 
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]📄 Rendering YAML app: {app_name}[/cyan]")
+    output.print(f"[cyan]📄 Rendering YAML app: {app_name}[/cyan]", level="info")
 
     # build/ 디렉토리에서 YAML 파일 찾기
     build_path = build_dir / app_name
 
     if not build_path.exists():
-        console.print(
-            "[yellow]⚠️ Build directory not found, using original files[/yellow]"
-        )
+        output.print_warning("Build directory not found, using original files")
         # build 없으면 원본 파일 사용
         combined_content = ""
         for file_rel_path in app.files:
@@ -182,14 +181,17 @@ def template_yaml_app(
                 if combined_content:
                     combined_content += "\n---\n"
                 combined_content += content
-                console.print(f"  ✓ {file_rel_path}")
+                output.print(f"  ✓ {file_rel_path}", level="info")
             else:
-                console.print(f"[yellow]  ⚠️ File not found: {file_rel_path}[/yellow]")
+                output.print_warning(f"File not found: {file_rel_path}")
     else:
         # build 디렉토리의 모든 YAML 파일 결합
         yaml_files = list(build_path.glob("*.yaml")) + list(build_path.glob("*.yml"))
         if not yaml_files:
-            console.print(f"[red]❌ No YAML files found in: {build_path}[/red]")
+            output.print_error(
+                f"No YAML files found in: {build_path}",
+                build_path=str(build_path),
+            )
             return False
 
         combined_content = ""
@@ -198,15 +200,15 @@ def template_yaml_app(
             if combined_content:
                 combined_content += "\n---\n"
             combined_content += content
-            console.print(f"  ✓ {yaml_file.name}")
+            output.print(f"  ✓ {yaml_file.name}", level="info")
 
     if combined_content:
         output_file = rendered_dir / f"{app_name}.yaml"
         output_file.write_text(combined_content, encoding="utf-8")
-        console.print(f"[green]✅ Rendered YAML saved: {output_file}[/green]")
+        output.print_success(f"Rendered YAML saved: {output_file}")
         return True
 
-    console.print("[red]❌ No content to render[/red]")
+    output.print_error("No content to render")
     return False
 
 
@@ -217,6 +219,7 @@ def template_http_app(
     build_dir: Path,
     app_config_dir: Path,
     rendered_dir: Path,
+    output: OutputManager,
 ) -> bool:
     """
     HTTP 앱 렌더링 (다운로드된 파일 복사).
@@ -228,11 +231,12 @@ def template_http_app(
         build_dir: build 디렉토리
         app_config_dir: 앱 설정 디렉토리
         rendered_dir: 렌더링 결과 디렉토리
+        output: OutputManager instance
 
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]📄 Rendering HTTP app: {app_name}[/cyan]")
+    output.print(f"[cyan]📄 Rendering HTTP app: {app_name}[/cyan]", level="info")
 
     # build/ 디렉토리에서 파일 찾기
     build_path = build_dir / app_name
@@ -241,29 +245,35 @@ def template_http_app(
         # build 디렉토리의 파일 복사
         source_files = list(build_path.glob("*"))
         if not source_files:
-            console.print(f"[red]❌ No files found in: {build_path}[/red]")
+            output.print_error(
+                f"No files found in: {build_path}",
+                build_path=str(build_path),
+            )
             return False
 
         for source_file in source_files:
             if source_file.is_file():
                 dest_file = rendered_dir / f"{app_name}-{source_file.name}"
                 shutil.copy2(source_file, dest_file)
-                console.print(f"  ✓ {source_file.name} → {dest_file.name}")
+                output.print(f"  ✓ {source_file.name} → {dest_file.name}", level="info")
 
-        console.print("[green]✅ HTTP app files copied[/green]")
+        output.print_success("HTTP app files copied")
         return True
     else:
         # build 없으면 원본 다운로드 파일 사용
         source_file = app_config_dir / app.dest
 
         if not source_file.exists():
-            console.print(f"[red]❌ Downloaded file not found: {source_file}[/red]")
-            console.print("[yellow]💡 Run 'sbkube prepare' first[/yellow]")
+            output.print_error(
+                f"Downloaded file not found: {source_file}",
+                file=str(source_file),
+            )
+            output.print_warning("Run 'sbkube prepare' first")
             return False
 
         dest_file = rendered_dir / f"{app_name}-{source_file.name}"
         shutil.copy2(source_file, dest_file)
-        console.print(f"[green]✅ HTTP app file copied: {dest_file}[/green]")
+        output.print_success(f"HTTP app file copied: {dest_file}")
         return True
 
 
@@ -322,22 +332,14 @@ def cmd(
     - 렌더링된 YAML을 .sbkube/rendered/ 디렉토리에 저장
     - 배포 전 미리보기 및 CI/CD 검증용
     """
-    # Get output format from context
+    # Initialize OutputManager
     output_format = ctx.obj.get("format", "human")
-    formatter = OutputFormatter(format_type=output_format)
+    output = OutputManager(format_type=output_format)
 
-    # Set console quiet mode for non-human formats
-    global console
-    if output_format != "human":
-        console = Console(quiet=True)
-
-    if output_format == "human":
-        console.print("[bold blue]✨ SBKube `template` 시작 ✨[/bold blue]")
-    else:
-        pass  # Suppress start message in LLM mode
+    output.print("[bold blue]✨ SBKube `template` 시작 ✨[/bold blue]", level="info")
 
     if dry_run:
-        console.print("[yellow]🔍 Dry-run mode enabled[/yellow]")
+        output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="info")
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
@@ -368,30 +370,31 @@ def cmd(
 
     # rendered 디렉토리 생성
     RENDERED_DIR.mkdir(parents=True, exist_ok=True)
-    console.print(f"[cyan]📁 Output directory: {RENDERED_DIR}[/cyan]")
+    output.print(f"[cyan]📁 Output directory: {RENDERED_DIR}[/cyan]", level="info")
 
     # 각 앱 그룹 처리
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
-        console.print(
-            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
-        )
+        output.print_section(f"Processing app group: {APP_CONFIG_DIR.name}")
 
         config_file_path = APP_CONFIG_DIR / config_file_name
 
         # 설정 파일 로드
         if not config_file_path.exists():
-            console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+            output.print_error(
+                f"Config file not found: {config_file_path}",
+                config_path=str(config_file_path),
+            )
             overall_success = False
             continue
 
-        console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info")
         config_data = load_config_file(config_file_path)
 
         try:
             config = SBKubeConfig(**config_data)
         except Exception as e:
-            console.print(f"[red]❌ Invalid config file: {e}[/red]")
+            output.print_error(f"Invalid config file: {e}", error=str(e))
             overall_success = False
             continue
 
@@ -405,11 +408,11 @@ def cmd(
         # 글로벌 pre-template 훅 실행
         if config.hooks and "template" in config.hooks:
             template_hooks = config.hooks["template"].model_dump()
-            console.print("[cyan]🪝 Executing global pre-template hooks...[/cyan]")
+            output.print("[cyan]🪝 Executing global pre-template hooks...[/cyan]", level="info")
             if not hook_executor.execute_command_hooks(
                 template_hooks, "pre", "template"
             ):
-                console.print("[red]❌ Pre-template hook failed[/red]")
+                output.print_error("Pre-template hook failed")
                 overall_success = False
                 continue
 
@@ -419,7 +422,7 @@ def cmd(
         if app_name:
             # 특정 앱만 렌더링
             if app_name not in config.apps:
-                console.print(f"[red]❌ App not found: {app_name}[/red]")
+                output.print_error(f"App not found: {app_name}", app_name=app_name)
                 overall_success = False
                 continue
             apps_to_template = [app_name]
@@ -437,15 +440,17 @@ def cmd(
                 app = config.apps[app_name_iter]
 
                 if not app.enabled:
-                    console.print(
-                        f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]"
+                    output.print(
+                        f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]",
+                        level="info",
                     )
                     continue
 
                 # 앱별 pre-template 훅 실행
                 if hasattr(app, "hooks") and app.hooks:
-                    console.print(
-                        f"[cyan]🪝 Executing pre-template hook for {app_name_iter}...[/cyan]"
+                    output.print(
+                        f"[cyan]🪝 Executing pre-template hook for {app_name_iter}...[/cyan]",
+                        level="info",
                     )
                     if not hook_executor.execute_app_hook(
                         app_name_iter,
@@ -453,8 +458,9 @@ def cmd(
                         "pre_template",
                         context={"namespace": config.namespace},
                     ):
-                        console.print(
-                            f"[red]❌ Pre-template hook failed for {app_name_iter}[/red]"
+                        output.print_error(
+                            f"Pre-template hook failed for {app_name_iter}",
+                            app_name=app_name_iter,
                         )
                         failed = True
                         break
@@ -463,8 +469,9 @@ def cmd(
 
                 if isinstance(app, HookApp):
                     # HookApp은 template 단계 불필요 (deploy 시에만 실행)
-                    console.print(
-                        f"[yellow]⏭️  HookApp does not support template: {app_name_iter}[/yellow]"
+                    output.print(
+                        f"[yellow]⏭️  HookApp does not support template: {app_name_iter}[/yellow]",
+                        level="info",
                     )
                     success = True
                 elif isinstance(app, HelmApp):
@@ -476,6 +483,7 @@ def cmd(
                         BUILD_DIR,
                         APP_CONFIG_DIR,
                         RENDERED_DIR,
+                        output,
                     )
                 elif isinstance(app, YamlApp):
                     success = template_yaml_app(
@@ -485,6 +493,7 @@ def cmd(
                         BUILD_DIR,
                         APP_CONFIG_DIR,
                         RENDERED_DIR,
+                        output,
                     )
                 elif isinstance(app, HttpApp):
                     success = template_http_app(
@@ -494,10 +503,12 @@ def cmd(
                         BUILD_DIR,
                         APP_CONFIG_DIR,
                         RENDERED_DIR,
+                        output,
                     )
                 else:
-                    console.print(
-                        f"[yellow]⏭️  App type '{app.type}' does not support template: {app_name_iter}[/yellow]"
+                    output.print(
+                        f"[yellow]⏭️  App type '{app.type}' does not support template: {app_name_iter}[/yellow]",
+                        level="info",
                     )
                     success = True  # 건너뛰어도 성공으로 간주
 
@@ -505,8 +516,9 @@ def cmd(
                     failed = True
                     # 앱별 on_template_failure 훅 실행
                     if hasattr(app, "hooks") and app.hooks:
-                        console.print(
-                            f"[yellow]🪝 Executing on-failure hook for {app_name_iter}...[/yellow]"
+                        output.print(
+                            f"[yellow]🪝 Executing on-failure hook for {app_name_iter}...[/yellow]",
+                            level="warning",
                         )
                         hook_executor.execute_app_hook(
                             app_name_iter,
@@ -518,8 +530,9 @@ def cmd(
 
                 # 앱별 post-template 훅 실행
                 if hasattr(app, "hooks") and app.hooks:
-                    console.print(
-                        f"[cyan]🪝 Executing post-template hook for {app_name_iter}...[/cyan]"
+                    output.print(
+                        f"[cyan]🪝 Executing post-template hook for {app_name_iter}...[/cyan]",
+                        level="info",
                     )
                     if not hook_executor.execute_app_hook(
                         app_name_iter,
@@ -527,8 +540,9 @@ def cmd(
                         "post_template",
                         context={"namespace": config.namespace},
                     ):
-                        console.print(
-                            f"[red]❌ Post-template hook failed for {app_name_iter}[/red]"
+                        output.print_error(
+                            f"Post-template hook failed for {app_name_iter}",
+                            app_name=app_name_iter,
                         )
                         failed = True
                         break
@@ -539,19 +553,20 @@ def cmd(
             # 글로벌 post-template 훅 실행 (성공 시에만)
             if not failed and config.hooks and "template" in config.hooks:
                 template_hooks = config.hooks["template"].model_dump()
-                console.print("[cyan]🪝 Executing global post-template hooks...[/cyan]")
+                output.print("[cyan]🪝 Executing global post-template hooks...[/cyan]", level="info")
                 if not hook_executor.execute_command_hooks(
                     template_hooks, "post", "template"
                 ):
-                    console.print("[red]❌ Post-template hook failed[/red]")
+                    output.print_error("Post-template hook failed")
                     failed = True
 
         except Exception:
             # 글로벌 on_failure 훅 실행
             if config.hooks and "template" in config.hooks:
                 template_hooks = config.hooks["template"].model_dump()
-                console.print(
-                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]"
+                output.print(
+                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]",
+                    level="warning",
                 )
                 hook_executor.execute_command_hooks(
                     template_hooks, "on_failure", "template"
@@ -562,57 +577,56 @@ def cmd(
         if failed:
             if config.hooks and "template" in config.hooks:
                 template_hooks = config.hooks["template"].model_dump()
-                console.print(
-                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]"
+                output.print(
+                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]",
+                    level="warning",
                 )
                 hook_executor.execute_command_hooks(
                     template_hooks, "on_failure", "template"
                 )
 
         # 이 앱 그룹 결과 출력
-        console.print(
-            f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' templated: {success_count}/{total_count} apps[/bold green]"
+        output.print_success(
+            f"App group '{APP_CONFIG_DIR.name}' templated: {success_count}/{total_count} apps",
+            app_group=APP_CONFIG_DIR.name,
+            success_count=success_count,
+            total_count=total_count,
         )
-        console.print(f"[cyan]📁 Rendered files saved to: {RENDERED_DIR}[/cyan]")
+        output.print(f"[cyan]📁 Rendered files saved to: {RENDERED_DIR}[/cyan]", level="info")
 
         if success_count < total_count or failed:
             overall_success = False
 
     # 전체 결과
     if not overall_success:
-        if output_format == "human":
-            console.print("\n[bold red]❌ Some app groups failed to template[/bold red]")
-        else:
-            result = formatter.format_deployment_result(
-                status="failed",
-                summary={
-                    "app_groups_processed": len(app_config_dirs),
-                    "status": "failed",
-                },
-                deployments=[],
-                next_steps=["Check error messages and fix configuration", "Verify chart paths and values files"],
-                errors=["Some app groups failed to template"],
-            )
-            formatter.print_output(result)
+        output.print("\n[bold red]❌ Some app groups failed to template[/bold red]", level="error")
+        output.finalize(
+            status="failed",
+            summary={
+                "app_groups_processed": len(app_config_dirs),
+                "status": "failed",
+            },
+            next_steps=[
+                "Check error messages and fix configuration",
+                "Verify chart paths and values files",
+            ],
+            errors=["Some app groups failed to template"],
+        )
         raise click.Abort()
     else:
-        if output_format == "human":
-            console.print(
-                "\n[bold green]🎉 All app groups templated successfully![/bold green]"
-            )
-        else:
-            result = formatter.format_deployment_result(
-                status="success",
-                summary={
-                    "app_groups_processed": len(app_config_dirs),
-                    "rendered_files": str(RENDERED_DIR),
-                    "status": "success",
-                },
-                deployments=[],
-                next_steps=[
-                    f"Review rendered files: ls {RENDERED_DIR}",
-                    f"Deploy with: sbkube deploy --app-dir {app_config_dirs[0].name}",
-                ],
-                errors=[],
-            )
-            formatter.print_output(result)
+        output.print(
+            "\n[bold green]🎉 All app groups templated successfully![/bold green]",
+            level="success",
+        )
+        output.finalize(
+            status="success",
+            summary={
+                "app_groups_processed": len(app_config_dirs),
+                "rendered_files": str(RENDERED_DIR),
+                "status": "success",
+            },
+            next_steps=[
+                f"Review rendered files: ls {RENDERED_DIR}",
+                f"Deploy with: sbkube deploy --app-dir {app_config_dirs[0].name}",
+            ],
+        )

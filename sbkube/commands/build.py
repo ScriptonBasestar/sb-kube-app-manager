@@ -12,15 +12,12 @@ import shutil
 from pathlib import Path
 
 import click
-from rich.console import Console
 
 from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
-from sbkube.utils.output_formatter import OutputFormatter
-
-console = Console()
+from sbkube.utils.output_manager import OutputManager
 
 
 def build_helm_app(
@@ -30,6 +27,7 @@ def build_helm_app(
     charts_dir: Path,
     build_dir: Path,
     app_config_dir: Path,
+    output: OutputManager,
     dry_run: bool = False,
 ) -> bool:
     """
@@ -42,12 +40,13 @@ def build_helm_app(
         charts_dir: charts 디렉토리
         build_dir: build 디렉토리
         app_config_dir: 앱 설정 디렉토리
+        output: OutputManager instance
         dry_run: dry-run 모드 (실제 파일 복사/수정하지 않음)
 
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]🔨 Building Helm app: {app_name}[/cyan]")
+    output.print(f"[cyan]🔨 Building Helm app: {app_name}[/cyan]", level="info")
 
     # 1. 소스 차트 경로 결정
     if app.is_remote_chart():
@@ -56,8 +55,11 @@ def build_helm_app(
         source_path = charts_dir / chart_name / chart_name
 
         if not source_path.exists():
-            console.print(f"[red]❌ Remote chart not found: {source_path}[/red]")
-            console.print("[yellow]💡 Run 'sbkube prepare' first[/yellow]")
+            output.print_error(
+                f"Remote chart not found: {source_path}",
+                chart_path=str(source_path),
+            )
+            output.print_warning("Run 'sbkube prepare' first")
             return False
     else:
         # Local chart: app_config_dir 기준
@@ -69,27 +71,32 @@ def build_helm_app(
             source_path = app_config_dir / app.chart
 
         if not source_path.exists():
-            console.print(f"[red]❌ Local chart not found: {source_path}[/red]")
+            output.print_error(
+                f"Local chart not found: {source_path}",
+                chart_path=str(source_path),
+            )
             return False
 
     # 2. 빌드 디렉토리로 복사
     dest_path = build_dir / app_name
 
     if dry_run:
-        console.print(
-            f"[yellow]🔍 [DRY-RUN] Would copy chart: {source_path} → {dest_path}[/yellow]"
+        output.print(
+            f"[yellow]🔍 [DRY-RUN] Would copy chart: {source_path} → {dest_path}[/yellow]",
+            level="info",
         )
         if dest_path.exists():
-            console.print(
-                "[yellow]🔍 [DRY-RUN] Would remove existing build directory[/yellow]"
+            output.print(
+                "[yellow]🔍 [DRY-RUN] Would remove existing build directory[/yellow]",
+                level="info",
             )
     else:
         # 기존 디렉토리 삭제
         if dest_path.exists():
-            console.print(f"  Removing existing build directory: {dest_path}")
+            output.print(f"  Removing existing build directory: {dest_path}", level="info")
             shutil.rmtree(dest_path)
 
-        console.print(f"  Copying chart: {source_path} → {dest_path}")
+        output.print(f"  Copying chart: {source_path} → {dest_path}", level="info")
         shutil.copytree(source_path, dest_path)
 
     # 3. Check for override directory and warn if not configured
@@ -97,9 +104,9 @@ def build_helm_app(
 
     # 3.1. Warn if override directory exists but not configured
     if overrides_base.exists() and overrides_base.is_dir() and not app.overrides:
-        console.print()
-        console.print(
-            f"[yellow]⚠️  Override directory found but not configured: {app_name}[/yellow]"
+        output.print("", level="warning")
+        output.print_warning(
+            f"Override directory found but not configured: {app_name}"
         )
 
         try:
@@ -107,47 +114,51 @@ def build_helm_app(
         except ValueError:
             rel_path = overrides_base
 
-        console.print(f"[yellow]    Location: {rel_path}[/yellow]")
-        console.print("[yellow]    Files:[/yellow]")
+        output.print(f"[yellow]    Location: {rel_path}[/yellow]", level="warning")
+        output.print("[yellow]    Files:[/yellow]", level="warning")
 
         # Show first few files
         override_files = [f for f in overrides_base.rglob("*") if f.is_file()]
         for f in override_files[:5]:
             rel_file_path = f.relative_to(overrides_base)
-            console.print(f"[yellow]      - {rel_file_path}[/yellow]")
+            output.print(f"[yellow]      - {rel_file_path}[/yellow]", level="warning")
 
         if len(override_files) > 5:
-            console.print(
-                f"[yellow]      ... and {len(override_files) - 5} more files[/yellow]"
+            output.print(
+                f"[yellow]      ... and {len(override_files) - 5} more files[/yellow]",
+                level="warning",
             )
 
-        console.print(
-            "[yellow]    💡 To apply these overrides, add to config.yaml:[/yellow]"
+        output.print(
+            "[yellow]    💡 To apply these overrides, add to config.yaml:[/yellow]",
+            level="warning",
         )
-        console.print(f"[yellow]       {app_name}:[/yellow]")
-        console.print("[yellow]         overrides:[/yellow]")
+        output.print(f"[yellow]       {app_name}:[/yellow]", level="warning")
+        output.print("[yellow]         overrides:[/yellow]", level="warning")
         if override_files:
             # Show up to 3 files with full path mapping explanation
             for i, f in enumerate(override_files[:3]):
                 rel_file_path = f.relative_to(overrides_base)
-                console.print(f"[yellow]           - {rel_file_path}[/yellow]")
+                output.print(f"[yellow]           - {rel_file_path}[/yellow]", level="warning")
                 if i == 0:
-                    console.print(
-                        f"[dim yellow]             # → build/{app_name}/{rel_file_path}[/dim yellow]"
+                    output.print(
+                        f"[dim yellow]             # → build/{app_name}/{rel_file_path}[/dim yellow]",
+                        level="warning",
                     )
             if len(override_files) > 3:
-                console.print(
-                    f"[yellow]           # ... and {len(override_files) - 3} more[/yellow]"
+                output.print(
+                    f"[yellow]           # ... and {len(override_files) - 3} more[/yellow]",
+                    level="warning",
                 )
-        console.print()
+        output.print("", level="warning")
 
     # 3.2. Apply overrides if configured
     if app.overrides:
-        console.print(f"  Processing {len(app.overrides)} override patterns...")
+        output.print(f"  Processing {len(app.overrides)} override patterns...", level="info")
 
         if not overrides_base.exists():
-            console.print(
-                f"[yellow]⚠️ Overrides directory not found: {overrides_base}[/yellow]"
+            output.print_warning(
+                f"Overrides directory not found: {overrides_base}"
             )
         else:
             total_files_copied = 0
@@ -159,13 +170,14 @@ def build_helm_app(
                     matched_files = list(overrides_base.glob(override_pattern))
 
                     if not matched_files:
-                        console.print(
-                            f"[yellow]    ⚠️ No files matched pattern: {override_pattern}[/yellow]"
+                        output.print_warning(
+                            f"    No files matched pattern: {override_pattern}"
                         )
                         continue
 
-                    console.print(
-                        f"    Pattern '{override_pattern}' matched {len(matched_files)} files"
+                    output.print(
+                        f"    Pattern '{override_pattern}' matched {len(matched_files)} files",
+                        level="info",
                     )
 
                     for src_file in matched_files:
@@ -176,13 +188,14 @@ def build_helm_app(
 
                             # Create destination directory
                             if dry_run:
-                                console.print(
-                                    f"[yellow]      🔍 [DRY-RUN] Would override: {override_rel_path}[/yellow]"
+                                output.print(
+                                    f"[yellow]      🔍 [DRY-RUN] Would override: {override_rel_path}[/yellow]",
+                                    level="info",
                                 )
                             else:
                                 dst_file.parent.mkdir(parents=True, exist_ok=True)
                                 shutil.copy2(src_file, dst_file)
-                                console.print(f"      ✓ {override_rel_path}")
+                                output.print(f"      ✓ {override_rel_path}", level="info")
                                 total_files_copied += 1
                 else:
                     # Exact file path - existing behavior
@@ -191,57 +204,60 @@ def build_helm_app(
 
                     if src_file.exists() and src_file.is_file():
                         if dry_run:
-                            console.print(
-                                f"[yellow]    🔍 [DRY-RUN] Would override: {override_pattern}[/yellow]"
+                            output.print(
+                                f"[yellow]    🔍 [DRY-RUN] Would override: {override_pattern}[/yellow]",
+                                level="info",
                             )
                         else:
                             # 대상 디렉토리 생성
                             dst_file.parent.mkdir(parents=True, exist_ok=True)
                             shutil.copy2(src_file, dst_file)
-                            console.print(f"    ✓ Override: {override_pattern}")
+                            output.print(f"    ✓ Override: {override_pattern}", level="info")
                             total_files_copied += 1
                     else:
-                        console.print(
-                            f"[yellow]    ⚠️ Override file not found: {src_file}[/yellow]"
+                        output.print_warning(
+                            f"    Override file not found: {src_file}"
                         )
 
             if total_files_copied > 0:
-                console.print(f"  Total files copied: {total_files_copied}")
+                output.print(f"  Total files copied: {total_files_copied}", level="info")
 
     # 4. Removes 적용
     if app.removes:
-        console.print(f"  Removing {len(app.removes)} patterns...")
+        output.print(f"  Removing {len(app.removes)} patterns...", level="info")
         for remove_pattern in app.removes:
             remove_target = dest_path / remove_pattern
 
             if dry_run:
                 if remove_target.exists():
                     if remove_target.is_dir():
-                        console.print(
-                            f"[yellow]    🔍 [DRY-RUN] Would remove directory: {remove_pattern}[/yellow]"
+                        output.print(
+                            f"[yellow]    🔍 [DRY-RUN] Would remove directory: {remove_pattern}[/yellow]",
+                            level="info",
                         )
                     elif remove_target.is_file():
-                        console.print(
-                            f"[yellow]    🔍 [DRY-RUN] Would remove file: {remove_pattern}[/yellow]"
+                        output.print(
+                            f"[yellow]    🔍 [DRY-RUN] Would remove file: {remove_pattern}[/yellow]",
+                            level="info",
                         )
                 else:
-                    console.print(
-                        f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]"
+                    output.print_warning(
+                        f"    Remove target not found: {remove_pattern}"
                     )
             else:
                 if remove_target.exists():
                     if remove_target.is_dir():
                         shutil.rmtree(remove_target)
-                        console.print(f"    ✓ Removed directory: {remove_pattern}")
+                        output.print(f"    ✓ Removed directory: {remove_pattern}", level="info")
                     elif remove_target.is_file():
                         remove_target.unlink()
-                        console.print(f"    ✓ Removed file: {remove_pattern}")
+                        output.print(f"    ✓ Removed file: {remove_pattern}", level="info")
                 else:
-                    console.print(
-                        f"[yellow]    ⚠️ Remove target not found: {remove_pattern}[/yellow]"
+                    output.print_warning(
+                        f"    Remove target not found: {remove_pattern}"
                     )
 
-    console.print(f"[green]✅ Helm app built: {app_name}[/green]")
+    output.print_success(f"Helm app built: {app_name}")
     return True
 
 
@@ -251,6 +267,7 @@ def build_http_app(
     base_dir: Path,
     build_dir: Path,
     app_config_dir: Path,
+    output: OutputManager,
     dry_run: bool = False,
 ) -> bool:
     """
@@ -262,34 +279,39 @@ def build_http_app(
         base_dir: 프로젝트 루트
         build_dir: build 디렉토리
         app_config_dir: 앱 설정 디렉토리
+        output: OutputManager instance
         dry_run: dry-run 모드 (실제 파일 복사하지 않음)
 
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]🔨 Building HTTP app: {app_name}[/cyan]")
+    output.print(f"[cyan]🔨 Building HTTP app: {app_name}[/cyan]", level="info")
 
     # 다운로드된 파일 위치 (prepare 단계에서 생성됨)
     source_file = app_config_dir / app.dest
 
     if not source_file.exists():
-        console.print(f"[red]❌ Downloaded file not found: {source_file}[/red]")
-        console.print("[yellow]💡 Run 'sbkube prepare' first[/yellow]")
+        output.print_error(
+            f"Downloaded file not found: {source_file}",
+            file=str(source_file),
+        )
+        output.print_warning("Run 'sbkube prepare' first")
         return False
 
     # build/ 디렉토리로 복사
     dest_file = build_dir / app_name / source_file.name
 
     if dry_run:
-        console.print(
-            f"[yellow]🔍 [DRY-RUN] Would copy: {source_file} → {dest_file}[/yellow]"
+        output.print(
+            f"[yellow]🔍 [DRY-RUN] Would copy: {source_file} → {dest_file}[/yellow]",
+            level="info",
         )
     else:
         dest_file.parent.mkdir(parents=True, exist_ok=True)
-        console.print(f"  Copying: {source_file} → {dest_file}")
+        output.print(f"  Copying: {source_file} → {dest_file}", level="info")
         shutil.copy2(source_file, dest_file)
 
-    console.print(f"[green]✅ HTTP app built: {app_name}[/green]")
+    output.print_success(f"HTTP app built: {app_name}")
     return True
 
 
@@ -341,17 +363,11 @@ def cmd(
     - Overrides 적용 (overrides/<app-name>/* → build/<app-name>/*)
     - Removes 적용 (불필요한 파일/디렉토리 삭제)
     """
-    # Get output format from context
+    # Initialize OutputManager
     output_format = ctx.obj.get("format", "human")
-    formatter = OutputFormatter(format_type=output_format)
+    output = OutputManager(format_type=output_format)
 
-    # Set console quiet mode for non-human formats
-    global console
-    if output_format != "human":
-        console = Console(quiet=True)
-
-    if output_format == "human":
-        console.print("[bold blue]✨ SBKube `build` 시작 ✨[/bold blue]")
+    output.print("[bold blue]✨ SBKube `build` 시작 ✨[/bold blue]", level="info")
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
@@ -375,25 +391,26 @@ def cmd(
     # 각 앱 그룹 처리
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
-        console.print(
-            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
-        )
+        output.print_section(f"Processing app group: {APP_CONFIG_DIR.name}")
 
         config_file_path = APP_CONFIG_DIR / config_file_name
 
         # 설정 파일 로드
         if not config_file_path.exists():
-            console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+            output.print_error(
+                f"Config file not found: {config_file_path}",
+                config_path=str(config_file_path),
+            )
             overall_success = False
             continue
 
-        console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info")
         config_data = load_config_file(config_file_path)
 
         try:
             config = SBKubeConfig(**config_data)
         except Exception as e:
-            console.print(f"[red]❌ Invalid config file: {e}[/red]")
+            output.print_error(f"Invalid config file: {e}", error=str(e))
             overall_success = False
             continue
 
@@ -403,7 +420,7 @@ def cmd(
         if app_name:
             # 특정 앱만 빌드
             if app_name not in config.apps:
-                console.print(f"[red]❌ App not found: {app_name}[/red]")
+                output.print_error(f"App not found: {app_name}", app_name=app_name)
                 overall_success = False
                 continue
             apps_to_build = [app_name]
@@ -426,7 +443,7 @@ def cmd(
                 hook_phase="pre",
                 command_name="build",
             ):
-                console.print("[red]❌ Pre-build hook failed[/red]")
+                output.print_error("Pre-build hook failed")
                 overall_success = False
                 continue
 
@@ -439,8 +456,9 @@ def cmd(
             app = config.apps[app_name_iter]
 
             if not app.enabled:
-                console.print(
-                    f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]"
+                output.print(
+                    f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]",
+                    level="info",
                 )
                 continue
 
@@ -453,8 +471,9 @@ def cmd(
                     hook_type="pre_build",
                     context={},
                 ):
-                    console.print(
-                        f"[red]❌ Pre-build hook failed for app: {app_name_iter}[/red]"
+                    output.print_error(
+                        f"Pre-build hook failed for app: {app_name_iter}",
+                        app_name=app_name_iter,
                     )
                     build_failed = True
                     continue
@@ -463,8 +482,9 @@ def cmd(
 
             if isinstance(app, HookApp):
                 # HookApp은 build 단계 불필요 (deploy 시에만 실행)
-                console.print(
-                    f"[yellow]⏭️  HookApp does not require build: {app_name_iter}[/yellow]"
+                output.print(
+                    f"[yellow]⏭️  HookApp does not require build: {app_name_iter}[/yellow]",
+                    level="info",
                 )
                 success = True
             elif isinstance(app, HelmApp):
@@ -477,20 +497,23 @@ def cmd(
                         CHARTS_DIR,
                         BUILD_DIR,
                         APP_CONFIG_DIR,
+                        output,
                         dry_run,
                     )
                 else:
-                    console.print(
-                        f"[yellow]⏭️  Skipping Helm app (no customization): {app_name_iter}[/yellow]"
+                    output.print(
+                        f"[yellow]⏭️  Skipping Helm app (no customization): {app_name_iter}[/yellow]",
+                        level="info",
                     )
                     success = True  # 건너뛰어도 성공으로 간주
             elif isinstance(app, HttpApp):
                 success = build_http_app(
-                    app_name_iter, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, dry_run
+                    app_name_iter, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, output, dry_run
                 )
             else:
-                console.print(
-                    f"[yellow]⏭️  App type '{app.type}' does not require build: {app_name_iter}[/yellow]"
+                output.print(
+                    f"[yellow]⏭️  App type '{app.type}' does not require build: {app_name_iter}[/yellow]",
+                    level="info",
                 )
                 success = True  # 건너뛰어도 성공으로 간주
 
@@ -533,8 +556,11 @@ def cmd(
                 )
 
         # 이 앱 그룹 결과 출력
-        console.print(
-            f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' built: {success_count}/{total_count} apps[/bold green]"
+        output.print_success(
+            f"App group '{APP_CONFIG_DIR.name}' built: {success_count}/{total_count} apps",
+            app_group=APP_CONFIG_DIR.name,
+            success_count=success_count,
+            total_count=total_count,
         )
 
         if success_count < total_count:
@@ -542,29 +568,21 @@ def cmd(
 
     # 전체 결과
     if not overall_success:
-        if output_format == "human":
-            console.print("\n[bold red]❌ Some app groups failed to build[/bold red]")
-        else:
-            result = formatter.format_deployment_result(
-                status="failed",
-                summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
-                deployments=[],
-                next_steps=["Check error messages above and fix configuration"],
-                errors=["Some apps failed to build"],
-            )
-            formatter.print_output(result)
+        output.print("\n[bold red]❌ Some app groups failed to build[/bold red]", level="error")
+        output.finalize(
+            status="failed",
+            summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
+            next_steps=["Check error messages above and fix configuration"],
+            errors=["Some apps failed to build"],
+        )
         raise click.Abort()
     else:
-        if output_format == "human":
-            console.print(
-                "\n[bold green]🎉 All app groups built successfully![/bold green]"
-            )
-        else:
-            result = formatter.format_deployment_result(
-                status="success",
-                summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
-                deployments=[],
-                next_steps=["Run 'sbkube deploy' to deploy to cluster"],
-                errors=[],
-            )
-            formatter.print_output(result)
+        output.print(
+            "\n[bold green]🎉 All app groups built successfully![/bold green]",
+            level="success",
+        )
+        output.finalize(
+            status="success",
+            summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
+            next_steps=["Run 'sbkube deploy' to deploy to cluster"],
+        )

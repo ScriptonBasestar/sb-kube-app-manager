@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any
 
 import click
-from rich.console import Console
 
 from sbkube.exceptions import KubernetesConnectionError
 from sbkube.models.config_model import (
@@ -47,10 +46,7 @@ from sbkube.utils.cluster_config import (
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
-from sbkube.utils.output_formatter import OutputFormatter
-
-console = Console()
-
+from sbkube.utils.output_manager import OutputManager
 
 _CONNECTION_ERROR_KEYWORDS: tuple[str, ...] = (
     "connection refused",
@@ -92,6 +88,7 @@ def deploy_helm_app(
     charts_dir: Path,
     build_dir: Path,
     app_config_dir: Path,
+    output: OutputManager,
     kubeconfig: str | None = None,
     context: str | None = None,
     dry_run: bool = False,
@@ -109,6 +106,7 @@ def deploy_helm_app(
         charts_dir: charts 디렉토리
         build_dir: build 디렉토리
         app_config_dir: 앱 설정 디렉토리
+        output: OutputManager 인스턴스
         kubeconfig: kubeconfig 파일 경로
         context: kubectl context 이름
         dry_run: dry-run 모드
@@ -119,6 +117,7 @@ def deploy_helm_app(
     Returns:
         성공 여부
     """
+    console = output.get_console()
     # Progress tracking setup
     current_step = 0
 
@@ -133,7 +132,7 @@ def deploy_helm_app(
             )
 
     if not progress_tracker:
-        console.print(f"[cyan]🚀 Deploying Helm app: {app_name}[/cyan]")
+        output.print(f"[cyan]🚀 Deploying Helm app: {app_name}[/cyan]")
 
     _update_progress("Resolving chart path")
 
@@ -163,8 +162,8 @@ def deploy_helm_app(
             )  # .sbkube/charts/redis/redis
 
             if not source_path.exists():
-                console.print(f"[red]❌ Chart not found: {source_path}[/red]")
-                console.print("[yellow]💡 Run 'sbkube prepare' first[/yellow]")
+                output.print_error(f"Chart not found: {source_path}")
+                output.print_warning("Run 'sbkube prepare' first")
                 return False
             chart_path = source_path
         else:
@@ -180,7 +179,7 @@ def deploy_helm_app(
                 source_path = app_config_dir / app.chart
 
             if not source_path.exists():
-                console.print(f"[red]❌ Local chart not found: {source_path}[/red]")
+                output.print_error(f"Local chart not found: {source_path}")
                 return False
 
             chart_path = source_path
@@ -222,8 +221,9 @@ def deploy_helm_app(
                 )
                 create_return_code, _, create_stderr = run_command(create_cmd)
                 if create_return_code != 0:
-                    console.print(
-                        f"[red]❌ Failed to create namespace '{namespace}': {create_stderr}[/red]"
+                    output.print_error(
+                        f"Failed to create namespace '{namespace}'",
+                        error=create_stderr
                     )
                     return False
 
@@ -306,7 +306,7 @@ def deploy_helm_app(
         reason = _get_connection_error_reason(stdout, stderr)
         if reason:
             raise KubernetesConnectionError(reason=reason)
-        console.print(f"[red]❌ Failed to deploy: {stderr}[/red]")
+        output.print_error("Failed to deploy", error=stderr)
         return False
 
     if progress_tracker:
@@ -314,9 +314,7 @@ def deploy_helm_app(
             f"[green]✅ {app_name} deployed (release: {release_name})[/green]"
         )
     else:
-        console.print(
-            f"[green]✅ Helm app deployed: {app_name} (release: {release_name})[/green]"
-        )
+        output.print_success(f"Helm app deployed: {app_name} (release: {release_name})")
     return True
 
 
@@ -325,6 +323,7 @@ def deploy_yaml_app(
     app: YamlApp,
     base_dir: Path,
     app_config_dir: Path,
+    output: OutputManager,
     kubeconfig: str | None = None,
     context: str | None = None,
     dry_run: bool = False,
@@ -340,6 +339,7 @@ def deploy_yaml_app(
         app: YamlApp 설정
         base_dir: 프로젝트 루트
         app_config_dir: 앱 설정 디렉토리
+        output: OutputManager 인스턴스
         kubeconfig: kubeconfig 파일 경로
         context: kubectl context 이름
         dry_run: dry-run 모드
@@ -353,7 +353,8 @@ def deploy_yaml_app(
     # 순환 import 방지를 위해 함수 내부에서 import
     from sbkube.utils.path_resolver import expand_repo_variables
 
-    console.print(f"[cyan]🚀 Deploying YAML app: {app_name}[/cyan]")
+    console = output.get_console()
+    output.print(f"[cyan]🚀 Deploying YAML app: {app_name}[/cyan]")
 
     # 네임스페이스 해석: app.namespace가 명시되면 우선, 없으면 config.namespace 사용
     namespace = app.namespace or config_namespace
@@ -373,9 +374,7 @@ def deploy_yaml_app(
         expanded_file = yaml_file
         if "${repos." in yaml_file:
             if apps_config is None:
-                console.print(
-                    f"[red]❌ Cannot expand variable '{yaml_file}': apps_config not provided[/red]"
-                )
+                output.print_error(f"Cannot expand variable '{yaml_file}': apps_config not provided")
                 return False
             try:
                 expanded_file = expand_repo_variables(yaml_file, repos_dir, apps_config)
@@ -385,9 +384,7 @@ def deploy_yaml_app(
                         f"  [dim]Variable expanded: {yaml_file} → {expanded_file}[/dim]"
                     )
             except Exception as e:
-                console.print(
-                    f"[red]❌ Failed to expand variable in '{yaml_file}': {e}[/red]"
-                )
+                output.print_error(f"Failed to expand variable in '{yaml_file}'", error=str(e))
                 return False
 
         # 경로 해석: 절대경로면 그대로, 상대경로면 app_config_dir 기준
@@ -396,7 +393,7 @@ def deploy_yaml_app(
             yaml_path = app_config_dir / expanded_file
 
         if not yaml_path.exists():
-            console.print(f"[red]❌ YAML file not found: {yaml_path}[/red]")
+            output.print_error(f"YAML file not found: {yaml_path}")
             return False
 
         cmd = ["kubectl", "apply", "-f", str(yaml_path)]
@@ -418,10 +415,10 @@ def deploy_yaml_app(
             reason = _get_connection_error_reason(stdout, stderr)
             if reason:
                 raise KubernetesConnectionError(reason=reason)
-            console.print(f"[red]❌ Failed to apply: {stderr}[/red]")
+            output.print_error("Failed to apply", error=stderr)
             return False
 
-    console.print(f"[green]✅ YAML app deployed: {app_name}[/green]")
+    output.print_success(f"YAML app deployed: {app_name}")
     return True
 
 
@@ -430,6 +427,7 @@ def deploy_action_app(
     app: ActionApp,
     base_dir: Path,
     app_config_dir: Path,
+    output: OutputManager,
     kubeconfig: str | None = None,
     context: str | None = None,
     dry_run: bool = False,
@@ -443,6 +441,7 @@ def deploy_action_app(
         app: ActionApp 설정
         base_dir: 프로젝트 루트
         app_config_dir: 앱 설정 디렉토리
+        output: OutputManager 인스턴스
         kubeconfig: kubeconfig 파일 경로
         context: kubectl context 이름
         dry_run: dry-run 모드
@@ -451,7 +450,8 @@ def deploy_action_app(
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]🚀 Deploying Action app: {app_name}[/cyan]")
+    console = output.get_console()
+    output.print(f"[cyan]🚀 Deploying Action app: {app_name}[/cyan]")
 
     # 네임스페이스 해석: app.namespace가 명시되면 우선, 없으면 config.namespace 사용
     namespace = app.namespace or config_namespace
@@ -487,10 +487,10 @@ def deploy_action_app(
             reason = _get_connection_error_reason(stdout, stderr)
             if reason:
                 raise KubernetesConnectionError(reason=reason)
-            console.print(f"[red]❌ Failed to {action_type}: {stderr}[/red]")
+            output.print_error(f"Failed to {action_type}", error=stderr)
             return False
 
-    console.print(f"[green]✅ Action app deployed: {app_name}[/green]")
+    output.print_success(f"Action app deployed: {app_name}")
     return True
 
 
@@ -498,6 +498,7 @@ def deploy_exec_app(
     app_name: str,
     app: ExecApp,
     base_dir: Path,
+    output: OutputManager,
     dry_run: bool = False,
 ) -> bool:
     """
@@ -507,12 +508,14 @@ def deploy_exec_app(
         app_name: 앱 이름
         app: ExecApp 설정
         base_dir: 프로젝트 루트
+        output: OutputManager 인스턴스
         dry_run: dry-run 모드
 
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]🚀 Executing commands: {app_name}[/cyan]")
+    console = output.get_console()
+    output.print(f"[cyan]🚀 Executing commands: {app_name}[/cyan]")
 
     for command in app.commands:
         if dry_run:
@@ -526,13 +529,13 @@ def deploy_exec_app(
             reason = _get_connection_error_reason(stdout, stderr)
             if reason:
                 raise KubernetesConnectionError(reason=reason)
-            console.print(f"[red]❌ Command failed: {stderr}[/red]")
+            output.print_error("Command failed", error=stderr)
             return False
 
         if stdout:
             console.print(f"  Output: {stdout.strip()}")
 
-    console.print(f"[green]✅ Commands executed: {app_name}[/green]")
+    output.print_success(f"Commands executed: {app_name}")
     return True
 
 
@@ -541,6 +544,7 @@ def deploy_kustomize_app(
     app: KustomizeApp,
     base_dir: Path,
     app_config_dir: Path,
+    output: OutputManager,
     kubeconfig: str | None = None,
     context: str | None = None,
     dry_run: bool = False,
@@ -554,6 +558,7 @@ def deploy_kustomize_app(
         app: KustomizeApp 설정
         base_dir: 프로젝트 루트
         app_config_dir: 앱 설정 디렉토리
+        output: OutputManager 인스턴스
         kubeconfig: kubeconfig 파일 경로
         context: kubectl context 이름
         dry_run: dry-run 모드
@@ -562,14 +567,15 @@ def deploy_kustomize_app(
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]🚀 Deploying Kustomize app: {app_name}[/cyan]")
+    console = output.get_console()
+    output.print(f"[cyan]🚀 Deploying Kustomize app: {app_name}[/cyan]")
 
     kustomize_path = app_config_dir / app.path
     # 네임스페이스 해석: app.namespace가 명시되면 우선, 없으면 config.namespace 사용
     namespace = app.namespace or config_namespace
 
     if not kustomize_path.exists():
-        console.print(f"[red]❌ Kustomize path not found: {kustomize_path}[/red]")
+        output.print_error(f"Kustomize path not found: {kustomize_path}")
         return False
 
     cmd = ["kubectl", "apply", "-k", str(kustomize_path)]
@@ -591,10 +597,10 @@ def deploy_kustomize_app(
         reason = _get_connection_error_reason(stdout, stderr)
         if reason:
             raise KubernetesConnectionError(reason=reason)
-        console.print(f"[red]❌ Failed to apply: {stderr}[/red]")
+        output.print_error("Failed to apply", error=stderr)
         return False
 
-    console.print(f"[green]✅ Kustomize app deployed: {app_name}[/green]")
+    output.print_success(f"Kustomize app deployed: {app_name}")
     return True
 
 
@@ -603,6 +609,7 @@ def deploy_noop_app(
     app: NoopApp,
     base_dir: Path,
     app_config_dir: Path,
+    output: OutputManager,
     dry_run: bool = False,
 ) -> bool:
     """
@@ -613,20 +620,22 @@ def deploy_noop_app(
         app: NoopApp 설정
         base_dir: 프로젝트 루트
         app_config_dir: 앱 설정 디렉토리
+        output: OutputManager 인스턴스
         dry_run: dry-run 모드
 
     Returns:
         항상 True (성공)
     """
-    console.print(f"[cyan]🚀 Processing Noop app: {app_name}[/cyan]")
+    console = output.get_console()
+    output.print(f"[cyan]🚀 Processing Noop app: {app_name}[/cyan]")
 
     if app.description:
         console.print(f"  Description: {app.description}")
 
     if dry_run:
-        console.print("  [yellow]Dry-run mode: No actual deployment[/yellow]")
+        output.print_warning("Dry-run mode: No actual deployment")
 
-    console.print(f"[green]✅ Noop app processed: {app_name} (no-op)[/green]")
+    output.print_success(f"Noop app processed: {app_name} (no-op)")
     return True
 
 
@@ -635,6 +644,7 @@ def deploy_hook_app(
     app: HookApp,
     base_dir: Path,
     app_config_dir: Path,
+    output: OutputManager,
     kubeconfig: str | None = None,
     context: str | None = None,
     namespace: str | None = None,
@@ -650,6 +660,7 @@ def deploy_hook_app(
         app: HookApp 설정
         base_dir: 프로젝트 루트
         app_config_dir: 앱 설정 디렉토리
+        output: OutputManager 인스턴스
         kubeconfig: kubeconfig 파일 경로
         context: kubectl context
         namespace: 배포 대상 namespace
@@ -658,11 +669,12 @@ def deploy_hook_app(
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]🪝 Deploying Hook app: {app_name}[/cyan]")
+    console = output.get_console()
+    output.print(f"[cyan]🪝 Deploying Hook app: {app_name}[/cyan]")
 
     # HookApp의 tasks가 비어있으면 경고
     if not app.tasks:
-        console.print("[yellow]⚠️  No tasks defined in Hook app, skipping[/yellow]")
+        output.print_warning("No tasks defined in Hook app, skipping")
         return True
 
     # namespace 결정 (우선순위: 앱 설정 > 명령어 인자)
@@ -695,9 +707,9 @@ def deploy_hook_app(
     )
 
     if success:
-        console.print(f"[green]✅ Hook app deployed: {app_name}[/green]")
+        output.print_success(f"Hook app deployed: {app_name}")
     else:
-        console.print(f"[red]❌ Hook app failed: {app_name}[/red]")
+        output.print_error(f"Hook app failed: {app_name}")
 
     return success
 
@@ -752,17 +764,11 @@ def cmd(
     - exec 타입: 커스텀 명령어
     - kustomize 타입: kubectl apply -k
     """
-    # Get output format from context
+    # Initialize OutputManager
     output_format = ctx.obj.get("format", "human")
-    formatter = OutputFormatter(format_type=output_format)
+    output = OutputManager(format_type=output_format)
 
-    # Set console quiet mode for non-human formats
-    global console
-    if output_format != "human":
-        console = Console(quiet=True)
-
-    if output_format == "human":
-        console.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]")
+    output.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]")
 
     # kubectl 설치 확인 (cluster connectivity는 나중에 확인)
     check_kubectl_installed_or_exit()
@@ -785,9 +791,7 @@ def cmd(
     # 각 앱 그룹 처리
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
-        console.print(
-            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
-        )
+        output.print_section(f"Processing app group: {APP_CONFIG_DIR.name}")
 
         config_file_path = APP_CONFIG_DIR / config_file_name
 
@@ -799,14 +803,14 @@ def cmd(
 
         sources = None
         if sources_file_path and sources_file_path.exists():
-            console.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
+            output.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
             try:
                 from sbkube.models.sources_model import SourceScheme
 
                 sources_data = load_config_file(sources_file_path)
                 sources = SourceScheme(**sources_data)
             except Exception as e:
-                console.print(f"[red]❌ Invalid sources file: {e}[/red]")
+                output.print_error(f"Invalid sources file: {e}")
                 overall_success = False
                 continue
 
@@ -818,7 +822,7 @@ def cmd(
                 sources=sources,
             )
         except ClusterConfigError as e:
-            console.print(f"[red]{e}[/red]")
+            output.print_error(str(e))
             overall_success = False
             continue
 
@@ -830,17 +834,17 @@ def cmd(
 
         # 설정 파일 로드
         if not config_file_path.exists():
-            console.print(f"[red]❌ Config file not found: {config_file_path}[/red]")
+            output.print_error(f"Config file not found: {config_file_path}")
             overall_success = False
             continue
 
-        console.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
         config_data = load_config_file(config_file_path)
 
         try:
             config = SBKubeConfig(**config_data)
         except Exception as e:
-            console.print(f"[red]❌ Invalid config file: {e}[/red]")
+            output.print_error(f"Invalid config file: {e}")
             overall_success = False
             continue
 
@@ -850,7 +854,7 @@ def cmd(
         if app_name:
             # 특정 앱만 배포
             if app_name not in config.apps:
-                console.print(f"[red]❌ App not found: {app_name}[/red]")
+                output.print_error(f"App not found: {app_name}")
                 overall_success = False
                 continue
             apps_to_deploy = [app_name]
@@ -876,7 +880,7 @@ def cmd(
                 hook_phase="pre",
                 command_name="deploy",
             ):
-                console.print("[red]❌ Pre-deploy hook failed[/red]")
+                output.print_error("Pre-deploy hook failed")
                 overall_success = False
                 continue
 
@@ -889,9 +893,7 @@ def cmd(
             app = config.apps[app_name_iter]
 
             if not app.enabled:
-                console.print(
-                    f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]"
-                )
+                output.print_warning(f"Skipping disabled app: {app_name_iter}")
                 continue
 
             # ========== 앱별 pre-deploy 훅 실행 ==========
@@ -912,9 +914,7 @@ def cmd(
                         hook_type="pre_deploy",
                         context=hook_context,
                     ):
-                        console.print(
-                            f"[red]❌ Pre-deploy tasks failed for app: {app_name_iter}[/red]"
-                        )
+                        output.print_error(f"Pre-deploy tasks failed for app: {app_name_iter}")
                         deployment_failed = True
                         continue
 
@@ -925,9 +925,7 @@ def cmd(
                     hook_type="pre_deploy",
                     context=hook_context,
                 ):
-                    console.print(
-                        f"[red]❌ Pre-deploy hook failed for app: {app_name_iter}[/red]"
-                    )
+                    output.print_error(f"Pre-deploy hook failed for app: {app_name_iter}")
                     deployment_failed = True
                     continue
 
@@ -943,6 +941,7 @@ def cmd(
                         CHARTS_DIR,
                         BUILD_DIR,
                         APP_CONFIG_DIR,
+                        output,
                         kubeconfig,
                         context,
                         dry_run,
@@ -958,6 +957,7 @@ def cmd(
                         app,
                         BASE_DIR,
                         APP_CONFIG_DIR,
+                        output,
                         kubeconfig,
                         context,
                         dry_run,
@@ -971,19 +971,21 @@ def cmd(
                         app,
                         BASE_DIR,
                         APP_CONFIG_DIR,
+                        output,
                         kubeconfig,
                         context,
                         dry_run,
                         config_namespace=config.namespace,
                     )
                 elif isinstance(app, ExecApp):
-                    success = deploy_exec_app(app_name_iter, app, BASE_DIR, dry_run)
+                    success = deploy_exec_app(app_name_iter, app, BASE_DIR, output, dry_run)
                 elif isinstance(app, KustomizeApp):
                     success = deploy_kustomize_app(
                         app_name_iter,
                         app,
                         BASE_DIR,
                         APP_CONFIG_DIR,
+                        output,
                         kubeconfig,
                         context,
                         dry_run,
@@ -991,7 +993,7 @@ def cmd(
                     )
                 elif isinstance(app, NoopApp):
                     success = deploy_noop_app(
-                        app_name_iter, app, BASE_DIR, APP_CONFIG_DIR, dry_run
+                        app_name_iter, app, BASE_DIR, APP_CONFIG_DIR, output, dry_run
                     )
                 elif isinstance(app, HookApp):
                     success = deploy_hook_app(
@@ -999,25 +1001,21 @@ def cmd(
                         app,
                         BASE_DIR,
                         APP_CONFIG_DIR,
+                        output,
                         kubeconfig,
                         context,
                         config.namespace,  # config에서 namespace 가져옴
                         dry_run,
                     )
                 else:
-                    console.print(
-                        f"[yellow]⏭️  Unsupported app type '{app.type}': {app_name_iter}[/yellow]"
-                    )
+                    output.print_warning(f"Unsupported app type '{app.type}': {app_name_iter}")
                     continue
             except KubernetesConnectionError as exc:
-                console.print(
-                    f"[red]❌ Kubernetes cluster connection error detected while processing app: {app_name_iter}[/red]"
+                output.print_error(
+                    f"Kubernetes cluster connection error detected while processing app: {app_name_iter}",
+                    error=exc.reason if exc.reason else None
                 )
-                if exc.reason:
-                    console.print(f"[red]   {exc.reason}[/red]")
-                console.print(
-                    "[yellow]💡 Check your cluster connectivity and try again.[/yellow]"
-                )
+                output.print_warning("Check your cluster connectivity and try again.")
                 deployment_failed = True
                 overall_success = False
                 break
@@ -1088,8 +1086,8 @@ def cmd(
                 )
 
         # 이 앱 그룹 결과 출력
-        console.print(
-            f"[bold green]✅ App group '{APP_CONFIG_DIR.name}' deployed: {success_count}/{total_count} apps[/bold green]"
+        output.print_success(
+            f"App group '{APP_CONFIG_DIR.name}' deployed: {success_count}/{total_count} apps"
         )
 
         if success_count < total_count:
@@ -1097,29 +1095,17 @@ def cmd(
 
     # 전체 결과
     if not overall_success:
-        if output_format == "human":
-            console.print("\n[bold red]❌ Some app groups failed to deploy[/bold red]")
-        else:
-            result = formatter.format_deployment_result(
-                status="failed",
-                summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
-                deployments=[],
-                next_steps=["Check error messages above and fix configuration"],
-                errors=["Some apps failed to deploy"],
-            )
-            formatter.print_output(result)
+        output.finalize(
+            status="failed",
+            summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
+            next_steps=["Check error messages above and fix configuration"],
+            errors=None,  # OutputManager will use accumulated errors
+        )
         raise click.Abort()
     else:
-        if output_format == "human":
-            console.print(
-                "\n[bold green]🎉 All app groups deployed successfully![/bold green]"
-            )
-        else:
-            result = formatter.format_deployment_result(
-                status="success",
-                summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
-                deployments=[],
-                next_steps=["Verify deployment with: kubectl get pods"],
-                errors=[],
-            )
-            formatter.print_output(result)
+        output.finalize(
+            status="success",
+            summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
+            next_steps=["Verify deployment with: kubectl get pods"],
+            errors=[],
+        )

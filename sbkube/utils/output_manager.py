@@ -40,6 +40,7 @@ class OutputManager:
         self.formatter = OutputFormatter(format_type=format_type)
         self.events: list[dict[str, Any]] = []  # LLM/JSON/YAML용 이벤트 수집
         self.deployments: list[dict[str, Any]] = []  # Deployment 정보 추적
+        self.error_messages: list[str] = []  # 에러 메시지 누적
         self._finalized = False
 
     @staticmethod
@@ -124,6 +125,11 @@ class OutputManager:
             error: 에러 상세 정보
             **metadata: 추가 메타데이터
         """
+        # 에러 메시지 누적 (LLM/JSON/YAML 모드용)
+        clean_message = self._strip_markup(message)
+        if clean_message not in self.error_messages:
+            self.error_messages.append(clean_message)
+
         if self.format_type == "human":
             self.console.print(f"[red]❌ {message}[/red]")
             if error:
@@ -133,7 +139,7 @@ class OutputManager:
                 {
                     "type": "error",
                     "level": "error",
-                    "message": message,
+                    "message": clean_message,
                     "error": error,
                     **metadata,
                 }
@@ -253,12 +259,18 @@ class OutputManager:
             return
 
         # LLM/JSON/YAML 모드: 수집된 deployment 정보를 구조화하여 출력
+        # 에러 메시지 우선순위: 명시적 전달 > 누적된 에러 > 이벤트에서 추출
+        final_errors = errors if errors is not None else self.error_messages
+        if not final_errors:
+            # 최후의 수단: events에서 추출
+            final_errors = [e["message"] for e in self.events if e.get("level") == "error"]
+
         result = self.formatter.format_deployment_result(
             status=status,
             summary=summary,
             deployments=self.deployments,  # ✅ self.events 대신 self.deployments 사용
             next_steps=next_steps or [],
-            errors=errors or [e["message"] for e in self.events if e.get("level") == "error"],
+            errors=final_errors,
         )
         self.formatter.print_output(result)
 

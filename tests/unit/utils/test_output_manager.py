@@ -276,3 +276,85 @@ class TestOutputManager:
         assert isinstance(result, str)
         assert "app1" in result
         assert "app2" in result
+
+    def test_error_message_accumulation(self):
+        """Test that error messages are accumulated correctly."""
+        manager = OutputManager(format_type="llm")
+
+        # Print multiple errors
+        manager.print_error("Error 1")
+        manager.print_error("Error 2", error="Details 2")
+        manager.print_error("[red]Error 3[/red]")  # With markup
+
+        # Check error_messages accumulation
+        assert len(manager.error_messages) == 3
+        assert "Error 1" in manager.error_messages
+        assert "Error 2" in manager.error_messages
+        assert "Error 3" in manager.error_messages  # Markup stripped
+        assert "[red]" not in manager.error_messages[2]
+
+    def test_error_message_deduplication(self):
+        """Test that duplicate error messages are not accumulated."""
+        manager = OutputManager(format_type="llm")
+
+        # Print same error twice
+        manager.print_error("Duplicate error")
+        manager.print_error("Duplicate error")
+
+        # Should only have one entry
+        assert len(manager.error_messages) == 1
+        assert manager.error_messages[0] == "Duplicate error"
+
+    @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
+    def test_finalize_with_auto_collected_errors(self, mock_print_output):
+        """Test finalize() uses auto-collected errors when errors=None."""
+        manager = OutputManager(format_type="llm")
+
+        # Print errors
+        manager.print_error("App not found: mongo")
+        manager.print_error("Config file missing")
+
+        # Finalize without passing errors parameter
+        manager.finalize(
+            status="failed",
+            summary={"processed": 0},
+            next_steps=["Fix issues"],
+            # errors=None (default) - should use auto-collected
+        )
+
+        # Verify formatter was called
+        assert mock_print_output.called
+        call_args = mock_print_output.call_args
+        result = call_args[0][0]
+
+        # Check that auto-collected errors are in output
+        assert isinstance(result, str)
+        assert "App not found: mongo" in result
+        assert "Config file missing" in result
+
+    @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
+    def test_finalize_with_explicit_errors_overrides(self, mock_print_output):
+        """Test that explicit errors parameter overrides auto-collected."""
+        manager = OutputManager(format_type="llm")
+
+        # Print errors (should be ignored)
+        manager.print_error("Auto-collected error 1")
+        manager.print_error("Auto-collected error 2")
+
+        # Finalize with explicit errors
+        manager.finalize(
+            status="failed",
+            summary={"processed": 0},
+            errors=["Explicit error only"],
+        )
+
+        # Verify formatter was called
+        assert mock_print_output.called
+        call_args = mock_print_output.call_args
+        result = call_args[0][0]
+
+        # Check that only explicit error is in output
+        assert isinstance(result, str)
+        assert "Explicit error only" in result
+        assert "Auto-collected error 1" not in result
+        assert "Auto-collected error 2" not in result

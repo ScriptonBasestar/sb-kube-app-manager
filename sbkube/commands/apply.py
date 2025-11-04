@@ -492,7 +492,7 @@ def cmd(
                 "status": "failed",
             },
             next_steps=["Check error messages above", "Fix issues and retry"],
-            errors=["Some app groups failed to apply"],
+            # errors는 OutputManager가 자동으로 수집한 것을 사용
         )
         raise click.Abort()
     else:

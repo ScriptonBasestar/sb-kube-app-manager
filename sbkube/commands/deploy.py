@@ -10,6 +10,7 @@ SBKube deploy 명령어.
 """
 
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -118,7 +119,6 @@ def deploy_helm_app(
         성공 여부
     """
     # Progress tracking setup
-    total_steps = 4  # Chart path, Namespace, Command build, Helm execution
     current_step = 0
 
     def _update_progress(description: str):

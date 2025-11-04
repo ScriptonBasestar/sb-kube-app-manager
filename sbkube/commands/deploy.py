@@ -294,6 +294,7 @@ def deploy_yaml_app(
     dry_run: bool = False,
     apps_config: dict | None = None,
     sbkube_work_dir: Path | None = None,
+    config_namespace: str | None = None,
 ) -> bool:
     """
     YAML 앱 배포 (kubectl apply).
@@ -308,6 +309,7 @@ def deploy_yaml_app(
         dry_run: dry-run 모드
         apps_config: 전체 앱 설정 (변수 확장용)
         sbkube_work_dir: .sbkube 작업 디렉토리 경로
+        config_namespace: config.yaml의 전역 namespace (fallback용)
 
     Returns:
         성공 여부
@@ -317,7 +319,8 @@ def deploy_yaml_app(
 
     console.print(f"[cyan]🚀 Deploying YAML app: {app_name}[/cyan]")
 
-    namespace = app.namespace
+    # 네임스페이스 해석: app.namespace가 명시되면 우선, 없으면 config.namespace 사용
+    namespace = app.namespace or config_namespace
 
     # App-level context overrides CLI/sources.yaml context
     if hasattr(app, "context") and app.context:
@@ -394,6 +397,7 @@ def deploy_action_app(
     kubeconfig: str | None = None,
     context: str | None = None,
     dry_run: bool = False,
+    config_namespace: str | None = None,
 ) -> bool:
     """
     Action 앱 배포 (커스텀 액션).
@@ -406,13 +410,15 @@ def deploy_action_app(
         kubeconfig: kubeconfig 파일 경로
         context: kubectl context 이름
         dry_run: dry-run 모드
+        config_namespace: config.yaml의 전역 namespace (fallback용)
 
     Returns:
         성공 여부
     """
     console.print(f"[cyan]🚀 Deploying Action app: {app_name}[/cyan]")
 
-    namespace = app.namespace
+    # 네임스페이스 해석: app.namespace가 명시되면 우선, 없으면 config.namespace 사용
+    namespace = app.namespace or config_namespace
 
     for action in app.actions:
         action_type = action.get("type", "apply")
@@ -505,6 +511,7 @@ def deploy_kustomize_app(
     kubeconfig: str | None = None,
     context: str | None = None,
     dry_run: bool = False,
+    config_namespace: str | None = None,
 ) -> bool:
     """
     Kustomize 앱 배포 (kubectl apply -k).
@@ -517,6 +524,7 @@ def deploy_kustomize_app(
         kubeconfig: kubeconfig 파일 경로
         context: kubectl context 이름
         dry_run: dry-run 모드
+        config_namespace: config.yaml의 전역 namespace (fallback용)
 
     Returns:
         성공 여부
@@ -524,7 +532,8 @@ def deploy_kustomize_app(
     console.print(f"[cyan]🚀 Deploying Kustomize app: {app_name}[/cyan]")
 
     kustomize_path = app_config_dir / app.path
-    namespace = app.namespace
+    # 네임스페이스 해석: app.namespace가 명시되면 우선, 없으면 config.namespace 사용
+    namespace = app.namespace or config_namespace
 
     if not kustomize_path.exists():
         console.print(f"[red]❌ Kustomize path not found: {kustomize_path}[/red]")
@@ -911,6 +920,7 @@ def cmd(
                         dry_run,
                         apps_config=apps_config_dict,
                         sbkube_work_dir=SBKUBE_WORK_DIR,
+                        config_namespace=config.namespace,
                     )
                 elif isinstance(app, ActionApp):
                     success = deploy_action_app(
@@ -921,6 +931,7 @@ def cmd(
                         kubeconfig,
                         context,
                         dry_run,
+                        config_namespace=config.namespace,
                     )
                 elif isinstance(app, ExecApp):
                     success = deploy_exec_app(app_name_iter, app, BASE_DIR, dry_run)
@@ -933,6 +944,7 @@ def cmd(
                         kubeconfig,
                         context,
                         dry_run,
+                        config_namespace=config.namespace,
                     )
                 elif isinstance(app, NoopApp):
                     success = deploy_noop_app(

@@ -146,6 +146,46 @@ apps:
 1. **template**: 파일 읽기 및 렌더링
 1. **deploy**: `kubectl apply` 실행 (변수 확장)
 
+#### Namespace 처리 (중요)
+
+YAML 타입 앱은 **config.yaml의 전역 namespace**를 자동으로 상속합니다.
+
+```yaml
+# config.yaml
+namespace: production   # 전역 네임스페이스
+
+apps:
+  my-secret:
+    type: yaml
+    manifests:
+      - manifests/secret.yaml   # namespace 필드가 없어도 됨
+```
+
+위 설정에서 `secret.yaml`에 `metadata.namespace`가 없더라도, sbkube는 자동으로 `--namespace production` 플래그를 추가합니다.
+
+**앱별 네임스페이스 오버라이드**:
+
+```yaml
+namespace: default   # 전역
+
+apps:
+  prod-secret:
+    type: yaml
+    namespace: production   # 앱별 오버라이드
+    manifests:
+      - manifests/prod-secret.yaml
+```
+
+**우선순위**:
+1. **매니페스트 내부** `metadata.namespace` (최우선)
+2. **앱별** `app.namespace`
+3. **전역** `config.namespace`
+4. **kubectl 기본값** (`default` 네임스페이스)
+
+**권장 사항**:
+- 매니페스트에는 namespace를 명시하지 않고 config.yaml에서 관리 (DRY 원칙)
+- 앱별 오버라이드는 명확한 이유가 있을 때만 사용
+
 ______________________________________________________________________
 
 ### 3. `git` - Git 리포지토리
@@ -252,12 +292,30 @@ apps:
 - `actions` (필수): 액션 목록
   - `type` (필수): `apply` 또는 `delete`
   - `path` (필수): YAML 파일 경로
+  - `namespace` (선택): 액션별 네임스페이스 (앱 네임스페이스 오버라이드)
+- `namespace` (선택): 앱 네임스페이스
 
 **워크플로우**:
 
 1. **prepare**: 건너뜀
 1. **build**: 액션 유효성 검증
 1. **deploy**: 순서대로 `kubectl apply/delete` 실행
+
+**Namespace 처리**:
+
+Action 타입도 YAML 타입과 동일하게 config.yaml의 전역 namespace를 상속합니다.
+
+```yaml
+namespace: kube-system
+
+apps:
+  monitoring-setup:
+    type: action
+    # namespace 생략 시 kube-system 사용
+    actions:
+      - type: apply
+        path: manifests/crd.yaml
+```
 
 ______________________________________________________________________
 

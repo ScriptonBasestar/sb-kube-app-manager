@@ -234,6 +234,51 @@ apps:
     namespace: monitoring     # 이 앱만 monitoring 네임스페이스에 배포
 ```
 
+**Namespace 상속 규칙 (v0.6.1+)**:
+
+모든 앱 타입 (helm, yaml, action, kustomize)에서 동일하게 동작합니다:
+
+1. **명시적 앱 네임스페이스 우선**: `app.namespace`가 설정되어 있으면 이를 사용
+2. **전역 네임스페이스 폴백**: `app.namespace`가 `None`이면 `config.namespace` 사용
+3. **kubectl 기본값**: 둘 다 없으면 `default` 네임스페이스 (kubectl 기본 동작)
+
+**예제**:
+
+```yaml
+# config.yaml
+namespace: production  # 전역 네임스페이스
+
+apps:
+  # 1. 전역 네임스페이스 사용 (production)
+  app1:
+    type: yaml
+    manifests:
+      - manifests/app1.yaml
+    # namespace 필드 없음 → production 사용
+
+  # 2. 앱별 네임스페이스 오버라이드
+  app2:
+    type: yaml
+    manifests:
+      - manifests/app2.yaml
+    namespace: staging  # production 대신 staging 사용
+
+  # 3. Helm 앱도 동일한 규칙 적용
+  app3:
+    type: helm
+    chart: my/chart
+    # namespace 필드 없음 → production 사용
+```
+
+**이전 버전과의 차이 (v0.6.0 이하)**:
+
+- **v0.6.0 이하**: YAML/Action/Kustomize 타입은 전역 네임스페이스를 자동 상속하지 않음 (버그)
+- **v0.6.1+**: 모든 앱 타입이 동일하게 전역 네임스페이스를 상속 (수정됨)
+
+**권장 사항**:
+- 대부분의 경우 전역 `namespace`만 설정하고 앱별 `namespace`는 생략
+- 특정 앱만 다른 네임스페이스가 필요한 경우에만 앱별 오버라이드 사용
+
 #### labels (dict, 선택)
 
 앱에 적용할 커스텀 라벨입니다.

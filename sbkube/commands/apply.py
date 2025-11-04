@@ -16,6 +16,7 @@ from sbkube.utils.deployment_checker import DeploymentChecker
 from sbkube.utils.error_formatter import format_deployment_error
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
+from sbkube.utils.output_formatter import OutputFormatter
 from sbkube.utils.progress_tracker import ProgressTracker
 
 console = Console()
@@ -106,10 +107,19 @@ def cmd(
 
     의존성(depends_on)을 자동으로 해결하여 올바른 순서로 배포합니다.
     """
-    console.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]")
+    # Get output format from context
+    output_format = ctx.obj.get("format", "human")
+    formatter = OutputFormatter(format_type=output_format)
 
-    if dry_run:
-        console.print("[yellow]🔍 Dry-run mode enabled[/yellow]")
+    # LLM 모드에서는 Rich Console 출력 억제
+    if output_format != "human":
+        console = Console(quiet=True)
+
+    if output_format == "human":
+        console.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]")
+
+        if dry_run:
+            console.print("[yellow]🔍 Dry-run mode enabled[/yellow]")
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
@@ -415,7 +425,7 @@ def cmd(
                     console.print("[red]❌ Post-apply hook failed[/red]")
                     failed = True
 
-        except Exception as e:
+        except Exception:
             failed = True
             # 글로벌 on_failure 훅 실행
             if config.hooks and "apply" in config.hooks:
@@ -448,10 +458,38 @@ def cmd(
             )
 
     # 전체 결과
-    if not overall_success:
-        console.print("\n[bold red]❌ Some app groups failed to apply[/bold red]")
-        raise click.Abort()
+    if output_format == "human":
+        if not overall_success:
+            console.print("\n[bold red]❌ Some app groups failed to apply[/bold red]")
+            raise click.Abort()
+        else:
+            console.print(
+                "\n[bold green]🎉 All app groups applied successfully![/bold green]"
+            )
     else:
-        console.print(
-            "\n[bold green]🎉 All app groups applied successfully![/bold green]"
-        )
+        # LLM/JSON/YAML 출력
+        if not overall_success:
+            result = formatter.format_deployment_result(
+                status="failed",
+                summary={
+                    "app_groups_processed": len(app_config_dirs),
+                    "status": "failed",
+                },
+                deployments=[],
+                next_steps=["Check error messages above", "Fix issues and retry"],
+                errors=["Some app groups failed to apply"],
+            )
+            formatter.print_output(result)
+            raise click.Abort()
+        else:
+            result = formatter.format_deployment_result(
+                status="success",
+                summary={
+                    "app_groups_processed": len(app_config_dirs),
+                    "status": "success",
+                },
+                deployments=[],
+                next_steps=["Verify deployment with: kubectl get pods"],
+                errors=[],
+            )
+            formatter.print_output(result)

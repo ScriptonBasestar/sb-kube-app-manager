@@ -161,6 +161,72 @@ ERROR_GUIDE: dict[str, dict[str, Any]] = {
         "quick_fix": None,
         "auto_recoverable": False,
     },
+    "DatabaseAuthenticationError": {
+        "title": "데이터베이스 인증 실패",
+        "suggestions": [
+            "DB 사용자/비밀번호 확인 → kubectl get secret -n <namespace>",
+            "Secret 내용 확인 → kubectl get secret <secret-name> -o jsonpath='{.data}'",
+            "config.yaml의 database 설정 확인 (password, user, host)",
+            "데이터베이스 직접 연결 테스트 → psql/mysql 명령어 사용",
+            "Secret이 올바른 네임스페이스에 있는지 확인",
+        ],
+        "commands": {
+            "validate": "설정 파일 검증",
+            "doctor": "시스템 진단 및 연결 확인",
+        },
+        "doc_link": "docs/07-troubleshooting/database-connection.md",
+        "quick_fix": "kubectl get secret -n <namespace>",
+        "auto_recoverable": False,
+    },
+    "DatabaseConnectionError": {
+        "title": "데이터베이스 연결 실패",
+        "suggestions": [
+            "DB 서비스 상태 확인 → kubectl get svc -n <namespace>",
+            "DB Pod 상태 확인 → kubectl get pods -n <namespace>",
+            "네트워크 정책 확인 → NetworkPolicy 설정",
+            "DB 로그 확인 → kubectl logs <db-pod> -n <namespace>",
+            "호스트명/포트 확인 → config.yaml의 database.host, database.port",
+        ],
+        "commands": {
+            "doctor": "시스템 진단",
+        },
+        "doc_link": "docs/07-troubleshooting/database-connection.md",
+        "quick_fix": "kubectl get svc,pods -n <namespace>",
+        "auto_recoverable": False,
+    },
+    "HelmReleaseError": {
+        "title": "Helm 릴리스 배포 실패",
+        "suggestions": [
+            "Helm 릴리스 상태 확인 → helm list -n <namespace>",
+            "릴리스 히스토리 확인 → helm history <release> -n <namespace>",
+            "실패한 릴리스 삭제 → helm uninstall <release> -n <namespace>",
+            "Pending 릴리스 정리 → helm rollback 또는 helm uninstall",
+            "Pod 이벤트 확인 → kubectl describe pod <pod-name> -n <namespace>",
+        ],
+        "commands": {
+            "delete": "애플리케이션 삭제 후 재배포",
+            "state": "배포 상태 확인",
+        },
+        "doc_link": "docs/07-troubleshooting/deployment-failures.md#helm-release-errors",
+        "quick_fix": "helm list -n <namespace>",
+        "auto_recoverable": True,
+    },
+    "UnknownError": {
+        "title": "분류되지 않은 에러",
+        "suggestions": [
+            "전체 에러 로그 확인",
+            "시스템 진단 실행 → sbkube doctor",
+            "배포 히스토리 확인 → sbkube history",
+            "상세 로그 확인 → kubectl logs, kubectl describe",
+        ],
+        "commands": {
+            "doctor": "시스템 진단",
+            "history": "배포 히스토리 확인",
+        },
+        "doc_link": "docs/07-troubleshooting/README.md",
+        "quick_fix": "sbkube doctor",
+        "auto_recoverable": False,
+    },
 }
 
 

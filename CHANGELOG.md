@@ -4,6 +4,72 @@
 
 ## [Unreleased]
 
+### ✨ Improved
+
+**Enhanced Error Handling for Deployment Failures** (2025-01-04)
+
+- ✅ **NEW**: Automatic error classification system for deployment failures
+- ✅ **NEW**: Rich formatted error messages with contextual information
+- ✅ **NEW**: Step-by-step error tracking (prepare/build/deploy phase identification)
+- ✅ **NEW**: Automatic extraction of database connection details (PostgreSQL/MySQL)
+- ✅ **NEW**: Automatic extraction of Helm release details
+- ✅ **NEW**: Context-aware error suggestions and quick-fix commands
+- ✅ **EXPANDED**: ERROR_GUIDE database with new error types:
+  - `DatabaseAuthenticationError` - Database authentication failures
+  - `DatabaseConnectionError` - Database connection issues
+  - `HelmReleaseError` - Helm release deployment failures
+  - `UnknownError` - Fallback for unclassified errors
+
+**New Error Display Format**:
+```
+❌ 배포 실패: airflow
+(3/3 단계에서 실패)
+
+📍 실패 단계: 🚀 Deploy
+🔍 에러 타입: DatabaseAuthenticationError
+💬 상세 내용: password authentication failed for user "airflow_user"
+
+🗄️ 데이터베이스 정보:
+  • DB 종류: postgresql
+  • 사용자: airflow_user
+  • 호스트: postgresql.data.svc.cluster.local
+  • 포트: 5432
+
+💡 해결 방법:
+  • DB 사용자/비밀번호 확인 → kubectl get secret -n <namespace>
+  ...
+
+⚡ 빠른 해결: kubectl get secret -n <namespace>
+```
+
+**New Files**:
+- `sbkube/utils/error_classifier.py` - Pattern-based error classification
+- `sbkube/utils/error_formatter.py` - Rich error formatting utilities
+- `docs/07-troubleshooting/deployment-failures.md` - Comprehensive troubleshooting guide
+- `tests/unit/utils/test_error_classifier.py` - Test suite (9 tests, 92% coverage)
+
+**Updated Files**:
+- `sbkube/commands/apply.py` - Integrated step-by-step error formatting
+- `sbkube/utils/error_suggestions.py` - Extended ERROR_GUIDE database
+- `docs/02-features/commands.md` - Added error handling documentation
+
+**Technical Details**:
+- Pattern-based classification using regex for common error types
+- Severity levels: critical, high, medium, low, unknown
+- Phase tracking: load_config, prepare, build, deploy
+- Auto-recoverable flag for each error type
+- Database detail extraction (db_type, user, host, port)
+- Helm detail extraction (release_name, namespace, chart)
+
+**User Impact**:
+- Faster problem diagnosis with categorized errors
+- Clear step identification reduces debugging time
+- Automatic suggestions guide users to resolution
+- Database and Helm errors provide extracted context
+- Better UX for deployment failures
+
+**Reference**: Issue - Airflow deployment failure with PostgreSQL authentication error
+
 ### 🐛 Fixed
 
 **Namespace Inheritance Bug** (2025-11-04)

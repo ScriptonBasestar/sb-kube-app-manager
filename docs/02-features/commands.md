@@ -366,6 +366,43 @@ sbkube apply --dry-run                         # 실행 계획만 확인
 - **상태 추적**: `.sbkube/runs/`에 실행 상태 저장
 - **의존성 자동 검증**: `config.yaml`의 `deps` 필드에 명시된 앱 그룹 배포 상태를 자동으로 확인하여 미배포된 의존성이 있으면 배포 중단
 
+### 🚨 에러 처리 (v0.6.1+)
+
+배포 실패 시 개선된 에러 메시지를 제공합니다:
+
+```
+❌ 배포 실패: airflow
+(3/3 단계에서 실패)
+
+📍 실패 단계: 🚀 Deploy
+🔍 에러 타입: DatabaseAuthenticationError
+💬 상세 내용: password authentication failed for user "airflow_user"
+
+🗄️ 데이터베이스 정보:
+  • DB 종류: postgresql
+  • 사용자: airflow_user
+  • 호스트: postgresql.data.svc.cluster.local
+  • 포트: 5432
+
+💡 해결 방법:
+  • DB 사용자/비밀번호 확인 → kubectl get secret -n <namespace>
+  • Secret 내용 확인 → kubectl get secret <secret-name> -o jsonpath='{.data}'
+  ...
+
+⚡ 빠른 해결: kubectl get secret -n <namespace>
+```
+
+**주요 에러 타입**:
+- **DatabaseAuthenticationError** - DB 인증 실패
+- **DatabaseConnectionError** - DB 연결 실패
+- **HelmReleaseError** - Helm 릴리스 배포 실패
+- **KubernetesConnectionError** - K8s API 서버 연결 실패
+- **NamespaceNotFoundError** - 네임스페이스 없음
+
+각 에러 타입별로 자동으로 해결 방법이 제안됩니다.
+
+**상세 트러블슈팅**: [배포 실패 가이드](../07-troubleshooting/deployment-failures.md) 참조
+
 ### ⚠️ 참고
 
 - Kubernetes 클러스터 연결 및 Helm 설치 필요

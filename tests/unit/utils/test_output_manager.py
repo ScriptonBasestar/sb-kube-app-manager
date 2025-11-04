@@ -223,3 +223,56 @@ class TestOutputManager:
         assert manager.events[3]["type"] == "warning"
         assert manager.events[4]["type"] == "success"
         assert manager.events[5]["type"] == "list"
+
+    def test_add_deployment(self):
+        """Test add_deployment() method."""
+        manager = OutputManager(format_type="llm")
+
+        # Add deployment without version
+        manager.add_deployment(name="app1", namespace="default", status="deployed")
+
+        assert len(manager.deployments) == 1
+        assert manager.deployments[0]["name"] == "app1"
+        assert manager.deployments[0]["namespace"] == "default"
+        assert manager.deployments[0]["status"] == "deployed"
+        assert manager.deployments[0]["version"] == ""
+
+        # Add deployment with version
+        manager.add_deployment(
+            name="app2", namespace="production", status="failed", version="1.2.3"
+        )
+
+        assert len(manager.deployments) == 2
+        assert manager.deployments[1]["name"] == "app2"
+        assert manager.deployments[1]["namespace"] == "production"
+        assert manager.deployments[1]["status"] == "failed"
+        assert manager.deployments[1]["version"] == "1.2.3"
+
+    @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
+    def test_finalize_with_deployments(self, mock_print_output):
+        """Test finalize() correctly passes deployments to formatter."""
+        manager = OutputManager(format_type="llm")
+
+        # Add some deployments
+        manager.add_deployment(name="app1", namespace="default", status="deployed", version="1.0")
+        manager.add_deployment(name="app2", namespace="prod", status="skipped")
+
+        # Add some events
+        manager.print_error("Error message")
+
+        # Finalize
+        manager.finalize(
+            status="success",
+            summary={"deployed": 1, "skipped": 1},
+            next_steps=["Verify pods"],
+        )
+
+        # Verify formatter was called
+        assert mock_print_output.called
+        call_args = mock_print_output.call_args
+        result = call_args[0][0]
+
+        # Check that result is a string (formatted output)
+        assert isinstance(result, str)
+        assert "app1" in result
+        assert "app2" in result

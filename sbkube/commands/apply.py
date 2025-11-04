@@ -282,6 +282,12 @@ def cmd(
                         f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]",
                         level="info",
                     )
+                    # Record skipped deployment
+                    output.add_deployment(
+                        name=app_name_iter,
+                        namespace=getattr(app_config, "namespace", "default"),
+                        status="skipped",
+                    )
                     continue
 
                 if not no_progress:
@@ -408,6 +414,13 @@ def cmd(
                             progress_tracker.console_print(
                                 f"[green]✅ {app_name_iter} deployed successfully[/green]"
                             )
+                        # Record successful deployment
+                        output.add_deployment(
+                            name=app_name_iter,
+                            namespace=getattr(app_config, "namespace", "default"),
+                            status="deployed",
+                            version=getattr(app_config, "version", None),
+                        )
                     except Exception as deploy_error:
                         format_deployment_error(
                             error=deploy_error,
@@ -431,6 +444,13 @@ def cmd(
 
         except Exception:
             failed = True
+            # Record failed deployment (if app_name_iter is available)
+            if "app_name_iter" in locals():
+                output.add_deployment(
+                    name=app_name_iter,
+                    namespace=getattr(app_config, "namespace", "default"),
+                    status="failed",
+                )
             # 글로벌 on_failure 훅 실행
             if config.hooks and "apply" in config.hooks:
                 apply_hooks = config.hooks["apply"].model_dump()

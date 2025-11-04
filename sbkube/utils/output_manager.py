@@ -39,6 +39,7 @@ class OutputManager:
         self.console = Console(quiet=(format_type != "human"))
         self.formatter = OutputFormatter(format_type=format_type)
         self.events: list[dict[str, Any]] = []  # LLM/JSON/YAML용 이벤트 수집
+        self.deployments: list[dict[str, Any]] = []  # Deployment 정보 추적
         self._finalized = False
 
     @staticmethod
@@ -200,6 +201,31 @@ class OutputManager:
                 }
             )
 
+    def add_deployment(
+        self,
+        name: str,
+        namespace: str,
+        status: str,
+        version: str | None = None,
+    ) -> None:
+        """
+        배포 정보 기록 (LLM/JSON/YAML 출력용).
+
+        Args:
+            name: 앱 이름
+            namespace: 네임스페이스
+            status: 배포 상태 (deployed, failed, skipped 등)
+            version: 차트 버전 (선택)
+        """
+        self.deployments.append(
+            {
+                "name": name,
+                "namespace": namespace,
+                "status": status,
+                "version": version or "",
+            }
+        )
+
     def finalize(
         self,
         status: str,
@@ -226,11 +252,11 @@ class OutputManager:
             # (이미 즉시 출력되었으므로)
             return
 
-        # LLM/JSON/YAML 모드: 수집된 이벤트를 구조화하여 출력
+        # LLM/JSON/YAML 모드: 수집된 deployment 정보를 구조화하여 출력
         result = self.formatter.format_deployment_result(
             status=status,
             summary=summary,
-            deployments=self.events,
+            deployments=self.deployments,  # ✅ self.events 대신 self.deployments 사용
             next_steps=next_steps or [],
             errors=errors or [e["message"] for e in self.events if e.get("level") == "error"],
         )

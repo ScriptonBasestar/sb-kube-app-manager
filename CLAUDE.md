@@ -93,6 +93,7 @@ Level 4 (Implementation):
 | **Testing** | [docs/04-development/testing.md](docs/04-development/testing.md) | [Makefile](Makefile) |
 | **Troubleshooting** | [docs/07-troubleshooting/common-dev-issues.md](docs/07-troubleshooting/common-dev-issues.md) | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) |
 | **Configuration** | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) | [examples/](examples/) |
+| **LLM Integration** | [docs/02-features/llm-friendly-output.md](docs/02-features/llm-friendly-output.md) | [sbkube/utils/output_formatter.py](sbkube/utils/output_formatter.py) |
 
 ### 2.3 Context Priority Rules
 
@@ -145,6 +146,7 @@ ARCHITECTURE.md → commands/ (implementation code)
 - **Configuration**: [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md), [sbkube/models/config_model.py](sbkube/models/config_model.py)
 - **State Management**: [docs/00-product/product-spec.md](docs/00-product/product-spec.md) (Section 4), [sbkube/state/](sbkube/state/)
 - **App Types**: [docs/02-features/application-types.md](docs/02-features/application-types.md)
+- **LLM Integration**: [docs/02-features/llm-friendly-output.md](docs/02-features/llm-friendly-output.md), [sbkube/utils/output_formatter.py](sbkube/utils/output_formatter.py)
 
 ______________________________________________________________________
 
@@ -214,10 +216,16 @@ When starting work:
 
 1. Check [product-spec.md](docs/00-product/product-spec.md) for alignment
 2. Follow BaseCommand/EnhancedBaseCommand pattern
-3. Use Rich Console for output
+3. Use Rich Console for output (or OutputFormatter for LLM-friendly output)
 4. Add Pydantic model validation
 5. Document in [docs/02-features/commands.md](docs/02-features/commands.md)
 6. Write tests (success + error cases)
+
+**LLM-Friendly Output**:
+- All commands inherit `self.formatter` from `EnhancedBaseCommand`
+- Support `--format` option: `human` (default), `llm`, `json`, `yaml`
+- Use `OutputFormatter` for structured output when appropriate
+- See [llm-friendly-output.md](docs/02-features/llm-friendly-output.md)
 
 ### 4.4 New Command Addition
 
@@ -284,12 +292,18 @@ ______________________________________________________________________
 
 ## 6. Version Info
 
-- **Document Version**: 1.3
+- **Document Version**: 1.4
 - **Last Updated**: 2025-01-03
 - **Target SBKube Version**: v0.6.1+
 - **Author**: archmagece@users.noreply.github.com
 
 ### Change History
+
+- **v1.4 (2025-01-03)**:
+  - Added LLM Integration to Query Type Routing table
+  - Added LLM-Friendly Output section to New Feature Development
+  - Updated Semantic Index with LLM integration references
+  - Documented `--format` option and OutputFormatter usage
 
 - **v1.3 (2025-01-03)**:
   - Reduced from 1,542 lines to ~470 lines (70% reduction)

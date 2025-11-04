@@ -317,7 +317,7 @@ def cmd(
             effective_context = app_context or context
             effective_kubeconfig = kubeconfig if not app_context else None
 
-            if not app_config.files:
+            if not app_config.manifests:
                 console.print(
                     f"[yellow]⚠️ 앱 '{app_name}': 삭제할 YAML 파일이 지정되지 않았습니다. 건너뜁니다.[/yellow]",
                 )
@@ -328,8 +328,8 @@ def cmd(
             yaml_delete_successful_files = 0
             yaml_delete_failed_files = 0
 
-            # files를 역순으로 삭제
-            for file_rel_path in reversed(app_config.files):
+            # manifests를 역순으로 삭제
+            for file_rel_path in reversed(app_config.manifests):
                 file_path = Path(file_rel_path)
                 abs_yaml_path = file_path
                 if not abs_yaml_path.is_absolute():

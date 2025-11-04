@@ -18,6 +18,7 @@ from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
+from sbkube.utils.output_formatter import OutputFormatter
 
 console = Console()
 
@@ -323,7 +324,9 @@ def build_http_app(
     default=False,
     help="Dry-run 모드 (실제 파일 복사/수정하지 않음)",
 )
+@click.pass_context
 def cmd(
+    ctx: click.Context,
     app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
@@ -338,7 +341,17 @@ def cmd(
     - Overrides 적용 (overrides/<app-name>/* → build/<app-name>/*)
     - Removes 적용 (불필요한 파일/디렉토리 삭제)
     """
-    console.print("[bold blue]✨ SBKube `build` 시작 ✨[/bold blue]")
+    # Get output format from context
+    output_format = ctx.obj.get("format", "human")
+    formatter = OutputFormatter(format_type=output_format)
+
+    # Set console quiet mode for non-human formats
+    global console
+    if output_format != "human":
+        console = Console(quiet=True)
+
+    if output_format == "human":
+        console.print("[bold blue]✨ SBKube `build` 시작 ✨[/bold blue]")
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
@@ -529,9 +542,29 @@ def cmd(
 
     # 전체 결과
     if not overall_success:
-        console.print("\n[bold red]❌ Some app groups failed to build[/bold red]")
+        if output_format == "human":
+            console.print("\n[bold red]❌ Some app groups failed to build[/bold red]")
+        else:
+            result = formatter.format_deployment_result(
+                status="failed",
+                summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
+                deployments=[],
+                next_steps=["Check error messages above and fix configuration"],
+                errors=["Some apps failed to build"],
+            )
+            formatter.print_output(result)
         raise click.Abort()
     else:
-        console.print(
-            "\n[bold green]🎉 All app groups built successfully![/bold green]"
-        )
+        if output_format == "human":
+            console.print(
+                "\n[bold green]🎉 All app groups built successfully![/bold green]"
+            )
+        else:
+            result = formatter.format_deployment_result(
+                status="success",
+                summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
+                deployments=[],
+                next_steps=["Run 'sbkube deploy' to deploy to cluster"],
+                errors=[],
+            )
+            formatter.print_output(result)

@@ -24,6 +24,7 @@ from sbkube.utils.cluster_config import (
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
+from sbkube.utils.output_formatter import OutputFormatter
 
 console = Console()
 
@@ -610,7 +611,17 @@ def cmd(
     - helm 타입: Helm chart pull
     - git 타입: Git repository clone
     """
-    console.print("[bold blue]✨ SBKube `prepare` 시작 ✨[/bold blue]")
+    # Get output format from context
+    output_format = ctx.obj.get("format", "human")
+    formatter = OutputFormatter(format_type=output_format)
+
+    # Set console quiet mode for non-human formats
+    global console
+    if output_format != "human":
+        console = Console(quiet=True)
+
+    if output_format == "human":
+        console.print("[bold blue]✨ SBKube `prepare` 시작 ✨[/bold blue]")
 
     # Helm 설치 확인
     check_helm_installed_or_exit()
@@ -849,9 +860,29 @@ def cmd(
 
     # 전체 결과
     if not overall_success:
-        console.print("\n[bold red]❌ Some app groups failed to prepare[/bold red]")
+        if output_format == "human":
+            console.print("\n[bold red]❌ Some app groups failed to prepare[/bold red]")
+        else:
+            result = formatter.format_deployment_result(
+                status="failed",
+                summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
+                deployments=[],
+                next_steps=["Check error messages above and fix configuration"],
+                errors=["Some apps failed to prepare"],
+            )
+            formatter.print_output(result)
         raise click.Abort()
     else:
-        console.print(
-            "\n[bold green]🎉 All app groups prepared successfully![/bold green]"
-        )
+        if output_format == "human":
+            console.print(
+                "\n[bold green]🎉 All app groups prepared successfully![/bold green]"
+            )
+        else:
+            result = formatter.format_deployment_result(
+                status="success",
+                summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
+                deployments=[],
+                next_steps=["Run 'sbkube build' to build manifests"],
+                errors=[],
+            )
+            formatter.print_output(result)

@@ -19,8 +19,6 @@ from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_formatter import OutputFormatter
 from sbkube.utils.progress_tracker import ProgressTracker
 
-console = Console()
-
 
 @click.command(name="apply")
 @click.option(
@@ -112,8 +110,7 @@ def cmd(
     formatter = OutputFormatter(format_type=output_format)
 
     # LLM 모드에서는 Rich Console 출력 억제
-    if output_format != "human":
-        console = Console(quiet=True)
+    console = Console(quiet=(output_format != "human"))
 
     if output_format == "human":
         console.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]")

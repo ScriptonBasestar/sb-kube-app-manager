@@ -16,6 +16,7 @@ from sbkube.utils.deployment_checker import DeploymentChecker
 from sbkube.utils.error_formatter import format_deployment_error
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
+from sbkube.utils.progress_tracker import ProgressTracker
 
 console = Console()
 
@@ -75,6 +76,12 @@ console = Console()
     default=False,
     help="앱 그룹 의존성 검증 건너뛰기 (강제 배포 시)",
 )
+@click.option(
+    "--no-progress",
+    is_flag=True,
+    default=False,
+    help="진행 상황 표시 비활성화",
+)
 @click.pass_context
 def cmd(
     ctx: click.Context,
@@ -87,6 +94,7 @@ def cmd(
     skip_prepare: bool,
     skip_build: bool,
     skip_deps_check: bool,
+    no_progress: bool,
 ):
     """
     SBKube apply 명령어.
@@ -248,6 +256,10 @@ def cmd(
 
         # Process each app in dependency order
         failed = False
+
+        # Progress tracking setup
+        progress_tracker = ProgressTracker(console=console, disable=(dry_run or no_progress))
+
         try:
             for app_name_iter in apps_to_apply:
                 app_config = config.apps[app_name_iter]
@@ -258,9 +270,14 @@ def cmd(
                     )
                     continue
 
-                console.print(
-                    f"\n[bold cyan]━━━ Processing app: {app_name_iter} ({app_config.type}) ━━━[/bold cyan]"
-                )
+                if not no_progress:
+                    # Progress 모드: 앱 헤더를 간단하게
+                    console.print(f"\n[bold cyan]━━━ {app_name_iter} ({app_config.type}) ━━━[/bold cyan]")
+                else:
+                    # 일반 모드: 기존 동작 유지
+                    console.print(
+                        f"\n[bold cyan]━━━ Processing app: {app_name_iter} ({app_config.type}) ━━━[/bold cyan]"
+                    )
 
                 # Determine total steps (considering skip flags)
                 total_steps = 3
@@ -269,97 +286,124 @@ def cmd(
                 if skip_build:
                     total_steps -= 1
 
-                # Step 1: Prepare this app
-                if not skip_prepare:
-                    console.print(f"[cyan]📦 Step 1: Prepare {app_name_iter}[/cyan]")
+                # Use progress tracker if enabled
+                use_progress = not no_progress and not dry_run
+
+                # Execute steps with progress tracking
+                with progress_tracker.track_task(
+                    f"Deploying {app_name_iter}", total=total_steps
+                ) as task_id:
+
+                    # Step 1: Prepare this app
+                    if not skip_prepare:
+                        if use_progress:
+                            progress_tracker.update(task_id, description=f"📦 Prepare {app_name_iter}")
+                        else:
+                            console.print(f"[cyan]📦 Step 1: Prepare {app_name_iter}[/cyan]")
+
+                        try:
+                            # Create new context with parent's obj for kubeconfig/context/sources_file
+                            prepare_ctx = click.Context(prepare_cmd, parent=ctx)
+                            prepare_ctx.obj = ctx.obj  # Pass parent context object
+                            prepare_ctx.invoke(
+                                prepare_cmd,
+                                app_config_dir_name=current_app_dir,
+                                base_dir=base_dir,
+                                config_file_name=config_file_name,
+                                sources_file_name=sources_file_name,
+                                app_name=app_name_iter,  # 현재 처리 중인 앱
+                                force=False,
+                                dry_run=dry_run,
+                            )
+                            if use_progress:
+                                progress_tracker.update(task_id, advance=1)
+                        except Exception as prepare_error:
+                            format_deployment_error(
+                                error=prepare_error,
+                                app_name=app_name_iter,
+                                step="prepare",
+                                step_number=1,
+                                total_steps=total_steps,
+                                console=console,
+                            )
+                            raise  # Re-raise to trigger outer exception handler
+
+                    # Step 2: Build this app
+                    if not skip_build:
+                        step_number = 2 if not skip_prepare else 1
+                        if use_progress:
+                            progress_tracker.update(task_id, description=f"🔨 Build {app_name_iter}")
+                        else:
+                            console.print(
+                                f"[cyan]🔨 Step {step_number}: Build {app_name_iter}[/cyan]"
+                            )
+
+                        try:
+                            # Create new context with parent's obj
+                            build_ctx = click.Context(build_cmd, parent=ctx)
+                            build_ctx.obj = ctx.obj  # Pass parent context object
+                            build_ctx.invoke(
+                                build_cmd,
+                                app_config_dir_name=current_app_dir,
+                                base_dir=base_dir,
+                                config_file_name=config_file_name,
+                                app_name=app_name_iter,  # 현재 처리 중인 앱
+                                dry_run=dry_run,
+                            )
+                            if use_progress:
+                                progress_tracker.update(task_id, advance=1)
+                        except Exception as build_error:
+                            format_deployment_error(
+                                error=build_error,
+                                app_name=app_name_iter,
+                                step="build",
+                                step_number=step_number,
+                                total_steps=total_steps,
+                                console=console,
+                            )
+                            raise  # Re-raise to trigger outer exception handler
+
+                    # Step 3: Deploy this app
+                    step_number = 3
+                    if skip_prepare:
+                        step_number -= 1
+                    if skip_build:
+                        step_number -= 1
+
+                    if use_progress:
+                        progress_tracker.update(task_id, description=f"🚀 Deploy {app_name_iter}")
+                    else:
+                        console.print(
+                            f"[cyan]🚀 Step {step_number}: Deploy {app_name_iter}[/cyan]"
+                        )
 
                     try:
                         # Create new context with parent's obj for kubeconfig/context/sources_file
-                        prepare_ctx = click.Context(prepare_cmd, parent=ctx)
-                        prepare_ctx.obj = ctx.obj  # Pass parent context object
-                        prepare_ctx.invoke(
-                            prepare_cmd,
-                            app_config_dir_name=current_app_dir,
-                            base_dir=base_dir,
-                            config_file_name=config_file_name,
-                            sources_file_name=sources_file_name,
-                            app_name=app_name_iter,  # 현재 처리 중인 앱
-                            force=False,
-                            dry_run=dry_run,
-                        )
-                    except Exception as prepare_error:
-                        format_deployment_error(
-                            error=prepare_error,
-                            app_name=app_name_iter,
-                            step="prepare",
-                            step_number=1,
-                            total_steps=total_steps,
-                            console=console,
-                        )
-                        raise  # Re-raise to trigger outer exception handler
-
-                # Step 2: Build this app
-                if not skip_build:
-                    step_number = 2 if not skip_prepare else 1
-                    console.print(
-                        f"[cyan]🔨 Step {step_number}: Build {app_name_iter}[/cyan]"
-                    )
-
-                    try:
-                        # Create new context with parent's obj
-                        build_ctx = click.Context(build_cmd, parent=ctx)
-                        build_ctx.obj = ctx.obj  # Pass parent context object
-                        build_ctx.invoke(
-                            build_cmd,
+                        deploy_ctx = click.Context(deploy_cmd, parent=ctx)
+                        deploy_ctx.obj = ctx.obj  # Pass parent context object
+                        deploy_ctx.invoke(
+                            deploy_cmd,
                             app_config_dir_name=current_app_dir,
                             base_dir=base_dir,
                             config_file_name=config_file_name,
                             app_name=app_name_iter,  # 현재 처리 중인 앱
                             dry_run=dry_run,
                         )
-                    except Exception as build_error:
+                        if use_progress:
+                            progress_tracker.update(task_id, advance=1)
+                            progress_tracker.console_print(
+                                f"[green]✅ {app_name_iter} deployed successfully[/green]"
+                            )
+                    except Exception as deploy_error:
                         format_deployment_error(
-                            error=build_error,
+                            error=deploy_error,
                             app_name=app_name_iter,
-                            step="build",
+                            step="deploy",
                             step_number=step_number,
                             total_steps=total_steps,
                             console=console,
                         )
                         raise  # Re-raise to trigger outer exception handler
-
-                # Step 3: Deploy this app
-                step_number = 3
-                if skip_prepare:
-                    step_number -= 1
-                if skip_build:
-                    step_number -= 1
-                console.print(
-                    f"[cyan]🚀 Step {step_number}: Deploy {app_name_iter}[/cyan]"
-                )
-
-                try:
-                    # Create new context with parent's obj for kubeconfig/context/sources_file
-                    deploy_ctx = click.Context(deploy_cmd, parent=ctx)
-                    deploy_ctx.obj = ctx.obj  # Pass parent context object
-                    deploy_ctx.invoke(
-                        deploy_cmd,
-                        app_config_dir_name=current_app_dir,
-                        base_dir=base_dir,
-                        config_file_name=config_file_name,
-                        app_name=app_name_iter,  # 현재 처리 중인 앱
-                        dry_run=dry_run,
-                    )
-                except Exception as deploy_error:
-                    format_deployment_error(
-                        error=deploy_error,
-                        app_name=app_name_iter,
-                        step="deploy",
-                        step_number=step_number,
-                        total_steps=total_steps,
-                        console=console,
-                    )
-                    raise  # Re-raise to trigger outer exception handler
 
             # 글로벌 post-apply 훅 실행
             if config.hooks and "apply" in config.hooks:

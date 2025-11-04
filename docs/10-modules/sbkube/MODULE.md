@@ -1,3 +1,11 @@
+---
+type: Module Overview
+audience: Developer
+topics: [module, structure, organization]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # SBKube 모듈 정의
 
 ## 모듈 개요

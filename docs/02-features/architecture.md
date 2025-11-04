@@ -1,3 +1,11 @@
+---
+type: Technical Documentation
+audience: Developer
+topics: [architecture, system-design, overview]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # 🏗️ SBKube 아키텍처 가이드
 
 SBKube의 내부 구조와 설계 원칙에 대한 상세한 설명입니다.

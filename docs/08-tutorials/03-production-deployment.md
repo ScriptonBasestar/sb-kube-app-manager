@@ -1,3 +1,11 @@
+---
+type: Tutorial
+audience: End User, Developer
+topics: [production, best-practices, operations]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # 🏭 프로덕션 배포 Best Practices
 
 > **난이도**: ⭐⭐⭐ 고급 **소요 시간**: 30분 **사전 요구사항**: [02-multi-app-deployment.md](02-multi-app-deployment.md) 완료

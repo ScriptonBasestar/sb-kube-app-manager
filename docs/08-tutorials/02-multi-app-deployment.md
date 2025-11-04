@@ -1,3 +1,11 @@
+---
+type: Tutorial
+audience: End User
+topics: [multi-app, dependencies, orchestration]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # 🔗 다중 애플리케이션 배포
 
 > **난이도**: ⭐⭐ 중급 **소요 시간**: 15-20분 **사전 요구사항**: [01-getting-started.md](01-getting-started.md) 완료

@@ -1,3 +1,11 @@
+---
+type: Tutorial
+audience: End User
+topics: [customization, helm-overrides, advanced]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # 🎨 Helm 차트 커스터마이징
 
 > **난이도**: ⭐⭐⭐ 고급 **소요 시간**: 25분 **사전 요구사항**: [01-getting-started.md](01-getting-started.md) 완료

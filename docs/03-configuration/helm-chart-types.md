@@ -1,3 +1,11 @@
+---
+type: API Reference
+audience: End User
+topics: [helm, chart-types, configuration]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # Helm Chart Types in SBKube
 
 SBKube은 다양한 형태의 Helm 차트를 지원합니다.

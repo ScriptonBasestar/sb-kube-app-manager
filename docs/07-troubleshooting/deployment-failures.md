@@ -1,3 +1,11 @@
+---
+type: Troubleshooting Guide
+audience: End User, Developer
+topics: [errors, deployment-failures, debugging]
+llm_priority: high
+last_updated: 2025-01-04
+---
+
 # 배포 실패 트러블슈팅 가이드
 
 SBKube 배포 중 발생할 수 있는 다양한 에러 상황과 해결 방법을 안내합니다.

@@ -1,3 +1,11 @@
+---
+type: Quick Reference
+audience: Developer
+topics: [commands, development, shortcuts, make]
+llm_priority: high
+last_updated: 2025-01-04
+---
+
 # Quick Command Reference
 
 Most commonly used commands for SBKube development.

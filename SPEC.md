@@ -1,3 +1,11 @@
+---
+type: Technical Specification
+audience: Developer
+topics: [architecture, requirements, implementation]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # SBKube 기술 명세서 (Technical Specification)
 
 ## 1. 프로젝트 개요

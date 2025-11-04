@@ -1,3 +1,11 @@
+---
+type: Developer Guide
+audience: Developer
+topics: [coding-standards, style-guide, conventions]
+llm_priority: high
+last_updated: 2025-01-04
+---
+
 # Coding Standards
 
 This document defines coding standards and conventions for SBKube development.

@@ -1,3 +1,12 @@
+---
+type: Internal Planning
+audience: Developer
+topics: [planning, roadmap, hooks]
+llm_priority: low
+exclude_from_context: true
+last_updated: 2025-01-04
+---
+
 # Hooks 시스템 개선 (Phase 1-4)
 
 > **최종 업데이트**: 2025-10-31 (Phase 3 완료) **현재 구현 상태**: Phase 1, 2, 3 완료 (v0.9.0+)

@@ -1,3 +1,11 @@
+---
+type: User Guide
+audience: End User
+topics: [app-types, web, worker, scheduled, helm]
+llm_priority: high
+last_updated: 2025-01-04
+---
+
 # 🎯 SBKube 애플리케이션 타입 가이드
 
 SBKube은 다양한 소스와 배포 방식을 지원하는 **7가지 애플리케이션 타입**을 제공합니다.

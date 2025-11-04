@@ -1,3 +1,11 @@
+---
+type: Product Documentation
+audience: Product Manager, Developer
+topics: [users, personas, use-cases, market]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # SBKube 대상 사용자 분석
 
 ## 주요 사용자 페르소나

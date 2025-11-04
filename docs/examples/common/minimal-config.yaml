@@ -1,0 +1,11 @@
+# Minimal SBKube Configuration Example
+# This is the simplest possible configuration
+
+namespace: default
+
+apps:
+  myapp:
+    type: web
+    git: https://github.com/user/repo
+    dockerfile_path: ./Dockerfile
+    helm_chart: ./charts/app

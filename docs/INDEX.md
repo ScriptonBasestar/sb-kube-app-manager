@@ -1,3 +1,12 @@
+---
+type: Navigation Index
+audience: End User, Developer, AI Agent
+topics: [navigation, index, documentation-map]
+llm_priority: high
+always_load: true
+last_updated: 2025-01-04
+---
+
 # 📚 SBKube Documentation Index
 
 > Kubernetes deployment automation CLI tool for k3s with Helm, YAML, and Git integration

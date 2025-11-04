@@ -1,3 +1,11 @@
+---
+type: API Reference
+audience: Developer
+topics: [api, contracts, interfaces, models]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # SBKube API 계약 명세
 
 ## 개요

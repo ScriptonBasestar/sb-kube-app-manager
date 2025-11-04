@@ -1,3 +1,11 @@
+---
+type: FAQ
+audience: End User
+topics: [faq, common-questions, quick-answers]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # 자주 묻는 질문 (FAQ)
 
 ## 설정 관련

@@ -1,3 +1,11 @@
+---
+type: Product Strategy
+audience: Product Manager, Developer
+topics: [vision, roadmap, future, milestones]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # SBKube 비전과 로드맵
 
 ## 장기 비전

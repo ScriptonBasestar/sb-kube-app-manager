@@ -1,3 +1,11 @@
+---
+type: Troubleshooting Guide
+audience: Developer
+topics: [troubleshooting, development, errors, solutions]
+llm_priority: high
+last_updated: 2025-01-04
+---
+
 # Common Development Issues
 
 Solutions for frequently encountered development issues in SBKube.

@@ -1,3 +1,12 @@
+---
+type: External Reference
+audience: AI Agent
+topics: [quickstart, commands, configuration, examples]
+llm_priority: high
+external_reference: true
+last_updated: 2025-01-04
+---
+
 # SBKube LLM Guide
 
 > **AI-Optimized Documentation for Using SBKube in Other Projects**

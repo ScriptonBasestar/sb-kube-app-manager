@@ -1,3 +1,13 @@
+---
+type: AI Agent Instructions
+audience: AI Agent
+topics: [navigation, routing, context, guidelines]
+llm_priority: critical
+entry_point: true
+always_load: true
+last_updated: 2025-01-04
+---
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -90,18 +100,44 @@ Level 4 (Implementation):
 |------------|-----------------|-----------|
 | **Product Overview** | [PRODUCT.md](PRODUCT.md) | [docs/00-product/product-definition.md](docs/00-product/product-definition.md) |
 | **Feature Specs** | [docs/00-product/product-spec.md](docs/00-product/product-spec.md) | [docs/02-features/commands.md](docs/02-features/commands.md) |
+| **Target Users** | [docs/00-product/target-users.md](docs/00-product/target-users.md) | [PRODUCT.md](PRODUCT.md) |
+| **Roadmap** | [docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md) | [CHANGELOG.md](CHANGELOG.md) |
 | **Architecture** | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) | [docs/04-development/architecture-patterns.md](docs/04-development/architecture-patterns.md) |
 | **Development Setup** | [docs/04-development/README.md](docs/04-development/README.md) | [Makefile](Makefile) |
-| **Commands** | [Makefile](Makefile) | [docs/04-development/quick-commands.md](docs/04-development/quick-commands.md) |
+| **Commands Reference** | [docs/02-features/commands.md](docs/02-features/commands.md) | [docs/04-development/quick-commands.md](docs/04-development/quick-commands.md) |
+| **Command Usage** | [Makefile](Makefile) | [docs/04-development/quick-commands.md](docs/04-development/quick-commands.md) |
 | **Coding Standards** | [docs/04-development/coding-standards.md](docs/04-development/coding-standards.md) | [ruff.toml](ruff.toml), [mypy.ini](mypy.ini) |
 | **Testing** | [docs/04-development/testing.md](docs/04-development/testing.md) | [Makefile](Makefile) |
-| **Troubleshooting** | [docs/07-troubleshooting/common-dev-issues.md](docs/07-troubleshooting/common-dev-issues.md) | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) |
 | **Configuration** | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) | [examples/](examples/) |
-| **Migration** | [docs/03-configuration/migration-guide.md](docs/03-configuration/migration-guide.md) | [CHANGELOG.md](CHANGELOG.md) |
+| **App Types** | [docs/02-features/application-types.md](docs/02-features/application-types.md) | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) |
+| **Helm Customization** | [docs/03-configuration/chart-customization.md](docs/03-configuration/chart-customization.md) | [docs/03-configuration/helm-chart-types.md](docs/03-configuration/helm-chart-types.md) |
+| **Helm Charts** | [docs/03-configuration/helm-chart-types.md](docs/03-configuration/helm-chart-types.md) | [docs/03-configuration/chart-customization.md](docs/03-configuration/chart-customization.md) |
 | **Hooks** | [docs/02-features/hooks-guide.md](docs/02-features/hooks-guide.md) | [docs/02-features/hooks-reference.md](docs/02-features/hooks-reference.md) |
-| **LLM Integration** | [docs/02-features/llm-friendly-output.md](docs/02-features/llm-friendly-output.md) | [sbkube/utils/output_formatter.py](sbkube/utils/output_formatter.py) |
+| **Migration** | [docs/03-configuration/migration-guide.md](docs/03-configuration/migration-guide.md) | [CHANGELOG.md](CHANGELOG.md) |
+| **Troubleshooting** | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) | [docs/07-troubleshooting/common-dev-issues.md](docs/07-troubleshooting/common-dev-issues.md) |
+| **Deployment Failures** | [docs/07-troubleshooting/deployment-failures.md](docs/07-troubleshooting/deployment-failures.md) | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) |
+| **FAQ** | [docs/07-troubleshooting/faq.md](docs/07-troubleshooting/faq.md) | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) |
 | **Deployment** | [docs/06-deployment/deployment-guide.md](docs/06-deployment/deployment-guide.md) | [Makefile](Makefile) |
+| **Best Practices** | [docs/05-best-practices/directory-structure.md](docs/05-best-practices/directory-structure.md) | [docs/00-product/product-spec.md](docs/00-product/product-spec.md) |
+| **Directory Structure** | [docs/05-best-practices/directory-structure.md](docs/05-best-practices/directory-structure.md) | [examples/](examples/) |
+| **Tutorials** | [docs/08-tutorials/README.md](docs/08-tutorials/README.md) | [docs/01-getting-started/README.md](docs/01-getting-started/README.md) |
+| **Multi-App Deployment** | [docs/08-tutorials/02-multi-app-deployment.md](docs/08-tutorials/02-multi-app-deployment.md) | [docs/02-features/application-types.md](docs/02-features/application-types.md) |
+| **Production Deployment** | [docs/08-tutorials/03-production-deployment.md](docs/08-tutorials/03-production-deployment.md) | [docs/06-deployment/deployment-guide.md](docs/06-deployment/deployment-guide.md) |
+| **Customization** | [docs/08-tutorials/04-customization.md](docs/08-tutorials/04-customization.md) | [docs/03-configuration/chart-customization.md](docs/03-configuration/chart-customization.md) |
+| **LLM Integration** | [docs/02-features/llm-friendly-output.md](docs/02-features/llm-friendly-output.md) | [sbkube/utils/output_formatter.py](sbkube/utils/output_formatter.py) |
 | **External AI Reference** | [LLM_GUIDE.md](LLM_GUIDE.md) | For using SBKube in other projects |
+| **API Contract** | [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md) | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
+| **Dependencies** | [docs/10-modules/sbkube/DEPENDENCIES.md](docs/10-modules/sbkube/DEPENDENCIES.md) | [docs/10-modules/sbkube/MODULE.md](docs/10-modules/sbkube/MODULE.md) |
+| **Debugging** | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) | [docs/07-troubleshooting/common-dev-issues.md](docs/07-troubleshooting/common-dev-issues.md) |
+| **Validation** | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) | [docs/02-features/commands.md](docs/02-features/commands.md) (validate command) |
+| **State Management** | [docs/02-features/commands.md](docs/02-features/commands.md) (status, history) | [docs/00-product/product-spec.md](docs/00-product/product-spec.md) |
+| **Rollback** | [docs/02-features/commands.md](docs/02-features/commands.md) (rollback command) | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) |
+| **App Group Dependencies** | [examples/app-group-management/](examples/app-group-management/) | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) (deps field) |
+| **Kustomize** | [docs/02-features/application-types.md](docs/02-features/application-types.md) | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) |
+| **Error Messages** | [docs/07-troubleshooting/deployment-failures.md](docs/07-troubleshooting/deployment-failures.md) | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) |
+| **Performance** | [docs/02-features/llm-friendly-output.md](docs/02-features/llm-friendly-output.md) (--quiet mode) | [docs/05-best-practices/directory-structure.md](docs/05-best-practices/directory-structure.md) |
+| **Examples** | [examples/](examples/) | [docs/08-tutorials/README.md](docs/08-tutorials/README.md) |
+| **Installation** | [docs/01-getting-started/README.md](docs/01-getting-started/README.md) | [README.md](README.md) |
 
 ### 2.3 Context Priority Rules
 

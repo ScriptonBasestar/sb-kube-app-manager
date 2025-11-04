@@ -1,3 +1,12 @@
+---
+type: Historical Reference
+audience: Developer
+topics: [changelog, version-history, releases]
+llm_priority: low
+exclude_from_context: true
+last_updated: 2025-01-04
+---
+
 # Changelog - SBKube
 
 > **참고**: 이 문서의 과거 버전 예제에는 Bitnami 차트 참조가 포함되어 있습니다. 현재 버전(v0.6.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.

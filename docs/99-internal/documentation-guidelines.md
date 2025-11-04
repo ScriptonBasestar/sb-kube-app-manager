@@ -1,3 +1,12 @@
+---
+type: Internal Documentation
+audience: Developer
+topics: [meta, documentation, guidelines]
+llm_priority: low
+exclude_from_context: true
+last_updated: 2025-01-04
+---
+
 # 📖 Documentation Guidelines - LLM-Friendly Writing
 
 > SBKube 문서 작성 가이드: 사람과 LLM 모두에게 읽기 쉬운 문서 작성법

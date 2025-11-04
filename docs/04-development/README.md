@@ -1,3 +1,11 @@
+---
+type: Developer Guide
+audience: Developer
+topics: [development, setup, environment, contributing]
+llm_priority: high
+last_updated: 2025-01-04
+---
+
 # 👨‍💻 개발자 가이드
 
 SBKube 프로젝트 개발을 위한 환경 설정 및 개발 워크플로우 가이드입니다.

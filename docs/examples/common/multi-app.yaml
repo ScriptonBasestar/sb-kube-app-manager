@@ -1,0 +1,25 @@
+# Multi-Application Configuration Example
+# Shows web app + database deployment with dependencies
+
+namespace: production
+
+apps:
+  database:
+    type: helm
+    helm:
+      repo: bitnami
+      chart: postgresql
+      version: "12.0.0"
+      release_name: myapp-db
+      values:
+        - values/db-values.yaml
+
+  backend:
+    type: web
+    depends_on:
+      - database
+    git: https://github.com/user/backend
+    dockerfile_path: ./Dockerfile
+    helm_chart: ./charts/backend
+    values:
+      - values/backend-values.yaml

@@ -1,3 +1,11 @@
+---
+type: User Guide
+audience: End User, Developer
+topics: [helm, customization, overrides, values]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # Helm Chart Customization
 
 SBKube은 Helm 차트를 배포 전에 커스터마이징할 수 있는 강력한 기능을 제공합니다.

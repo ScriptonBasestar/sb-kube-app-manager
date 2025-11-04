@@ -1,3 +1,11 @@
+---
+type: User Guide
+audience: End User, Developer
+topics: [deployment, kubernetes, k3s, operations]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # 🚀 SBKube 배포 가이드
 
 SBKube 자체의 설치, 배포, 관리에 대한 종합 가이드입니다.

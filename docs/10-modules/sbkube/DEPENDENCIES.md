@@ -1,3 +1,11 @@
+---
+type: Technical Documentation
+audience: Developer
+topics: [dependencies, packages, requirements]
+llm_priority: low
+last_updated: 2025-01-04
+---
+
 # SBKube 의존성 명세
 
 ## 개요

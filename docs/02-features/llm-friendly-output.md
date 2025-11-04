@@ -1,3 +1,11 @@
+---
+type: Feature Guide
+audience: Developer, AI Agent
+topics: [output-formats, llm, json, yaml, automation]
+llm_priority: high
+last_updated: 2025-01-04
+---
+
 # LLM 친화적 출력 시스템
 
 > **LLM 에이전트 친화적 CLI 출력 포맷 가이드**

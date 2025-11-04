@@ -1,3 +1,11 @@
+---
+type: Tutorial Index
+audience: End User
+topics: [tutorials, learning-path, hands-on]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # 📚 SBKube 튜토리얼
 
 > SBKube를 처음 사용하는 분들을 위한 단계별 학습 가이드입니다.

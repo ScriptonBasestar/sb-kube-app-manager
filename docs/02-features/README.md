@@ -1,3 +1,11 @@
+---
+type: Feature Index
+audience: End User, Developer
+topics: [features, overview, cli-commands]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # 🚀 SBKube CLI 주요 기능
 
 SBKube는 Kubernetes 애플리케이션의 배포 및 관리를 자동화하는 CLI 도구입니다. Helm 차트, YAML 매니페스트, Git 저장소 등을 활용하여 애플리케이션의 생명주기를 효율적으로 관리할 수 있도록

@@ -1,3 +1,11 @@
+---
+type: Best Practices Guide
+audience: End User, Developer
+topics: [organization, structure, app-groups, naming]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # SBKube 디렉토리 구조 베스트 프랙티스
 
 > **작성일**: 2025-10-31 **대상**: 프로덕션 환경에서 SBKube 프로젝트를 구조화하는 모범 사례

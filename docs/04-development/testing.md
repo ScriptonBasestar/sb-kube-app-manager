@@ -1,3 +1,11 @@
+---
+type: Testing Guide
+audience: Developer
+topics: [testing, manual-testing, kind, kubernetes]
+llm_priority: medium
+last_updated: 2025-01-04
+---
+
 # 수동테스트
 
 ## Prepare kind kube

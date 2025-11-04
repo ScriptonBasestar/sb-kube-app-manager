@@ -53,15 +53,16 @@ YAML 형식 출력 (PyYAML 설치 필요)
 
 ### CLI 옵션으로 지정
 
+**중요**: `--format`은 글로벌 옵션이므로 서브커맨드 **앞**에 위치해야 합니다.
+
 ```bash
-# LLM 친화적 출력
-sbkube apply --format llm
+# ✅ 올바른 사용법 (글로벌 옵션은 서브커맨드 앞)
+sbkube --format llm apply --app-dir config
+sbkube --format json deploy
+sbkube --format yaml status
 
-# JSON 출력
-sbkube deploy --format json
-
-# YAML 출력
-sbkube status --format yaml
+# ❌ 잘못된 사용법 (에러 발생)
+sbkube apply --format llm  # Error: No such option: --format
 
 # 기본값 (human)
 sbkube apply
@@ -91,7 +92,7 @@ CLI 옵션 > 환경변수 > 기본값 (human)
 export SBKUBE_OUTPUT_FORMAT=json
 
 # CLI 옵션이 우선
-sbkube apply --format llm  # → llm 사용 (CLI 우선)
+sbkube --format llm apply  # → llm 사용 (CLI 우선)
 sbkube status              # → json 사용 (환경변수)
 ```
 
@@ -216,7 +217,7 @@ import json
 
 # LLM 친화적 포맷으로 실행
 result = subprocess.run(
-    ["sbkube", "apply", "--format", "llm"],
+    ["sbkube", "--format", "llm", "apply"],
     capture_output=True,
     text=True
 )
@@ -235,7 +236,7 @@ import json
 
 # JSON 포맷으로 실행
 result = subprocess.run(
-    ["sbkube", "status", "--format", "json"],
+    ["sbkube", "--format", "json", "status"],
     capture_output=True,
     text=True
 )

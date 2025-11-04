@@ -20,13 +20,13 @@
 
 **Usage Example**:
 ```bash
-# LLM-optimized output
-sbkube apply --format llm
+# LLM-optimized output (note: --format before subcommand)
+sbkube --format llm apply
 
 # JSON output
-sbkube status --format json
+sbkube --format json status
 
-# Environment variable
+# Environment variable (recommended)
 export SBKUBE_OUTPUT_FORMAT=llm
 sbkube apply
 ```

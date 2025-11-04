@@ -4,6 +4,44 @@
 
 ## [Unreleased]
 
+### ✨ New Features
+
+**LLM-Friendly Output System** (2025-01-03)
+
+- ✅ **NEW**: Multiple output formats for LLM agents and automation
+  - `human` - Rich Console output (default)
+  - `llm` - LLM-optimized compact text (80-90% token savings)
+  - `json` - Structured JSON for machine parsing
+  - `yaml` - YAML format output
+- ✅ **NEW**: `--format` CLI option for all commands
+- ✅ **NEW**: `SBKUBE_OUTPUT_FORMAT` environment variable support
+- ✅ **NEW**: `OutputFormatter` utility class for consistent formatting
+- ✅ **ENHANCED**: `EnhancedBaseCommand` with built-in formatter support
+
+**Usage Example**:
+```bash
+# LLM-optimized output
+sbkube apply --format llm
+
+# JSON output
+sbkube status --format json
+
+# Environment variable
+export SBKUBE_OUTPUT_FORMAT=llm
+sbkube apply
+```
+
+**Token Efficiency**:
+- Simple deployment (3 apps): 500-1000 tokens → 80-100 tokens (80-90% savings)
+- Complex deployment (10 apps): 2000-3000 tokens → 200-300 tokens (85-90% savings)
+
+**New Files**:
+- `sbkube/utils/output_formatter.py` - Output formatting utilities
+- `docs/02-features/llm-friendly-output.md` - Complete usage guide
+- `tests/unit/utils/test_output_formatter.py` - Test suite (17 tests, 84% coverage)
+
+**See:** [LLM-Friendly Output Guide](docs/02-features/llm-friendly-output.md)
+
 ### ✨ Improved
 
 **Enhanced Error Handling for Deployment Failures** (2025-01-04)

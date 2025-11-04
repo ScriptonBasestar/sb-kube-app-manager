@@ -170,6 +170,13 @@ class SbkubeGroup(click.Group):
     envvar="KUBE_NAMESPACE",
     help="작업을 수행할 기본 네임스페이스.",
 )
+@click.option(
+    "--format",
+    type=click.Choice(["human", "llm", "json", "yaml"], case_sensitive=False),
+    envvar="SBKUBE_OUTPUT_FORMAT",
+    default="human",
+    help="출력 형식 (human: Rich Console, llm: LLM 친화적, json: JSON, yaml: YAML). 환경변수: SBKUBE_OUTPUT_FORMAT",
+)
 @click.option("-v", "--verbose", is_flag=True, help="상세 로깅을 활성화합니다.")
 @click.pass_context
 def main(
@@ -179,6 +186,7 @@ def main(
     source: str,
     profile: str | None,
     namespace: str | None,
+    format: str,
     verbose: bool,
 ) -> None:
     """sbkube: Kubernetes 애플리케이션 관리를 위한 CLI 도구.
@@ -189,6 +197,7 @@ def main(
     ctx.obj["kubeconfig"] = kubeconfig
     ctx.obj["context"] = context
     ctx.obj["namespace"] = namespace
+    ctx.obj["format"] = format
     ctx.obj["verbose"] = verbose
 
     # --profile 옵션으로 sources 파일명 자동 생성

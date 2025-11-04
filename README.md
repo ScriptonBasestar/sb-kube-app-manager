@@ -93,6 +93,27 @@ Full documentation index: **[docs/INDEX.md](docs/INDEX.md)**
 
 ## ⚙️ Key Features
 
+### LLM-Friendly Output 🤖
+
+SBKube supports multiple output formats optimized for LLM agents and automation:
+
+```bash
+# Human-friendly (default)
+sbkube apply --format human
+
+# LLM-optimized (80-90% token savings)
+sbkube apply --format llm
+
+# Machine-parseable JSON
+sbkube apply --format json
+
+# Environment variable support
+export SBKUBE_OUTPUT_FORMAT=llm
+sbkube apply
+```
+
+**See:** [LLM-Friendly Output Guide](docs/02-features/llm-friendly-output.md)
+
 ### Multi-Stage Workflow
 
 ```

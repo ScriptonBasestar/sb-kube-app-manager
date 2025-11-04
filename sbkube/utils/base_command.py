@@ -16,6 +16,7 @@ from sbkube.models.sources_model import SourceScheme
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.logger import LogLevel, logger
+from sbkube.utils.output_formatter import OutputFormat, OutputFormatter
 
 
 class EnhancedBaseCommand:
@@ -30,6 +31,7 @@ class EnhancedBaseCommand:
         sources_file: str = "sources.yaml",
         validate_on_load: bool = True,
         use_inheritance: bool = True,
+        output_format: str = "human",
     ):
         """
         Initialize enhanced base command.
@@ -42,6 +44,7 @@ class EnhancedBaseCommand:
             sources_file: Sources configuration file name
             validate_on_load: Whether to validate configurations on load
             use_inheritance: Whether to enable configuration inheritance
+            output_format: Output format (human, llm, json, yaml)
         """
         # 디렉토리 경로 (명령어들과 일관성을 위해 대문자 상수 사용)
         self.BASE_DIR = Path(base_dir).resolve()
@@ -88,6 +91,10 @@ class EnhancedBaseCommand:
 
         # Hook executor (initialized after config load)
         self.hook_executor: HookExecutor | None = None
+
+        # Output formatter
+        self.output_format = OutputFormat(output_format.lower())
+        self.formatter = OutputFormatter(format_type=self.output_format)
 
     def _init_hook_executor(self, dry_run: bool = False):
         """Initialize hook executor after configuration is loaded."""

@@ -357,13 +357,18 @@ export sbkube_output_format=llm
 - EnhancedBaseCommand 통합
 - 테스트 코드
 
-### Phase 2 (예정)
-- `apply` 명령어에 LLM 출력 적용
-- `deploy` 명령어 통합
-- `status` 명령어 통합
+### Phase 2 (완료) ✅
+- ✅ `prepare` 명령어 LLM 출력 통합
+- ✅ `build` 명령어 LLM 출력 통합
+- ✅ `deploy` 명령어 LLM 출력 통합
+- ✅ `apply` 명령어 LLM 출력 통합
+- ✅ `template` 명령어 LLM 출력 통합
+- ⚠️ `status` 명령어 기본 지원 (상세 구현 예정)
 
 ### Phase 3 (예정)
-- 모든 명령어 통합
+- `status` 명령어 상세 LLM 출력 구현
+- `history` 명령어 LLM 출력 통합
+- 나머지 명령어 통합 (`rollback`, `delete`, `upgrade` 등)
 - `--format compact` 추가 (더 간결한 human 모드)
 - 필드 선택 옵션 (`--fields`)
 

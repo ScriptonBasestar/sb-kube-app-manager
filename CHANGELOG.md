@@ -8,6 +8,7 @@
 
 **LLM-Friendly Output System** (2025-01-03)
 
+**Phase 1: Infrastructure** (2025-01-03)
 - ✅ **NEW**: Multiple output formats for LLM agents and automation
   - `human` - Rich Console output (default)
   - `llm` - LLM-optimized compact text (80-90% token savings)
@@ -18,27 +19,43 @@
 - ✅ **NEW**: `OutputFormatter` utility class for consistent formatting
 - ✅ **ENHANCED**: `EnhancedBaseCommand` with built-in formatter support
 
+**Phase 2: Command Integration** (2025-01-03)
+- ✅ **INTEGRATED**: `prepare` command - LLM-friendly output for chart/repo downloads
+- ✅ **INTEGRATED**: `build` command - LLM-friendly output for chart customization
+- ✅ **INTEGRATED**: `deploy` command - LLM-friendly output for deployments
+- ✅ **INTEGRATED**: `apply` command - Full workflow LLM output support
+
 **Usage Example**:
 ```bash
 # LLM-optimized output (note: --format before subcommand)
 sbkube --format llm apply
+sbkube --format llm prepare
+sbkube --format llm build
+sbkube --format llm deploy
 
 # JSON output
 sbkube --format json status
 
-# Environment variable (recommended)
+# Environment variable (recommended for LLM agents)
 export SBKUBE_OUTPUT_FORMAT=llm
-sbkube apply
+sbkube apply  # All commands use LLM format
 ```
 
 **Token Efficiency**:
 - Simple deployment (3 apps): 500-1000 tokens → 80-100 tokens (80-90% savings)
 - Complex deployment (10 apps): 2000-3000 tokens → 200-300 tokens (85-90% savings)
+- Full workflow (prepare+build+deploy): 1500-2000 tokens → 150-200 tokens (85-90% savings)
 
 **New Files**:
 - `sbkube/utils/output_formatter.py` - Output formatting utilities
 - `docs/02-features/llm-friendly-output.md` - Complete usage guide
 - `tests/unit/utils/test_output_formatter.py` - Test suite (17 tests, 84% coverage)
+
+**Modified Files**:
+- `sbkube/commands/prepare.py` - LLM output support
+- `sbkube/commands/build.py` - LLM output support
+- `sbkube/commands/deploy.py` - LLM output support
+- `sbkube/commands/apply.py` - LLM output support
 
 **See:** [LLM-Friendly Output Guide](docs/02-features/llm-friendly-output.md)
 

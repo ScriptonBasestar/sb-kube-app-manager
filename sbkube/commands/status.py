@@ -23,6 +23,7 @@ from sbkube.utils.cluster_grouping import (
     group_releases_by_app_group,
 )
 from sbkube.utils.cluster_status import ClusterStatusCollector
+# from sbkube.utils.output_formatter import OutputFormatter  # TODO: Implement LLM output
 
 console = Console()
 
@@ -129,6 +130,15 @@ def cmd(
         # Watch mode (auto-refresh every 10s)
         sbkube status --watch
     """
+    # Get output format from context
+    output_format = ctx.obj.get("format", "human")
+    # formatter = OutputFormatter(format_type=output_format)  # TODO: Implement LLM output
+
+    # Set console quiet mode for non-human formats (basic support)
+    global console
+    if output_format != "human":
+        console = Console(quiet=True)
+
     base_path = Path(base_dir)
     sources_file = base_path / "sources.yaml"
 

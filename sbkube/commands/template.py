@@ -18,6 +18,7 @@ from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
+from sbkube.utils.output_formatter import OutputFormatter
 
 console = Console()
 
@@ -303,7 +304,9 @@ def template_http_app(
     default=False,
     help="Dry-run 모드 (훅 실행 시뮬레이션)",
 )
+@click.pass_context
 def cmd(
+    ctx: click.Context,
     app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
@@ -319,7 +322,19 @@ def cmd(
     - 렌더링된 YAML을 .sbkube/rendered/ 디렉토리에 저장
     - 배포 전 미리보기 및 CI/CD 검증용
     """
-    console.print("[bold blue]✨ SBKube `template` 시작 ✨[/bold blue]")
+    # Get output format from context
+    output_format = ctx.obj.get("format", "human")
+    formatter = OutputFormatter(format_type=output_format)
+
+    # Set console quiet mode for non-human formats
+    global console
+    if output_format != "human":
+        console = Console(quiet=True)
+
+    if output_format == "human":
+        console.print("[bold blue]✨ SBKube `template` 시작 ✨[/bold blue]")
+    else:
+        pass  # Suppress start message in LLM mode
 
     if dry_run:
         console.print("[yellow]🔍 Dry-run mode enabled[/yellow]")
@@ -565,9 +580,39 @@ def cmd(
 
     # 전체 결과
     if not overall_success:
-        console.print("\n[bold red]❌ Some app groups failed to template[/bold red]")
+        if output_format == "human":
+            console.print("\n[bold red]❌ Some app groups failed to template[/bold red]")
+        else:
+            result = formatter.format_deployment_result(
+                status="failed",
+                summary={
+                    "app_groups_processed": len(app_config_dirs),
+                    "status": "failed",
+                },
+                deployments=[],
+                next_steps=["Check error messages and fix configuration", "Verify chart paths and values files"],
+                errors=["Some app groups failed to template"],
+            )
+            formatter.print_output(result)
         raise click.Abort()
     else:
-        console.print(
-            "\n[bold green]🎉 All app groups templated successfully![/bold green]"
-        )
+        if output_format == "human":
+            console.print(
+                "\n[bold green]🎉 All app groups templated successfully![/bold green]"
+            )
+        else:
+            result = formatter.format_deployment_result(
+                status="success",
+                summary={
+                    "app_groups_processed": len(app_config_dirs),
+                    "rendered_files": str(RENDERED_DIR),
+                    "status": "success",
+                },
+                deployments=[],
+                next_steps=[
+                    f"Review rendered files: ls {RENDERED_DIR}",
+                    f"Deploy with: sbkube deploy --app-dir {app_config_dirs[0].name}",
+                ],
+                errors=[],
+            )
+            formatter.print_output(result)

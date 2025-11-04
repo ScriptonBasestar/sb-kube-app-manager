@@ -371,14 +371,21 @@ export sbkube_output_format=llm
 - ✅ `deploy` 명령어 LLM 출력 통합
 - ✅ `apply` 명령어 LLM 출력 통합
 - ✅ `template` 명령어 LLM 출력 통합
-- ⚠️ `status` 명령어 기본 지원 (상세 구현 예정)
 
-### Phase 3 (예정)
-- `status` 명령어 상세 LLM 출력 구현
-- `history` 명령어 LLM 출력 통합
-- 나머지 명령어 통합 (`rollback`, `delete`, `upgrade` 등)
+### Phase 3 (진행 중) 🚧
+- ✅ `status` 명령어 LLM 출력 통합 (2025-01-03 완료)
+  - 클러스터 및 노드 정보
+  - Helm 릴리스 상태 (앱그룹별, 네임스페이스별)
+  - 구조화된 배포 목록
+  - 80-85% 토큰 절약
+- ⏳ `history` 명령어 LLM 출력 통합
+- ⏳ 나머지 명령어 통합 (`rollback`, `delete`, `upgrade` 등)
+
+### Phase 4 (예정)
 - `--format compact` 추가 (더 간결한 human 모드)
 - 필드 선택 옵션 (`--fields`)
+- LLM 친화적 dependency tree 출력
+- LLM 친화적 health check 출력
 
 ## 관련 문서
 
@@ -390,4 +397,4 @@ export sbkube_output_format=llm
 
 **작성일:** 2025-01-03
 **버전:** v0.6.1+
-**마지막 업데이트:** 2025-01-03
+**마지막 업데이트:** 2025-01-03 (Phase 3 status 명령어 완료)

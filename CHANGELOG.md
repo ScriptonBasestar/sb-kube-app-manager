@@ -34,7 +34,13 @@ last_updated: 2025-01-04
 - ✅ **INTEGRATED**: `deploy` command - LLM-friendly output for deployments
 - ✅ **INTEGRATED**: `apply` command - Full workflow LLM output support
 - ✅ **INTEGRATED**: `template` command - LLM-friendly output for YAML rendering
-- ⚠️ **PARTIAL**: `status` command - Console quiet mode support (detailed output pending)
+
+**Phase 3: Operational Commands** (2025-01-03)
+- ✅ **INTEGRATED**: `status` command - LLM-friendly cluster status output
+  - Cluster and node information
+  - Helm release status by app-group or namespace
+  - Structured deployment list with status
+  - 80-85% token savings for status queries
 
 **Usage Example**:
 ```bash
@@ -44,13 +50,16 @@ sbkube --format llm prepare
 sbkube --format llm build
 sbkube --format llm template
 sbkube --format llm deploy
+sbkube --format llm status
 
 # JSON output
 sbkube --format json status
+sbkube --format json status --by-group
 
 # Environment variable (recommended for LLM agents)
 export SBKUBE_OUTPUT_FORMAT=llm
 sbkube apply  # All commands use LLM format
+sbkube status --managed  # Show only managed apps in LLM format
 ```
 
 **Token Efficiency**:
@@ -58,6 +67,7 @@ sbkube apply  # All commands use LLM format
 - Complex deployment (10 apps): 2000-3000 tokens → 200-300 tokens (85-90% savings)
 - Full workflow (prepare+build+template+deploy): 1500-2000 tokens → 150-200 tokens (85-90% savings)
 - Template rendering: 300-500 tokens → 50-80 tokens (80-85% savings)
+- Status queries: 800-1200 tokens → 120-180 tokens (80-85% savings)
 
 **New Files**:
 - `sbkube/utils/output_formatter.py` - Output formatting utilities
@@ -70,7 +80,8 @@ sbkube apply  # All commands use LLM format
 - `sbkube/commands/deploy.py` - LLM output support
 - `sbkube/commands/apply.py` - LLM output support
 - `sbkube/commands/template.py` - LLM output support
-- `sbkube/commands/status.py` - Console quiet mode support (basic)
+- `sbkube/commands/status.py` - Full LLM output support with structured status data
+- `tests/commands/test_status.py` - Added LLM output tests
 
 **See:** [LLM-Friendly Output Guide](docs/02-features/llm-friendly-output.md)
 

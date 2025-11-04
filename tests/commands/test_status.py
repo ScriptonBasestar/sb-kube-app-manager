@@ -117,6 +117,22 @@ class TestStatusAppGroup:
         assert "app_group" in result.output or "APP_GROUP" in result.output
 
 
+class TestStatusLLMOutput:
+    """Tests for LLM-friendly output format (Phase 3)."""
+
+    def test_status_with_llm_format_help(self, runner):
+        """Test --format option is available."""
+        result = runner.invoke(main, ["--help"])
+        assert "--format" in result.output
+        assert "llm" in result.output
+
+    def test_status_requires_sources_even_with_llm_format(self, runner, tmp_path):
+        """Test status with --format llm still requires sources.yaml."""
+        result = runner.invoke(main, ["--format", "llm", "status", "--base-dir", str(tmp_path)])
+        assert result.exit_code != 0
+        # Should still show error about missing sources.yaml
+
+
 class TestStatusOptionCombinations:
     """Tests for option combinations."""
 

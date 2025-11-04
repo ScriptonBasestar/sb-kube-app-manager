@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 
 import click
-from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
 
@@ -23,9 +22,7 @@ from sbkube.utils.cluster_grouping import (
     group_releases_by_app_group,
 )
 from sbkube.utils.cluster_status import ClusterStatusCollector
-# from sbkube.utils.output_formatter import OutputFormatter  # TODO: Implement LLM output
-
-console = Console()
+from sbkube.utils.output_manager import OutputManager
 
 DEFAULT_CACHE_TTL_SECONDS = 300
 
@@ -132,42 +129,31 @@ def cmd(
     """
     # Get output format from context
     output_format = ctx.obj.get("format", "human")
-    # formatter = OutputFormatter(format_type=output_format)  # TODO: Implement LLM output
-
-    # Set console quiet mode for non-human formats (basic support)
-    global console
-    if output_format != "human":
-        console = Console(quiet=True)
+    output = OutputManager(format_type=output_format)
 
     base_path = Path(base_dir)
     sources_file = base_path / "sources.yaml"
 
     # Load sources.yaml
     if not sources_file.exists():
-        console.print(f"[red]Error: sources.yaml not found in {base_dir}[/red]")
-        console.print(
-            "\n[yellow]Hint: Run 'sbkube init' to create a sources.yaml file[/yellow]"
-        )
+        output.print_error(f"sources.yaml not found in {base_dir}")
+        output.print("\n[yellow]Hint: Run 'sbkube init' to create a sources.yaml file[/yellow]")
         sys.exit(1)
 
     try:
         config_manager = ConfigManager(base_path)
         sources = config_manager.load_sources()
     except Exception as e:
-        console.print(f"[red]Error: Failed to load sources.yaml: {e}[/red]")
+        output.print_error("Failed to load sources.yaml", error=str(e))
         sys.exit(1)
 
     # Validate required fields
     if not sources.kubeconfig:
-        console.print(
-            "[red]Error: 'kubeconfig' field is required in sources.yaml[/red]"
-        )
+        output.print_error("'kubeconfig' field is required in sources.yaml")
         sys.exit(1)
 
     if not sources.kubeconfig_context:
-        console.print(
-            "[red]Error: 'kubeconfig_context' field is required in sources.yaml[/red]"
-        )
+        output.print_error("'kubeconfig_context' field is required in sources.yaml")
         sys.exit(1)
 
     # Initialize cache and collector
@@ -184,20 +170,22 @@ def cmd(
 
     # Phase 6: Handle --deps mode
     if deps:
-        _display_dependency_tree(base_path, app_group)
+        _display_dependency_tree(base_path, app_group, output)
+        output.finalize()
         return
 
     # Handle watch mode
     if watch:
         import time
 
-        console.print("[cyan]Watching status (updates every 10 seconds)[/cyan]")
-        console.print("[dim]Press Ctrl+C to stop[/dim]\n")
+        output.print("[cyan]Watching status (updates every 10 seconds)[/cyan]")
+        output.print("[dim]Press Ctrl+C to stop[/dim]\n")
         try:
             while True:
-                _collect_and_cache(collector, cache, force_refresh=True)
+                _collect_and_cache(collector, cache, output, force_refresh=True)
                 _display_status(
                     cache,
+                    output,
                     by_group=by_group,
                     managed=managed,
                     show_all=show_all,
@@ -206,22 +194,24 @@ def cmd(
                     show_cache_info=False,
                     health_check=health_check,
                 )
-                console.print("\n[dim]Next update in 10 seconds...[/dim]")
+                output.print("\n[dim]Next update in 10 seconds...[/dim]")
                 time.sleep(10)
         except KeyboardInterrupt:
-            console.print("\n[yellow]Stopped watching.[/yellow]")
+            output.print("\n[yellow]Stopped watching.[/yellow]")
+            output.finalize()
             sys.exit(0)
 
     # Normal mode: check cache or refresh
     if refresh or not cache.is_valid():
-        _collect_and_cache(collector, cache, force_refresh=refresh)
+        _collect_and_cache(collector, cache, output, force_refresh=refresh)
     else:
-        console.print(
+        output.print(
             f"[dim]Using cached data (collected {_format_age(cache.get_age_seconds())} ago)[/dim]\n"
         )
 
     _display_status(
         cache,
+        output,
         by_group=by_group,
         managed=managed,
         show_all=show_all,
@@ -231,51 +221,51 @@ def cmd(
         health_check=health_check,
     )
 
+    output.finalize()
+
 
 def _collect_and_cache(
-    collector: ClusterStatusCollector, cache: ClusterCache, force_refresh: bool = False
+    collector: ClusterStatusCollector,
+    cache: ClusterCache,
+    output: OutputManager,
+    force_refresh: bool = False,
 ) -> None:
     """Collect cluster status and save to cache."""
     import subprocess
 
     action = "Refreshing" if force_refresh else "Collecting"
-    console.print(f"[cyan]{action} cluster status...[/cyan]")
+    output.print(f"[cyan]{action} cluster status...[/cyan]")
 
     try:
         status_data = collector.collect_all()
         cache.save(status_data)
-        console.print("[green]✓ Status collected successfully[/green]\n")
+        output.print_success("Status collected successfully")
     except subprocess.TimeoutExpired:
-        console.print("[yellow]⏱️ Command timeout - kubectl/helm took too long[/yellow]")
+        output.print_warning("⏱️ Command timeout - kubectl/helm took too long")
         if cache.exists():
-            console.print(
-                "[yellow]Using existing cache file (may be outdated)[/yellow]\n"
-            )
+            output.print_warning("Using existing cache file (may be outdated)")
         else:
-            console.print("[red]No cache available to fall back on[/red]")
+            output.print_error("No cache available to fall back on")
             sys.exit(1)
     except subprocess.CalledProcessError as e:
-        console.print(f"[red]kubectl/helm error: {e.stderr if e.stderr else e}[/red]")
+        output.print_error("kubectl/helm error", error=str(e.stderr if e.stderr else e))
         if cache.exists():
-            console.print(
-                "[yellow]Using existing cache file (may be outdated)[/yellow]\n"
-            )
+            output.print_warning("Using existing cache file (may be outdated)")
         else:
-            console.print("[red]No cache available to fall back on[/red]")
+            output.print_error("No cache available to fall back on")
             sys.exit(1)
     except Exception as e:
-        console.print(f"[red]Unexpected error: {e}[/red]")
+        output.print_error("Unexpected error", error=str(e))
         if cache.exists():
-            console.print(
-                "[yellow]Using existing cache file (may be outdated)[/yellow]\n"
-            )
+            output.print_warning("Using existing cache file (may be outdated)")
         else:
-            console.print("[red]No cache available to fall back on[/red]")
+            output.print_error("No cache available to fall back on")
             sys.exit(1)
 
 
 def _display_status(
     cache: ClusterCache,
+    output: OutputManager,
     by_group: bool = False,
     managed: bool = False,
     show_all: bool = False,
@@ -287,15 +277,13 @@ def _display_status(
     """Display cluster status from cache."""
     data = cache.load()
     if not data:
-        console.print("[red]Error: No cached data available[/red]")
+        output.print_error("No cached data available")
         sys.exit(1)
 
     # Header
     cluster_name = data.get("cluster_name", "unknown")
     context = data.get("context", "unknown")
-    console.print(
-        f"[bold cyan]Status: {cluster_name}[/bold cyan] (context: {context})\n"
-    )
+    output.print(f"[bold cyan]Status: {cluster_name}[/bold cyan] (context: {context})\n")
 
     # Get Helm releases
     helm_releases = data.get("helm_releases", [])
@@ -305,6 +293,7 @@ def _display_status(
         _display_grouped_status(
             data=data,
             helm_releases=helm_releases,
+            output=output,
             by_group=by_group,
             managed=managed,
             app_group=app_group,
@@ -313,80 +302,102 @@ def _display_status(
         )
     else:
         # Standard summary view
-        _display_summary_status(data, helm_releases, unhealthy, health_check)
+        _display_summary_status(data, helm_releases, output, unhealthy, health_check)
 
     # Show cache metadata at the end
-    _display_cache_info(cache, show_cache_info)
+    _display_cache_info(cache, output, show_cache_info)
+
+    # Finalize LLM/JSON/YAML output
+    if output.format_type != "human":
+        _finalize_status_output(output, data, helm_releases, by_group, app_group)
 
 
 def _display_summary_status(
     data: dict,
     helm_releases: list[dict],
+    output: OutputManager,
     unhealthy: bool = False,
     health_check: bool = False,
 ) -> None:
     """Display standard summary status table."""
-    table = Table(show_header=True, header_style="bold magenta", border_style="dim")
-    table.add_column("Resource", style="cyan", width=20)
-    table.add_column("Status", style="white", width=50)
+    if output.format_type == "human":
+        console = output.get_console()
+        table = Table(show_header=True, header_style="bold magenta", border_style="dim")
+        table.add_column("Resource", style="cyan", width=20)
+        table.add_column("Status", style="white", width=50)
 
-    # Cluster info
-    cluster_info = data.get("cluster_info", {})
-    if api_server := cluster_info.get("api_server"):
-        table.add_row("API Server", api_server)
-    if version := cluster_info.get("version"):
-        table.add_row("Kubernetes", version)
+        # Cluster info
+        cluster_info = data.get("cluster_info", {})
+        if api_server := cluster_info.get("api_server"):
+            table.add_row("API Server", api_server)
+        if version := cluster_info.get("version"):
+            table.add_row("Kubernetes", version)
 
-    # Nodes
-    nodes = data.get("nodes", [])
-    if nodes:
+        # Nodes
+        nodes = data.get("nodes", [])
+        if nodes:
+            ready_count = sum(1 for node in nodes if node.get("status") == "Ready")
+            total_count = len(nodes)
+            status_color = "green" if ready_count == total_count else "yellow"
+            table.add_row(
+                "Nodes",
+                f"[{status_color}]{ready_count} Ready[/{status_color}] / {total_count} Total",
+            )
+        else:
+            table.add_row("Nodes", "[dim]No nodes found[/dim]")
+
+        # Namespaces
+        namespaces = data.get("namespaces", [])
+        table.add_row("Namespaces", str(len(namespaces)))
+
+        # Helm releases
+        if helm_releases:
+            # Filter unhealthy if requested
+            if unhealthy:
+                helm_releases = [
+                    r
+                    for r in helm_releases
+                    if r.get("status") not in ["deployed", "superseded"]
+                ]
+
+            status_count: dict[str, int] = {}
+            for release in helm_releases:
+                status = release.get("status", "unknown")
+                status_count[status] = status_count.get(status, 0) + 1
+
+            status_summary = ", ".join(
+                f"{count} {status}" for status, count in sorted(status_count.items())
+            )
+            table.add_row("Helm Releases", f"{len(helm_releases)} ({status_summary})")
+        else:
+            table.add_row("Helm Releases", "[dim]No releases found[/dim]")
+
+        console.print(table)
+        console.print()
+
+        # Phase 7: Health check details
+        if health_check:
+            _display_health_check_details(data, output)
+    else:
+        # LLM/JSON/YAML mode: collect structured data
+        nodes = data.get("nodes", [])
         ready_count = sum(1 for node in nodes if node.get("status") == "Ready")
         total_count = len(nodes)
-        status_color = "green" if ready_count == total_count else "yellow"
-        table.add_row(
-            "Nodes",
-            f"[{status_color}]{ready_count} Ready[/{status_color}] / {total_count} Total",
-        )
-    else:
-        table.add_row("Nodes", "[dim]No nodes found[/dim]")
 
-    # Namespaces
-    namespaces = data.get("namespaces", [])
-    table.add_row("Namespaces", str(len(namespaces)))
-
-    # Helm releases
-    if helm_releases:
-        # Filter unhealthy if requested
-        if unhealthy:
-            helm_releases = [
-                r
-                for r in helm_releases
-                if r.get("status") not in ["deployed", "superseded"]
-            ]
-
-        status_count: dict[str, int] = {}
+        # Record releases as deployments
         for release in helm_releases:
-            status = release.get("status", "unknown")
-            status_count[status] = status_count.get(status, 0) + 1
-
-        status_summary = ", ".join(
-            f"{count} {status}" for status, count in sorted(status_count.items())
-        )
-        table.add_row("Helm Releases", f"{len(helm_releases)} ({status_summary})")
-    else:
-        table.add_row("Helm Releases", "[dim]No releases found[/dim]")
-
-    console.print(table)
-    console.print()
-
-    # Phase 7: Health check details
-    if health_check:
-        _display_health_check_details(data)
+            output.add_deployment(
+                name=release.get("name", "unknown"),
+                namespace=release.get("namespace", "unknown"),
+                status=release.get("status", "unknown"),
+                version=release.get("chart", ""),
+            )
 
 
 def _display_grouped_status(
     data: dict,
     helm_releases: list[dict],
+    output: OutputManager,
     by_group: bool = False,
     managed: bool = False,
     app_group: str | None = None,
@@ -399,9 +410,7 @@ def _display_grouped_status(
         db = DeploymentDatabase()
     except Exception:
         db = None
-        console.print(
-            "[yellow]⚠️ Could not connect to State DB, grouping may be incomplete[/yellow]\n"
-        )
+        output.print_warning("Could not connect to State DB, grouping may be incomplete")
 
     # Group releases
     grouped_data = group_releases_by_app_group(helm_releases, db)
@@ -410,13 +419,13 @@ def _display_grouped_status(
     if app_group:
         group_data = filter_by_app_group(grouped_data, app_group)
         if not group_data:
-            console.print(f"[red]App-group not found: {app_group}[/red]")
-            console.print("\n[dim]Available app-groups:[/dim]")
+            output.print_error(f"App-group not found: {app_group}")
+            output.print("\n[dim]Available app-groups:[/dim]")
             for ag in grouped_data.get("managed_app_groups", {}).keys():
-                console.print(f"  - {ag}")
+                output.print(f"  - {ag}")
             return
 
-        _display_single_app_group(app_group, group_data)
+        _display_single_app_group(app_group, group_data, output)
         return
 
     # Display all app-groups
@@ -437,48 +446,65 @@ def _display_grouped_status(
         }
 
     # Display summary
-    console.print(f"[bold]App Groups:[/bold] {summary['total_app_groups']}")
-    console.print(f"[bold]Managed Releases:[/bold] {summary['total_managed_releases']}")
-    if not managed:
-        console.print(
-            f"[bold]Unmanaged Releases:[/bold] {summary['total_unmanaged_releases']}"
-        )
-    console.print(
-        f"[bold]Overall Health:[/bold] {_format_health(summary['overall_health'])}\n"
-    )
-
-    # Display each app-group
-    for ag_name in sorted(managed_groups.keys()):
-        group_data = managed_groups[ag_name]
-        _display_app_group_summary(ag_name, group_data)
-
-    # Display unmanaged releases
-    if unmanaged and not managed:
-        console.print("\n[bold yellow]Unmanaged Releases:[/bold yellow]")
-        table = Table(show_header=True, border_style="dim")
-        table.add_column("Name", style="cyan")
-        table.add_column("Namespace", style="white")
-        table.add_column("Status", style="white")
-
-        for rel in unmanaged:
-            table.add_row(
-                rel["name"],
-                rel["namespace"],
-                _format_release_status(rel["status"]),
+    if output.format_type == "human":
+        output.print(f"[bold]App Groups:[/bold] {summary['total_app_groups']}")
+        output.print(f"[bold]Managed Releases:[/bold] {summary['total_managed_releases']}")
+        if not managed:
+            output.print(
+                f"[bold]Unmanaged Releases:[/bold] {summary['total_unmanaged_releases']}"
             )
-        console.print(table)
-        console.print()
+        output.print(
+            f"[bold]Overall Health:[/bold] {_format_health(summary['overall_health'])}\n"
+        )
+
+        # Display each app-group
+        for ag_name in sorted(managed_groups.keys()):
+            group_data = managed_groups[ag_name]
+            _display_app_group_summary(ag_name, group_data, output)
+
+        # Display unmanaged releases
+        if unmanaged and not managed:
+            console = output.get_console()
+            output.print("\n[bold yellow]Unmanaged Releases:[/bold yellow]")
+            table = Table(show_header=True, border_style="dim")
+            table.add_column("Name", style="cyan")
+            table.add_column("Namespace", style="white")
+            table.add_column("Status", style="white")
+
+            for rel in unmanaged:
+                table.add_row(
+                    rel["name"],
+                    rel["namespace"],
+                    _format_release_status(rel["status"]),
+                )
+            console.print(table)
+            console.print()
+    else:
+        # LLM/JSON/YAML mode: collect structured data
+        for ag_name in sorted(managed_groups.keys()):
+            group_data = managed_groups[ag_name]
+            apps = group_data.get("apps", {})
+            for app_name, app_info in apps.items():
+                output.add_deployment(
+                    name=app_name,
+                    namespace=group_data.get("namespace", "unknown"),
+                    status=app_info.get("status", "unknown"),
+                    version=app_info.get("chart", ""),
+                )
 
 
-def _display_single_app_group(app_group: str, group_data: dict) -> None:
+def _display_single_app_group(
+    app_group: str, group_data: dict, output: OutputManager
+) -> None:
     """Display detailed information for a single app-group."""
-    console.print(f"[bold cyan]App Group: {app_group}[/bold cyan]")
-    console.print(f"Namespace: {group_data.get('namespace', 'N/A')}")
+    console = output.get_console()
+    output.print(f"[bold cyan]App Group: {app_group}[/bold cyan]")
+    output.print(f"Namespace: {group_data.get('namespace', 'N/A')}")
 
     summary = group_data.get("summary", {})
-    console.print(f"Total Apps: {summary.get('total_apps', 0)}")
-    console.print(f"Healthy: [green]{summary.get('healthy', 0)}[/green]")
-    console.print(f"Failed: [red]{summary.get('failed', 0)}[/red]\n")
+    output.print(f"Total Apps: {summary.get('total_apps', 0)}")
+    output.print(f"Healthy: [green]{summary.get('healthy', 0)}[/green]")
+    output.print(f"Failed: [red]{summary.get('failed', 0)}[/red]\n")
 
     # Display apps table
     apps = group_data.get("apps", {})
@@ -498,7 +524,7 @@ def _display_single_app_group(app_group: str, group_data: dict) -> None:
         console.print()
 
 
-def _display_app_group_summary(app_group: str, group_data: dict) -> None:
+def _display_app_group_summary(app_group: str, group_data: dict, output: OutputManager) -> None:
     """Display summary for an app-group."""
     summary = group_data.get("summary", {})
     total = summary.get("total_apps", 0)
@@ -516,10 +542,11 @@ def _display_app_group_summary(app_group: str, group_data: dict) -> None:
         icon = "❌"
         color = "red"
 
-    console.print(
-        f"{icon} [{color}]{app_group}[/{color}] "
-        f"({healthy}/{total} healthy, {failed} failed)"
-    )
+    if output.format_type == "human":
+        console.print(
+            f"{icon} [{color}]{app_group}[/{color}] "
+            f"({healthy}/{total} healthy, {failed} failed)"
+        )
 
 
 def _format_health(health: str) -> str:
@@ -545,7 +572,9 @@ def _format_release_status(status: str) -> str:
     return status_map.get(status, status)
 
 
-def _display_cache_info(cache: ClusterCache, show: bool) -> None:
+def _display_cache_info(
+    cache: ClusterCache, output: OutputManager, show: bool
+) -> None:
     """Display cache metadata."""
     if not show:
         return
@@ -579,19 +608,19 @@ def _format_duration(seconds: float) -> str:
     return _format_age(seconds)
 
 
-def _display_dependency_tree(base_path: Path, app_group: str | None) -> None:
+def _display_dependency_tree(base_path: Path, app_group: str | None, output: OutputManager) -> None:
     """Display dependency tree for applications (Phase 6)."""
-    console.print("\n[bold cyan]🔗 Dependency Tree[/bold cyan]\n")
+    output.print("\n[bold cyan]🔗 Dependency Tree[/bold cyan]\n")
 
     try:
         config_manager = ConfigManager(base_path)
         config = config_manager.load_config()
     except Exception as e:
-        console.print(f"[red]Error loading config: {e}[/red]")
+        output.print_error("Error loading config", error=str(e))
         sys.exit(1)
 
     if not config.apps:
-        console.print("[yellow]No applications found in config.yaml[/yellow]")
+        output.print_warning("No applications found in config.yaml")
         return
 
     # Build dependency map
@@ -600,42 +629,44 @@ def _display_dependency_tree(base_path: Path, app_group: str | None) -> None:
     # Detect circular dependencies
     circular = _detect_circular_dependencies(dep_map)
     if circular:
-        console.print("[red]⚠️  Circular dependencies detected:[/red]")
+        output.print_error("⚠️  Circular dependencies detected:")
         for cycle in circular:
-            console.print(f"  [red]• {' → '.join(cycle)}[/red]")
-        console.print()
+            output.print(f"  [red]• {' → '.join(cycle)}[/red]")
+        output.print("")
 
     # Filter by app_group if specified
     apps_to_show = config.apps
     if app_group:
         apps_to_show = [app for app in config.apps if app.name.startswith(app_group)]
         if not apps_to_show:
-            console.print(f"[yellow]No apps found for app-group: {app_group}[/yellow]")
+            output.print_warning(f"No apps found for app-group: {app_group}")
             return
 
     # Find root apps (apps with no dependencies or all deps satisfied)
     root_apps = _find_root_apps(apps_to_show, dep_map)
 
     if not root_apps:
-        console.print("[yellow]No root applications found[/yellow]")
+        output.print_warning("No root applications found")
         return
 
-    # Build and display tree
-    tree = Tree("📦 Applications")
-    visited = set()
+    # Dependency tree visualization is human-only
+    if output.format_type == "human":
+        # Build and display tree
+        tree = Tree("📦 Applications")
+        visited = set()
 
-    for root_app in root_apps:
-        _add_tree_node(tree, root_app, dep_map, visited, circular)
+        for root_app in root_apps:
+            _add_tree_node(tree, root_app, dep_map, visited, circular)
 
-    console.print(tree)
-    console.print()
+        console.print(tree)
+        console.print()
 
-    # Statistics
-    total_apps = len(apps_to_show)
-    apps_with_deps = sum(1 for app in apps_to_show if dep_map.get(app.name))
-    console.print(
-        f"[dim]Total: {total_apps} apps, {apps_with_deps} with dependencies[/dim]"
-    )
+        # Statistics
+        total_apps = len(apps_to_show)
+        apps_with_deps = sum(1 for app in apps_to_show if dep_map.get(app.name))
+        console.print(
+            f"[dim]Total: {total_apps} apps, {apps_with_deps} with dependencies[/dim]"
+        )
 
 
 def _build_dependency_map(apps: list) -> dict[str, list[str]]:
@@ -730,13 +761,17 @@ def _add_tree_node(
         parent.add(f"[{color}]{app.name}[/{color}] [dim](no deps)[/dim]")
 
 
-def _display_health_check_details(data: dict) -> None:
+def _display_health_check_details(data: dict, output: OutputManager) -> None:
     """Display detailed health check information for pods (Phase 7)."""
-    console.print("\n[bold cyan]💊 Health Check Details[/bold cyan]\n")
+    output.print_section("💊 Health Check Details")
 
     pods = data.get("pods", [])
     if not pods:
-        console.print("[yellow]No pods found[/yellow]")
+        output.print_warning("No pods found")
+        return
+
+    # Health check details is human-only (complex table visualization)
+    if output.format_type != "human":
         return
 
     # Group pods by namespace
@@ -854,3 +889,73 @@ def _get_health_icon(health_status: str) -> str:
         return "🔄"
     else:
         return "ℹ️"
+
+
+def _finalize_status_output(
+    output: OutputManager,
+    data: dict,
+    helm_releases: list[dict],
+    by_group: bool,
+    app_group: str | None,
+) -> None:
+    """Finalize LLM/JSON/YAML output for status command."""
+    cluster_name = data.get("cluster_name", "unknown")
+    context = data.get("context", "unknown")
+    nodes = data.get("nodes", [])
+    namespaces = data.get("namespaces", [])
+
+    # Count node status
+    ready_count = sum(1 for node in nodes if node.get("status") == "Ready")
+    total_count = len(nodes)
+
+    # Count release status
+    status_count: dict[str, int] = {}
+    for release in helm_releases:
+        status = release.get("status", "unknown")
+        status_count[status] = status_count.get(status, 0) + 1
+
+    # Determine overall status
+    failed_count = status_count.get("failed", 0)
+    deployed_count = status_count.get("deployed", 0)
+    if failed_count > 0:
+        overall_status = "degraded" if deployed_count > failed_count else "failed"
+    else:
+        overall_status = "success"
+
+    # Summary
+    summary = {
+        "cluster": cluster_name,
+        "context": context,
+        "nodes_ready": f"{ready_count}/{total_count}",
+        "namespaces": len(namespaces),
+        "total_releases": len(helm_releases),
+        "release_status": status_count,
+    }
+
+    # Next steps
+    next_steps = []
+    if by_group or app_group:
+        next_steps.append(f"kubectl get pods -n {app_group}" if app_group else "kubectl get pods --all-namespaces")
+    else:
+        next_steps.append("kubectl get nodes")
+        next_steps.append("kubectl get pods --all-namespaces")
+
+    # Finalize
+    output.finalize(
+        status=overall_status,
+        summary=summary,
+        next_steps=next_steps,
+        errors=output.error_messages if output.error_messages else None,
+    )
+
+def _finalize_status_output(
+    output: OutputManager,
+    data: dict,
+    helm_releases: list[dict],
+    by_group: bool,
+    app_group: str | None,
+) -> None:
+    """Finalize structured output for LLM/JSON/YAML formats."""
+    # Already added deployments via add_deployment() calls
+    # This is a placeholder for any additional structured output finalization
+    pass

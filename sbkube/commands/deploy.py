@@ -95,6 +95,7 @@ def deploy_helm_app(
     dry_run: bool = False,
     deployment_id: str | None = None,
     operator: str | None = None,
+    progress_tracker: Any = None,
 ) -> bool:
     """
     Helm 앱 배포 (install/upgrade).
@@ -111,11 +112,29 @@ def deploy_helm_app(
         dry_run: dry-run 모드
         deployment_id: 배포 ID (Phase 2)
         operator: 배포자 이름 (Phase 2)
+        progress_tracker: ProgressTracker 인스턴스 (Phase 2)
 
     Returns:
         성공 여부
     """
-    console.print(f"[cyan]🚀 Deploying Helm app: {app_name}[/cyan]")
+    # Progress tracking setup
+    total_steps = 4  # Chart path, Namespace, Command build, Helm execution
+    current_step = 0
+
+    def _update_progress(description: str):
+        nonlocal current_step
+        current_step += 1
+        if progress_tracker:
+            progress_tracker.update(
+                progress_tracker.current_task,
+                completed=current_step,
+                description=f"🚀 Deploy {app_name}: {description}",
+            )
+
+    if not progress_tracker:
+        console.print(f"[cyan]🚀 Deploying Helm app: {app_name}[/cyan]")
+
+    _update_progress("Resolving chart path")
 
     release_name = app.release_name or app_name
     namespace = app.namespace
@@ -169,6 +188,8 @@ def deploy_helm_app(
     # Helm install/upgrade 명령어
     cmd = ["helm", "upgrade", release_name, str(chart_path), "--install"]
 
+    _update_progress("Checking namespace")
+
     if namespace:
         # Ensure namespace exists unless helm will create it
         namespace_missing = False
@@ -181,13 +202,19 @@ def deploy_helm_app(
 
         if namespace_missing and not app.create_namespace:
             if dry_run:
-                console.print(
-                    f"[yellow]⚠️ Namespace '{namespace}' is missing (dry-run: skipping creation)[/yellow]"
-                )
+                if not progress_tracker:
+                    console.print(
+                        f"[yellow]⚠️ Namespace '{namespace}' is missing (dry-run: skipping creation)[/yellow]"
+                    )
             else:
-                console.print(
-                    f"[yellow]ℹ️  Namespace '{namespace}' not found. Creating...[/yellow]"
-                )
+                if progress_tracker:
+                    progress_tracker.console_print(
+                        f"[yellow]  Creating namespace '{namespace}'...[/yellow]"
+                    )
+                else:
+                    console.print(
+                        f"[yellow]ℹ️  Namespace '{namespace}' not found. Creating...[/yellow]"
+                    )
                 create_cmd = ["kubectl", "create", "namespace", namespace]
                 create_cmd = apply_cluster_config_to_command(
                     create_cmd, kubeconfig, context
@@ -266,9 +293,12 @@ def deploy_helm_app(
     cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
 
     # 명령어 출력
-    console.print(f"  Command: {' '.join(cmd)}")
+    if not progress_tracker:
+        console.print(f"  Command: {' '.join(cmd)}")
 
     # 실행
+    _update_progress("Installing/Upgrading Helm release")
+
     return_code, stdout, stderr = run_command(cmd, timeout=300)
 
     if return_code != 0:
@@ -278,9 +308,14 @@ def deploy_helm_app(
         console.print(f"[red]❌ Failed to deploy: {stderr}[/red]")
         return False
 
-    console.print(
-        f"[green]✅ Helm app deployed: {app_name} (release: {release_name})[/green]"
-    )
+    if progress_tracker:
+        progress_tracker.console_print(
+            f"[green]✅ {app_name} deployed (release: {release_name})[/green]"
+        )
+    else:
+        console.print(
+            f"[green]✅ Helm app deployed: {app_name} (release: {release_name})[/green]"
+        )
     return True
 
 

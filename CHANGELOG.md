@@ -4,6 +4,27 @@
 
 ## [Unreleased]
 
+### 🐛 Fixed
+
+**Namespace Inheritance Bug** (2025-11-04)
+
+- ✅ **CRITICAL**: Fixed YAML/Action/Kustomize apps not respecting `config.namespace`
+- ✅ Resources were being deployed to `default` namespace instead of the configured global namespace when `app.namespace` was not explicitly set
+- ✅ All app types now consistently inherit from `config.namespace` when `app.namespace` is None
+- ✅ Backward compatible: Apps with explicit `app.namespace` continue to work identically
+- ✅ Affected users: All deployments using YAML/Action/Kustomize apps without explicit app-level namespace
+
+**Technical Details**:
+- Modified `deploy_yaml_app()`, `deploy_action_app()`, `deploy_kustomize_app()` to accept `config_namespace` parameter
+- Added namespace fallback logic: `namespace = app.namespace or config_namespace`
+- Updated all deployer call sites to pass `config.namespace`
+- Added comprehensive test suite: `tests/unit/commands/test_deploy_namespace.py` (9 test cases)
+- Enhanced documentation in `application-types.md` and `config-schema.md`
+
+**Migration**: No action required - fix is backward compatible
+
+**Reference**: `tasks/issue/namespace-not-applied-to-yaml-manifests.md`
+
 ### ✨ New Features
 
 **Multi-Cluster Context Support** (2025-11-03)

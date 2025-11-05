@@ -1,9 +1,16 @@
 """Tests for sbkube history command (Phase 5)."""
 
+from datetime import datetime
+
 import pytest
 from click.testing import CliRunner
 
 from sbkube.cli import main
+from sbkube.models.deployment_state import (
+    DeploymentDetail,
+    DeploymentStatus,
+    DeploymentSummary,
+)
 
 
 @pytest.fixture
@@ -137,6 +144,93 @@ class TestHistoryFormat:
     def test_history_format_yaml(self, runner, state_db_with_data):
         """Test --format yaml output."""
         pytest.skip("Requires State DB with sample data")
+
+
+class TestHistoryLLMOutput:
+    """Tests for LLM-friendly output (Phase 3)."""
+
+    def test_history_llm_list_output(self, runner, monkeypatch):
+        """sbkube history should emit compact LLM summary."""
+
+        deployments = [
+            DeploymentSummary(
+                deployment_id="dep-001",
+                timestamp=datetime(2025, 1, 1, 12, 0, 0),
+                cluster="prod",
+                namespace="default",
+                status=DeploymentStatus.SUCCESS,
+                app_count=3,
+                success_count=3,
+                failed_count=0,
+            )
+        ]
+
+        class FakeDB:
+            def list_deployments(self, **kwargs):
+                return deployments
+
+            def get_deployment(self, *args, **kwargs):
+                return None
+
+            def get_deployment_diff(self, *args, **kwargs):
+                return None
+
+            def get_deployment_values_diff(self, *args, **kwargs):
+                return None
+
+        monkeypatch.setattr("sbkube.commands.history.DeploymentDatabase", lambda: FakeDB())
+
+        result = runner.invoke(main, ["--format", "llm", "history"])
+
+        assert result.exit_code == 0
+        assert "HISTORY STATUS" in result.output
+        assert "TOTAL DEPLOYMENTS: 1" in result.output
+        assert "dep-001" in result.output
+
+    def test_history_llm_detail_output(self, runner, monkeypatch):
+        """sbkube history --show should produce structured LLM detail."""
+
+        detail = DeploymentDetail(
+            deployment_id="dep-001",
+            timestamp=datetime(2025, 1, 2, 8, 30, 0),
+            cluster="prod",
+            namespace="default",
+            app_config_dir="/work/configs/app",
+            status=DeploymentStatus.SUCCESS,
+            config_snapshot={"apps": []},
+            apps=[
+                {
+                    "name": "web",
+                    "type": "helm",
+                    "status": "success",
+                    "namespace": "default",
+                }
+            ],
+            resources=[],
+            helm_releases=[],
+        )
+
+        class FakeDB:
+            def list_deployments(self, **kwargs):
+                return []
+
+            def get_deployment(self, deployment_id):
+                return detail if deployment_id == "dep-001" else None
+
+            def get_deployment_diff(self, *args, **kwargs):
+                return None
+
+            def get_deployment_values_diff(self, *args, **kwargs):
+                return None
+
+        monkeypatch.setattr("sbkube.commands.history.DeploymentDatabase", lambda: FakeDB())
+
+        result = runner.invoke(main, ["--format", "llm", "history", "--show", "dep-001"])
+
+        assert result.exit_code == 0
+        assert "DEPLOYMENT ID: dep-001" in result.output
+        assert "APPS (1):" in result.output
+        assert "web" in result.output
 
 
 class TestHistoryFilters:

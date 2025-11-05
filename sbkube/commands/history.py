@@ -1,26 +1,50 @@
-"""Deployment history management.
+"""Deployment history management with LLM-friendly output."""
 
-This command displays the history of deployments tracked by sbkube,
-allowing users to review past deployments and their outcomes.
+from __future__ import annotations
 
-Replaces: sbkube state list, sbkube state show
-"""
+import difflib
+import hashlib
+import json
+from collections import Counter
+from typing import Any, Iterable, Tuple
 
 import click
+from rich.table import Table
 
+from sbkube.models.deployment_state import (
+    DeploymentDetail,
+    DeploymentSummary,
+    DeploymentStatus,
+)
 from sbkube.state.database import DeploymentDatabase
-from sbkube.utils.logger import logger
+from sbkube.utils.output_manager import OutputManager
+
+try:
+    import yaml
+except ImportError:  # pragma: no cover - optional dependency
+    yaml = None
+
+
+STATUS_ICONS = {
+    "success": "✅",
+    "failed": "❌",
+    "in_progress": "🔄",
+    "pending": "⏳",
+    "rolled_back": "↩️",
+    "partially_failed": "⚠️",
+}
 
 
 @click.command(name="history")
 @click.option("--cluster", help="Filter by cluster name")
 @click.option("--namespace", "-n", help="Filter by namespace")
-@click.option("--limit", default=20, help="Maximum number of deployments to show")
+@click.option("--limit", default=20, show_default=True, help="Maximum number of deployments to show")
 @click.option(
     "--format",
-    type=click.Choice(["table", "json", "yaml"]),
-    default="table",
-    help="Output format",
+    "format_override",
+    type=click.Choice(["table", "human", "llm", "json", "yaml"], case_sensitive=False),
+    default=None,
+    help="Override output format (deprecated: prefer `sbkube --format`).",
 )
 @click.option(
     "--show",
@@ -38,416 +62,639 @@ from sbkube.utils.logger import logger
     help="Compare Helm values between two deployments (format: ID1,ID2)",
 )
 @click.argument("app_group", required=False)
+@click.pass_context
 def cmd(
+    ctx: click.Context,
     cluster: str | None,
     namespace: str | None,
     limit: int,
-    format: str,
+    format_override: str | None,
     deployment_id: str | None,
     diff_ids: str | None,
     values_diff_ids: str | None,
     app_group: str | None,
-):
-    """Display deployment history.
+) -> None:
+    """Display deployment history with LLM-friendly output."""
 
-    Shows the history of deployments managed by sbkube, including deployment
-    status, apps deployed, and timestamps.
+    output_format = _resolve_output_format(ctx, format_override)
+    output = OutputManager(format_type=output_format)
 
-    \b
-    Examples:
-        # Show recent deployments
-        sbkube history
+    if format_override and format_override.lower() == "table" and output.format_type == "human":
+        output.print_warning(
+            "Option '--format table' is deprecated; use `sbkube --format human` or SBKUBE_OUTPUT_FORMAT=human.",
+            deprecated_option="--format table",
+        )
 
-        # Show deployments for a specific cluster
-        sbkube history --cluster production
-
-        # Show deployments for a namespace
-        sbkube history --namespace kube-system
-
-        # Show detailed info for a deployment
-        sbkube history --show dep_20250131_143022
-
-        # Show history for a specific app-group
-        sbkube history app_000_infra_network
-
-        # Compare two deployments (Phase 5)
-        sbkube history --diff dep_20250131_143022,dep_20250131_150000
-
-        # Compare Helm values between deployments (Phase 5)
-        sbkube history --values-diff dep_20250131_143022,dep_20250131_150000
-
-        # Export history as JSON
-        sbkube history --format json
-    """
     try:
         db = DeploymentDatabase()
+    except Exception as exc:  # pragma: no cover - initialization errors
+        output.print_error("Failed to initialize deployment database", error=str(exc))
+        _finalize_history_failure(output, [str(exc)])
+        raise click.Abort()
 
-        # Phase 5: Compare Helm values
+    try:
         if values_diff_ids:
-            _show_values_diff(db, values_diff_ids, format)
+            _handle_values_diff(output, db, values_diff_ids)
             return
 
-        # Phase 5: Compare two deployments
         if diff_ids:
-            _show_deployment_diff(db, diff_ids, format)
+            _handle_diff(output, db, diff_ids)
             return
 
-        # Show specific deployment details
         if deployment_id:
-            _show_deployment_detail(db, deployment_id, format)
+            _handle_detail(output, db, deployment_id)
             return
 
-        # Phase 5: Filter by app-group (완성)
-        if app_group:
-            logger.info(f"Filtering by app-group: {app_group}")
-
-        # List deployments
-        deployments = db.list_deployments(
+        _handle_list(
+            output,
+            db,
             cluster=cluster,
             namespace=namespace,
             app_group=app_group,
             limit=limit,
         )
-
-        if format == "table":
-            _print_deployments_table(deployments)
-        elif format == "json":
-            import json
-
-            data = [d.model_dump() for d in deployments]
-            click.echo(json.dumps(data, indent=2, default=str))
-        elif format == "yaml":
-            import yaml
-
-            data = [d.model_dump() for d in deployments]
-            click.echo(yaml.dump(data, default_flow_style=False))
-
-    except Exception as e:
-        logger.error(f"Failed to retrieve deployment history: {e}")
+    except click.Abort:
+        raise
+    except Exception as exc:
+        output.print_error("Failed to retrieve deployment history", error=str(exc))
+        _finalize_history_failure(output, [str(exc)])
         raise click.Abort()
 
 
-def _show_deployment_detail(
-    db: DeploymentDatabase, deployment_id: str, format: str
+def _handle_list(
+    output: OutputManager,
+    db: DeploymentDatabase,
+    cluster: str | None,
+    namespace: str | None,
+    app_group: str | None,
+    limit: int,
 ) -> None:
-    """Show detailed information for a specific deployment."""
-    deployment = db.get_deployment(deployment_id)
+    """Render deployment history list view."""
+    deployments = db.list_deployments(
+        cluster=cluster,
+        namespace=namespace,
+        app_group=app_group,
+        limit=limit,
+    )
 
+    entries = [_serialize_summary(dep) for dep in deployments]
+    status_counts = Counter(entry["status"] for entry in entries)
+
+    if output.format_type == "human":
+        if not entries:
+            output.print_warning("No deployments found", reason="empty_history")
+        else:
+            _print_history_table(output, entries)
+    elif not entries:
+        output.print_warning("No deployments found", reason="empty_history")
+
+    summary = {
+        "view": "list",
+        "total": len(entries),
+        "returned": len(entries),
+        "limit": limit,
+        "filters": {
+            "cluster": cluster or "any",
+            "namespace": namespace or "any",
+            "app_group": app_group or "any",
+        },
+        "status_counts": dict(status_counts),
+    }
+
+    next_steps = []
+    if entries:
+        next_steps.append(f"sbkube history --show {entries[0]['deployment_id']}")
+
+    overall_status = _derive_overall_status(status_counts)
+    output.finalize_history(
+        status=overall_status,
+        summary=summary,
+        history=entries,
+        next_steps=next_steps,
+    )
+
+
+def _handle_detail(
+    output: OutputManager, db: DeploymentDatabase, deployment_id: str
+) -> None:
+    """Render detailed deployment view."""
+    deployment = db.get_deployment(deployment_id)
     if not deployment:
-        logger.error(f"Deployment not found: {deployment_id}")
+        message = f"Deployment not found: {deployment_id}"
+        output.print_error(message, deployment_id=deployment_id)
+        _finalize_history_failure(output, [message])
         raise click.Abort()
 
-    if format == "json":
-        import json
+    detail = _serialize_detail(deployment)
 
-        click.echo(json.dumps(deployment.model_dump(), indent=2, default=str))
-    elif format == "yaml":
-        import yaml
+    if output.format_type == "human":
+        _print_deployment_detail(output, detail)
 
-        click.echo(yaml.dump(deployment.model_dump(), default_flow_style=False))
-    else:
-        # Detailed text output
-        _print_deployment_detail(deployment)
+    summary = {
+        "view": "detail",
+        "deployment_id": detail["deployment_id"],
+        "status": detail["status"],
+        "timestamp": detail["timestamp"],
+        "cluster": detail["cluster"],
+        "namespace": detail["namespace"],
+    }
 
+    next_steps = [f"sbkube history --diff {detail['deployment_id']},<other-id>"]
 
-def _print_deployments_table(deployments):
-    """Print deployments in table format."""
-    if not deployments:
-        logger.info("No deployments found")
-        return
-
-    logger.heading("Deployment History")
-
-    # Header
-    header = f"{'ID':<30} {'Timestamp':<20} {'Cluster':<15} {'Namespace':<15} {'Status':<12} {'Apps':<10}"
-    click.echo(header)
-    click.echo("-" * len(header))
-
-    # Rows
-    for dep in deployments:
-        timestamp = dep.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-        status_icon = {
-            "success": "✅",
-            "failed": "❌",
-            "in_progress": "🔄",
-            "rolled_back": "↩️",
-            "partially_failed": "⚠️",
-        }.get(dep.status.value, "❓")
-
-        row = (
-            f"{dep.deployment_id:<30} "
-            f"{timestamp:<20} "
-            f"{dep.cluster:<15} "
-            f"{dep.namespace:<15} "
-            f"{status_icon} {dep.status.value:<10} "
-            f"{dep.success_count}/{dep.app_count:<8}"
-        )
-        click.echo(row)
+    output.finalize_history(
+        status=detail["status"],
+        summary=summary,
+        history=[detail],
+        next_steps=next_steps,
+        errors=[detail["error_message"]] if detail.get("error_message") else None,
+    )
 
 
-def _print_deployment_detail(deployment):
-    """Print detailed deployment information."""
-    logger.heading(f"Deployment: {deployment.deployment_id}")
-
-    click.echo(f"Timestamp: {deployment.timestamp}")
-    click.echo(f"Cluster: {deployment.cluster}")
-    click.echo(f"Namespace: {deployment.namespace}")
-    click.echo(f"Config Dir: {deployment.app_config_dir}")
-    click.echo(f"Status: {deployment.status.value}")
-
-    if deployment.error_message:
-        click.echo(f"Error: {deployment.error_message}")
-
-    # Apps
-    click.echo("\nApplications:")
-    for app in deployment.apps:
-        status_icon = "✅" if app["status"] == "success" else "❌"
-        click.echo(f"  {status_icon} {app['name']} ({app['type']})")
-        if app.get("error_message"):
-            click.echo(f"     Error: {app['error_message']}")
-
-    # Resources
-    if deployment.resources:
-        click.echo("\nResources:")
-        for resource in deployment.resources:
-            action_icon = {"create": "➕", "update": "📝", "delete": "➖"}.get(
-                resource.action.value,
-                "❓",
-            )
-
-            ns_str = f" -n {resource.namespace}" if resource.namespace else ""
-            click.echo(f"  {action_icon} {resource.kind}/{resource.name}{ns_str}")
-
-    # Helm releases
-    if deployment.helm_releases:
-        click.echo("\nHelm Releases:")
-        for release in deployment.helm_releases:
-            click.echo(
-                f"  📦 {release.release_name} "
-                f"(rev: {release.revision}, status: {release.status})"
-            )
-
-
-def _show_deployment_diff(db: DeploymentDatabase, diff_ids: str, format: str) -> None:
-    """Compare and show differences between two deployments."""
+def _handle_diff(
+    output: OutputManager,
+    db: DeploymentDatabase,
+    diff_ids: str,
+) -> None:
+    """Render deployment comparison view."""
     try:
-        id1, id2 = diff_ids.split(",")
-        id1, id2 = id1.strip(), id2.strip()
-    except ValueError:
-        logger.error("Invalid --diff format. Use: --diff ID1,ID2")
+        id1, id2 = _parse_pair(diff_ids, option_name="--diff")
+    except ValueError as err:
+        output.print_error(str(err))
+        _finalize_history_failure(output, [str(err)])
         raise click.Abort()
 
     diff_result = db.get_deployment_diff(id1, id2)
-
     if not diff_result:
-        logger.error(f"One or both deployments not found: {id1}, {id2}")
+        message = f"One or both deployments not found: {id1}, {id2}"
+        output.print_error(message)
+        _finalize_history_failure(output, [message])
         raise click.Abort()
 
-    if format == "json":
-        import json
+    diff_payload = _serialize_diff(diff_result)
 
-        click.echo(json.dumps(diff_result, indent=2, default=str))
-    elif format == "yaml":
-        import yaml
+    if output.format_type == "human":
+        _print_deployment_diff(output, diff_result)
 
-        click.echo(yaml.dump(diff_result, default_flow_style=False))
-    else:
-        # Detailed text output
-        _print_deployment_diff(diff_result)
+    summary = {
+        "view": "diff",
+        "source": id1,
+        "target": id2,
+        "status": diff_payload["deployment2"]["status"],
+    }
 
+    next_steps = [f"sbkube history --values-diff {id1},{id2}"]
 
-def _print_deployment_diff(diff_result: dict) -> None:
-    """Print deployment comparison in readable format."""
-    import difflib
-
-    dep1 = diff_result["deployment1"]
-    dep2 = diff_result["deployment2"]
-    apps_diff = diff_result["apps_diff"]
-
-    logger.heading("Deployment Comparison")
-
-    # Basic info comparison
-    click.echo(f"\n{'Field':<20} {'Deployment 1':<30} {'Deployment 2':<30}")
-    click.echo("-" * 80)
-    click.echo(f"{'ID':<20} {dep1['id']:<30} {dep2['id']:<30}")
-    click.echo(
-        f"{'Timestamp':<20} {str(dep1['timestamp']):<30} {str(dep2['timestamp']):<30}"
+    output.finalize_history(
+        status="success",
+        summary=summary,
+        history=[diff_payload],
+        next_steps=next_steps,
     )
-    click.echo(f"{'Cluster':<20} {dep1['cluster']:<30} {dep2['cluster']:<30}")
-    click.echo(f"{'Namespace':<20} {dep1['namespace']:<30} {dep2['namespace']:<30}")
-    click.echo(f"{'Status':<20} {dep1['status']:<30} {dep2['status']:<30}")
-    click.echo(f"{'App Count':<20} {dep1['app_count']:<30} {dep2['app_count']:<30}")
-
-    # Apps changes
-    click.echo("\n📦 Application Changes:")
-    if apps_diff["added"]:
-        click.echo(f"  ➕ Added ({len(apps_diff['added'])}):")
-        for app in apps_diff["added"]:
-            click.echo(f"     • {app}")
-
-    if apps_diff["removed"]:
-        click.echo(f"  ➖ Removed ({len(apps_diff['removed'])}):")
-        for app in apps_diff["removed"]:
-            click.echo(f"     • {app}")
-
-    if apps_diff["modified"]:
-        click.echo(f"  📝 Modified ({len(apps_diff['modified'])}):")
-        for app in apps_diff["modified"]:
-            click.echo(f"     • {app}")
-
-    # Config snapshot diff
-    if dep1.get("config_snapshot") and dep2.get("config_snapshot"):
-        click.echo("\n📄 Configuration Changes:")
-
-        import yaml
-
-        config1_str = yaml.dump(dep1["config_snapshot"], default_flow_style=False)
-        config2_str = yaml.dump(dep2["config_snapshot"], default_flow_style=False)
-
-        diff = difflib.unified_diff(
-            config1_str.splitlines(keepends=True),
-            config2_str.splitlines(keepends=True),
-            fromfile=f"{dep1['id']} config",
-            tofile=f"{dep2['id']} config",
-            lineterm="",
-        )
-
-        diff_lines = list(diff)
-        if diff_lines:
-            for line in diff_lines[:50]:  # Limit to 50 lines
-                if line.startswith("+"):
-                    click.echo(click.style(line.rstrip(), fg="green"))
-                elif line.startswith("-"):
-                    click.echo(click.style(line.rstrip(), fg="red"))
-                elif line.startswith("@@"):
-                    click.echo(click.style(line.rstrip(), fg="cyan"))
-                else:
-                    click.echo(line.rstrip())
-
-            if len(diff_lines) > 50:
-                click.echo(f"\n... ({len(diff_lines) - 50} more lines)")
-        else:
-            click.echo("  No configuration changes detected")
-    else:
-        click.echo("\n📄 Configuration: Not available for comparison")
 
 
-def _show_values_diff(
-    db: DeploymentDatabase, values_diff_ids: str, format: str
+def _handle_values_diff(
+    output: OutputManager,
+    db: DeploymentDatabase,
+    diff_ids: str,
 ) -> None:
-    """Compare and show Helm values differences between two deployments."""
+    """Render Helm values comparison view."""
     try:
-        id1, id2 = values_diff_ids.split(",")
-        id1, id2 = id1.strip(), id2.strip()
-    except ValueError:
-        logger.error("Invalid --values-diff format. Use: --values-diff ID1,ID2")
+        id1, id2 = _parse_pair(diff_ids, option_name="--values-diff")
+    except ValueError as err:
+        output.print_error(str(err))
+        _finalize_history_failure(output, [str(err)])
         raise click.Abort()
 
     diff_result = db.get_deployment_values_diff(id1, id2)
-
     if not diff_result:
-        logger.error(f"One or both deployments not found: {id1}, {id2}")
+        message = f"One or both deployments not found: {id1}, {id2}"
+        output.print_error(message)
+        _finalize_history_failure(output, [message])
         raise click.Abort()
 
-    if format == "json":
-        import json
+    values_payload = _serialize_values_diff(diff_result)
 
-        click.echo(json.dumps(diff_result, indent=2, default=str))
-    elif format == "yaml":
-        import yaml
+    if output.format_type == "human":
+        _print_values_diff(output, diff_result)
 
-        click.echo(yaml.dump(diff_result, default_flow_style=False))
-    else:
-        # Detailed text output
-        _print_values_diff(diff_result)
+    summary = {
+        "view": "values-diff",
+        "deployment1": id1,
+        "deployment2": id2,
+    }
+
+    output.finalize_history(
+        status="success",
+        summary=summary,
+        history=[values_payload],
+    )
 
 
-def _print_values_diff(diff_result: dict) -> None:
-    """Print Helm values comparison in readable format."""
-    import difflib
+# --------------------------------------------------------------------------- #
+# Serialization helpers
+# --------------------------------------------------------------------------- #
+
+
+def _serialize_summary(dep: DeploymentSummary) -> dict[str, Any]:
+    status = dep.status.value if isinstance(dep.status, DeploymentStatus) else dep.status
+    return {
+        "deployment_id": dep.deployment_id,
+        "timestamp": dep.timestamp.isoformat(),
+        "cluster": dep.cluster,
+        "namespace": dep.namespace,
+        "status": status,
+        "status_icon": STATUS_ICONS.get(status, "•"),
+        "apps": {
+            "success": dep.success_count,
+            "total": dep.app_count,
+            "failed": dep.failed_count,
+        },
+        "error_message": dep.error_message,
+    }
+
+
+def _serialize_detail(deployment: DeploymentDetail) -> dict[str, Any]:
+    status = (
+        deployment.status.value
+        if isinstance(deployment.status, DeploymentStatus)
+        else deployment.status
+    )
+
+    apps = []
+    for app in deployment.apps:
+        app_status = app.get("status", "unknown")
+        apps.append(
+            {
+                "name": app.get("name"),
+                "type": app.get("type"),
+                "namespace": app.get("namespace"),
+                "status": app_status,
+                "status_icon": STATUS_ICONS.get(app_status, "•"),
+                "error_message": app.get("error_message"),
+            }
+        )
+
+    resources = []
+    for resource in deployment.resources:
+        resources.append(
+            {
+                "kind": resource.kind,
+                "name": resource.name,
+                "namespace": resource.namespace,
+                "action": resource.action.value if hasattr(resource.action, "value") else resource.action,
+            }
+        )
+
+    helm_releases = []
+    for release in deployment.helm_releases:
+        helm_releases.append(
+            {
+                "release_name": release.release_name,
+                "namespace": release.namespace,
+                "chart": release.chart,
+                "chart_version": release.chart_version,
+                "app_version": release.app_version,
+                "revision": release.revision,
+                "status": release.status,
+            }
+        )
+
+    return {
+        "deployment_id": deployment.deployment_id,
+        "timestamp": deployment.timestamp.isoformat(),
+        "cluster": deployment.cluster,
+        "namespace": deployment.namespace,
+        "config_dir": deployment.app_config_dir,
+        "status": status,
+        "status_icon": STATUS_ICONS.get(status, "•"),
+        "error_message": deployment.error_message,
+        "apps": apps,
+        "resources": resources,
+        "helm_releases": helm_releases,
+        "config_snapshot": deployment.config_snapshot,
+        "sources_snapshot": deployment.sources_snapshot if hasattr(deployment, "sources_snapshot") else None,
+    }
+
+
+def _serialize_diff(diff_result: dict[str, Any]) -> dict[str, Any]:
+    dep1 = diff_result["deployment1"]
+    dep2 = diff_result["deployment2"]
+    apps_diff = diff_result.get("apps_diff", {})
+
+    config_changes = _summarize_config_changes(
+        dep1.get("config_snapshot"),
+        dep2.get("config_snapshot"),
+    )
+
+    return {
+        "deployment1": _serialize_diff_side(dep1),
+        "deployment2": _serialize_diff_side(dep2),
+        "apps_diff": apps_diff,
+        "config_changes": config_changes,
+        "config_checksums": {
+            "deployment1": _hash_config(dep1.get("config_snapshot")),
+            "deployment2": _hash_config(dep2.get("config_snapshot")),
+        },
+    }
+
+
+def _serialize_diff_side(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": data.get("id"),
+        "timestamp": _to_iso(data.get("timestamp")),
+        "cluster": data.get("cluster"),
+        "namespace": data.get("namespace"),
+        "status": data.get("status"),
+        "app_count": data.get("app_count"),
+    }
+
+
+def _serialize_values_diff(diff_result: dict[str, Any]) -> dict[str, Any]:
+    values_diff = diff_result.get("values_diff", {})
+
+    summary_counts = Counter(info.get("status", "unknown") for info in values_diff.values())
+
+    releases = [
+        {"name": name, "status": info.get("status")}
+        for name, info in values_diff.items()
+    ]
+
+    return {
+        "deployment1_id": diff_result["deployment1"]["id"],
+        "deployment2_id": diff_result["deployment2"]["id"],
+        "summary": dict(summary_counts),
+        "releases": releases,
+        "values_diff": values_diff,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Human rendering helpers
+# --------------------------------------------------------------------------- #
+
+
+def _print_history_table(output: OutputManager, entries: list[dict[str, Any]]) -> None:
+    console = output.get_console()
+    table = Table(title="Deployment History", expand=True)
+    table.add_column("ID", style="cyan", overflow="fold")
+    table.add_column("Timestamp", style="green")
+    table.add_column("Cluster", style="magenta")
+    table.add_column("Namespace", style="magenta")
+    table.add_column("Status", style="yellow")
+    table.add_column("Apps", justify="right")
+
+    for entry in entries:
+        apps = entry["apps"]
+        table.add_row(
+            entry["deployment_id"],
+            entry["timestamp"],
+            entry["cluster"],
+            entry["namespace"],
+            f"{entry['status_icon']} {entry['status']}",
+            f"{apps['success']}/{apps['total']}",
+        )
+
+    console.print(table)
+
+
+def _print_deployment_detail(output: OutputManager, detail: dict[str, Any]) -> None:
+    console = output.get_console()
+    console.print(f"[bold cyan]Deployment:[/bold cyan] {detail['deployment_id']}")
+    console.print(f"Timestamp: {detail['timestamp']}")
+    console.print(f"Cluster: {detail['cluster']}  Namespace: {detail['namespace']}")
+    console.print(f"Config Dir: {detail.get('config_dir', '-')}")
+    console.print(f"Status: {detail['status_icon']} {detail['status']}")
+
+    if detail.get("error_message"):
+        console.print(f"[red]Error:[/red] {detail['error_message']}")
+
+    if detail["apps"]:
+        console.print("\n[bold]Applications[/bold]")
+        for app in detail["apps"]:
+            namespace = f" ({app['namespace']})" if app.get("namespace") else ""
+            console.print(
+                f"  {app['status_icon']} {app['name']} [{app['type']}]"
+                f"{namespace} - {app['status']}"
+            )
+            if app.get("error_message"):
+                console.print(f"      [red]Error:[/red] {app['error_message']}")
+
+    if detail["resources"]:
+        console.print("\n[bold]Resources[/bold]")
+        for resource in detail["resources"]:
+            ns = f"/{resource['namespace']}" if resource.get("namespace") else ""
+            console.print(
+                f"  {resource['action'].upper():<8} {resource['kind']}{ns}/{resource['name']}"
+            )
+
+    if detail["helm_releases"]:
+        console.print("\n[bold]Helm Releases[/bold]")
+        for release in detail["helm_releases"]:
+            console.print(
+                "  📦 {name} (rev {rev}) status={status}".format(
+                    name=release["release_name"],
+                    rev=release["revision"],
+                    status=release["status"],
+                )
+            )
+
+
+def _print_deployment_diff(output: OutputManager, diff_result: dict[str, Any]) -> None:
+    console = output.get_console()
+    console.print("[bold cyan]Deployment Comparison[/bold cyan]")
 
     dep1 = diff_result["deployment1"]
     dep2 = diff_result["deployment2"]
-    values_diff = diff_result["values_diff"]
 
-    logger.heading("Helm Values Comparison")
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("Field")
+    table.add_column("Deployment 1")
+    table.add_column("Deployment 2")
 
-    click.echo(f"\nDeployment 1: {dep1['id']} ({dep1['timestamp']})")
-    click.echo(f"Deployment 2: {dep2['id']} ({dep2['timestamp']})")
+    table.add_row("ID", str(dep1["id"]), str(dep2["id"]))
+    table.add_row(
+        "Timestamp",
+        str(dep1["timestamp"]),
+        str(dep2["timestamp"]),
+    )
+    table.add_row("Cluster", dep1["cluster"], dep2["cluster"])
+    table.add_row("Namespace", dep1["namespace"], dep2["namespace"])
+    table.add_row("Status", dep1["status"], dep2["status"])
+    table.add_row("App Count", str(dep1["app_count"]), str(dep2["app_count"]))
 
-    if not values_diff:
-        click.echo("\n⚠️  No Helm releases found in either deployment")
-        return
+    console.print(table)
 
-    # Summary
-    added_count = sum(1 for v in values_diff.values() if v["status"] == "added")
-    removed_count = sum(1 for v in values_diff.values() if v["status"] == "removed")
-    modified_count = sum(1 for v in values_diff.values() if v["status"] == "modified")
-    unchanged_count = sum(1 for v in values_diff.values() if v["status"] == "unchanged")
+    apps_diff = diff_result.get("apps_diff", {})
+    console.print("\n[bold]Application Changes[/bold]")
+    for label in ("added", "removed", "modified"):
+        items = apps_diff.get(label) or []
+        if items:
+            console.print(f"  {label.capitalize()} ({len(items)}):")
+            for item in items:
+                console.print(f"    • {item}")
 
-    click.echo("\n📊 Summary:")
-    click.echo(f"  ➕ Added: {added_count}")
-    click.echo(f"  ➖ Removed: {removed_count}")
-    click.echo(f"  📝 Modified: {modified_count}")
-    click.echo(f"  ✅ Unchanged: {unchanged_count}")
-
-    # Detailed changes
-    for release_name, diff in values_diff.items():
-        status = diff["status"]
-
-        if status == "added":
-            click.echo(f"\n➕ {release_name} (ADDED)")
-            if diff.get("values"):
-                import yaml
-
-                values_str = yaml.dump(diff["values"], default_flow_style=False)
-                for line in values_str.splitlines()[:20]:
-                    click.echo(click.style(f"  + {line}", fg="green"))
-
-        elif status == "removed":
-            click.echo(f"\n➖ {release_name} (REMOVED)")
-            if diff.get("values"):
-                import yaml
-
-                values_str = yaml.dump(diff["values"], default_flow_style=False)
-                for line in values_str.splitlines()[:20]:
-                    click.echo(click.style(f"  - {line}", fg="red"))
-
-        elif status == "modified":
-            click.echo(f"\n📝 {release_name} (MODIFIED)")
-
-            import yaml
-
-            values1_str = (
-                yaml.dump(diff["values_before"], default_flow_style=False)
-                if diff.get("values_before")
-                else ""
-            )
-            values2_str = (
-                yaml.dump(diff["values_after"], default_flow_style=False)
-                if diff.get("values_after")
-                else ""
-            )
-
-            diff_lines = difflib.unified_diff(
-                values1_str.splitlines(keepends=True),
-                values2_str.splitlines(keepends=True),
-                fromfile=f"{dep1['id']}",
-                tofile=f"{dep2['id']}",
+    config1 = dep1.get("config_snapshot")
+    config2 = dep2.get("config_snapshot")
+    if config1 and config2 and yaml:
+        console.print("\n[bold]Configuration Changes[/bold]")
+        config1_str = yaml.dump(config1, default_flow_style=False)
+        config2_str = yaml.dump(config2, default_flow_style=False)
+        diff_lines = list(
+            difflib.unified_diff(
+                config1_str.splitlines(),
+                config2_str.splitlines(),
+                fromfile=f"{dep1['id']} config",
+                tofile=f"{dep2['id']} config",
                 lineterm="",
             )
+        )
+        for line in diff_lines[:50]:
+            if line.startswith("+"):
+                console.print(f"[green]{line}[/green]")
+            elif line.startswith("-"):
+                console.print(f"[red]{line}[/red]")
+            elif line.startswith("@@"):
+                console.print(f"[cyan]{line}[/cyan]")
+            else:
+                console.print(line)
+        if len(diff_lines) > 50:
+            console.print(f"... ({len(diff_lines) - 50} more lines)")
 
-            diff_list = list(diff_lines)
-            if diff_list:
-                for line in diff_list[:30]:  # Limit to 30 lines per release
-                    if line.startswith("+"):
-                        click.echo(click.style(f"  {line.rstrip()}", fg="green"))
-                    elif line.startswith("-"):
-                        click.echo(click.style(f"  {line.rstrip()}", fg="red"))
-                    elif line.startswith("@@"):
-                        click.echo(click.style(f"  {line.rstrip()}", fg="cyan"))
-                    else:
-                        click.echo(f"  {line.rstrip()}")
 
-                if len(diff_list) > 30:
-                    click.echo(f"  ... ({len(diff_list) - 30} more lines)")
+def _print_values_diff(output: OutputManager, diff_result: dict[str, Any]) -> None:
+    console = output.get_console()
+    console.print("[bold cyan]Helm Values Comparison[/bold cyan]")
+
+    dep1 = diff_result["deployment1"]
+    dep2 = diff_result["deployment2"]
+    console.print(
+        f"Deployment 1: {dep1['id']} ({dep1['timestamp']})\n"
+        f"Deployment 2: {dep2['id']} ({dep2['timestamp']})"
+    )
+
+    values_diff = diff_result.get("values_diff", {})
+    status_counter = Counter(info.get("status", "unknown") for info in values_diff.values())
+    console.print("\n[bold]Summary[/bold]")
+    for key in ("added", "removed", "modified", "unchanged"):
+        console.print(f"  {key.capitalize():<9}: {status_counter.get(key, 0)}")
+
+    if not values_diff:
+        console.print("\n[italic]No Helm releases found in either deployment[/italic]")
+        return
+
+    for release_name, info in values_diff.items():
+        status = info.get("status")
+        console.print(f"\n[bold]{release_name}[/bold] ({status.upper()})")
+
+        if status in {"added", "removed"} and info.get("values") and yaml:
+            values_str = yaml.dump(info["values"], default_flow_style=False)
+            for line in values_str.splitlines()[:20]:
+                prefix = "+" if status == "added" else "-"
+                color = "green" if status == "added" else "red"
+                console.print(f"[{color}]{prefix} {line}[/{color}]")
+        elif status == "modified" and yaml:
+            before = yaml.dump(info.get("values_before"), default_flow_style=False) if info.get("values_before") else ""
+            after = yaml.dump(info.get("values_after"), default_flow_style=False) if info.get("values_after") else ""
+            diff_lines = list(
+                difflib.unified_diff(
+                    before.splitlines(),
+                    after.splitlines(),
+                    fromfile=dep1["id"],
+                    tofile=dep2["id"],
+                    lineterm="",
+                )
+            )
+            for line in diff_lines[:30]:
+                if line.startswith("+"):
+                    console.print(f"[green]{line}[/green]")
+                elif line.startswith("-"):
+                    console.print(f"[red]{line}[/red]")
+                elif line.startswith("@@"):
+                    console.print(f"[cyan]{line}[/cyan]")
+                else:
+                    console.print(line)
+            if len(diff_lines) > 30:
+                console.print(f"... ({len(diff_lines) - 30} more lines)")
+
+
+# --------------------------------------------------------------------------- #
+# Utility helpers
+# --------------------------------------------------------------------------- #
+
+
+def _resolve_output_format(ctx: click.Context, override: str | None) -> str:
+    base_format = ctx.obj.get("format", "human") if ctx.obj else "human"
+    if not override:
+        return base_format
+
+    override_normalized = override.lower()
+    if override_normalized == "table":
+        return "human"
+
+    return override_normalized
+
+
+def _derive_overall_status(status_counts: Counter) -> str:
+    if status_counts.get("failed") or status_counts.get("partially_failed"):
+        return "warning"
+    if status_counts.get("rolled_back"):
+        return "warning"
+    return "success"
+
+
+def _parse_pair(value: str, option_name: str) -> Tuple[str, str]:
+    try:
+        first, second = value.split(",", 1)
+        return first.strip(), second.strip()
+    except ValueError as err:
+        raise ValueError(f"Invalid {option_name} format. Use: {option_name} ID1,ID2") from err
+
+
+def _hash_config(config: Any) -> str | None:
+    if config is None:
+        return None
+    try:
+        payload = json.dumps(config, sort_keys=True, default=str).encode()
+        return hashlib.sha256(payload).hexdigest()
+    except Exception:  # pragma: no cover - hashing failures are unlikely
+        return None
+
+
+def _summarize_config_changes(
+    config1: Any,
+    config2: Any,
+    max_lines: int = 20,
+) -> list[str]:
+    if not yaml or not config1 or not config2:
+        return []
+
+    config1_str = yaml.dump(config1, default_flow_style=False)
+    config2_str = yaml.dump(config2, default_flow_style=False)
+    diff_lines = list(
+        difflib.unified_diff(
+            config1_str.splitlines(),
+            config2_str.splitlines(),
+            lineterm="",
+        )
+    )
+    return diff_lines[:max_lines]
+
+
+def _to_iso(value: Any) -> str | None:
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value) if value is not None else None
+
+
+def _finalize_history_failure(output: OutputManager, errors: Iterable[str]) -> None:
+    if output.format_type == "human":
+        return
+
+    output.finalize_history(
+        status="failed",
+        summary={"view": "error"},
+        history=[],
+        next_steps=[],
+        errors=list(errors),
+    )
+

@@ -274,6 +274,49 @@ class OutputManager:
         )
         self.formatter.print_output(result)
 
+    def finalize_history(
+        self,
+        status: str,
+        summary: dict[str, Any],
+        history: list[dict[str, Any]],
+        next_steps: list[str] | None = None,
+        errors: list[str] | None = None,
+    ) -> None:
+        """
+        최종 출력 (history 전용 구조화 데이터 출력).
+
+        Args:
+            status: 최종 상태 (success, failed, warning)
+            summary: 요약 정보 (필터, 카운트 등)
+            history: 히스토리 데이터 목록
+            next_steps: 다음 단계 제안 (선택)
+            errors: 에러 목록 (선택)
+        """
+        if self._finalized:
+            return
+
+        self._finalized = True
+
+        if self.format_type == "human":
+            return
+
+        final_errors = errors if errors is not None else self.error_messages
+        if not final_errors:
+            final_errors = [
+                event["message"]
+                for event in self.events
+                if event.get("level") == "error"
+            ]
+
+        result = self.formatter.format_history_result(
+            status=status,
+            summary=summary,
+            history=history,
+            next_steps=next_steps or [],
+            errors=final_errors,
+        )
+        self.formatter.print_output(result)
+
     def get_console(self) -> Console:
         """
         Rich Console 객체 반환 (고급 기능용).

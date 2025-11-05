@@ -168,13 +168,18 @@ class TestOutputManager:
         )
 
         assert manager._finalized
+        # Ensure second call with no arguments is a no-op
+        manager.finalize()
 
     @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
-    def test_finalize_llm_mode(self, mock_print_output):
+    @patch("sbkube.utils.output_formatter.OutputFormatter.format_deployment_result")
+    def test_finalize_llm_mode(self, mock_format_result, mock_print_output):
         """Test finalize() in LLM mode."""
         manager = OutputManager(format_type="llm")
         manager.print("Event 1", level="info")
         manager.print_error("Error event")
+
+        mock_format_result.return_value = {"result": "ok"}
 
         manager.finalize(
             status="failed",
@@ -184,8 +189,47 @@ class TestOutputManager:
         )
 
         # finalize should call formatter.print_output
+        assert mock_format_result.called
+        called_kwargs = mock_format_result.call_args.kwargs
+        assert called_kwargs["status"] == "failed"
+        assert called_kwargs["summary"] == {"processed": 2, "failed": 1}
         assert mock_print_output.called
         assert manager._finalized
+
+    @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
+    @patch("sbkube.utils.output_formatter.OutputFormatter.format_deployment_result")
+    def test_finalize_llm_mode_defaults(self, mock_format_result, mock_print_output):
+        """Test finalize() default inference when status/summary are omitted."""
+        manager = OutputManager(format_type="llm")
+        manager.print("Event 1", level="info")
+        mock_format_result.return_value = {"result": "ok"}
+
+        manager.finalize()
+
+        assert mock_format_result.called
+        kwargs = mock_format_result.call_args.kwargs
+        assert kwargs["status"] == "success"
+        assert kwargs["summary"]["events_recorded"] == 1
+        assert kwargs["summary"]["deployments_recorded"] == 0
+        assert kwargs["summary"]["errors"] == 0
+        assert mock_print_output.called
+
+    @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
+    @patch("sbkube.utils.output_formatter.OutputFormatter.format_deployment_result")
+    def test_finalize_llm_mode_defaults_with_errors(
+        self, mock_format_result, mock_print_output
+    ):
+        """Test finalize() infers failed status when errors are collected."""
+        manager = OutputManager(format_type="llm")
+        manager.print_error("Something went wrong")
+        mock_format_result.return_value = {"result": "ok"}
+
+        manager.finalize()
+
+        kwargs = mock_format_result.call_args.kwargs
+        assert kwargs["status"] == "failed"
+        assert kwargs["summary"]["errors"] == 1
+        assert mock_print_output.called
 
     def test_finalize_idempotent(self):
         """Test that finalize() can be called multiple times safely."""

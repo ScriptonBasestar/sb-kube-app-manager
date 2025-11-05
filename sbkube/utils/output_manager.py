@@ -234,8 +234,8 @@ class OutputManager:
 
     def finalize(
         self,
-        status: str,
-        summary: dict[str, Any],
+        status: str | None = None,
+        summary: dict[str, Any] | None = None,
         next_steps: list[str] | None = None,
         errors: list[str] | None = None,
     ) -> None:
@@ -243,8 +243,8 @@ class OutputManager:
         최종 출력 (LLM/JSON/YAML 모드에서 구조화된 데이터 출력).
 
         Args:
-            status: 최종 상태 (success, failed, warning)
-            summary: 요약 정보
+            status: 최종 상태 (success, failed, warning). 생략 시 에러 여부를 기반으로 추론.
+            summary: 요약 정보. 생략 시 기본 요약(이벤트/배포/에러 개수) 사용.
             next_steps: 다음 단계 제안 (선택)
             errors: 에러 목록 (선택)
         """
@@ -265,9 +265,21 @@ class OutputManager:
             # 최후의 수단: events에서 추출
             final_errors = [e["message"] for e in self.events if e.get("level") == "error"]
 
+        inferred_status = (
+            status
+            if status is not None
+            else ("failed" if final_errors else "success")
+        )
+
+        inferred_summary = summary if summary is not None else {
+            "events_recorded": len(self.events),
+            "deployments_recorded": len(self.deployments),
+            "errors": len(final_errors),
+        }
+
         result = self.formatter.format_deployment_result(
-            status=status,
-            summary=summary,
+            status=inferred_status,
+            summary=inferred_summary,
             deployments=self.deployments,  # ✅ self.events 대신 self.deployments 사용
             next_steps=next_steps or [],
             errors=final_errors,

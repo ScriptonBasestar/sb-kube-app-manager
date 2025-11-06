@@ -6,8 +6,9 @@ ______________________________________________________________________
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)](<>)
-[![Repo](https://img.shields.io/badge/GitHub-kube--app--manaer-blue?logo=github)](https://github.com/archmagece/sb-kube-app-manager)
-[![Version](https://img.shields.io/badge/version-0.6.0-blue)](CHANGELOG.md)
+[![Repo](https://img.shields.io/badge/GitHub-sb--kube--app--manager-blue?logo=github)](https://github.com/ScriptonBasestar/sb-kube-app-manager)
+[![Version](https://img.shields.io/badge/version-0.7.0--dev-orange)](CHANGELOG.md)
+[![Stable](https://img.shields.io/badge/stable-0.6.0-blue)](CHANGELOG.md)
 
 **SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML
 manifests, and Git repositories into a unified declarative configuration.
@@ -69,39 +70,44 @@ sbkube apply --app-dir . --namespace production
 
 ## 📚 Documentation
 
-### Product Understanding
+### 📘 Core Documentation (Start Here)
 
-Complete product definition and specifications: **[PRODUCT.md](PRODUCT.md)**
+- **[PRODUCT.md](PRODUCT.md)** - 제품 개요 (무엇을, 왜): 문제 정의, 사용자 시나리오, 핵심 기능
+- **[SPEC.md](SPEC.md)** - 기술 명세 (어떻게): 시스템 아키텍처, 워크플로우, API 명세
 
-- 📋 [Product Definition](docs/00-product/product-definition.md) - Problem statement and solutions
-- 📖 [Feature Specification](docs/00-product/product-spec.md) - Complete features and user scenarios
-- 🗺️ [Vision & Roadmap](docs/00-product/vision-roadmap.md) - Long-term vision and development plan
-- 👥 [Target Users](docs/00-product/target-users.md) - User personas and journeys
+> 💡 PRODUCT.md는 "무엇을 만들고 왜 만드는가"를, SPEC.md는 "어떻게 구현하는가"를 설명합니다.
 
-### User Guides
+### 📖 Product & Planning
 
-- 📖 [Getting Started](docs/01-getting-started/) - Installation and quick start
-- ⚙️ [Features](docs/02-features/) - Commands and feature descriptions
-- 🔧 [Configuration](docs/03-configuration/) - Configuration file guide
-- 📖 [Examples](examples/) - Various deployment scenarios
-- 🔍 [Troubleshooting](docs/07-troubleshooting/) - Common issues and solutions
+- 📋 [Product Definition](docs/00-product/product-definition.md) - 제품 정의 및 해결 과제
+- 📖 [Feature Specification](docs/00-product/product-spec.md) - 전체 기능 및 사용자 시나리오
+- 🗺️ [Vision & Roadmap](docs/00-product/vision-roadmap.md) - 장기 비전 및 개발 계획
+- 👥 [Target Users](docs/00-product/target-users.md) - 사용자 페르소나 및 여정
 
-### Developer Resources
+### 👤 User Guides
 
-- 👨‍💻 [Developer Guide](docs/04-development/) - Development environment setup
-- 🤖 [AI Agent Guide](CLAUDE.md) - Integrated guide for AI agents
-- 🏗️ [Architecture](docs/10-modules/sbkube/ARCHITECTURE.md) - Detailed architecture design
-- 📄 [API Contract](docs/10-modules/sbkube/API_CONTRACT.md) - API reference
+- 📖 [Getting Started](docs/01-getting-started/) - 설치 및 빠른 시작
+- ⚙️ [Features](docs/02-features/) - 명령어 및 기능 설명
+- 🔧 [Configuration](docs/03-configuration/) - 설정 파일 가이드
+- 📖 [Examples](examples/) - 다양한 배포 시나리오
+- 🔍 [Troubleshooting](docs/07-troubleshooting/) - 일반적인 문제 및 해결책
 
-### AI Integration
+### 👨‍💻 Developer Resources
 
-- 🤖 [LLM Guide](LLM_GUIDE.md) - AI-optimized reference for using SBKube in other projects
-  - Quick commands reference
-  - Configuration examples
-  - Common patterns and troubleshooting
-  - Designed for AI assistants (Claude, ChatGPT, etc.)
+- 👨‍💻 [Developer Guide](docs/04-development/) - 개발 환경 설정
+- 🤖 [AI Agent Guide](CLAUDE.md) - AI 에이전트 통합 가이드
+- 🏗️ [Architecture](docs/10-modules/sbkube/ARCHITECTURE.md) - 상세 아키텍처 설계 (SPEC.md 기반)
+- 📄 [API Contract](docs/10-modules/sbkube/API_CONTRACT.md) - API 참조 (SPEC.md 기반)
 
-Full documentation index: **[docs/INDEX.md](docs/INDEX.md)**
+### 🤖 AI Integration
+
+- 🤖 [LLM Guide](LLM_GUIDE.md) - AI 최적화 참조 (다른 프로젝트에서 SBKube 사용 시)
+  - 빠른 명령어 참조
+  - 설정 예제
+  - 일반 패턴 및 문제 해결
+  - AI 어시스턴트용 설계 (Claude, ChatGPT 등)
+
+**전체 문서 인덱스**: [docs/INDEX.md](docs/INDEX.md)
 
 ## ⚙️ Key Features
 
@@ -302,7 +308,7 @@ sbkube migrate old-config.yaml -o config.yaml
 
 ## 💬 지원
 
-- 📋 [이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)
+- 📋 [이슈 트래커](https://github.com/ScriptonBasestar/sb-kube-app-manager/issues)
 - 📧 문의: archmagece@users.noreply.github.com
 
 ## 📄 라이선스

@@ -12,12 +12,20 @@ ______________________________________________________________________
 
 ## 📋 Quick Navigation
 
-**New to this project?** → Read [PRODUCT.md](PRODUCT.md) first (2-minute overview)
+**New to this project?** → Start with these root documents:
+
+1. **[PRODUCT.md](PRODUCT.md)** (무엇을, 왜) - Product overview, problems, solutions, users
+2. **[SPEC.md](SPEC.md)** (어떻게) - Technical architecture, workflows, implementation details
 
 **Query Type Routing**:
 
-- Product questions → [docs/00-product/](docs/00-product/)
-- Architecture questions → [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
+- **"무엇을" questions** (What/Why) → [PRODUCT.md](PRODUCT.md)
+- **"어떻게" questions** (How/Implementation) → [SPEC.md](SPEC.md)
+- Product planning → [docs/00-product/](docs/00-product/)
+- Architecture questions → [SPEC.md](SPEC.md) Section 2, then [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
+- Workflow details → [SPEC.md](SPEC.md) Section 3
+- Data models → [SPEC.md](SPEC.md) Section 4
+- API specs → [SPEC.md](SPEC.md) Section 5
 - Development setup → [docs/04-development/README.md](docs/04-development/README.md)
 - Commands reference → [Makefile](Makefile) (`make help`) or [Quick Commands](docs/04-development/quick-commands.md)
 - Coding standards → [docs/04-development/coding-standards.md](docs/04-development/coding-standards.md)
@@ -36,7 +44,8 @@ ______________________________________________________________________
 
 - **Product**: SBKube - Kubernetes deployment automation CLI for k3s
 - **Tech Stack**: Python 3.12+, Click, Pydantic, SQLAlchemy, Rich
-- **Version**: v0.6.1
+- **Current Version**: v0.7.0 (개발 중 / Development)
+- **Stable Version**: v0.6.0
 - **Architecture**: Monolithic Python CLI application
 - **Core Workflow**: `prepare → build → template → deploy` (or `sbkube apply`)
 
@@ -68,8 +77,9 @@ ______________________________________________________________________
 ### 2.1 Context Hierarchy
 
 ```
-Level 0 (Entry Point):
-  └─ PRODUCT.md
+Level 0 (Root Documents - Single Source of Truth):
+  ├─ PRODUCT.md (무엇을, 왜)
+  └─ SPEC.md (어떻게)
 
 Level 1 (Product Definition):
   ├─ docs/00-product/product-definition.md
@@ -77,8 +87,8 @@ Level 1 (Product Definition):
   └─ docs/00-product/target-users.md
 
 Level 2 (Module Architecture):
-  ├─ docs/10-modules/sbkube/ARCHITECTURE.md
-  └─ docs/10-modules/sbkube/API_CONTRACT.md
+  ├─ docs/10-modules/sbkube/ARCHITECTURE.md (SPEC.md의 상세화)
+  └─ docs/10-modules/sbkube/API_CONTRACT.md (SPEC.md의 상세화)
 
 Level 3 (Features & Config):
   ├─ docs/02-features/commands.md
@@ -88,17 +98,26 @@ Level 4 (Implementation):
   └─ sbkube/ (source code)
 ```
 
+**중요 원칙 (Important Principle)**:
+- PRODUCT.md와 SPEC.md는 **근본 문서** (root documents)
+- 모든 하위 문서는 이 두 문서를 따라야 함
+- 하위 문서는 **상세화** 또는 **특화**만 제공
+
 ### 2.2 Query Type Routing
 
-| Query Type | Primary Document | Secondary | |------------|-----------------|-----------| | **Product Overview** |
-[PRODUCT.md](PRODUCT.md) | [docs/00-product/product-definition.md](docs/00-product/product-definition.md) | | **Feature
-Specs** | [docs/00-product/product-spec.md](docs/00-product/product-spec.md) |
-[docs/02-features/commands.md](docs/02-features/commands.md) | | **Target Users** |
-[docs/00-product/target-users.md](docs/00-product/target-users.md) | [PRODUCT.md](PRODUCT.md) | | **Roadmap** |
-[docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md) | [CHANGELOG.md](CHANGELOG.md) | |
-**Architecture** | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
-[docs/04-development/architecture-patterns.md](docs/04-development/architecture-patterns.md) | | **Development Setup** |
-[docs/04-development/README.md](docs/04-development/README.md) | [Makefile](Makefile) | | **Commands Reference** |
+| Query Type | Primary Document | Secondary |
+|------------|-----------------|-----------|
+| **Product Overview (무엇을)** | [PRODUCT.md](PRODUCT.md) | [docs/00-product/product-definition.md](docs/00-product/product-definition.md) |
+| **Technical Spec (어떻게)** | [SPEC.md](SPEC.md) | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
+| **System Architecture** | [SPEC.md](SPEC.md) Section 2 | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
+| **Workflow Details** | [SPEC.md](SPEC.md) Section 3 | [docs/02-features/commands.md](docs/02-features/commands.md) |
+| **Data Models** | [SPEC.md](SPEC.md) Section 4 | [sbkube/models/](sbkube/models/) |
+| **API Specifications** | [SPEC.md](SPEC.md) Section 5 | [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md) |
+| **Feature Specs** | [PRODUCT.md](PRODUCT.md) Section 6 | [docs/00-product/product-spec.md](docs/00-product/product-spec.md) |
+| **Target Users** | [PRODUCT.md](PRODUCT.md) Section 3 | [docs/00-product/target-users.md](docs/00-product/target-users.md) |
+| **Roadmap** | [docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md) | [CHANGELOG.md](CHANGELOG.md) |
+| **Development Setup** | [docs/04-development/README.md](docs/04-development/README.md) | [Makefile](Makefile) |
+| **Commands Reference** |
 [docs/02-features/commands.md](docs/02-features/commands.md) |
 [docs/04-development/quick-commands.md](docs/04-development/quick-commands.md) | | **Command Usage** |
 [Makefile](Makefile) | [docs/04-development/quick-commands.md](docs/04-development/quick-commands.md) | | **Coding
@@ -161,6 +180,19 @@ Practices** | [docs/05-best-practices/directory-structure.md](docs/05-best-pract
 
 ### 2.3 Context Priority Rules
 
+#### Rule 0: Root Documents First (NEW)
+
+**ALWAYS start with root documents for authoritative information**:
+
+```
+"무엇을/왜" queries → PRODUCT.md → docs/00-product/ → Specific docs
+"어떻게" queries → SPEC.md → docs/10-modules/ → Source code
+```
+
+**중요**: PRODUCT.md와 SPEC.md는 Single Source of Truth (SSOT)
+- 하위 문서와 충돌 시 → 항상 PRODUCT.md/SPEC.md 우선
+- 하위 문서는 상세화 또는 특화 목적만
+
 #### Rule 1: Product-First
 
 All queries start with product context:
@@ -171,10 +203,10 @@ Query → PRODUCT.md → docs/00-product/ → Specific docs
 
 #### Rule 2: Module Boundaries
 
-Module-specific queries reference module docs first:
+Module-specific queries reference SPEC.md first, then module docs:
 
 ```
-SBKube implementation → docs/10-modules/sbkube/ → sbkube/ source
+Implementation queries → SPEC.md → docs/10-modules/sbkube/ → sbkube/ source
 ```
 
 #### Rule 3: Semantic Chunking
@@ -183,29 +215,31 @@ Load long documents section by section (\<4000 tokens per chunk)
 
 #### Rule 4: Cross-References
 
-Use automatic document linking:
+Use automatic document linking from root documents:
 
 ```
-product-definition.md → product-spec.md (feature details)
-ARCHITECTURE.md → commands/ (implementation code)
+PRODUCT.md → SPEC.md (implementation details)
+SPEC.md → ARCHITECTURE.md (detailed design)
+SPEC.md → commands/ (implementation code)
 ```
 
 ### 2.4 Token Efficiency Guide
 
 **Minimal Context (< 10K tokens)** - Simple queries:
 
-- PRODUCT.md (full)
+- PRODUCT.md (full) or SPEC.md (relevant sections)
 - docs/00-product/product-definition.md (overview section)
 
 **Medium Context (10K-50K tokens)** - Feature queries:
 
-- PRODUCT.md
+- PRODUCT.md + SPEC.md (relevant sections)
 - docs/00-product/product-spec.md (relevant sections)
 - docs/02-features/commands.md (specific commands)
 - examples/ (usage examples)
 
 **Large Context (50K-100K tokens)** - Implementation work:
 
+- PRODUCT.md + SPEC.md (full)
 - CLAUDE.md
 - docs/10-modules/sbkube/ARCHITECTURE.md
 - sbkube/ source files (specific modules)
@@ -215,15 +249,17 @@ ARCHITECTURE.md → commands/ (implementation code)
 
 **Key Concepts → Document Mapping**:
 
-- **Product Vision**: [docs/00-product/product-definition.md](docs/00-product/product-definition.md),
-  [docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md)
-- **Workflow**: [docs/00-product/product-spec.md](docs/00-product/product-spec.md) (Section 1),
-  [docs/02-features/commands.md](docs/02-features/commands.md)
-- **Configuration**: [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md),
-  [sbkube/models/config_model.py](sbkube/models/config_model.py)
-- **State Management**: [docs/00-product/product-spec.md](docs/00-product/product-spec.md) (Section 4),
-  [sbkube/state/](sbkube/state/)
-- **App Types**: [docs/02-features/application-types.md](docs/02-features/application-types.md)
+- **Product Overview (무엇을, 왜)**: [PRODUCT.md](PRODUCT.md) → [docs/00-product/product-definition.md](docs/00-product/product-definition.md)
+- **Technical Implementation (어떻게)**: [SPEC.md](SPEC.md) → [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
+- **Product Vision**: [PRODUCT.md](PRODUCT.md) Section 1, [docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md)
+- **System Architecture**: [SPEC.md](SPEC.md) Section 2, [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
+- **Workflow**: [SPEC.md](SPEC.md) Section 3, [docs/02-features/commands.md](docs/02-features/commands.md)
+- **Data Models**: [SPEC.md](SPEC.md) Section 4, [sbkube/models/config_model.py](sbkube/models/config_model.py)
+- **API Specifications**: [SPEC.md](SPEC.md) Section 5, [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md)
+- **Configuration**: [SPEC.md](SPEC.md) Section 4, [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md)
+- **State Management**: [SPEC.md](SPEC.md) Section 6, [sbkube/state/](sbkube/state/)
+- **Hooks System**: [SPEC.md](SPEC.md) Section 7, [docs/02-features/hooks-guide.md](docs/02-features/hooks-guide.md)
+- **App Types**: [PRODUCT.md](PRODUCT.md) Section 6, [docs/02-features/application-types.md](docs/02-features/application-types.md)
 - **LLM Integration**: [docs/02-features/llm-friendly-output.md](docs/02-features/llm-friendly-output.md),
   [sbkube/utils/output_formatter.py](sbkube/utils/output_formatter.py)
 
@@ -381,12 +417,23 @@ ______________________________________________________________________
 
 ## 6. Version Info
 
-- **Document Version**: 1.4
-- **Last Updated**: 2025-01-03
-- **Target SBKube Version**: v0.6.1+
+- **Document Version**: 1.5
+- **Last Updated**: 2025-01-06
+- **Target SBKube Version**: v0.7.0+ (dev), v0.6.0 (stable)
 - **Author**: archmagece@users.noreply.github.com
 
 ### Change History
+
+- **v1.5 (2025-01-06)**:
+
+  - **Major Update**: Integrated PRODUCT.md and SPEC.md as root documents
+  - Added "Root Documents First" rule (Rule 0) in Context Priority Rules
+  - Updated Quick Navigation to emphasize PRODUCT.md (무엇을/왜) and SPEC.md (어떻게) distinction
+  - Expanded Query Type Routing table with SPEC.md section references
+  - Updated Context Hierarchy to show PRODUCT.md and SPEC.md as Level 0 (SSOT)
+  - Updated Semantic Index with PRODUCT.md and SPEC.md mappings
+  - Updated version information to v0.7.0 (development) and v0.6.0 (stable)
+  - Added principle: "하위 문서는 상세화 또는 특화만 제공"
 
 - **v1.4 (2025-01-03)**:
 

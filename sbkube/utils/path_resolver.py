@@ -51,9 +51,7 @@ def expand_repo_variables(
                 f"Variable ${{repos.{repo_name}}} references non-existent app '{repo_name}'. "
                 f"Available apps: {', '.join(apps_config.keys())}"
             )
-            raise SbkubeError(
-                msg
-            )
+            raise SbkubeError(msg)
 
         # 2. 해당 앱이 git 타입인지 확인
         app_config = apps_config[repo_name]
@@ -63,9 +61,7 @@ def expand_repo_variables(
                 f"Variable ${{repos.{repo_name}}} can only reference git-type apps, "
                 f"but '{repo_name}' is type '{app_type}'"
             )
-            raise SbkubeError(
-                msg
-            )
+            raise SbkubeError(msg)
 
         # 3. 리포지토리 경로 반환
         return str(repos_dir / repo_name)
@@ -106,9 +102,7 @@ def validate_variable_syntax(path: str) -> None:
             f"Invalid variable syntax: unclosed brace in path '{path}'. "
             f"Expected format: ${{repos.app-name}}"
         )
-        raise SbkubeError(
-            msg
-        )
+        raise SbkubeError(msg)
 
     # 올바른 형식 검증
     pattern = r"\$\{repos\.[a-zA-Z0-9_-]+\}"
@@ -129,6 +123,4 @@ def validate_variable_syntax(path: str) -> None:
                 f"Invalid variable syntax: '{match}' in path '{path}'. "
                 f"Expected format: ${{repos.app-name}} (alphanumeric, hyphens, underscores only)"
             )
-            raise SbkubeError(
-                msg
-            )
+            raise SbkubeError(msg)

@@ -14,7 +14,9 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 class TestK3scodeAIWorkflow:
     """Test k3scode AI application workflow."""
 
-    def test_ai_prepare(self, runner, examples_dir, tmp_path, list_directory_contents) -> None:
+    def test_ai_prepare(
+        self, runner, examples_dir, tmp_path, list_directory_contents
+    ) -> None:
         """Test k3scode AI prepare phase.
 
         This test verifies that the prepare command correctly downloads
@@ -66,7 +68,9 @@ class TestK3scodeAIWorkflow:
             f"Neither .sbkube/charts nor .sbkube/repos directory created in {project_root}\nContents: {list_directory_contents(project_root)}"
         )
 
-    def test_ai_build(self, runner, examples_dir, tmp_path, list_directory_contents) -> None:
+    def test_ai_build(
+        self, runner, examples_dir, tmp_path, list_directory_contents
+    ) -> None:
         """Test k3scode AI build phase.
 
         This test runs prepare first (to get dependencies), then builds

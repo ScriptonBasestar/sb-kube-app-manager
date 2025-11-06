@@ -677,9 +677,7 @@ def _parse_pair(value: str, option_name: str) -> tuple[str, str]:
         return first.strip(), second.strip()
     except ValueError as err:
         msg = f"Invalid {option_name} format. Use: {option_name} ID1,ID2"
-        raise ValueError(
-            msg
-        ) from err
+        raise ValueError(msg) from err
 
 
 def _hash_config(config: Any) -> str | None:

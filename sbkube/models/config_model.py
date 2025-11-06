@@ -839,9 +839,7 @@ class ActionSpec(ConfigBaseModel):
                 "For executing commands, use 'type: exec' instead of 'type: action'. "
                 f"Invalid path: '{v}'"
             )
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         return v.strip()
 
@@ -887,9 +885,7 @@ class ActionApp(ConfigBaseModel):
                 "ActionApp must have at least one action. "
                 "Add actions with 'type' (apply/delete) and 'path' fields."
             )
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
         return v
 
 
@@ -1176,9 +1172,7 @@ class SBKubeConfig(ConfigBaseModel):
                 for dep in app.depends_on:
                     if dep not in app_names:
                         msg = f"App '{app_name}' depends on non-existent app '{dep}'"
-                        raise ValueError(
-                            msg
-                        )
+                        raise ValueError(msg)
 
         # 2. 순환 의존성 체크 (DFS 기반)
         visited = set()
@@ -1203,9 +1197,7 @@ class SBKubeConfig(ConfigBaseModel):
         for app_name in self.apps:
             if app_name not in visited and has_cycle(app_name):
                 msg = f"Circular dependency detected involving app '{app_name}'"
-                raise ValueError(
-                    msg
-                )
+                raise ValueError(msg)
 
         return self
 

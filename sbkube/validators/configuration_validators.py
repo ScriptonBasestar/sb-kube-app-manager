@@ -236,9 +236,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
             url = repo_config["url"]
             if not isinstance(url, str):
                 issues.append(f"{prefix}: url은 문자열이어야 합니다")
-            elif not (
-                url.startswith(("http://", "https://", "git@"))
-            ):
+            elif not (url.startswith(("http://", "https://", "git@"))):
                 issues.append(f"{prefix}: url '{url}'는 올바른 Git URL 형식이 아닙니다")
 
         return issues

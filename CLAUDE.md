@@ -15,14 +15,15 @@ ______________________________________________________________________
 **New to this project?** → Start with these root documents:
 
 1. **[PRODUCT.md](PRODUCT.md)** (무엇을, 왜) - Product overview, problems, solutions, users
-2. **[SPEC.md](SPEC.md)** (어떻게) - Technical architecture, workflows, implementation details
+1. **[SPEC.md](SPEC.md)** (어떻게) - Technical architecture, workflows, implementation details
 
 **Query Type Routing**:
 
 - **"무엇을" questions** (What/Why) → [PRODUCT.md](PRODUCT.md)
 - **"어떻게" questions** (How/Implementation) → [SPEC.md](SPEC.md)
 - Product planning → [docs/00-product/](docs/00-product/)
-- Architecture questions → [SPEC.md](SPEC.md) Section 2, then [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
+- Architecture questions → [SPEC.md](SPEC.md) Section 2, then
+  [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
 - Workflow details → [SPEC.md](SPEC.md) Section 3
 - Data models → [SPEC.md](SPEC.md) Section 4
 - API specs → [SPEC.md](SPEC.md) Section 5
@@ -99,26 +100,27 @@ Level 4 (Implementation):
 ```
 
 **중요 원칙 (Important Principle)**:
+
 - PRODUCT.md와 SPEC.md는 **근본 문서** (root documents)
 - 모든 하위 문서는 이 두 문서를 따라야 함
 - 하위 문서는 **상세화** 또는 **특화**만 제공
 
 ### 2.2 Query Type Routing
 
-| Query Type | Primary Document | Secondary |
-|------------|-----------------|-----------|
-| **Product Overview (무엇을)** | [PRODUCT.md](PRODUCT.md) | [docs/00-product/product-definition.md](docs/00-product/product-definition.md) |
-| **Technical Spec (어떻게)** | [SPEC.md](SPEC.md) | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
-| **System Architecture** | [SPEC.md](SPEC.md) Section 2 | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
-| **Workflow Details** | [SPEC.md](SPEC.md) Section 3 | [docs/02-features/commands.md](docs/02-features/commands.md) |
-| **Data Models** | [SPEC.md](SPEC.md) Section 4 | [sbkube/models/](sbkube/models/) |
-| **API Specifications** | [SPEC.md](SPEC.md) Section 5 | [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md) |
-| **Feature Specs** | [PRODUCT.md](PRODUCT.md) Section 6 | [docs/00-product/product-spec.md](docs/00-product/product-spec.md) |
-| **Target Users** | [PRODUCT.md](PRODUCT.md) Section 3 | [docs/00-product/target-users.md](docs/00-product/target-users.md) |
-| **Roadmap** | [docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md) | [CHANGELOG.md](CHANGELOG.md) |
-| **Development Setup** | [docs/04-development/README.md](docs/04-development/README.md) | [Makefile](Makefile) |
-| **Commands Reference** |
-[docs/02-features/commands.md](docs/02-features/commands.md) |
+| Query Type | Primary Document | Secondary | |------------|-----------------|-----------| | **Product Overview (무엇을)**
+| [PRODUCT.md](PRODUCT.md) | [docs/00-product/product-definition.md](docs/00-product/product-definition.md) | |
+**Technical Spec (어떻게)** | [SPEC.md](SPEC.md) |
+[docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) | | **System Architecture** |
+[SPEC.md](SPEC.md) Section 2 | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) | |
+**Workflow Details** | [SPEC.md](SPEC.md) Section 3 | [docs/02-features/commands.md](docs/02-features/commands.md) | |
+**Data Models** | [SPEC.md](SPEC.md) Section 4 | [sbkube/models/](sbkube/models/) | | **API Specifications** |
+[SPEC.md](SPEC.md) Section 5 | [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md) | |
+**Feature Specs** | [PRODUCT.md](PRODUCT.md) Section 6 |
+[docs/00-product/product-spec.md](docs/00-product/product-spec.md) | | **Target Users** | [PRODUCT.md](PRODUCT.md)
+Section 3 | [docs/00-product/target-users.md](docs/00-product/target-users.md) | | **Roadmap** |
+[docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md) | [CHANGELOG.md](CHANGELOG.md) | | **Development
+Setup** | [docs/04-development/README.md](docs/04-development/README.md) | [Makefile](Makefile) | | **Commands
+Reference** | [docs/02-features/commands.md](docs/02-features/commands.md) |
 [docs/04-development/quick-commands.md](docs/04-development/quick-commands.md) | | **Command Usage** |
 [Makefile](Makefile) | [docs/04-development/quick-commands.md](docs/04-development/quick-commands.md) | | **Coding
 Standards** | [docs/04-development/coding-standards.md](docs/04-development/coding-standards.md) |
@@ -190,6 +192,7 @@ Practices** | [docs/05-best-practices/directory-structure.md](docs/05-best-pract
 ```
 
 **중요**: PRODUCT.md와 SPEC.md는 Single Source of Truth (SSOT)
+
 - 하위 문서와 충돌 시 → 항상 PRODUCT.md/SPEC.md 우선
 - 하위 문서는 상세화 또는 특화 목적만
 
@@ -249,17 +252,24 @@ SPEC.md → commands/ (implementation code)
 
 **Key Concepts → Document Mapping**:
 
-- **Product Overview (무엇을, 왜)**: [PRODUCT.md](PRODUCT.md) → [docs/00-product/product-definition.md](docs/00-product/product-definition.md)
-- **Technical Implementation (어떻게)**: [SPEC.md](SPEC.md) → [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
-- **Product Vision**: [PRODUCT.md](PRODUCT.md) Section 1, [docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md)
-- **System Architecture**: [SPEC.md](SPEC.md) Section 2, [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
+- **Product Overview (무엇을, 왜)**: [PRODUCT.md](PRODUCT.md) →
+  [docs/00-product/product-definition.md](docs/00-product/product-definition.md)
+- **Technical Implementation (어떻게)**: [SPEC.md](SPEC.md) →
+  [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
+- **Product Vision**: [PRODUCT.md](PRODUCT.md) Section 1,
+  [docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md)
+- **System Architecture**: [SPEC.md](SPEC.md) Section 2,
+  [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
 - **Workflow**: [SPEC.md](SPEC.md) Section 3, [docs/02-features/commands.md](docs/02-features/commands.md)
 - **Data Models**: [SPEC.md](SPEC.md) Section 4, [sbkube/models/config_model.py](sbkube/models/config_model.py)
-- **API Specifications**: [SPEC.md](SPEC.md) Section 5, [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md)
-- **Configuration**: [SPEC.md](SPEC.md) Section 4, [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md)
+- **API Specifications**: [SPEC.md](SPEC.md) Section 5,
+  [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md)
+- **Configuration**: [SPEC.md](SPEC.md) Section 4,
+  [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md)
 - **State Management**: [SPEC.md](SPEC.md) Section 6, [sbkube/state/](sbkube/state/)
 - **Hooks System**: [SPEC.md](SPEC.md) Section 7, [docs/02-features/hooks-guide.md](docs/02-features/hooks-guide.md)
-- **App Types**: [PRODUCT.md](PRODUCT.md) Section 6, [docs/02-features/application-types.md](docs/02-features/application-types.md)
+- **App Types**: [PRODUCT.md](PRODUCT.md) Section 6,
+  [docs/02-features/application-types.md](docs/02-features/application-types.md)
 - **LLM Integration**: [docs/02-features/llm-friendly-output.md](docs/02-features/llm-friendly-output.md),
   [sbkube/utils/output_formatter.py](sbkube/utils/output_formatter.py)
 
@@ -303,6 +313,7 @@ make lint-fix
 ### Essential Development Commands
 
 **Daily Development Workflow**:
+
 ```bash
 # 1. Quick validation before commit
 make check              # Fast syntax + type check (빠른 검증)
@@ -323,6 +334,7 @@ make test-utils         # Test utilities
 ```
 
 **Code Quality Levels**:
+
 ```bash
 # Level 1: Quick check (가장 빠름 - 코드 수정 후 즉시 실행)
 make check              # Syntax + mypy (no auto-fix)
@@ -337,6 +349,7 @@ make lint-strict-fix    # Strict with auto-fix
 ```
 
 **Testing Strategies**:
+
 ```bash
 # By test type
 make test-unit          # Unit tests (tests/unit/)
@@ -354,6 +367,7 @@ make test-coverage      # With HTML coverage report
 ```
 
 **CI Simulation**:
+
 ```bash
 make ci                 # Run full CI checks (lint + test)
 make ci-fix             # CI with auto-fix
@@ -366,7 +380,8 @@ make ci-fix             # CI with auto-fix
 - **Git**: NEVER commit (`.gitignore` rule)
 - **Auto-created**: During workflow execution
 
-**Key Insight**: `.sbkube` directory is NOT in project root but in the same directory as `sources.yaml`. This allows multiple config directories to have independent working directories.
+**Key Insight**: `.sbkube` directory is NOT in project root but in the same directory as `sources.yaml`. This allows
+multiple config directories to have independent working directories.
 
 ### High-Level Architecture Patterns
 
@@ -406,6 +421,7 @@ Configuration loading follows a strict hierarchy ([sbkube/models/config_manager.
 ```
 
 **Pydantic Validation**:
+
 - [sbkube/models/config_model.py](sbkube/models/config_model.py): `SBKubeConfig`, `AppConfig`
 - [sbkube/models/sources_model.py](sbkube/models/sources_model.py): `SourceScheme`, `HelmSource`, `GitSource`
 - Validation errors collected in `self.validation_errors`
@@ -423,6 +439,7 @@ Hooks:   Hooks:    Hooks:    Hooks:
 ```
 
 **Hook Execution** ([sbkube/utils/hook_executor.py](sbkube/utils/hook_executor.py)):
+
 - Inline commands: executed in shell
 - Script files: executed with proper PATH
 - Error handling: fail-fast or continue based on config
@@ -444,6 +461,7 @@ self.formatter.table(data, headers=["Name", "Status"])
 ```
 
 **Format Types**:
+
 - `human`: Rich console output (default)
 - `llm`: Token-optimized output (80-90% reduction)
 - `json`: Structured JSON
@@ -454,11 +472,13 @@ self.formatter.table(data, headers=["Name", "Status"])
 **Database**: `~/.sbkube/deployments.db` ([sbkube/state/database.py](sbkube/state/database.py))
 
 **Models**:
+
 - `DeploymentState`: deployment history
 - `AppState`: individual app states
 - `RollbackPoint`: rollback snapshots
 
 **Usage Pattern**:
+
 ```python
 from sbkube.state.tracker import StateTracker
 
@@ -471,6 +491,7 @@ tracker.complete_deployment(deployment_id)
 #### 6. Error Handling System
 
 **Exception Hierarchy** ([sbkube/exceptions.py](sbkube/exceptions.py)):
+
 ```
 SbkubeError (base)
 ├── ConfigValidationError
@@ -481,6 +502,7 @@ SbkubeError (base)
 ```
 
 **Error Formatting** ([sbkube/utils/error_formatter.py](sbkube/utils/error_formatter.py)):
+
 - Error classification
 - Contextual suggestions
 - User-friendly messages
@@ -501,6 +523,7 @@ def main(ctx, kubeconfig, context, format):
 ```
 
 **Command Categories**:
+
 - 핵심 워크플로우: prepare, build, template, deploy
 - 통합 명령어: apply (runs all 4 stages)
 - 상태 관리: status, history, rollback
@@ -520,6 +543,7 @@ def main(ctx, kubeconfig, context, format):
 ```
 
 **Validator Types** ([sbkube/validators/](sbkube/validators/)):
+
 - `basic_validators.py`: basic checks
 - `environment_validators.py`: tool availability
 - `dependency_validators.py`: app dependency graph

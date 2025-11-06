@@ -95,18 +95,25 @@ def template_helm_app(
 
     # 클러스터 전역 values 추가 (v0.7.0+, 최하위 우선순위)
     import tempfile
+
     temp_cluster_values_file = None
     if cluster_global_values:
         import yaml
+
         output.print("  Applying cluster global values...", level="info")
         # 임시 파일에 cluster global values 저장
         temp_cluster_values_file = tempfile.NamedTemporaryFile(
             mode="w", suffix=".yaml", delete=False, encoding="utf-8"
         )
-        yaml.dump(cluster_global_values, temp_cluster_values_file, default_flow_style=False)
+        yaml.dump(
+            cluster_global_values, temp_cluster_values_file, default_flow_style=False
+        )
         temp_cluster_values_file.close()
         helm_cmd.extend(["--values", temp_cluster_values_file.name])
-        output.print(f"    ✓ cluster global values ({len(cluster_global_values)} keys)", level="info")
+        output.print(
+            f"    ✓ cluster global values ({len(cluster_global_values)} keys)",
+            level="info",
+        )
 
     # values 파일 추가
     if app.values:
@@ -158,6 +165,7 @@ def template_helm_app(
         # 임시 파일 정리
         if temp_cluster_values_file:
             import os
+
             try:
                 os.unlink(temp_cluster_values_file.name)
             except Exception:
@@ -430,11 +438,13 @@ def cmd(
 
                 sources_data = load_config_file(sources_file_path)
                 sources = SourceScheme(**sources_data)
-                cluster_global_values = sources.get_merged_global_values(sources_dir=APP_CONFIG_DIR)
+                cluster_global_values = sources.get_merged_global_values(
+                    sources_dir=APP_CONFIG_DIR
+                )
                 if cluster_global_values:
                     output.print(
-                        f"[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]",
-                        level="info"
+                        "[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]",
+                        level="info",
                     )
             except Exception as e:
                 output.print_warning(f"Failed to load cluster global values: {e}")

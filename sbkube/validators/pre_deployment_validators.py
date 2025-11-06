@@ -163,7 +163,8 @@ class DeploymentSimulator(ValidationCheck):
                     # 네임스페이스 존재 확인
                     result = subprocess.run(
                         ["kubectl", "get", "namespace", namespace],
-                        check=False, capture_output=True,
+                        check=False,
+                        capture_output=True,
                         text=True,
                         timeout=10,
                     )
@@ -180,7 +181,8 @@ class DeploymentSimulator(ValidationCheck):
                                 "-o",
                                 "yaml",
                             ],
-                            check=False, capture_output=True,
+                            check=False,
+                            capture_output=True,
                             text=True,
                             timeout=10,
                         )
@@ -400,7 +402,8 @@ class DeploymentSimulator(ValidationCheck):
                         "--namespace",
                         namespace,
                     ],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=30,
                 )
@@ -594,7 +597,8 @@ class RiskAssessmentValidator(ValidationCheck):
             # Ingress 리소스 확인
             result = subprocess.run(
                 ["kubectl", "get", "ingress", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -612,7 +616,8 @@ class RiskAssessmentValidator(ValidationCheck):
             # LoadBalancer 서비스 확인
             result = subprocess.run(
                 ["kubectl", "get", "service", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -650,7 +655,8 @@ class RiskAssessmentValidator(ValidationCheck):
             # PVC 확인
             result = subprocess.run(
                 ["kubectl", "get", "pvc", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -703,7 +709,8 @@ class RiskAssessmentValidator(ValidationCheck):
             # ServiceAccount 확인
             result = subprocess.run(
                 ["kubectl", "get", "serviceaccount", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -729,7 +736,8 @@ class RiskAssessmentValidator(ValidationCheck):
             # Role/RoleBinding 확인
             result = subprocess.run(
                 ["kubectl", "get", "role,rolebinding", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -889,7 +897,8 @@ class RollbackPlanValidator(ValidationCheck):
 
             result = subprocess.run(
                 ["helm", "list", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=15,
             )
@@ -919,7 +928,8 @@ class RollbackPlanValidator(ValidationCheck):
                             "-o",
                             "json",
                         ],
-                        check=False, capture_output=True,
+                        check=False,
+                        capture_output=True,
                         text=True,
                         timeout=10,
                     )
@@ -950,7 +960,8 @@ class RollbackPlanValidator(ValidationCheck):
             # Velero 백업 도구 확인
             result = subprocess.run(
                 ["kubectl", "get", "deployment", "velero", "-n", "velero"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -962,7 +973,8 @@ class RollbackPlanValidator(ValidationCheck):
             # etcd 백업 가능성 (클러스터 관리자 권한 필요)
             result = subprocess.run(
                 ["kubectl", "get", "nodes", "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -996,7 +1008,8 @@ class RollbackPlanValidator(ValidationCheck):
             # PVC 및 PV 확인
             result = subprocess.run(
                 ["kubectl", "get", "pvc", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -1160,7 +1173,8 @@ class ImpactAnalysisValidator(ValidationCheck):
                     "-o",
                     "json",
                 ],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=15,
             )
@@ -1201,7 +1215,8 @@ class ImpactAnalysisValidator(ValidationCheck):
             for resource_type in ["deployments", "services", "configmaps", "secrets"]:
                 result = subprocess.run(
                     ["kubectl", "get", resource_type, "-n", namespace, "-o", "json"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=10,
                 )
@@ -1239,7 +1254,8 @@ class ImpactAnalysisValidator(ValidationCheck):
             # 기존 서비스의 포트 확인
             result = subprocess.run(
                 ["kubectl", "get", "services", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -1288,7 +1304,8 @@ class ImpactAnalysisValidator(ValidationCheck):
             # 노드 리소스 사용량 확인
             result = subprocess.run(
                 ["kubectl", "top", "nodes", "--no-headers"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=15,
             )
@@ -1331,7 +1348,8 @@ class ImpactAnalysisValidator(ValidationCheck):
             namespace = await self._get_namespace(context)
             result = subprocess.run(
                 ["kubectl", "top", "pods", "-n", namespace, "--no-headers"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )

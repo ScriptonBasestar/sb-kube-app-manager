@@ -212,9 +212,7 @@ class InitCommand(BaseCommand):
         template_dir = self._get_template_dir()
         if not template_dir.exists():
             msg = f"템플릿 '{self.template_name}'을 찾을 수 없습니다: {template_dir}"
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
     def _create_directory_structure(self) -> None:
         """디렉토리 구조 생성."""

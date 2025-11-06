@@ -15,7 +15,9 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 class TestCompleteWorkflow:
     """Test complete sbkube workflow with all phases."""
 
-    def test_complete_workflow_prepare_phase(self, runner, examples_dir, tmp_path) -> None:
+    def test_complete_workflow_prepare_phase(
+        self, runner, examples_dir, tmp_path
+    ) -> None:
         """Test prepare phase of complete workflow.
 
         This test verifies that prepare correctly handles the configuration
@@ -56,7 +58,9 @@ class TestCompleteWorkflow:
         # Verify output
         assert "prepare" in result.output.lower() or "준비" in result.output
 
-    def test_complete_workflow_build_phase(self, runner, examples_dir, tmp_path) -> None:
+    def test_complete_workflow_build_phase(
+        self, runner, examples_dir, tmp_path
+    ) -> None:
         """Test build phase of complete workflow.
 
         This test runs prepare first, then builds the application.

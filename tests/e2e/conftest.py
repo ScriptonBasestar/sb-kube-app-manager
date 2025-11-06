@@ -40,7 +40,9 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
-def verify_example_exists(example_path: Path, required_files: list[str] | None = None) -> None:
+def verify_example_exists(
+    example_path: Path, required_files: list[str] | None = None
+) -> None:
     """Verify that an example directory exists and contains required files.
 
     Args:

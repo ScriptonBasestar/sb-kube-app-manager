@@ -186,7 +186,9 @@ def create_sample_local_copy_source_dir(base_dir):
 
 
 @pytest.fixture(autouse=True)
-def setup_test_environment(base_dir, app_dir, charts_dir, repos_dir, monkeypatch) -> None:
+def setup_test_environment(
+    base_dir, app_dir, charts_dir, repos_dir, monkeypatch
+) -> None:
     """각 테스트 실행 전후로 환경을 설정하고 정리합니다."""
     monkeypatch.setattr(Path, "cwd", lambda: base_dir)
     monkeypatch.setattr(

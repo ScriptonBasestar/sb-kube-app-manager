@@ -4,8 +4,8 @@ ______________________________________________________________________
 
 # 📋 SBKube 명령어 상세 가이드
 
-> **주의**: 이 문서는 [SPEC.md](../../SPEC.md) Section 3 (워크플로우) 및 Section 5 (API 명세)의 사용자 가이드 버전입니다.
-> 기술적 구현 상세는 SPEC.md를 우선 참조하세요.
+> **주의**: 이 문서는 [SPEC.md](../../SPEC.md) Section 3 (워크플로우) 및 Section 5 (API 명세)의 사용자 가이드 버전입니다. 기술적 구현 상세는 SPEC.md를 우선
+> 참조하세요.
 
 ## TL;DR
 
@@ -286,19 +286,24 @@ Single shared base cache file for all views:
 Releases are classified by app-group using priority:
 
 1. **Label** (recommended): `sbkube.io/app-group=app_000_infra_network`
+
    - Set at Helm release install time
    - Most reliable and explicit
 
-2. **State DB**: Previous deployment records from sbkube
+1. **State DB**: Previous deployment records from sbkube
+
    - Falls back if label not present
 
-3. **Name pattern**: Release name like `app_000_...`
+1. **Name pattern**: Release name like `app_000_...`
+
    - Auto-extracted from name
 
-4. **Namespace pattern**: Namespace like `app_000_...`
+1. **Namespace pattern**: Namespace like `app_000_...`
+
    - Last resort fallback
 
 **Example**: Deploy with label
+
 ```bash
 helm install myapp chart/ \
   --set-string='podAnnotations.sbkube\.io/app-group=app_000_infra_network'
@@ -557,7 +562,7 @@ The following will be removed in v1.0.0:
 `sbkube status` | | `sbkube state list` | `sbkube history` | | `sbkube state show <id>` | `sbkube history --show <id>` |
 | `sbkube state rollback <id>` | `sbkube rollback <id>` |
 
----
+______________________________________________________________________
 
 ## Related Documentation
 
@@ -568,8 +573,6 @@ The following will be removed in v1.0.0:
 - **LLM 통합**: [llm-friendly-output.md](llm-friendly-output.md) - LLM 친화적 출력
 - **문제 해결**: [../07-troubleshooting/deployment-failures.md](../07-troubleshooting/deployment-failures.md) - 배포 문제 해결
 
----
+______________________________________________________________________
 
-**문서 버전**: 1.1
-**마지막 업데이트**: 2025-01-06
-**담당자**: archmagece@users.noreply.github.com
+**문서 버전**: 1.1 **마지막 업데이트**: 2025-01-06 **담당자**: archmagece@users.noreply.github.com

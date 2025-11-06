@@ -173,7 +173,6 @@ class ConfigManager:
         # Merge configurations
         return self._deep_merge(parent_data, child_data)
 
-
     def _deep_merge(
         self,
         base: dict[str, Any],

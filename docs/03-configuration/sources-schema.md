@@ -58,11 +58,13 @@ kubeconfig: ~/.kube/config
 ```
 
 **Supported formats**:
+
 - Tilde expansion: `~/kube/config`
 - Absolute path: `/home/user/.kube/config`
 - Relative path: `./configs/kubeconfig`
 
 **Validation**:
+
 - File must exist
 - Must be a valid kubeconfig file
 
@@ -75,6 +77,7 @@ kubeconfig_context: prod-cluster
 ```
 
 **Validation**:
+
 - Context must exist in the kubeconfig file
 - Cannot be empty
 
@@ -87,6 +90,7 @@ cluster: production-k3s
 ```
 
 **Usage**:
+
 - Documentation and logging
 - No functional impact on deployment
 - Helps identify which cluster you're deploying to
@@ -106,6 +110,7 @@ cluster_values_file: cluster-values.yaml
 ```
 
 **Example cluster-values.yaml**:
+
 ```yaml
 global:
   storageClass: nfs-client
@@ -117,11 +122,13 @@ global:
 ```
 
 **Path resolution**:
+
 - Relative paths: resolved from sources.yaml directory
 - Absolute paths: used as-is
 - Tilde expansion: supported (`~/configs/values.yaml`)
 
 **Validation**:
+
 - File must exist if specified
 - Must be valid YAML
 
@@ -138,11 +145,13 @@ global_values:
 ```
 
 **Priority**:
+
 - `cluster_values_file`: lowest priority
 - `global_values`: higher priority (overrides file)
 - App-specific values: highest priority (override cluster values)
 
 **Use cases**:
+
 - Quick overrides without editing files
 - Environment-specific values
 - Temporary settings
@@ -166,11 +175,13 @@ global_values:
 ```
 
 **Merge behavior**:
+
 ```
 Final values = deep_merge(cluster_values_file, global_values)
 ```
 
 **See also**:
+
 - [examples/cluster-global-values/](../../examples/cluster-global-values/) - Complete example
 - [dict_merge.py](../../sbkube/utils/dict_merge.py) - Merge implementation
 
@@ -190,16 +201,19 @@ app_dirs:
 ```
 
 **Behavior**:
+
 - **If specified**: Only deploy listed directories (strict mode)
 - **If not specified**: Auto-discover all directories with `config.yaml`
 
 **Validation**:
+
 - Directory names only (no paths: `../app` ❌)
 - No hidden directories (`.hidden` ❌)
 - No duplicates
 - All directories must exist
 
 **Use cases**:
+
 - Selective deployment in large projects
 - CI/CD pipelines
 - Staged rollouts
@@ -213,6 +227,7 @@ ______________________________________________________________________
 Helm chart repository configuration.
 
 **String shorthand** (simple):
+
 ```yaml
 helm_repos:
   bitnami: https://charts.bitnami.com/bitnami
@@ -220,6 +235,7 @@ helm_repos:
 ```
 
 **Object format** (with authentication):
+
 ```yaml
 helm_repos:
   private-repo:
@@ -239,6 +255,7 @@ helm_repos:
 ```
 
 **Fields**:
+
 - `url` (required): Repository URL
 - `username` (optional): Basic auth username
 - `password` (optional): Basic auth password
@@ -248,6 +265,7 @@ helm_repos:
 - `insecure_skip_tls_verify` (optional): Skip TLS verification (default: false)
 
 **Validation**:
+
 - URL must start with `http://` or `https://`
 - TLS files must be specified together (all 3 or none)
 - Cannot use both `insecure_skip_tls_verify` and TLS files
@@ -261,6 +279,7 @@ ______________________________________________________________________
 OCI (Docker/Harbor) registry configuration for Helm charts.
 
 **String shorthand**:
+
 ```yaml
 oci_registries:
   ghcr: ghcr.io
@@ -268,6 +287,7 @@ oci_registries:
 ```
 
 **Object format** (with authentication):
+
 ```yaml
 oci_registries:
   private-harbor:
@@ -277,11 +297,13 @@ oci_registries:
 ```
 
 **Fields**:
+
 - `registry` (required): Registry URL
 - `username` (optional): Registry username
 - `password` (optional): Registry password
 
 **Auto-prefixing**:
+
 - Input: `ghcr.io` → Stored as: `oci://ghcr.io`
 
 ______________________________________________________________________
@@ -293,12 +315,14 @@ ______________________________________________________________________
 Git repository configuration for pulling charts/manifests.
 
 **String shorthand**:
+
 ```yaml
 git_repos:
   my-charts: https://github.com/example/helm-charts.git
 ```
 
 **Object format**:
+
 ```yaml
 git_repos:
   my-charts:
@@ -318,6 +342,7 @@ git_repos:
 ```
 
 **Fields**:
+
 - `url` (required): Git repository URL
 - `branch` (optional): Branch name (default: `main`)
 - `username` (optional): HTTP auth username
@@ -325,6 +350,7 @@ git_repos:
 - `ssh_key` (optional): SSH private key path
 
 **Validation**:
+
 - URL must start with: `http://`, `https://`, `git://`, `ssh://`, or `git@`
 - Cannot use both username/password and ssh_key
 - Branch cannot be empty
@@ -347,6 +373,7 @@ no_proxy:
 ```
 
 **Applied to**:
+
 - Helm repository access
 - Git cloning
 - HTTP file downloads
@@ -450,6 +477,7 @@ sbkube doctor --app-dir your-config-dir/
 ```
 
 **Common validation errors**:
+
 - Missing required fields (`kubeconfig`, `kubeconfig_context`)
 - Invalid file paths (`cluster_values_file` not found)
 - Invalid URL formats
@@ -465,8 +493,6 @@ ______________________________________________________________________
 - [SPEC.md](../../SPEC.md) - Technical specification
 - [examples/cluster-global-values/](../../examples/cluster-global-values/) - Cluster values example
 
----
+______________________________________________________________________
 
-**Document Version**: 1.0
-**Last Updated**: 2025-01-06
-**Author**: archmagece@users.noreply.github.com
+**Document Version**: 1.0 **Last Updated**: 2025-01-06 **Author**: archmagece@users.noreply.github.com

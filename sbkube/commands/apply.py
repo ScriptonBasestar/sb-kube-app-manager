@@ -465,7 +465,9 @@ def cmd(
 
         except KeyboardInterrupt:
             # User interrupted (Ctrl+C) - exit immediately
-            output.print("\n[yellow]⚠️  Operation interrupted by user[/yellow]", level="warning")
+            output.print(
+                "\n[yellow]⚠️  Operation interrupted by user[/yellow]", level="warning"
+            )
             if "app_name_iter" in locals():
                 output.print_error(f"App '{app_name_iter}' deployment was interrupted")
             raise  # Re-raise to exit the entire command

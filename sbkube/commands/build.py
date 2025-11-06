@@ -257,13 +257,9 @@ def build_helm_app(
                     )
                 elif remove_target.is_file():
                     remove_target.unlink()
-                    output.print(
-                        f"    ✓ Removed file: {remove_pattern}", level="info"
-                    )
+                    output.print(f"    ✓ Removed file: {remove_pattern}", level="info")
             else:
-                output.print_warning(
-                    f"    Remove target not found: {remove_pattern}"
-                )
+                output.print_warning(f"    Remove target not found: {remove_pattern}")
 
     output.print_success(f"Helm app built: {app_name}")
     return True

@@ -144,7 +144,9 @@ class TestDeploymentChecker:
         assert is_deployed is False
         assert "database error" in msg
 
-    def test_check_app_group_deployed_with_namespace_override(self, checker, mock_db) -> None:
+    def test_check_app_group_deployed_with_namespace_override(
+        self, checker, mock_db
+    ) -> None:
         """Test checking with namespace override."""
         mock_deployment = MagicMock()
         mock_deployment.status = DeploymentStatus.SUCCESS
@@ -241,7 +243,9 @@ class TestDeploymentChecker:
 
         assert info is None
 
-    def test_check_app_group_deployed_namespace_auto_detect(self, checker, mock_db) -> None:
+    def test_check_app_group_deployed_namespace_auto_detect(
+        self, checker, mock_db
+    ) -> None:
         """Test automatic namespace detection when namespace not provided."""
         # Mock deployment in different namespace
         mock_deployment = MagicMock()

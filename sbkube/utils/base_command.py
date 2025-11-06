@@ -401,7 +401,9 @@ class EnhancedBaseCommand:
 
         return check_required_cli_tools(self.app_info_list)
 
-    def process_apps_with_stats(self, process_func, operation_name: str = "processing") -> None:
+    def process_apps_with_stats(
+        self, process_func, operation_name: str = "processing"
+    ) -> None:
         """Process app list and output statistics.
 
         Args:

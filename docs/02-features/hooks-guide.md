@@ -4,8 +4,7 @@ ______________________________________________________________________
 
 # SBKube Hooks Guide
 
-> **주의**: 이 문서는 [SPEC.md](../../SPEC.md) Section 7 (Hooks 시스템)의 사용자 가이드 버전입니다.
-> 기술적 구현 상세는 SPEC.md를 우선 참조하세요.
+> **주의**: 이 문서는 [SPEC.md](../../SPEC.md) Section 7 (Hooks 시스템)의 사용자 가이드 버전입니다. 기술적 구현 상세는 SPEC.md를 우선 참조하세요.
 
 SBKube hooks enable custom script execution before/after commands and deployments, providing powerful automation
 capabilities for your Kubernetes workflows.
@@ -614,7 +613,7 @@ spec:
         command: ["./migrate", "up"]
 ```
 
----
+______________________________________________________________________
 
 ## Related Documentation
 
@@ -622,7 +621,7 @@ spec:
 - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
 - **상세 참조**: [Hooks Reference](./hooks-reference.md) - 훅 타입, 환경 변수 상세
 - **앱 타입**: [Application Types](./application-types.md) - HookApp 타입 상세
-- **예제**: [../../examples/hooks*/](../../examples/) - 다양한 hooks 예제
+- **예제**: [../../examples/hooks\*/](../../examples/) - 다양한 hooks 예제
 
 ### Examples Directory
 
@@ -636,8 +635,6 @@ spec:
 - `examples/hooks-error-handling/` - Error handling and rollback
 - `examples/hooks-hookapp-simple/` - HookApp introduction
 
----
+______________________________________________________________________
 
-**문서 버전**: 1.1
-**마지막 업데이트**: 2025-01-06
-**담당자**: archmagece@users.noreply.github.com
+**문서 버전**: 1.1 **마지막 업데이트**: 2025-01-06 **담당자**: archmagece@users.noreply.github.com

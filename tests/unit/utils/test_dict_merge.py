@@ -1,7 +1,5 @@
 """Unit tests for dict_merge utility functions."""
 
-import pytest
-
 from sbkube.utils.dict_merge import deep_merge, merge_multiple
 
 
@@ -29,7 +27,9 @@ class TestDeepMerge:
 
     def test_deep_nested_merge(self):
         """Test deeply nested dictionary merge."""
-        base = {"level1": {"level2": {"level3": {"key": "base_value", "other": "keep"}}}}
+        base = {
+            "level1": {"level2": {"level3": {"key": "base_value", "other": "keep"}}}
+        }
         override = {"level1": {"level2": {"level3": {"key": "override_value"}}}}
         result = deep_merge(base, override)
 

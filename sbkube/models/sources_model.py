@@ -153,7 +153,9 @@ class SourceScheme(InheritableConfigModel):
 
     # Cluster-level global values (optional, v0.7.0+)
     cluster_values_file: str | None = None  # Path to cluster-level values YAML file
-    global_values: dict[str, Any] | None = None  # Inline global values (merged with cluster_values_file)
+    global_values: dict[str, Any] | None = (
+        None  # Inline global values (merged with cluster_values_file)
+    )
 
     # Repository configuration (optional)
     helm_repos: dict[str, HelmRepoScheme] = {}
@@ -285,19 +287,17 @@ class SourceScheme(InheritableConfigModel):
             raise ValueError(msg)
 
         if len(v) == 0:
-            msg = "app_dirs cannot be empty. Remove the field or provide directory names"
-            raise ValueError(
-                msg
+            msg = (
+                "app_dirs cannot be empty. Remove the field or provide directory names"
             )
+            raise ValueError(msg)
 
         # Validate each directory name
         validated = []
         for dir_name in v:
             if not isinstance(dir_name, str):
                 msg = f"app_dirs must contain strings, got: {type(dir_name).__name__}"
-                raise ValueError(
-                    msg
-                )
+                raise ValueError(msg)
 
             dir_name = dir_name.strip()
             if not dir_name:
@@ -310,15 +310,11 @@ class SourceScheme(InheritableConfigModel):
                     f"app_dirs must contain directory names only, not paths: '{dir_name}'. "
                     "Use simple names like 'redis', 'postgres', etc."
                 )
-                raise ValueError(
-                    msg
-                )
+                raise ValueError(msg)
 
             if dir_name.startswith("."):
                 msg = f"app_dirs cannot contain hidden directories: '{dir_name}'"
-                raise ValueError(
-                    msg
-                )
+                raise ValueError(msg)
 
             validated.append(dir_name)
 
@@ -454,7 +450,9 @@ class SourceScheme(InheritableConfigModel):
 
         return v
 
-    def get_merged_global_values(self, sources_dir: str | Path | None = None) -> dict[str, Any]:
+    def get_merged_global_values(
+        self, sources_dir: str | Path | None = None
+    ) -> dict[str, Any]:
         """Merge cluster-level values with priority.
 
         Priority (low to high):

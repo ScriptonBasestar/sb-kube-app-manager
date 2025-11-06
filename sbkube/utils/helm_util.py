@@ -36,9 +36,7 @@ def get_installed_charts(
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
     except FileNotFoundError as exc:
         msg = "helm"
-        raise CliToolNotFoundError(
-            msg, "https://helm.sh/docs/intro/install/"
-        ) from exc
+        raise CliToolNotFoundError(msg, "https://helm.sh/docs/intro/install/") from exc
     except subprocess.CalledProcessError as exc:
         error_output = (exc.stderr or exc.stdout or "").strip()
         if error_output and _matches_any_keyword(

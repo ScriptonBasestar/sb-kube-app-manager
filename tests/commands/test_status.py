@@ -126,7 +126,9 @@ class TestStatusLLMOutput:
         assert "--format" in result.output
         assert "llm" in result.output
 
-    def test_status_requires_sources_even_with_llm_format(self, runner, tmp_path) -> None:
+    def test_status_requires_sources_even_with_llm_format(
+        self, runner, tmp_path
+    ) -> None:
         """Test status with --format llm still requires sources.yaml."""
         result = runner.invoke(
             main, ["--format", "llm", "status", "--base-dir", str(tmp_path)]

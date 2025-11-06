@@ -40,7 +40,9 @@ def test_validate_task_result_simple(mock_apply_config, mock_run_command) -> Non
 
 @patch("sbkube.utils.hook_executor.run_command")
 @patch("sbkube.utils.hook_executor.apply_cluster_config_to_command")
-def test_validate_task_result_wait_for_ready(mock_apply_config, mock_run_command) -> None:
+def test_validate_task_result_wait_for_ready(
+    mock_apply_config, mock_run_command
+) -> None:
     """wait_for_ready=True 검증 테스트."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
     mock_run_command.return_value = (0, "condition met", "")
@@ -72,7 +74,9 @@ def test_validate_task_result_wait_for_ready(mock_apply_config, mock_run_command
 
 @patch("sbkube.utils.hook_executor.run_command")
 @patch("sbkube.utils.hook_executor.apply_cluster_config_to_command")
-def test_validate_task_result_with_conditions(mock_apply_config, mock_run_command) -> None:
+def test_validate_task_result_with_conditions(
+    mock_apply_config, mock_run_command
+) -> None:
     """조건부 validation 테스트."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
     mock_run_command.return_value = (0, "condition met", "")
@@ -208,7 +212,9 @@ def test_check_task_dependencies_wait_for(mock_apply_config, mock_run_command) -
 
 @patch("sbkube.utils.hook_executor.run_command")
 @patch("sbkube.utils.hook_executor.apply_cluster_config_to_command")
-def test_check_task_dependencies_wait_for_failure(mock_apply_config, mock_run_command) -> None:
+def test_check_task_dependencies_wait_for_failure(
+    mock_apply_config, mock_run_command
+) -> None:
     """wait_for 실패 테스트 (timeout)."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
     mock_run_command.return_value = (1, "", "Error: timed out")

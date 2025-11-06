@@ -4,9 +4,6 @@ Tests verify that HelmApp Pydantic model validates helm_label_injection
 field correctly for charts with strict schema validation.
 """
 
-import pytest
-from pydantic import ValidationError
-
 from sbkube.models.config_model import HelmApp
 
 

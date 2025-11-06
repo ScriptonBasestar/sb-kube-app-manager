@@ -49,7 +49,9 @@ class TestDeployExamples:
         # Verify output
         assert "deploy" in result.output.lower() or "배포" in result.output
 
-    def test_deploy_install_action_dry_run(self, runner, examples_dir, tmp_path) -> None:
+    def test_deploy_install_action_dry_run(
+        self, runner, examples_dir, tmp_path
+    ) -> None:
         """Test deploy with custom action installation (dry-run).
 
         This test verifies that deploy correctly handles custom actions

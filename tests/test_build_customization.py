@@ -88,7 +88,9 @@ class TestChartCustomization:
         assert (build_dir / "grafana" / "templates" / "service.yaml").exists()
         assert (build_dir / "grafana" / "templates" / "ingress.yaml").exists()
 
-    def test_override_entire_templates_directory(self, tmp_path, output_manager) -> None:
+    def test_override_entire_templates_directory(
+        self, tmp_path, output_manager
+    ) -> None:
         """Templates 디렉토리 전체를 교체하는 시나리오."""
         # 원본 차트
         chart_dir = tmp_path / "charts" / "myapp" / "myapp"

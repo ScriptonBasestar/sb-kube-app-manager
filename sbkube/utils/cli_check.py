@@ -186,7 +186,8 @@ def check_cluster_connectivity(
 
         result = subprocess.run(
             cmd,
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,
             timeout=timeout + 5,
         )

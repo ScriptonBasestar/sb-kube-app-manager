@@ -24,7 +24,9 @@ class ClusterStatusCollector:
     Uses kubectl and helm CLI tools to gather cluster-wide information.
     """
 
-    def __init__(self, kubeconfig: str | None = None, context: str | None = None) -> None:
+    def __init__(
+        self, kubeconfig: str | None = None, context: str | None = None
+    ) -> None:
         """Initialize cluster status collector.
 
         Args:

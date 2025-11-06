@@ -41,14 +41,10 @@ breaking changes that require configuration migration.
 
 ### Version History
 
-| Version | Release Date | Major Changes |
-|---------|--------------|---------------|
-| v0.7.1  | 2025-01-06   | Cluster global values, helm_label_injection, error handling |
-| v0.7.0  | 2025-01-03   | LLM output integration |
-| v0.6.1  | 2025-01-03   | Enhanced error handling |
-| v0.6.0  | 2024-12-15   | State management, helm format |
-| v0.5.0  | 2024-11-01   | Working directory consolidation |
-| v0.4.x  | 2024-09-01   | Initial stable release |
+| Version | Release Date | Major Changes | |---------|--------------|---------------| | v0.7.1 | 2025-01-06 | Cluster
+global values, helm_label_injection, error handling | | v0.7.0 | 2025-01-03 | LLM output integration | | v0.6.1 |
+2025-01-03 | Enhanced error handling | | v0.6.0 | 2024-12-15 | State management, helm format | | v0.5.0 | 2024-11-01 |
+Working directory consolidation | | v0.4.x | 2024-09-01 | Initial stable release |
 
 ______________________________________________________________________
 
@@ -125,9 +121,7 @@ ______________________________________________________________________
 
 ### Migration to v0.7.1
 
-**Release Date**: 2025-01-06
-**Type**: Feature Release
-**Breaking Changes**: None
+**Release Date**: 2025-01-06 **Type**: Feature Release **Breaking Changes**: None
 
 #### New Features
 
@@ -150,9 +144,10 @@ global_values:  # Inline values (higher priority)
 ```
 
 **Values Priority** (low to high):
+
 1. `cluster_values_file` - External YAML file
-2. `global_values` - Inline in sources.yaml
-3. App-specific `values` files
+1. `global_values` - Inline in sources.yaml
+1. App-specific `values` files
 
 **Migration Steps**:
 
@@ -165,7 +160,7 @@ global_values:  # Inline values (higher priority)
      timezone: Asia/Seoul
    ```
 
-2. **(Optional)** Add `cluster_values_file` or `global_values` to `sources.yaml`:
+1. **(Optional)** Add `cluster_values_file` or `global_values` to `sources.yaml`:
 
    ```yaml
    # sources.yaml
@@ -175,14 +170,15 @@ global_values:  # Inline values (higher priority)
        environment: production
    ```
 
-3. Verify values inheritance:
+1. Verify values inheritance:
 
    ```bash
    sbkube template --app-dir <path> --app <app-name>
    # Check rendered YAML for cluster global values
    ```
 
-**See:** [sources-schema.md](sources-schema.md#cluster-global-values), [examples/cluster-global-values/](../../examples/cluster-global-values/)
+**See:** [sources-schema.md](sources-schema.md#cluster-global-values),
+[examples/cluster-global-values/](../../examples/cluster-global-values/)
 
 **2. helm_label_injection Control**
 
@@ -198,6 +194,7 @@ apps:
 ```
 
 **When to use**:
+
 - Charts with strict schema validation (e.g., Authelia)
 - Charts that reject unknown labels
 - Apps where you want manual label control
@@ -207,8 +204,10 @@ apps:
 **Migration Steps**:
 
 1. Check if you have apps failing with "unknown field" errors
-2. Add `helm_label_injection: false` to those apps
-3. Re-deploy:
+
+1. Add `helm_label_injection: false` to those apps
+
+1. Re-deploy:
 
    ```bash
    sbkube apply --app-dir <path> --app <app-name>
@@ -217,6 +216,7 @@ apps:
 **3. Enhanced Error Messages**
 
 No migration needed. Improved error messages for:
+
 - Helm deployment timeouts (shows troubleshooting steps)
 - Ctrl+C interruptions (shows status check commands)
 
@@ -248,16 +248,14 @@ Troubleshooting:
 #### Recommended Actions
 
 1. Review new features in [CHANGELOG.md](../../CHANGELOG.md#071---2025-01-06)
-2. Consider using cluster global values for multi-app clusters
-3. Update configs for apps with strict schemas
+1. Consider using cluster global values for multi-app clusters
+1. Update configs for apps with strict schemas
 
----
+______________________________________________________________________
 
 ### Migration to v0.7.0
 
-**Release Date**: 2025-01-03
-**Type**: Feature Release
-**Breaking Changes**: None
+**Release Date**: 2025-01-03 **Type**: Feature Release **Breaking Changes**: None
 
 #### New Features
 
@@ -288,13 +286,11 @@ sbkube apply
 
 **See:** [llm-friendly-output.md](../02-features/llm-friendly-output.md)
 
----
+______________________________________________________________________
 
 ### Migration to v0.6.1
 
-**Release Date**: 2025-01-03
-**Type**: Bug Fix Release
-**Breaking Changes**: None
+**Release Date**: 2025-01-03 **Type**: Bug Fix Release **Breaking Changes**: None
 
 #### Improvements
 
@@ -302,7 +298,7 @@ sbkube apply
 - Better deployment failure messages
 - Context-aware suggestions
 
----
+______________________________________________________________________
 
 ### Migration to v0.5.0
 
@@ -507,9 +503,11 @@ ______________________________________________________________________
 
 ### Overview
 
-SBKube v0.6.1+ automatically injects labels into all Kubernetes resources deployed via sbkube (Helm, YAML, Action, Kustomize). This enables proper app-group classification and status tracking via `sbkube status --by-group`.
+SBKube v0.6.1+ automatically injects labels into all Kubernetes resources deployed via sbkube (Helm, YAML, Action,
+Kustomize). This enables proper app-group classification and status tracking via `sbkube status --by-group`.
 
-**Important**: Existing kubectl-deployed resources are **not affected**. Labels are only injected for new deployments via sbkube.
+**Important**: Existing kubectl-deployed resources are **not affected**. Labels are only injected for new deployments
+via sbkube.
 
 ### Automatic Label Injection
 
@@ -528,14 +526,17 @@ metadata:
 ```
 
 **Requirements**:
+
 - Application directory must follow naming pattern: `app_XXX_category_subcategory`
 - Example: `app_000_infra_network/traefik/`
 
 ### Disabling Label Injection for Strict Schema Charts (v0.7.1+)
 
-Some Helm charts (e.g., Authelia, cert-manager) use strict schema validation and reject `commonLabels`/`commonAnnotations`. For these charts, you can disable automatic label injection:
+Some Helm charts (e.g., Authelia, cert-manager) use strict schema validation and reject
+`commonLabels`/`commonAnnotations`. For these charts, you can disable automatic label injection:
 
 **config.yaml**:
+
 ```yaml
 apps:
   authelia:
@@ -547,6 +548,7 @@ apps:
 ```
 
 **Alternative: Add labels via values file** (optional):
+
 ```yaml
 # authelia.yaml
 labels:  # Use chart's native label support
@@ -556,22 +558,26 @@ labels:  # Use chart's native label support
 ```
 
 **Impact**:
+
 - `sbkube status`: App tracking still works via State DB and name patterns
 - `sbkube history`: State DB-based tracking (fully functional)
 - `sbkube rollback`: State DB-based rollback (fully functional)
 
 **Why it works**: SBKube uses a priority-based classification system:
+
 1. Labels (sbkube.io/app-group) - Recommended
-2. **State DB** - Falls back when labels are disabled
-3. Release name pattern - `app_XXX_*` matching
-4. Namespace pattern - `app_XXX_*` matching
+1. **State DB** - Falls back when labels are disabled
+1. Release name pattern - `app_XXX_*` matching
+1. Namespace pattern - `app_XXX_*` matching
 
 **When to disable**:
+
 - Charts with strict schema validation (Authelia, cert-manager, some operator charts)
 - Charts that don't support `commonLabels`/`commonAnnotations`
 - OCI registry charts with limited customization
 
 **Error symptoms**:
+
 ```
 Error: values don't meet the specifications of the schema(s):
   authelia:
@@ -582,7 +588,8 @@ Error: values don't meet the specifications of the schema(s):
 
 #### For Manual kubectl Users (Existing Resources)
 
-If you have existing resources deployed directly with `kubectl apply`, they won't be automatically relabeled. To enable proper status tracking:
+If you have existing resources deployed directly with `kubectl apply`, they won't be automatically relabeled. To enable
+proper status tracking:
 
 **Option 1: Re-deploy via sbkube** (Recommended)
 
@@ -678,15 +685,16 @@ sbkube status app_000_infra_network
 When `sbkube status` groups releases, it uses this priority:
 
 1. **`sbkube.io/app-group` label** (most reliable)
-2. State DB records from previous sbkube deployments
-3. Release/resource name pattern matching (`app_XXX_...`)
-4. Namespace name pattern matching
+1. State DB records from previous sbkube deployments
+1. Release/resource name pattern matching (`app_XXX_...`)
+1. Namespace name pattern matching
 
 ### FAQ
 
 **Q: Do I need to relabel existing resources?**
 
-A: No, existing resources continue to work. Labels are only needed for proper `sbkube status --by-group` grouping and cluster status tracking.
+A: No, existing resources continue to work. Labels are only needed for proper `sbkube status --by-group` grouping and
+cluster status tracking.
 
 **Q: Can I mix sbkube and kubectl deployments?**
 

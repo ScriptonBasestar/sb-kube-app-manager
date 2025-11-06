@@ -88,7 +88,8 @@ class ClusterResourceValidator(ValidationCheck):
             # 노드 목록 및 상태 확인
             result = subprocess.run(
                 ["kubectl", "get", "nodes", "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=15,
             )
@@ -192,7 +193,8 @@ class ClusterResourceValidator(ValidationCheck):
                 # 리소스 쿼터 확인
                 result = subprocess.run(
                     ["kubectl", "get", "resourcequota", "-n", namespace, "-o", "json"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=10,
                 )
@@ -242,7 +244,8 @@ class ClusterResourceValidator(ValidationCheck):
         try:
             result = subprocess.run(
                 ["kubectl", "get", "storageclass", "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -398,7 +401,8 @@ class NamespacePermissionValidator(ValidationCheck):
             # 네임스페이스 존재 확인
             result = subprocess.run(
                 ["kubectl", "get", "namespace", namespace],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -407,7 +411,8 @@ class NamespacePermissionValidator(ValidationCheck):
                 # 네임스페이스가 없는 경우 생성 권한 확인
                 create_result = subprocess.run(
                     ["kubectl", "auth", "can-i", "create", "namespaces"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=5,
                 )
@@ -426,7 +431,8 @@ class NamespacePermissionValidator(ValidationCheck):
             # 네임스페이스 내 리소스 목록 권한 확인
             result = subprocess.run(
                 ["kubectl", "get", "pods", "-n", namespace, "--no-headers"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -464,7 +470,8 @@ class NamespacePermissionValidator(ValidationCheck):
             try:
                 result = subprocess.run(
                     ["kubectl", "auth", "can-i", action, resource, "-n", namespace],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=5,
                 )
@@ -488,7 +495,8 @@ class NamespacePermissionValidator(ValidationCheck):
         try:
             result = subprocess.run(
                 ["kubectl", "get", "serviceaccount", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -611,7 +619,8 @@ class NetworkPolicyValidator(ValidationCheck):
 
             result = subprocess.run(
                 ["kubectl", "get", "networkpolicy", "-n", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -662,7 +671,8 @@ class NetworkPolicyValidator(ValidationCheck):
                     "-o",
                     "json",
                 ],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -785,7 +795,8 @@ class SecurityContextValidator(ValidationCheck):
             # RBAC가 활성화되어 있는지 확인
             result = subprocess.run(
                 ["kubectl", "auth", "can-i", "create", "clusterroles"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=5,
             )
@@ -795,7 +806,8 @@ class SecurityContextValidator(ValidationCheck):
             # 현재 사용자의 권한 확인
             result = subprocess.run(
                 ["kubectl", "auth", "can-i", "--list"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -826,7 +838,8 @@ class SecurityContextValidator(ValidationCheck):
             # 네임스페이스 레이블 확인
             result = subprocess.run(
                 ["kubectl", "get", "namespace", namespace, "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -869,7 +882,8 @@ class SecurityContextValidator(ValidationCheck):
             # Pod Security Policy 확인 (deprecated이지만 여전히 사용될 수 있음)
             result = subprocess.run(
                 ["kubectl", "get", "podsecuritypolicy", "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -886,7 +900,8 @@ class SecurityContextValidator(ValidationCheck):
             # Security Context Constraints 확인 (OpenShift)
             result = subprocess.run(
                 ["kubectl", "get", "securitycontextconstraints", "-o", "json"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=5,
             )

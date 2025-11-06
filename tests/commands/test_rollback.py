@@ -61,7 +61,9 @@ class TestRollbackForce:
         )
 
     @pytest.mark.integration
-    def test_rollback_force_skips_confirmation(self, runner, state_db_with_data) -> None:
+    def test_rollback_force_skips_confirmation(
+        self, runner, state_db_with_data
+    ) -> None:
         """Test --force skips user confirmation."""
         pytest.skip("Requires State DB and cluster")
 

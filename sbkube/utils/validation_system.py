@@ -195,7 +195,9 @@ class ValidationCheck(DiagnosticCheck):
 class ValidationReport:
     """검증 보고서."""
 
-    def __init__(self, validation_mode: ValidationMode, context: ValidationContext) -> None:
+    def __init__(
+        self, validation_mode: ValidationMode, context: ValidationContext
+    ) -> None:
         self.validation_mode = validation_mode
         self.context = context
         self.results: list[ValidationResult] = []

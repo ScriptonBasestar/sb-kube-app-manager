@@ -33,7 +33,11 @@ class KubernetesConnectivityCheck(DiagnosticCheck):
 
             # 클러스터 연결 확인
             result = subprocess.run(
-                ["kubectl", "cluster-info"], check=False, capture_output=True, text=True, timeout=10
+                ["kubectl", "cluster-info"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
 
             if result.returncode != 0:
@@ -48,7 +52,8 @@ class KubernetesConnectivityCheck(DiagnosticCheck):
             # 클러스터 버전 확인
             result = subprocess.run(
                 ["kubectl", "version", "--short"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -101,7 +106,8 @@ class HelmInstallationCheck(DiagnosticCheck):
             # Helm 버전 확인
             result = subprocess.run(
                 ["helm", "version", "--short"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=5,
             )
@@ -327,7 +333,8 @@ class PermissionsCheck(DiagnosticCheck):
                 try:
                     result = subprocess.run(
                         ["kubectl", "auth", "can-i", action, resource],
-                        check=False, capture_output=True,
+                        check=False,
+                        capture_output=True,
                         text=True,
                         timeout=5,
                     )
@@ -378,7 +385,8 @@ class ResourceAvailabilityCheck(DiagnosticCheck):
             # 노드 상태 확인
             result = subprocess.run(
                 ["kubectl", "get", "nodes", "--no-headers"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )

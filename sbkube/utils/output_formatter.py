@@ -493,7 +493,9 @@ class OutputFormatter:
         """
         if isinstance(output, dict):
             # JSON or YAML dict → convert to string
-            if self.format == OutputFormat.JSON or (self.format == OutputFormat.YAML and yaml):
+            if self.format == OutputFormat.JSON or (
+                self.format == OutputFormat.YAML and yaml
+            ):
                 pass
             else:
                 pass

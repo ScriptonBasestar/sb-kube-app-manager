@@ -36,7 +36,6 @@ class HookExecutionError(SbkubeError):
     """Hook 실행 중 발생한 오류."""
 
 
-
 class HookExecutor:
     """Hook 실행 관리자.
 
@@ -200,7 +199,8 @@ class HookExecutor:
 
             result = subprocess.run(
                 shlex.split(command),
-                check=False, shell=False,
+                check=False,
+                shell=False,
                 cwd=self.work_dir,
                 env=full_env,
                 capture_output=True,

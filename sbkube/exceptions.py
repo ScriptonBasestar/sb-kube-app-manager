@@ -32,7 +32,6 @@ class ConfigurationError(SbkubeError):
     """Base class for configuration-related errors."""
 
 
-
 class ConfigFileNotFoundError(ConfigurationError):
     """Raised when a required configuration file is not found."""
 
@@ -72,7 +71,6 @@ class SchemaValidationError(ConfigurationError):
 
 class ToolError(SbkubeError):
     """Base class for external tool-related errors."""
-
 
 
 class CliToolNotFoundError(ToolError):
@@ -147,7 +145,6 @@ class KubernetesError(SbkubeError):
     """Base class for Kubernetes-related errors."""
 
 
-
 class KubernetesConnectionError(KubernetesError):
     """Raised when connection to Kubernetes cluster fails."""
 
@@ -210,7 +207,6 @@ class KubernetesResourceError(KubernetesError):
 
 class HelmError(SbkubeError):
     """Base class for Helm-related errors."""
-
 
 
 class HelmChartNotFoundError(HelmError):
@@ -277,7 +273,6 @@ class GitError(SbkubeError):
     """Base class for Git-related errors."""
 
 
-
 class GitRepositoryError(GitError):
     """Raised when Git repository operations fail."""
 
@@ -307,7 +302,6 @@ class GitRepositoryError(GitError):
 
 class FileSystemError(SbkubeError):
     """Base class for file system-related errors."""
-
 
 
 class FileOperationError(FileSystemError):
@@ -343,7 +337,6 @@ class SecurityError(SbkubeError):
     """Base class for security-related errors."""
 
 
-
 class PathTraversalError(SecurityError):
     """Raised when path traversal attempt is detected."""
 
@@ -359,7 +352,6 @@ class PathTraversalError(SecurityError):
 
 class ValidationError(SbkubeError):
     """Base class for validation errors."""
-
 
 
 class InputValidationError(ValidationError):
@@ -378,7 +370,6 @@ class InputValidationError(ValidationError):
 
 class NetworkError(SbkubeError):
     """Base class for network-related errors."""
-
 
 
 class DownloadError(NetworkError):
@@ -424,7 +415,6 @@ class StateError(SbkubeError):
     """Base class for state management errors."""
 
 
-
 class StateCorruptionError(StateError):
     """Raised when state corruption is detected."""
 
@@ -441,10 +431,8 @@ class DeploymentError(SbkubeError):
     """Base class for deployment-related errors."""
 
 
-
 class RollbackError(SbkubeError):
     """Base class for rollback-related errors."""
-
 
 
 def handle_exception(exc: Exception, logger=None) -> int:

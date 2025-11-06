@@ -267,7 +267,9 @@ class TestCommandRetry:
 
     @patch("subprocess.run")
     @patch("time.sleep")  # Mock sleep to speed up test
-    def test_run_command_with_retry_eventual_success(self, mock_sleep, mock_run) -> None:
+    def test_run_command_with_retry_eventual_success(
+        self, mock_sleep, mock_run
+    ) -> None:
         """Test command execution that succeeds after retries."""
         # First call fails, second succeeds
         mock_run.side_effect = [
@@ -349,7 +351,9 @@ class TestIntegration:
 
     @patch("subprocess.run")
     @patch("time.sleep")
-    def test_network_operation_with_intermittent_failure(self, mock_sleep, mock_run) -> None:
+    def test_network_operation_with_intermittent_failure(
+        self, mock_sleep, mock_run
+    ) -> None:
         """Test realistic scenario with intermittent network failures."""
         # Simulate network failure followed by success
         mock_run.side_effect = [

@@ -107,10 +107,14 @@ class RollbackManager:
 
         """
         # Check deployment status
-        if current_deployment.status not in [
-            DeploymentStatus.SUCCESS,
-            DeploymentStatus.PARTIALLY_FAILED,
-        ] and not request.force:
+        if (
+            current_deployment.status
+            not in [
+                DeploymentStatus.SUCCESS,
+                DeploymentStatus.PARTIALLY_FAILED,
+            ]
+            and not request.force
+        ):
             msg = (
                 f"Cannot rollback deployment with status: {current_deployment.status}. "
                 "Use --force to override."

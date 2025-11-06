@@ -154,7 +154,9 @@ class ProgressManager:
 
         return step
 
-    def start_overall_progress(self, profile: str | None = None, namespace: str | None = None) -> None:
+    def start_overall_progress(
+        self, profile: str | None = None, namespace: str | None = None
+    ) -> None:
         """전체 진행률 표시 시작."""
         if not self.show_progress:
             return
@@ -262,7 +264,9 @@ class ProgressManager:
             "current_step": self._get_current_step(),
         }
 
-    def _setup_layout(self, profile: str | None = None, namespace: str | None = None) -> None:
+    def _setup_layout(
+        self, profile: str | None = None, namespace: str | None = None
+    ) -> None:
         """레이아웃 구성."""
         if not self.show_progress:
             return

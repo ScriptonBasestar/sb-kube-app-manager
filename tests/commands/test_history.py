@@ -105,7 +105,9 @@ class TestHistoryValuesDiff:
         assert result.exit_code != 0
 
     @pytest.mark.integration
-    def test_history_values_diff_helm_releases(self, runner, state_db_with_helm_data) -> None:
+    def test_history_values_diff_helm_releases(
+        self, runner, state_db_with_helm_data
+    ) -> None:
         """Test --values-diff shows Helm values changes."""
         pytest.skip("Requires State DB with Helm release data")
 
@@ -120,7 +122,9 @@ class TestHistoryAppGroupFilter:
         assert "app_group" in result.output or "APP_GROUP" in result.output
 
     @pytest.mark.integration
-    def test_history_filter_by_app_group(self, runner, state_db_with_app_groups) -> None:
+    def test_history_filter_by_app_group(
+        self, runner, state_db_with_app_groups
+    ) -> None:
         """Test filtering history by app-group."""
         pytest.skip("Requires State DB with app-group data")
 
@@ -269,6 +273,8 @@ class TestHistoryIntegration:
         """Test diff between two real deployments."""
         pytest.skip("Requires two actual deployments")
 
-    def test_history_values_diff_real_helm_releases(self, runner, helm_deployments) -> None:
+    def test_history_values_diff_real_helm_releases(
+        self, runner, helm_deployments
+    ) -> None:
         """Test values-diff with real Helm releases."""
         pytest.skip("Requires Helm deployments")

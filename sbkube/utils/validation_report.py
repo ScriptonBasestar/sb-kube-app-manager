@@ -269,7 +269,9 @@ class ConsoleReportGenerator:
     def __init__(self, console: Console) -> None:
         self.console = console
 
-    def generate_report(self, report: ValidationReport, show_details: bool = True) -> None:
+    def generate_report(
+        self, report: ValidationReport, show_details: bool = True
+    ) -> None:
         """콘솔 보고서 생성."""
         summary = report.get_summary()
 

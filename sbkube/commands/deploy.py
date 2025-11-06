@@ -158,9 +158,7 @@ def deploy_helm_app(
     elif app.is_remote_chart():
         # Remote chart: .sbkube/charts/ 디렉토리에서 찾기
         chart_name = app.get_chart_name()
-        source_path = (
-            charts_dir / chart_name / chart_name
-        )  # .sbkube/charts/redis/redis
+        source_path = charts_dir / chart_name / chart_name  # .sbkube/charts/redis/redis
 
         if not source_path.exists():
             output.print_error(f"Chart not found: {source_path}")
@@ -243,15 +241,19 @@ def deploy_helm_app(
 
     # Cluster global values (v0.7.0+, 최하위 우선순위)
     import tempfile
+
     temp_cluster_values_file = None
     if cluster_global_values:
         import yaml
+
         console.print("  [dim]Applying cluster global values...[/dim]")
         # 임시 파일에 cluster global values 저장
         temp_cluster_values_file = tempfile.NamedTemporaryFile(
             mode="w", suffix=".yaml", delete=False, encoding="utf-8"
         )
-        yaml.dump(cluster_global_values, temp_cluster_values_file, default_flow_style=False)
+        yaml.dump(
+            cluster_global_values, temp_cluster_values_file, default_flow_style=False
+        )
         temp_cluster_values_file.close()
         cmd.extend(["--values", temp_cluster_values_file.name])
 
@@ -356,12 +358,12 @@ def deploy_helm_app(
                 f"[green]✅ {app_name} deployed (release: {release_name})[/green]"
             )
         else:
-            output.print_success(f"Helm app deployed: {app_name} (release: {release_name})")
+            output.print_success(
+                f"Helm app deployed: {app_name} (release: {release_name})"
+            )
         return True
     except KeyboardInterrupt:
-        console.print(
-            f"\n[yellow]⚠️  Deployment interrupted by user (Ctrl+C)[/yellow]"
-        )
+        console.print("\n[yellow]⚠️  Deployment interrupted by user (Ctrl+C)[/yellow]")
         console.print(
             f"[yellow]ℹ️  App '{app_name}' deployment may be incomplete.[/yellow]"
         )
@@ -373,6 +375,7 @@ def deploy_helm_app(
         # 임시 파일 정리
         if temp_cluster_values_file:
             import os
+
             try:
                 os.unlink(temp_cluster_values_file.name)
             except Exception:
@@ -446,7 +449,9 @@ def deploy_yaml_app(
         console.print(
             f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
         )
-        console.print("  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]")
+        console.print(
+            "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
+        )
 
     for yaml_file in app.manifests:
         # ${repos.app-name} 변수 확장
@@ -488,11 +493,14 @@ def deploy_yaml_app(
             if labels and annotations:
                 yaml_content = inject_labels_to_yaml(yaml_content, labels, annotations)
         except Exception as e:
-            output.print_error(f"Failed to process YAML file: {yaml_path}", error=str(e))
+            output.print_error(
+                f"Failed to process YAML file: {yaml_path}", error=str(e)
+            )
             return False
 
         # Create temporary file with injected labels
         import tempfile
+
         temp_dir = base_dir / ".sbkube" / "temp"
         temp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -593,7 +601,9 @@ def deploy_action_app(
         console.print(
             f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
         )
-        console.print("  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]")
+        console.print(
+            "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
+        )
 
     for action in app.actions:
         # ActionSpec은 이제 타입이 있는 객체입니다
@@ -612,15 +622,18 @@ def deploy_action_app(
         temp_yaml_path = None
         if not action_path.startswith(("http://", "https://")):
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     yaml_content = f.read()
 
                 # Inject labels if app-group detected
                 if labels and annotations:
-                    yaml_content = inject_labels_to_yaml(yaml_content, labels, annotations)
+                    yaml_content = inject_labels_to_yaml(
+                        yaml_content, labels, annotations
+                    )
 
                 # Create temporary file with injected labels
                 import tempfile
+
                 temp_dir = base_dir / ".sbkube" / "temp"
                 temp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -635,7 +648,9 @@ def deploy_action_app(
                     temp_yaml_path = Path(temp_file.name)
                     actual_file_path = str(temp_yaml_path)
             except Exception as e:
-                output.print_error(f"Failed to process YAML file: {file_path}", error=str(e))
+                output.print_error(
+                    f"Failed to process YAML file: {file_path}", error=str(e)
+                )
                 return False
 
         cmd = ["kubectl", action_type, "-f", actual_file_path]
@@ -771,7 +786,9 @@ def deploy_kustomize_app(
         console.print(
             f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
         )
-        console.print("  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]")
+        console.print(
+            "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
+        )
 
     # Build kustomize build command to get YAML output
     build_cmd = ["kustomize", "build", str(kustomize_path)]
@@ -795,6 +812,7 @@ def deploy_kustomize_app(
 
     # Create temporary file with built and injected YAML
     import tempfile
+
     temp_dir = base_dir / ".sbkube" / "temp"
     temp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1052,10 +1070,12 @@ def cmd(
                 sources = SourceScheme(**sources_data)
 
                 # Load cluster global values (v0.7.0+)
-                cluster_global_values = sources.get_merged_global_values(sources_dir=APP_CONFIG_DIR)
+                cluster_global_values = sources.get_merged_global_values(
+                    sources_dir=APP_CONFIG_DIR
+                )
                 if cluster_global_values:
                     output.print(
-                        f"[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]"
+                        "[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]"
                     )
             except Exception as e:
                 output.print_error(f"Invalid sources file: {e}")
@@ -1298,9 +1318,7 @@ def cmd(
                     )
 
                     # Phase 2: tasks (우선순위: tasks > manifests > commands)
-                    if (
-                        app_hooks.get("post_deploy_tasks")
-                    ):
+                    if app_hooks.get("post_deploy_tasks"):
                         hook_executor.execute_hook_tasks(
                             app_name=app_name_iter,
                             tasks=app_hooks["post_deploy_tasks"],

@@ -10,18 +10,18 @@ ______________________________________________________________________
 
 ## 📌 목차
 
-1. [문서 개요](#1-문서-개요)
-2. [시스템 아키텍처](#2-시스템-아키텍처)
-3. [워크플로우 상세](#3-워크플로우-상세)
-4. [데이터 모델 및 스키마](#4-데이터-모델-및-스키마)
-5. [API 및 명령어 명세](#5-api-및-명령어-명세)
-6. [상태 관리 시스템](#6-상태-관리-시스템)
-7. [Hooks 시스템 구현](#7-hooks-시스템-구현)
-8. [검증 시스템](#8-검증-시스템)
-9. [기술 스택 및 의존성](#9-기술-스택-및-의존성)
-10. [에러 처리 및 예외](#10-에러-처리-및-예외)
-11. [성능 및 확장성](#11-성능-및-확장성)
-12. [보안 고려사항](#12-보안-고려사항)
+1. [문서 개요](#1-%EB%AC%B8%EC%84%9C-%EA%B0%9C%EC%9A%94)
+1. [시스템 아키텍처](#2-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98)
+1. [워크플로우 상세](#3-%EC%9B%8C%ED%81%AC%ED%94%8C%EB%A1%9C%EC%9A%B0-%EC%83%81%EC%84%B8)
+1. [데이터 모델 및 스키마](#4-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%AA%A8%EB%8D%B8-%EB%B0%8F-%EC%8A%A4%ED%82%A4%EB%A7%88)
+1. [API 및 명령어 명세](#5-api-%EB%B0%8F-%EB%AA%85%EB%A0%B9%EC%96%B4-%EB%AA%85%EC%84%B8)
+1. [상태 관리 시스템](#6-%EC%83%81%ED%83%9C-%EA%B4%80%EB%A6%AC-%EC%8B%9C%EC%8A%A4%ED%85%9C)
+1. [Hooks 시스템 구현](#7-hooks-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EA%B5%AC%ED%98%84)
+1. [검증 시스템](#8-%EA%B2%80%EC%A6%9D-%EC%8B%9C%EC%8A%A4%ED%85%9C)
+1. [기술 스택 및 의존성](#9-%EA%B8%B0%EC%88%A0-%EC%8A%A4%ED%83%9D-%EB%B0%8F-%EC%9D%98%EC%A1%B4%EC%84%B1)
+1. [에러 처리 및 예외](#10-%EC%97%90%EB%9F%AC-%EC%B2%98%EB%A6%AC-%EB%B0%8F-%EC%98%88%EC%99%B8)
+1. [성능 및 확장성](#11-%EC%84%B1%EB%8A%A5-%EB%B0%8F-%ED%99%95%EC%9E%A5%EC%84%B1)
+1. [보안 고려사항](#12-%EB%B3%B4%EC%95%88-%EA%B3%A0%EB%A0%A4%EC%82%AC%ED%95%AD)
 
 ______________________________________________________________________
 
@@ -38,12 +38,11 @@ ______________________________________________________________________
 
 ### 1.3 관련 문서
 
-| 문서 | 목적 | 링크 |
-|------|------|------|
-| **PRODUCT.md** | 제품 정의 (무엇을, 왜) | [PRODUCT.md](PRODUCT.md) |
-| **ARCHITECTURE.md** | 상세 아키텍처 설계 | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
-| **API_CONTRACT.md** | API 계약 및 인터페이스 | [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md) |
-| **config-schema.md** | 설정 파일 스키마 상세 | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) |
+| 문서 | 목적 | 링크 | |------|------|------| | **PRODUCT.md** | 제품 정의 (무엇을, 왜) | [PRODUCT.md](PRODUCT.md) | |
+**ARCHITECTURE.md** | 상세 아키텍처 설계 | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) | |
+**API_CONTRACT.md** | API 계약 및 인터페이스 | [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md)
+| | **config-schema.md** | 설정 파일 스키마 상세 |
+[docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) |
 
 ### 1.4 버전 정보
 
@@ -207,6 +206,7 @@ ______________________________________________________________________
 **명령어**: `sbkube apply [옵션]`
 
 **실행 흐름**:
+
 ```
 1. 설정 파일 로딩 (config.yaml, sources.yaml)
    ↓
@@ -228,6 +228,7 @@ ______________________________________________________________________
 ```
 
 **시퀀스 다이어그램**:
+
 ```
 User         ApplyCmd      PrepareCmd   BuildCmd   TemplateCmd  DeployCmd   StateDB
  │              │              │           │            │           │          │
@@ -259,11 +260,13 @@ User         ApplyCmd      PrepareCmd   BuildCmd   TemplateCmd  DeployCmd   Stat
 **목적**: 외부 소스 다운로드 및 로컬화
 
 **지원 앱 타입**:
+
 - `helm`: Helm 차트 (remote repository)
 - `git`: Git 리포지토리
 - `http`: HTTP(S) URL 파일 다운로드
 
 **구현 로직** (helm 타입):
+
 ```python
 def prepare_helm_app(app: AppConfig, sources: SourcesConfig):
     """
@@ -287,6 +290,7 @@ def prepare_helm_app(app: AppConfig, sources: SourcesConfig):
 ```
 
 **출력 디렉토리**:
+
 ```
 .sbkube/
 └── charts/
@@ -301,9 +305,11 @@ def prepare_helm_app(app: AppConfig, sources: SourcesConfig):
 **목적**: 배포 가능한 형태로 변환
 
 **지원 앱 타입**:
+
 - `helm`: Helm 차트 커스터마이징 (overrides, removes 적용)
 
 **구현 로직** (차트 커스터마이징):
+
 ```python
 def build_helm_app(app: AppConfig):
     """
@@ -331,6 +337,7 @@ def build_helm_app(app: AppConfig):
 ```
 
 **출력 디렉토리**:
+
 ```
 .sbkube/
 └── build/
@@ -345,10 +352,12 @@ def build_helm_app(app: AppConfig):
 **목적**: 환경별 설정 적용 및 YAML 생성
 
 **지원 앱 타입**:
+
 - `helm`: Helm 차트 렌더링
 - `yaml`: YAML 파일 템플릿화 (Jinja2, 향후 지원)
 
 **구현 로직**:
+
 ```python
 def template_helm_app(app: AppConfig, namespace: str):
     """
@@ -374,6 +383,7 @@ def template_helm_app(app: AppConfig, namespace: str):
 ```
 
 **출력 디렉토리**:
+
 ```
 .sbkube/
 └── rendered/
@@ -386,12 +396,14 @@ def template_helm_app(app: AppConfig, namespace: str):
 **목적**: Kubernetes 클러스터에 배포
 
 **지원 앱 타입**:
+
 - `helm`: Helm 릴리스 설치/업그레이드
 - `yaml`: kubectl apply 실행
 - `action`: kubectl 액션 (apply, create, delete)
 - `exec`: 임의 명령어 실행
 
 **구현 로직** (helm 타입):
+
 ```python
 def deploy_helm_app(app: AppConfig, namespace: str, dry_run: bool = False):
     """
@@ -432,6 +444,7 @@ ______________________________________________________________________
 ### 4.1 config.yaml 스키마 (Pydantic)
 
 **모델 정의**:
+
 ```python
 # sbkube/models/config_model.py
 from pydantic import BaseModel, Field, field_validator
@@ -478,6 +491,7 @@ class Config(BaseModel):
 ```
 
 **YAML 예시**:
+
 ```yaml
 namespace: production
 deps: ["a000_infra"]
@@ -502,6 +516,7 @@ apps:
 ### 4.2 sources.yaml 스키마
 
 **모델 정의**:
+
 ```python
 # sbkube/models/sources_model.py
 class SourcesConfig(BaseModel):
@@ -515,6 +530,7 @@ class SourcesConfig(BaseModel):
 ```
 
 **YAML 예시**:
+
 ```yaml
 kubeconfig: ~/.kube/config
 kubeconfig_context: production-cluster
@@ -533,6 +549,7 @@ git:
 ### 4.3 배포 상태 DB 스키마
 
 **SQLAlchemy 모델**:
+
 ```python
 # sbkube/state/database.py
 from sqlalchemy import Column, Integer, String, DateTime, JSON
@@ -660,6 +677,7 @@ sbkube validate [TARGET_FILE] [옵션]
 ### 5.2 Python API (프로그래밍 방식)
 
 **명령어 직접 호출**:
+
 ```python
 from sbkube.commands.apply import ApplyCommand
 
@@ -674,6 +692,7 @@ cmd.execute()
 ```
 
 **설정 파일 로딩**:
+
 ```python
 from sbkube.utils.file_loader import load_config
 
@@ -689,6 +708,7 @@ ______________________________________________________________________
 ### 6.1 배포 상태 추적
 
 **저장 정보**:
+
 - 배포 시각 (timestamp)
 - 클러스터 정보 (context, namespace)
 - 앱 정보 (app_name, release_name)
@@ -696,6 +716,7 @@ ______________________________________________________________________
 - 메타데이터 (JSON 필드: 차트 버전, 설정 해시 등)
 
 **구현**:
+
 ```python
 # sbkube/state/tracker.py
 class DeploymentTracker:
@@ -734,6 +755,7 @@ class DeploymentTracker:
 **목적**: `deps` 필드에 선언된 의존 앱 그룹이 배포되었는지 확인
 
 **네임스페이스 자동 감지** (v0.6.0+):
+
 ```python
 # sbkube/validators/dependency_validator.py
 def validate_app_group_dependencies(config: Config, tracker: DeploymentTracker):
@@ -765,6 +787,7 @@ def validate_app_group_dependencies(config: Config, tracker: DeploymentTracker):
 ### 6.3 롤백 지원
 
 **롤백 프로세스**:
+
 ```python
 # sbkube/state/rollback.py
 def rollback_deployment(deployment_id: int, tracker: DeploymentTracker):
@@ -800,6 +823,7 @@ ______________________________________________________________________
 ### 7.1 Hooks 실행 타이밍
 
 **명령어 수준 Hooks** (전역):
+
 ```yaml
 # config.yaml
 hooks:
@@ -810,6 +834,7 @@ hooks:
 ```
 
 **앱 수준 Hooks**:
+
 ```yaml
 # config.yaml
 apps:
@@ -825,6 +850,7 @@ apps:
 ### 7.2 실행 순서
 
 **deploy 명령어 실행 시**:
+
 ```
 1. 전역 hooks.deploy.pre 실행
 2. 앱 A:
@@ -843,6 +869,7 @@ apps:
 ### 7.3 환경변수 주입
 
 **자동 주입 변수** (앱별 Hooks):
+
 ```python
 # sbkube/commands/deploy.py
 def execute_app_hooks(app: AppConfig, hook_type: str, namespace: str):
@@ -879,6 +906,7 @@ ______________________________________________________________________
 ### 8.1 설정 파일 검증 (validate 명령어)
 
 **검증 레이어**:
+
 ```
 1. YAML 파싱 검증 (PyYAML)
    ↓
@@ -892,6 +920,7 @@ ______________________________________________________________________
 ```
 
 **구현**:
+
 ```python
 # sbkube/commands/validate.py
 class ValidateCommand(EnhancedBaseCommand):
@@ -926,6 +955,7 @@ class ValidateCommand(EnhancedBaseCommand):
 **자동 실행**: deploy 명령어 실행 시
 
 **검증 항목**:
+
 - Kubernetes 클러스터 연결 확인
 - 대상 네임스페이스 존재 여부
 - 의존성 도구 설치 확인 (helm, kubectl, git)
@@ -935,6 +965,7 @@ class ValidateCommand(EnhancedBaseCommand):
 **선택적 실행**: `--verify` 플래그 (향후 지원)
 
 **검증 항목**:
+
 - Pod 상태 확인 (Running)
 - Service 엔드포인트 확인
 - Helm 릴리스 상태 (deployed)
@@ -946,6 +977,7 @@ ______________________________________________________________________
 ### 9.1 핵심 의존성
 
 **Python 패키지** (`pyproject.toml`):
+
 ```toml
 [project]
 dependencies = [
@@ -970,11 +1002,8 @@ dev = [
 
 ### 9.2 외부 도구 의존성
 
-| 도구 | 버전 | 용도 | 필수 여부 |
-|------|------|------|----------|
-| **Helm** | v3.x | 차트 관리 및 배포 | ✅ 필수 |
-| **kubectl** | v1.27+ | Kubernetes API 통신 | ✅ 필수 |
-| **Git** | v2.x | Git 리포지토리 클론 | ⚠️ Git 타입 사용 시 |
+| 도구 | 버전 | 용도 | 필수 여부 | |------|------|------|----------| | **Helm** | v3.x | 차트 관리 및 배포 | ✅ 필수 | | **kubectl** |
+v1.27+ | Kubernetes API 통신 | ✅ 필수 | | **Git** | v2.x | Git 리포지토리 클론 | ⚠️ Git 타입 사용 시 |
 
 ### 9.3 런타임 요구사항
 
@@ -987,6 +1016,7 @@ dev = [
 **빌드 시스템**: hatchling
 
 **배포 플랫폼**:
+
 - PyPI: `pip install sbkube`
 - GitHub Releases: Binary 배포 (향후 계획)
 
@@ -1017,6 +1047,7 @@ class CommandExecutionError(SBKubeError):
 ### 10.2 에러 메시지 형식
 
 **예시**:
+
 ```
 ❌ ValidationError: config.yaml
   apps.redis.chart: field required
@@ -1048,6 +1079,7 @@ ______________________________________________________________________
 **현재**: 순차 실행 (앱 의존성 고려)
 
 **향후 계획** (v0.8.x):
+
 - DAG 기반 병렬 실행
 - 독립적인 앱 동시 배포
 
@@ -1075,6 +1107,7 @@ ______________________________________________________________________
 ### 12.3 RBAC 권한
 
 **최소 권한 원칙**:
+
 - 대상 네임스페이스에 대한 생성/수정/삭제 권한
 - Helm 릴리스 설치 권한
 - RBAC 리소스 관리 권한 (필요 시)

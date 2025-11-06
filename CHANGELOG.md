@@ -12,7 +12,7 @@ ______________________________________________________________________
 
 _(No unreleased features yet)_
 
----
+______________________________________________________________________
 
 ## [0.7.1] - 2025-01-06
 
@@ -40,6 +40,7 @@ global_values:  # Inline values (higher priority)
 ```
 
 **Files Added**:
+
 - `sbkube/utils/dict_merge.py` - Deep merge utility
 - `tests/unit/utils/test_dict_merge.py` - Test suite
 - `docs/03-configuration/sources-schema.md` - Complete sources.yaml documentation
@@ -103,7 +104,7 @@ Troubleshooting:
 - ✅ **UPDATED**: [CLAUDE.md](CLAUDE.md) with architecture patterns and development commands
 - ✅ **SYNCED**: All documentation layers aligned with PRODUCT.md and SPEC.md
 
----
+______________________________________________________________________
 
 ## [0.7.0] - 2025-01-03
 
@@ -499,69 +500,76 @@ ______________________________________________________________________
 - Bitnami Redis → OpsTree Redis Operator로 예제 교체 (17개 파일)
 - 벤더 중립적 오픈소스 차트 사용, Kubernetes Operator 패턴 적용
 - 기존 코드와 완전 호환
+
 </details>
 
 <details>
 <summary>🚀 v0.5.0 (2025-10-31) - Breaking Changes 및 주요 기능 추가</summary>
 
 **Breaking Changes**:
+
 - Helm Chart 설정: `repo` + `chart` → 단일 `chart` 필드 (`grafana/grafana`)
 - CLI 옵션: `--env` → `--profile`, `--sources` → `--source`
 
 **새로운 기능**:
+
 - Hooks 시스템 (pre/post/on_failure 지원)
 - OCI Registry 지원 (TrueCharts, GHCR 등)
 - 고급 차트 커스터마이징 (`overrides`, `removes`)
 - 의존성 관리 (`depends_on`, 토폴로지 정렬)
 
 **문서 및 예제**:
+
 - 38개 실전 예제, 5개 튜토리얼 완성
 - API 계약 명세 추가
 - 마이그레이션 가이드 제공
 
 **보안 및 성능**:
+
 - `shell=True` 제거 (보안 개선)
 - Pydantic 2.7+ 업그레이드
 - Python 3.12+ 지원
+
 </details>
 
 <details>
 <summary>📊 v0.4.x 시리즈 - 예제 및 개발자 경험 개선</summary>
 
-**v0.4.10**: deps 필드 지원 (앱 그룹 간 의존성 선언)
-**v0.4.9**: Glob 패턴 지원 (overrides에 `*.yaml` 등 사용 가능)
-**v0.4.8**: Override 디렉토리 자동 감지 및 경고 시스템
-**v0.4.7**: sources.yaml 자동 탐색 기능 (monorepo 지원 개선)
-**v0.4.6**: prepare 명령어 멱등성 개선 (재실행 안전성)
-**v0.4.5**: Kustomize 예제 완성, 예제 커버리지 100% 달성
-**v0.4.4**: 워크플로우 예제 4개 추가 (apply, force-update, git, state-management)
-**v0.4.3**: 8개 예제 디렉토리 README 추가 (문서 커버리지 100%)
-**v0.4.1**: helm_repos dict 포맷 통일, Pydantic shorthand 지원
-**v0.4.0**: `--force` 옵션, validate/prepare 버그 수정
+**v0.4.10**: deps 필드 지원 (앱 그룹 간 의존성 선언) **v0.4.9**: Glob 패턴 지원 (overrides에 `*.yaml` 등 사용 가능) **v0.4.8**: Override 디렉토리
+자동 감지 및 경고 시스템 **v0.4.7**: sources.yaml 자동 탐색 기능 (monorepo 지원 개선) **v0.4.6**: prepare 명령어 멱등성 개선 (재실행 안전성) **v0.4.5**:
+Kustomize 예제 완성, 예제 커버리지 100% 달성 **v0.4.4**: 워크플로우 예제 4개 추가 (apply, force-update, git, state-management) **v0.4.3**: 8개
+예제 디렉토리 README 추가 (문서 커버리지 100%) **v0.4.1**: helm_repos dict 포맷 통일, Pydantic shorthand 지원 **v0.4.0**: `--force` 옵션,
+validate/prepare 버그 수정
+
 </details>
 
 <details>
 <summary>🎉 v0.3.0 (2025-10-22) - 메이저 리팩토링 (Breaking Changes)</summary>
 
 **설정 파일 간소화**:
+
 - Apps list → dict 변경 (앱 이름이 키)
 - `pull-helm` + `install-helm` → 단일 `helm` 타입 통합
 - `specs` 제거 (필드 평탄화)
 - 설정 파일 길이 50% 감소
 
 **새로운 기능**:
+
 - HTTP 파일 다운로드 지원
 - 의존성 자동 해결 (토폴로지 정렬, 순환 의존성 검출)
 - `sbkube migrate` 명령어 (자동 마이그레이션)
 
 **제거된 기능**:
+
 - `copy-*` 타입들 (copy-app, copy-repo, copy-chart, copy-root)
 - `render` → `template` 명령어로 대체
 
 **통계**:
+
 - 신규 파일 9개, 추가 라인 ~3,000
 - 설정 간소화: 필수 항목 30% 감소, 중첩 레벨 3→2
 - 테스트 커버리지 86%
+
 </details>
 
 ______________________________________________________________________

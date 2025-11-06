@@ -461,7 +461,9 @@ def cmd(
             console.print("")
             continue
 
-        if delete_successful_for_app or (not delete_command_executed and skip_not_found):
+        if delete_successful_for_app or (
+            not delete_command_executed and skip_not_found
+        ):
             delete_success_apps += 1
 
         console.print("")

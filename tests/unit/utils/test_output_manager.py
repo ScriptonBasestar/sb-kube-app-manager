@@ -197,7 +197,9 @@ class TestOutputManager:
 
     @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
     @patch("sbkube.utils.output_formatter.OutputFormatter.format_deployment_result")
-    def test_finalize_llm_mode_defaults(self, mock_format_result, mock_print_output) -> None:
+    def test_finalize_llm_mode_defaults(
+        self, mock_format_result, mock_print_output
+    ) -> None:
         """Test finalize() default inference when status/summary are omitted."""
         manager = OutputManager(format_type="llm")
         manager.print("Event 1", level="info")

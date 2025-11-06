@@ -473,7 +473,9 @@ data:
         assert mock_run.called
 
 
-def test_execute_app_hook_with_manifests_both_shell_and_manifests(tmp_workspace) -> None:
+def test_execute_app_hook_with_manifests_both_shell_and_manifests(
+    tmp_workspace,
+) -> None:
     """Shell 명령어와 manifests 모두 있는 경우 테스트."""
     base_dir, config_dir = tmp_workspace
 

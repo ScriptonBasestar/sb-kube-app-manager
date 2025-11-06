@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## type: Project Overview audience: End User, Developer topics: [introduction, features, installation, documentation] llm_priority: high entry_point: true last_updated: 2025-01-04
+## type: Project Overview audience: End User, Developer topics: [introduction, features, installation, documentation] llm_priority: high entry_point: true last_updated: 2025-01-06
 
 # 🧩 SBKube
 

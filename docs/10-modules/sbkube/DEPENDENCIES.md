@@ -3,14 +3,19 @@ type: Technical Documentation
 audience: Developer
 topics: [dependencies, packages, requirements]
 llm_priority: low
-last_updated: 2025-01-04
+last_updated: 2025-01-06
 ---
 
 # SBKube 의존성 명세
 
+> **주의**: 이 문서는 [SPEC.md](../../../SPEC.md) 및 [MODULE.md](MODULE.md)에서 참조하는 의존성 상세 명세입니다.
+> 기본 의존성 정보는 해당 문서들을 우선 참조하세요.
+
 ## 개요
 
 이 문서는 SBKube 모듈의 모든 외부 의존성을 명시합니다.
+
+**버전**: v0.7.0 (개발 중), v0.6.0 (안정)
 
 ## 런타임 환경 요구사항
 
@@ -403,8 +408,15 @@ apk add gcc musl-dev python3-dev libffi-dev openssl-dev
 
 ---
 
-**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
+## 관련 문서
 
-- [MODULE.md](MODULE.md) - 모듈 정의
-- [ARCHITECTURE.md](ARCHITECTURE.md) - 아키텍처
-- [API_CONTRACT.md](API_CONTRACT.md) - API 계약
+- **상위 문서**: [SPEC.md](../../../SPEC.md) - 기술 명세 (어떻게)
+- **모듈 개요**: [MODULE.md](MODULE.md) - 모듈 정의 및 경계
+- **아키텍처**: [ARCHITECTURE.md](ARCHITECTURE.md) - 시스템 설계
+- **API 계약**: [API_CONTRACT.md](API_CONTRACT.md) - API 명세
+
+---
+
+**문서 버전**: 1.1
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

@@ -3,14 +3,19 @@ type: API Reference
 audience: Developer
 topics: [api, contracts, interfaces, models]
 llm_priority: medium
-last_updated: 2025-01-04
+last_updated: 2025-01-06
 ---
 
 # SBKube API 계약 명세
 
+> **주의**: 이 문서는 [SPEC.md](../../../SPEC.md) Section 5 (API 명세)의 구현 상세 버전입니다.
+> 전체 API 개요는 SPEC.md를 우선 참조하세요.
+
 ## 개요
 
 이 문서는 SBKube 모듈의 내부 API 인터페이스 계약을 정의합니다. 새로운 명령어나 앱 타입을 추가할 때 이 계약을 준수해야 합니다.
+
+**버전**: v0.7.0 (개발 중), v0.6.0 (안정)
 
 ## BaseCommand 인터페이스
 
@@ -560,16 +565,35 @@ def cmd(ctx, ...):
 - **Minor 버전 변경**: 하위 호환 API 추가
 - **Patch 버전 변경**: 버그 수정 (API 변경 없음)
 
-### 현재 버전 (v0.6.0))
+### 현재 버전
 
-- BaseCommand 인터페이스: 안정
-- Pydantic 모델: 실험적 (v2 마이그레이션 중)
-- 상태 관리 API: 베타
+- **v0.7.0 (개발 중)**:
+  - EnhancedBaseCommand 추가 (OutputFormatter 통합)
+  - LLM 친화적 출력 지원 (`--format` 옵션)
+  - 향상된 에러 처리
+- **v0.6.0 (안정)**:
+  - BaseCommand 인터페이스: 안정
+  - Pydantic v2 마이그레이션 완료
+  - 상태 관리 API: 안정
+
+### API 안정성 등급
+
+- **안정 (Stable)**: BaseCommand, Pydantic 모델, CLI 인터페이스
+- **베타 (Beta)**: 상태 관리 API, 검증 시스템
+- **실험적 (Experimental)**: Hooks 시스템, 플러그인 인터페이스
 
 ---
 
-**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
+## 관련 문서
 
-- [MODULE.md](MODULE.md) - 모듈 정의
-- [ARCHITECTURE.md](ARCHITECTURE.md) - 아키텍처
-- [DEPENDENCIES.md](DEPENDENCIES.md) - 의존성 명세
+- **상위 문서**: [SPEC.md](../../../SPEC.md) - 기술 명세 (어떻게)
+- **제품 정의**: [PRODUCT.md](../../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
+- **모듈 개요**: [MODULE.md](MODULE.md) - 모듈 정의 및 경계
+- **아키텍처**: [ARCHITECTURE.md](ARCHITECTURE.md) - 시스템 설계
+- **의존성**: [DEPENDENCIES.md](DEPENDENCIES.md) - 외부 의존성 상세
+
+---
+
+**문서 버전**: 1.1
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

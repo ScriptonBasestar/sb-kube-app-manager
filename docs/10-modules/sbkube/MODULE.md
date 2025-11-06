@@ -3,14 +3,18 @@ type: Module Overview
 audience: Developer
 topics: [module, structure, organization]
 llm_priority: medium
-last_updated: 2025-01-04
+last_updated: 2025-01-06
 ---
 
 # SBKube 모듈 정의
 
+> **주의**: 이 문서는 [SPEC.md](../../../SPEC.md)의 구현 상세 버전입니다.
+> 기술 아키텍처 개요는 SPEC.md Section 2를 우선 참조하세요.
+
 ## 모듈 개요
 
 - **이름**: sbkube
+- **버전**: v0.7.0 (개발 중), v0.6.0 (안정)
 - **타입**: Python CLI Application (Monolithic)
 - **역할**: Kubernetes 배포 자동화 CLI 도구
 - **책임**: Helm, YAML, Git 소스 통합 및 k3s 클러스터 배포 관리
@@ -282,8 +286,16 @@ dependencies = [
 
 ---
 
-**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
+## 관련 문서
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - 상세 아키텍처
-- [API_CONTRACT.md](API_CONTRACT.md) - API 계약 (향후 작성)
-- [DEPENDENCIES.md](DEPENDENCIES.md) - 의존성 명세 (향후 작성)
+- **상위 문서**: [SPEC.md](../../../SPEC.md) - 기술 명세 (어떻게)
+- **제품 정의**: [PRODUCT.md](../../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
+- **상세 아키텍처**: [ARCHITECTURE.md](ARCHITECTURE.md) - 시스템 설계 세부사항
+- **API 계약**: [API_CONTRACT.md](API_CONTRACT.md) - 인터페이스 명세
+- **의존성**: [DEPENDENCIES.md](DEPENDENCIES.md) - 외부 의존성 상세
+
+---
+
+**문서 버전**: 1.1
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

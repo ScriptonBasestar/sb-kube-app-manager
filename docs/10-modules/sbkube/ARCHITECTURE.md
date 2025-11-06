@@ -3,26 +3,29 @@ type: Technical Documentation
 audience: Developer
 topics: [architecture, design, patterns, modules, implementation]
 llm_priority: medium
-last_updated: 2025-01-04
+last_updated: 2025-01-06
 ---
 
 # SBKube 모듈 아키텍처
 
+> **주의**: 이 문서는 [SPEC.md](../../../SPEC.md) Section 2 (시스템 아키텍처)의 구현 상세 버전입니다.
+> 전체 아키텍처 개요는 SPEC.md를 우선 참조하세요.
+
 ## TL;DR
 - **Purpose**: Technical architecture and design patterns for SBKube module implementation
+- **Version**: v0.7.0 (개발 중), v0.6.0 (안정)
 - **Key Points**:
-  - Monolithic architecture with clear layer separation
-  - BaseCommand pattern for command extensibility
+  - Monolithic architecture with clear layer separation (CLI→Command→Model→State→External)
+  - BaseCommand/EnhancedBaseCommand pattern for command extensibility
   - Pydantic for strong typing and validation
   - SQLAlchemy for state persistence
-  - Rich console for enhanced UX
+  - Rich console + OutputFormatter for enhanced UX and LLM-friendly output
 - **Quick Reference**: Layer architecture diagram shows CLI→Command→Model→State flow
-- **Related**: [PRODUCT.md](../../PRODUCT.md), [product-spec.md](../../00-product/product-spec.md), [API_CONTRACT.md](API_CONTRACT.md)
+- **Related**: [SPEC.md](../../../SPEC.md), [MODULE.md](MODULE.md), [API_CONTRACT.md](API_CONTRACT.md)
 
 ## 개요
 
-이 문서는 SBKube 모듈의 상세한 아키텍처 설계를 다룹니다. 사용자용 개요는 [docs/02-features/architecture.md](../../02-features/architecture.md)를
-참조하세요.
+이 문서는 SBKube 모듈의 상세한 아키텍처 설계를 다룹니다. 전체 시스템 아키텍처는 [SPEC.md](../../../SPEC.md) Section 2를, 사용자용 개요는 [docs/02-features/architecture.md](../../02-features/architecture.md)를 참조하세요.
 
 ## 아키텍처 원칙
 
@@ -601,20 +604,26 @@ def download_helm_chart(repo, chart, version):
 
 ## 향후 개선 계획
 
-### 단기 (v0.4.x - v0.5.x)
+### 완료된 마일스톤
 
 - ✅ v0.4.10: sources.yaml 클러스터 설정 필수화, deps 필드 지원
+- ✅ v0.5.0: 통합 워크플로우 (`apply` 명령어), Hooks 시스템
+- ✅ v0.6.0: 앱 그룹 의존성 검증, 네임스페이스 자동 감지, 라벨 기반 분류
+
+### 단기 (v0.7.x - v0.8.x)
+
+- 🟡 v0.7.0 (진행 중): LLM 친화적 출력 시스템, 향상된 에러 처리
 - 병렬 처리 구현
-- 플러그인 시스템 베타
-- 웹 UI 프로토타입
+- Hooks 고도화 (Manifests Hooks, Task 시스템)
+- 플러그인 시스템 도입
 
-### 중기 (v0.6.x - v0.8.x)
+### 중기 (v0.9.x - v1.0.x)
 
-- 멀티 클러스터 지원
-- 분산 잠금 (동시 배포 방지)
+- 멀티 클러스터 동시 배포
+- 웹 UI 프로토타입 (배포 상태 대시보드)
 - GitOps 통합 (Flux, ArgoCD)
 
-### 장기 (v1.0.x)
+### 장기 (v1.1+)
 
 - Kubernetes Operator 개발
 - API 서버 모드
@@ -622,8 +631,16 @@ def download_helm_chart(repo, chart, version):
 
 ---
 
-**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
+## 관련 문서
 
-- [MODULE.md](MODULE.md) - 모듈 정의 및 경계
-- [API_CONTRACT.md](API_CONTRACT.md) - API 계약 명세
-- [docs/02-features/architecture.md](../../02-features/architecture.md) - 사용자용 아키텍처 개요
+- **상위 문서**: [SPEC.md](../../../SPEC.md) - 기술 명세 (어떻게)
+- **제품 정의**: [PRODUCT.md](../../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
+- **모듈 개요**: [MODULE.md](MODULE.md) - 모듈 정의 및 경계
+- **API 계약**: [API_CONTRACT.md](API_CONTRACT.md) - API 계약 명세
+- **사용자 개요**: [docs/02-features/architecture.md](../../02-features/architecture.md) - 사용자용 아키텍처
+
+---
+
+**문서 버전**: 1.1
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

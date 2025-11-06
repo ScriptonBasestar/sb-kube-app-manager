@@ -1,6 +1,6 @@
 # sbkube Makefile
 
-.PHONY: help install test test-unit test-integration test-performance test-coverage clean
+.PHONY: help install test test-unit test-integration test-performance test-coverage clean build check lint lint-fix lint-check lint-strict lint-strict-fix pre-commit-install pre-commit-run pre-commit-update clean-db clean-docker
 
 # Default target
 help:

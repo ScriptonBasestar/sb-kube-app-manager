@@ -10,6 +10,105 @@ ______________________________________________________________________
 
 ### ✨ New Features
 
+_(No unreleased features yet)_
+
+---
+
+## [0.7.1] - 2025-01-06
+
+### 🚀 New Features
+
+**Cluster Global Values** (2025-01-06)
+
+- ✅ **NEW**: `cluster_values_file` in sources.yaml - Load cluster-level values from external file
+- ✅ **NEW**: `global_values` in sources.yaml - Inline cluster-level values
+- ✅ **NEW**: Deep merge utility for hierarchical values inheritance
+- ✅ **NEW**: Automatic values priority: cluster_values_file < global_values < app values
+- ✅ **NEW**: Cluster-level values applied to all Helm apps in template/deploy
+- ✅ **NEW**: Example configuration and documentation
+
+**Usage Example**:
+
+```yaml
+# sources.yaml
+cluster_values_file: cluster-values.yaml  # External file
+global_values:  # Inline values (higher priority)
+  global:
+    environment: production
+    monitoring:
+      enabled: true
+```
+
+**Files Added**:
+- `sbkube/utils/dict_merge.py` - Deep merge utility
+- `tests/unit/utils/test_dict_merge.py` - Test suite
+- `docs/03-configuration/sources-schema.md` - Complete sources.yaml documentation
+- `examples/cluster-global-values/` - Working examples
+
+**See:** [sources-schema.md](docs/03-configuration/sources-schema.md)
+
+**helm_label_injection Control** (2025-01-06)
+
+- ✅ **NEW**: `helm_label_injection` option per app (default: true)
+- ✅ **FIX**: Disable automatic label injection for strict Helm charts (e.g., Authelia)
+- ✅ **IMPROVED**: Fallback to state DB and name pattern tracking when disabled
+
+**Usage Example**:
+
+```yaml
+# config.yaml
+apps:
+  authelia:
+    type: helm
+    chart: authelia/authelia
+    helm_label_injection: false  # Disable for strict validation charts
+```
+
+### 🐛 Bug Fixes
+
+**Enhanced Error Handling for Deployment Interruptions** (2025-01-06)
+
+- ✅ **FIX**: KeyboardInterrupt (Ctrl+C) now exits immediately with clear message
+- ✅ **FIX**: Helm deployment timeout shows detailed troubleshooting guide
+- ✅ **IMPROVED**: Timeout detection with actionable next steps
+- ✅ **IMPROVED**: Deployment interruption handling with status check commands
+
+**Error Messages**:
+
+```
+⚠️  Deployment interrupted by user (Ctrl+C)
+ℹ️  App 'keycloak' deployment may be incomplete.
+Check deployment status: kubectl get pods -n auth
+```
+
+```
+❌ Helm deployment timed out after 300 seconds (5 minutes).
+
+Possible causes:
+  - Pod image pull is slow or failing
+  - Pod is failing health checks
+  - Insufficient cluster resources
+
+Troubleshooting:
+  1. Check pod status: kubectl get pods -n {namespace}
+  2. Check pod logs: kubectl logs -n {namespace} <pod-name>
+  3. Describe pod: kubectl describe pod -n {namespace} <pod-name>
+  4. Increase timeout: add 'timeout: 10m' to app config
+```
+
+### 📚 Documentation
+
+- ✅ **NEW**: [sources-schema.md](docs/03-configuration/sources-schema.md) - Complete sources.yaml reference
+- ✅ **UPDATED**: [PRODUCT.md](PRODUCT.md) and [SPEC.md](SPEC.md) as comprehensive root documents (SSOT)
+- ✅ **UPDATED**: [CLAUDE.md](CLAUDE.md) with architecture patterns and development commands
+- ✅ **SYNCED**: All documentation layers aligned with PRODUCT.md and SPEC.md
+
+---
+
+## [0.7.0] - 2025-01-03
+
+### ✨ New Features
+
 **LLM-Friendly Output System** (2025-01-03)
 
 **Phase 1: Infrastructure** (2025-01-03)

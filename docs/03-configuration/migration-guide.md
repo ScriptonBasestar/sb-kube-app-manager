@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## type: User Guide audience: End User, Developer topics: [migration, upgrade, breaking-changes] llm_priority: medium last_updated: 2025-01-04
+## type: User Guide audience: End User, Developer topics: [migration, upgrade, breaking-changes] llm_priority: medium last_updated: 2025-01-06
 
 # SBKube Migration Guide
 
@@ -10,10 +10,11 @@ ______________________________________________________________________
 
 ## TL;DR
 
-- **Current Version**: v0.6.1
-- **Major Changes**: v0.5 (working directory), v0.6 (state management)
+- **Current Version**: v0.7.1
+- **Latest Stable**: v0.7.0
+- **Major Changes**: v0.7.1 (cluster global values, error handling), v0.7.0 (LLM output), v0.6 (state management)
 - **Migration Tool**: `sbkube validate` checks compatibility
-- **Related**: [Config Schema](config-schema.md)
+- **Related**: [Config Schema](config-schema.md), [sources-schema.md](sources-schema.md)
 
 ______________________________________________________________________
 
@@ -22,9 +23,11 @@ ______________________________________________________________________
 - [Overview](#overview)
 - [General Migration Process](#general-migration-process)
 - [Version-Specific Guides](#version-specific-guides)
-  - [Migration to v0.5.0](#migration-to-v050)
-  - [Migration to v0.6.0](#migration-to-v060)
+  - [Migration to v0.7.1](#migration-to-v071)
+  - [Migration to v0.7.0](#migration-to-v070)
   - [Migration to v0.6.1](#migration-to-v061)
+  - [Migration to v0.6.0](#migration-to-v060)
+  - [Migration to v0.5.0](#migration-to-v050)
 - [Label Migration Guide](#label-migration-guide)
 - [Breaking Changes Summary](#breaking-changes-summary)
 - [FAQ](#faq)
@@ -38,9 +41,14 @@ breaking changes that require configuration migration.
 
 ### Version History
 
-| Version | Release Date | Major Changes | |---------|-------------|---------------| | v0.6.1 | 2025-01-03 | LLM output
-integration | | v0.6.0 | 2024-12-15 | State management, helm format | | v0.5.0 | 2024-11-01 | Working directory
-consolidation | | v0.4.x | 2024-09-01 | Initial stable release |
+| Version | Release Date | Major Changes |
+|---------|--------------|---------------|
+| v0.7.1  | 2025-01-06   | Cluster global values, helm_label_injection, error handling |
+| v0.7.0  | 2025-01-03   | LLM output integration |
+| v0.6.1  | 2025-01-03   | Enhanced error handling |
+| v0.6.0  | 2024-12-15   | State management, helm format |
+| v0.5.0  | 2024-11-01   | Working directory consolidation |
+| v0.4.x  | 2024-09-01   | Initial stable release |
 
 ______________________________________________________________________
 
@@ -114,6 +122,187 @@ ______________________________________________________________________
 ______________________________________________________________________
 
 ## Version-Specific Guides
+
+### Migration to v0.7.1
+
+**Release Date**: 2025-01-06
+**Type**: Feature Release
+**Breaking Changes**: None
+
+#### New Features
+
+**1. Cluster Global Values**
+
+Add cluster-level values that apply to all Helm apps:
+
+```yaml
+# sources.yaml
+kubeconfig: ~/.kube/config
+kubeconfig_context: prod-cluster
+
+# New in v0.7.1: Cluster global values
+cluster_values_file: cluster-values.yaml  # External file (lowest priority)
+global_values:  # Inline values (higher priority)
+  global:
+    environment: production
+    monitoring:
+      enabled: true
+```
+
+**Values Priority** (low to high):
+1. `cluster_values_file` - External YAML file
+2. `global_values` - Inline in sources.yaml
+3. App-specific `values` files
+
+**Migration Steps**:
+
+1. **(Optional)** Create `cluster-values.yaml` for cluster-wide settings:
+
+   ```yaml
+   # cluster-values.yaml
+   global:
+     storageClass: local-path
+     timezone: Asia/Seoul
+   ```
+
+2. **(Optional)** Add `cluster_values_file` or `global_values` to `sources.yaml`:
+
+   ```yaml
+   # sources.yaml
+   cluster_values_file: cluster-values.yaml
+   global_values:
+     global:
+       environment: production
+   ```
+
+3. Verify values inheritance:
+
+   ```bash
+   sbkube template --app-dir <path> --app <app-name>
+   # Check rendered YAML for cluster global values
+   ```
+
+**See:** [sources-schema.md](sources-schema.md#cluster-global-values), [examples/cluster-global-values/](../../examples/cluster-global-values/)
+
+**2. helm_label_injection Control**
+
+Disable automatic label injection for strict Helm charts:
+
+```yaml
+# config.yaml
+apps:
+  authelia:
+    type: helm
+    chart: authelia/authelia
+    helm_label_injection: false  # New in v0.7.1
+```
+
+**When to use**:
+- Charts with strict schema validation (e.g., Authelia)
+- Charts that reject unknown labels
+- Apps where you want manual label control
+
+**Default**: `true` (labels injected automatically)
+
+**Migration Steps**:
+
+1. Check if you have apps failing with "unknown field" errors
+2. Add `helm_label_injection: false` to those apps
+3. Re-deploy:
+
+   ```bash
+   sbkube apply --app-dir <path> --app <app-name>
+   ```
+
+**3. Enhanced Error Messages**
+
+No migration needed. Improved error messages for:
+- Helm deployment timeouts (shows troubleshooting steps)
+- Ctrl+C interruptions (shows status check commands)
+
+**Example error message**:
+
+```
+❌ Helm deployment timed out after 300 seconds (5 minutes).
+
+Possible causes:
+  - Pod image pull is slow or failing
+  - Pod is failing health checks
+  - Insufficient cluster resources
+
+Troubleshooting:
+  1. Check pod status: kubectl get pods -n auth
+  2. Check pod logs: kubectl logs -n auth <pod-name>
+  3. Describe pod: kubectl describe pod -n auth <pod-name>
+  4. Increase timeout: add 'timeout: 10m' to app config
+```
+
+#### Backward Compatibility
+
+✅ **Fully backward compatible** with v0.7.0 and v0.6.x configurations.
+
+- `cluster_values_file` and `global_values` are optional
+- `helm_label_injection` defaults to `true` (existing behavior)
+- All existing configs work without changes
+
+#### Recommended Actions
+
+1. Review new features in [CHANGELOG.md](../../CHANGELOG.md#071---2025-01-06)
+2. Consider using cluster global values for multi-app clusters
+3. Update configs for apps with strict schemas
+
+---
+
+### Migration to v0.7.0
+
+**Release Date**: 2025-01-03
+**Type**: Feature Release
+**Breaking Changes**: None
+
+#### New Features
+
+**LLM-Friendly Output System**
+
+- `--format` option: `human`, `llm`, `json`, `yaml`
+- `SBKUBE_OUTPUT_FORMAT` environment variable
+- 80-90% token savings for LLM agents
+
+**Migration Steps**:
+
+No migration needed. New feature is opt-in.
+
+**Usage**:
+
+```bash
+# LLM-optimized output
+sbkube --format llm apply
+sbkube --format llm status
+
+# JSON output
+sbkube --format json status
+
+# Environment variable
+export SBKUBE_OUTPUT_FORMAT=llm
+sbkube apply
+```
+
+**See:** [llm-friendly-output.md](../02-features/llm-friendly-output.md)
+
+---
+
+### Migration to v0.6.1
+
+**Release Date**: 2025-01-03
+**Type**: Bug Fix Release
+**Breaking Changes**: None
+
+#### Improvements
+
+- Enhanced error handling and classification
+- Better deployment failure messages
+- Context-aware suggestions
+
+---
 
 ### Migration to v0.5.0
 

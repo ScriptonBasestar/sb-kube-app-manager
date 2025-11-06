@@ -4,7 +4,7 @@ Tests verify that all app types (YAML, Action, Kustomize) correctly respect
 namespace settings from both config-level and app-level configurations.
 """
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from sbkube.commands.deploy import (
     deploy_action_app,
@@ -12,6 +12,7 @@ from sbkube.commands.deploy import (
     deploy_yaml_app,
 )
 from sbkube.models.config_model import ActionApp, KustomizeApp, YamlApp
+from sbkube.utils.output_manager import OutputManager
 
 
 class TestYamlAppNamespaceHandling:
@@ -45,11 +46,13 @@ stringData:
         )
 
         # Act
+        output = MagicMock(spec=OutputManager)
         result = deploy_yaml_app(
             app_name="test-app",
             app=app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,
@@ -91,11 +94,13 @@ stringData:
         )
 
         # Act
+        output = MagicMock(spec=OutputManager)
         result = deploy_yaml_app(
             app_name="test-app",
             app=app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,
@@ -135,11 +140,13 @@ stringData:
         )
 
         # Act
+        output = MagicMock(spec=OutputManager)
         result = deploy_yaml_app(
             app_name="test-app",
             app=app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,
@@ -184,11 +191,13 @@ metadata:
         )
 
         # Act
+        output = MagicMock(spec=OutputManager)
         result = deploy_action_app(
             app_name="test-action-app",
             app=app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,
@@ -226,11 +235,13 @@ metadata:
         )
 
         # Act
+        output = MagicMock(spec=OutputManager)
         result = deploy_action_app(
             app_name="test-action-app",
             app=app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,
@@ -276,11 +287,13 @@ resources:
         )
 
         # Act
+        output = MagicMock(spec=OutputManager)
         result = deploy_kustomize_app(
             app_name="test-kustomize-app",
             app=app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,
@@ -289,8 +302,10 @@ resources:
 
         # Assert
         assert result is True
-        mock_run_command.assert_called_once()
-        cmd = mock_run_command.call_args[0][0]
+        # Kustomize runs 2 commands: kustomize build + kubectl apply
+        assert mock_run_command.call_count == 2
+        # Check the kubectl apply command (second call)
+        cmd = mock_run_command.call_args_list[1][0][0]
         assert "--namespace" in cmd
         assert "kustomize-namespace" in cmd
 
@@ -319,11 +334,13 @@ resources:
         )
 
         # Act
+        output = MagicMock(spec=OutputManager)
         result = deploy_kustomize_app(
             app_name="test-kustomize-app",
             app=app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,
@@ -332,8 +349,10 @@ resources:
 
         # Assert
         assert result is True
-        mock_run_command.assert_called_once()
-        cmd = mock_run_command.call_args[0][0]
+        # Kustomize runs 2 commands: kustomize build + kubectl apply
+        assert mock_run_command.call_count == 2
+        # Check the kubectl apply command (second call)
+        cmd = mock_run_command.call_args_list[1][0][0]
         assert "--namespace" in cmd
         assert "app-kustomize-namespace" in cmd
         assert "config-namespace" not in cmd
@@ -370,11 +389,13 @@ metadata:
         )
 
         # Act - Deploy YAML app
+        output = MagicMock(spec=OutputManager)
         deploy_yaml_app(
             app_name="yaml-app",
             app=yaml_app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,
@@ -387,11 +408,13 @@ metadata:
         mock_run_command.reset_mock()
 
         # Act - Deploy Action app
+        output = MagicMock(spec=OutputManager)
         deploy_action_app(
             app_name="action-app",
             app=action_app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,
@@ -432,11 +455,13 @@ metadata:
         app = YamlApp(type="yaml", enabled=True, manifests=["test.yaml"], namespace="")
 
         # Act
+        output = MagicMock(spec=OutputManager)
         result = deploy_yaml_app(
             app_name="test-app",
             app=app,
             base_dir=tmp_path,
             app_config_dir=tmp_path,
+            output=output,
             kubeconfig=None,
             context=None,
             dry_run=False,

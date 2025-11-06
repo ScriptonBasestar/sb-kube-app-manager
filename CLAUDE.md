@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## type: AI Agent Instructions audience: AI Agent topics: [navigation, routing, context, guidelines] llm_priority: critical entry_point: true always_load: true last_updated: 2025-01-04
+## type: AI Agent Instructions audience: AI Agent topics: [navigation, routing, context, guidelines] llm_priority: critical entry_point: true always_load: true last_updated: 2025-01-06
 
 # CLAUDE.md
 

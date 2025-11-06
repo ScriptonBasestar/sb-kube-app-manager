@@ -1,30 +1,39 @@
 ______________________________________________________________________
 
-## type: API Reference audience: End User topics: [configuration, schema, yaml, validation, apps] llm_priority: high last_updated: 2025-01-04
+## type: API Reference audience: End User topics: [configuration, schema, yaml, validation, apps] llm_priority: high last_updated: 2025-01-06
 
 # 📋 config.yaml 스키마 가이드
+
+> **주의**: 이 문서는 [SPEC.md](../../SPEC.md) Section 4 (설정 관리)의 사용자 가이드 버전입니다.
+> 기술적 구현 상세(Pydantic 모델 등)는 SPEC.md를 우선 참조하세요.
 
 ## TL;DR
 
 - **Purpose**: Complete schema reference for SBKube's main configuration file (config.yaml)
+- **Version**: v0.7.0 (개발 중), v0.6.0 (안정)
 - **Key Points**:
   - Apps use dictionary structure with name as key (not list)
   - Support 7 app types: helm, yaml, git, http, kustomize, local-chart, oci
   - Global namespace with per-app overrides
   - Strong validation with Pydantic models
-  - Dependency management at both global and app level
+  - Dependency management at both global and app level (`deps` field)
 - **Quick Reference**: See "📂 파일 구조 개요" for basic structure
-- **Related**: [sources.yaml](sources-schema.md), [commands.md](../02-features/commands.md),
-  [examples/](../../examples/)
+- **Related**:
+  - **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+  - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
+  - **소스 설정**: [sources-schema.md](sources-schema.md) - sources.yaml 스키마
+  - **명령어**: [../02-features/commands.md](../02-features/commands.md)
+  - **예제**: [../../examples/](../../examples/)
 
 SBKube의 메인 설정 파일인 `config.yaml`의 완전한 스키마 문서입니다.
 
-> **주요 기능**:
+> **주요 기능** (v0.6.0+):
 >
 > - Apps는 이름을 key로 사용하는 dict 구조 (list → dict)
 > - `specs` 필드 제거 (필드 평탄화)
 > - `helm` + `helm` → 단일 `helm` 타입
 > - 지원 타입 단순화 (10개 → 7개)
+> - 앱 그룹 의존성 (`deps` 필드)
 
 ______________________________________________________________________
 
@@ -805,4 +814,17 @@ sbkube validate --app-dir config
 
 ______________________________________________________________________
 
-*더 많은 예제는 [examples/](../../examples/) 디렉토리를 참조하세요.*
+## Related Documentation
+
+- **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+- **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
+- **소스 설정**: [sources-schema.md](sources-schema.md) - sources.yaml 스키마
+- **앱 타입**: [../02-features/application-types.md](../02-features/application-types.md) - 지원 앱 타입 상세
+- **명령어**: [../02-features/commands.md](../02-features/commands.md) - CLI 참조
+- **예제**: [../../examples/](../../examples/) - 실전 예제
+
+---
+
+**문서 버전**: 1.1
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

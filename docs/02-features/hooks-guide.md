@@ -1,8 +1,11 @@
 ______________________________________________________________________
 
-## type: User Guide audience: End User topics: [hooks, automation, lifecycle] llm_priority: medium last_updated: 2025-01-04
+## type: User Guide audience: End User topics: [hooks, automation, lifecycle] llm_priority: medium last_updated: 2025-01-06
 
 # SBKube Hooks Guide
+
+> **주의**: 이 문서는 [SPEC.md](../../SPEC.md) Section 7 (Hooks 시스템)의 사용자 가이드 버전입니다.
+> 기술적 구현 상세는 SPEC.md를 우선 참조하세요.
 
 SBKube hooks enable custom script execution before/after commands and deployments, providing powerful automation
 capabilities for your Kubernetes workflows.
@@ -10,9 +13,13 @@ capabilities for your Kubernetes workflows.
 ## TL;DR
 
 - **Purpose**: Execute custom scripts before/after commands and deployments
+- **Version**: v0.7.0 (개발 중), v0.6.0 (안정)
 - **Levels**: Command-level (global) and App-level (per-app)
 - **Key Hooks**: pre\_*, post\_*, on\_\*\_failure
-- **Related**: [Hooks Reference](hooks-reference.md)
+- **Related**:
+  - **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+  - **상세 참조**: [Hooks Reference](hooks-reference.md)
+  - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의
 
 ## Overview
 
@@ -607,14 +614,17 @@ spec:
         command: ["./migrate", "up"]
 ```
 
-## Additional Resources
+---
 
-### Documentation
+## Related Documentation
 
-- **[Hooks Reference](./hooks-reference.md)** - Complete hook types, naming conventions, environment variables
-- **[Application Types](./application-types.md)** - HookApp type details
+- **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+- **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
+- **상세 참조**: [Hooks Reference](./hooks-reference.md) - 훅 타입, 환경 변수 상세
+- **앱 타입**: [Application Types](./application-types.md) - HookApp 타입 상세
+- **예제**: [../../examples/hooks*/](../../examples/) - 다양한 hooks 예제
 
-### Examples
+### Examples Directory
 
 - `examples/hooks/` - Basic hook usage
 - `examples/hooks-basic-all/` - All hook types
@@ -625,3 +635,9 @@ spec:
 - `examples/hooks-command-level/` - Global notifications
 - `examples/hooks-error-handling/` - Error handling and rollback
 - `examples/hooks-hookapp-simple/` - HookApp introduction
+
+---
+
+**문서 버전**: 1.1
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

@@ -1,12 +1,16 @@
 ______________________________________________________________________
 
-## type: API Reference audience: End User topics: [commands, cli, workflow, deployment, kubernetes] llm_priority: high last_updated: 2025-01-04
+## type: API Reference audience: End User topics: [commands, cli, workflow, deployment, kubernetes] llm_priority: high last_updated: 2025-01-06
 
 # 📋 SBKube 명령어 상세 가이드
+
+> **주의**: 이 문서는 [SPEC.md](../../SPEC.md) Section 3 (워크플로우) 및 Section 5 (API 명세)의 사용자 가이드 버전입니다.
+> 기술적 구현 상세는 SPEC.md를 우선 참조하세요.
 
 ## TL;DR
 
 - **Purpose**: Complete reference for all SBKube CLI commands and their options
+- **Version**: v0.7.0 (개발 중), v0.6.0 (안정)
 - **Key Points**:
   - Main workflow: `sbkube apply` (runs prepare→build→template→deploy)
   - Quick start: `sbkube init` → `sbkube doctor` → `sbkube apply`
@@ -14,8 +18,11 @@ ______________________________________________________________________
   - Troubleshooting: `sbkube doctor` for comprehensive system diagnostics
   - All commands support `--format` option for LLM-friendly output
 - **Quick Reference**: See command table below
-- **Related**: [PRODUCT.md](../../PRODUCT.md), [config-schema.md](../03-configuration/config-schema.md),
-  [llm-friendly-output.md](llm-friendly-output.md)
+- **Related**:
+  - **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+  - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
+  - **설정 참조**: [config-schema.md](../03-configuration/config-schema.md)
+  - **LLM 통합**: [llm-friendly-output.md](llm-friendly-output.md)
 
 ## 🚀 Quick Reference Table
 
@@ -550,9 +557,19 @@ The following will be removed in v1.0.0:
 `sbkube status` | | `sbkube state list` | `sbkube history` | | `sbkube state show <id>` | `sbkube history --show <id>` |
 | `sbkube state rollback <id>` | `sbkube rollback <id>` |
 
+---
+
 ## Related Documentation
 
-- [PRODUCT.md](../../PRODUCT.md) - Product overview
-- [config-schema.md](../03-configuration/config-schema.md) - Configuration reference
-- [llm-friendly-output.md](llm-friendly-output.md) - LLM integration guide
-- [deployment-failures.md](../07-troubleshooting/deployment-failures.md) - Troubleshooting guide
+- **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+- **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
+- **기능 명세**: [../00-product/product-spec.md](../00-product/product-spec.md) - 전체 기능 상세
+- **설정 참조**: [config-schema.md](../03-configuration/config-schema.md) - 설정 파일 스키마
+- **LLM 통합**: [llm-friendly-output.md](llm-friendly-output.md) - LLM 친화적 출력
+- **문제 해결**: [../07-troubleshooting/deployment-failures.md](../07-troubleshooting/deployment-failures.md) - 배포 문제 해결
+
+---
+
+**문서 버전**: 1.1
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

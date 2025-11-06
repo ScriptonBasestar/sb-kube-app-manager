@@ -1,5 +1,4 @@
-"""
-검증 보고서 생성 및 출력 시스템
+"""검증 보고서 생성 및 출력 시스템
 
 검증 결과를 다양한 형식(Console, JSON, HTML)으로 생성하고 출력하는 시스템입니다.
 검증 히스토리 관리 및 트렌드 분석 기능을 포함합니다.
@@ -47,7 +46,7 @@ class ValidationReportManager:
                 generator = ConsoleReportGenerator(self.console)
                 generator.generate_report(report, show_details)
                 return None
-            elif output_format.lower() == "json":
+            if output_format.lower() == "json":
                 generator = JSONReportGenerator()
                 content = generator.generate_report(report)
                 if output_file:
@@ -55,7 +54,7 @@ class ValidationReportManager:
                         f.write(content)
                     return output_file
                 return content
-            elif output_format.lower() == "html":
+            if output_format.lower() == "html":
                 generator = HTMLReportGenerator()
                 content = generator.generate_report(report)
                 if output_file:
@@ -63,8 +62,7 @@ class ValidationReportManager:
                         f.write(content)
                     return output_file
                 return content
-            else:
-                raise ValueError(f"지원하지 않는 출력 형식: {output_format}")
+            raise ValueError(f"지원하지 않는 출력 형식: {output_format}")
 
         except Exception as e:
             logger.error(f"보고서 생성 실패: {e}")
@@ -259,10 +257,9 @@ class ValidationReportManager:
 
         if recent_success_rate > earlier_success_rate + 0.1:
             return "검증 성공률이 향상되고 있습니다."
-        elif recent_success_rate < earlier_success_rate - 0.1:
+        if recent_success_rate < earlier_success_rate - 0.1:
             return "검증 성공률이 하락하고 있습니다. 설정 검토가 필요합니다."
-        else:
-            return "검증 성공률이 안정적으로 유지되고 있습니다."
+        return "검증 성공률이 안정적으로 유지되고 있습니다."
 
 
 class ConsoleReportGenerator:

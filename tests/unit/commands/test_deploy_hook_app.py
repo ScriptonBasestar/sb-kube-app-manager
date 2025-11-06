@@ -1,5 +1,4 @@
-"""
-Phase 4 deploy_hook_app() 함수 단위 테스트.
+"""Phase 4 deploy_hook_app() 함수 단위 테스트.
 
 HookApp 배포 기능 검증.
 """

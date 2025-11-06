@@ -1,5 +1,4 @@
-"""
-Unit tests for namespace handling in deployment commands.
+"""Unit tests for namespace handling in deployment commands.
 
 Tests verify that all app types (YAML, Action, Kustomize) correctly respect
 namespace settings from both config-level and app-level configurations.

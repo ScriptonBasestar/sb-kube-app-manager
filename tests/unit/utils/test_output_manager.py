@@ -1,5 +1,4 @@
-"""
-Unit tests for OutputManager.
+"""Unit tests for OutputManager.
 """
 
 from io import StringIO

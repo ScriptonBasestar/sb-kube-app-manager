@@ -1,5 +1,4 @@
-"""
-Hook Executor for SBKube.
+"""Hook Executor for SBKube.
 
 명령어 및 앱별 훅 실행을 담당하는 유틸리티 모듈.
 """
@@ -36,12 +35,10 @@ CommandHookPhase = Literal["pre", "post", "on_failure"]
 class HookExecutionError(SbkubeError):
     """Hook 실행 중 발생한 오류."""
 
-    pass
 
 
 class HookExecutor:
-    """
-    Hook 실행 관리자.
+    """Hook 실행 관리자.
 
     명령어 수준 및 앱 수준의 훅을 실행하고 결과를 처리합니다.
     """
@@ -57,8 +54,7 @@ class HookExecutor:
         context: str | None = None,
         namespace: str | None = None,
     ):
-        """
-        HookExecutor 초기화.
+        """HookExecutor 초기화.
 
         Args:
             base_dir: 프로젝트 루트 디렉토리 (BASE_DIR)
@@ -79,6 +75,7 @@ class HookExecutor:
             )
             # 훅에서 "./scripts/pre-deploy.sh" 실행 시
             # → /project/redis_dir/scripts/pre-deploy.sh 실행
+
         """
         self.base_dir = base_dir
         self.work_dir = work_dir or base_dir
@@ -95,8 +92,7 @@ class HookExecutor:
         hook_phase: CommandHookPhase,
         command_name: str = "",
     ) -> bool:
-        """
-        명령어 수준 훅 실행.
+        """명령어 수준 훅 실행.
 
         Args:
             hook_config: hooks.{command} 설정 (CommandHooks 인스턴스의 dict 형태)
@@ -105,6 +101,7 @@ class HookExecutor:
 
         Returns:
             성공 여부 (모든 명령어가 성공하면 True)
+
         """
         if not hook_config or hook_phase not in hook_config:
             return True
@@ -131,8 +128,7 @@ class HookExecutor:
         hook_type: HookType,
         context: dict | None = None,
     ) -> bool:
-        """
-        앱별 훅 실행.
+        """앱별 훅 실행.
 
         Args:
             app_name: 앱 이름
@@ -142,6 +138,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         if not app_hooks or hook_type not in app_hooks:
             return True
@@ -175,8 +172,7 @@ class HookExecutor:
         hook_type: str,
         env: dict | None = None,
     ) -> bool:
-        """
-        단일 명령어 실행.
+        """단일 명령어 실행.
 
         Args:
             command: 실행할 명령어
@@ -185,6 +181,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         if self.dry_run:
             console.print(
@@ -203,7 +200,7 @@ class HookExecutor:
 
             result = subprocess.run(
                 shlex.split(command),
-                shell=False,
+                check=False, shell=False,
                 cwd=self.work_dir,
                 env=full_env,
                 capture_output=True,
@@ -241,8 +238,7 @@ class HookExecutor:
         hook_type: HookType,
         context: dict | None = None,
     ) -> bool:
-        """
-        앱별 훅 실행 (shell 명령어 + manifests 지원).
+        """앱별 훅 실행 (shell 명령어 + manifests 지원).
 
         Phase 1: Manifests 지원 - shell 명령어와 manifests를 모두 실행합니다.
 
@@ -254,6 +250,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         if not app_hooks:
             return True
@@ -296,8 +293,7 @@ class HookExecutor:
         manifests: list[str],
         namespace: str | None = None,
     ) -> bool:
-        """
-        Manifests 파일 배포 (kubectl apply).
+        """Manifests 파일 배포 (kubectl apply).
 
         YamlApp 배포 로직과 유사하게 처리합니다.
 
@@ -308,6 +304,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         # namespace 결정 (우선순위: 파라미터 > 초기화 시 설정)
         target_namespace = namespace or self.namespace
@@ -365,8 +362,7 @@ class HookExecutor:
         hook_type: str,
         context: dict | None = None,
     ) -> bool:
-        """
-        Phase 2/3: Hook Tasks 실행 (타입별 처리 + validation, dependency, rollback).
+        """Phase 2/3: Hook Tasks 실행 (타입별 처리 + validation, dependency, rollback).
 
         Args:
             app_name: 앱 이름
@@ -376,6 +372,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         if not tasks:
             return True
@@ -437,8 +434,7 @@ class HookExecutor:
         task: dict,
         context: dict | None = None,
     ) -> bool:
-        """
-        단일 Hook Task 실행 (타입별 분기).
+        """단일 Hook Task 실행 (타입별 분기).
 
         Args:
             app_name: 앱 이름
@@ -447,6 +443,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         task_type = task.get("type")
         task_name = task.get("name", "unnamed")
@@ -455,13 +452,12 @@ class HookExecutor:
 
         if task_type == "manifests":
             return self._execute_manifests_task(app_name, task, context)
-        elif task_type == "inline":
+        if task_type == "inline":
             return self._execute_inline_task(app_name, task, context)
-        elif task_type == "command":
+        if task_type == "command":
             return self._execute_command_task(app_name, task, context)
-        else:
-            console.print(f"[red]❌ Unknown task type: {task_type}[/red]")
-            return False
+        console.print(f"[red]❌ Unknown task type: {task_type}[/red]")
+        return False
 
     def _execute_manifests_task(
         self,
@@ -469,8 +465,7 @@ class HookExecutor:
         task: dict,
         context: dict | None = None,
     ) -> bool:
-        """
-        Manifests 타입 Task 실행.
+        """Manifests 타입 Task 실행.
 
         Phase 1의 _deploy_manifests()를 재사용합니다.
 
@@ -481,6 +476,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         files = task.get("files", [])
         validation = task.get("validation")
@@ -508,8 +504,7 @@ class HookExecutor:
         task: dict,
         context: dict | None = None,
     ) -> bool:
-        """
-        Inline 타입 Task 실행.
+        """Inline 타입 Task 실행.
 
         YAML 콘텐츠를 임시 파일로 저장하고 kubectl apply 실행.
 
@@ -520,6 +515,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         import os
         import tempfile
@@ -593,8 +589,7 @@ class HookExecutor:
         task: dict,
         context: dict | None = None,
     ) -> bool:
-        """
-        Command 타입 Task 실행 (retry 및 on_failure 지원).
+        """Command 타입 Task 실행 (retry 및 on_failure 지원).
 
         Args:
             app_name: 앱 이름
@@ -603,6 +598,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         import time
 
@@ -642,23 +638,22 @@ class HookExecutor:
                 if delay > 0:
                     console.print(f"    [yellow]Retrying in {delay}s...[/yellow]")
                     time.sleep(delay)
-            else:
-                # 최종 실패
-                if on_failure == "warn":
-                    console.print(
-                        "[yellow]⚠️  Command failed but on_failure=warn, continuing...[/yellow]"
-                    )
-                    return True
-                elif on_failure == "ignore":
-                    console.print(
-                        "[dim]ℹ️  Command failed but on_failure=ignore, skipping...[/dim]"
-                    )
-                    return True
-                else:  # fail
-                    console.print(
-                        f"[red]❌ Command failed after {max_attempts} attempts[/red]"
-                    )
-                    return False
+            # 최종 실패
+            elif on_failure == "warn":
+                console.print(
+                    "[yellow]⚠️  Command failed but on_failure=warn, continuing...[/yellow]"
+                )
+                return True
+            elif on_failure == "ignore":
+                console.print(
+                    "[dim]ℹ️  Command failed but on_failure=ignore, skipping...[/dim]"
+                )
+                return True
+            else:  # fail
+                console.print(
+                    f"[red]❌ Command failed after {max_attempts} attempts[/red]"
+                )
+                return False
 
         return False
 
@@ -672,8 +667,7 @@ class HookExecutor:
         task: dict,
         context: dict | None = None,
     ) -> bool:
-        """
-        Task 실행 후 validation 규칙 검증.
+        """Task 실행 후 validation 규칙 검증.
 
         Args:
             app_name: 앱 이름
@@ -682,6 +676,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         validation = task.get("validation")
         if not validation:
@@ -759,17 +754,16 @@ class HookExecutor:
 
             console.print(f"[green]✅ Validation passed: {kind} is ready[/green]")
             return True
-        else:
-            # 단순 존재 확인
-            return_code, stdout, stderr = run_command(cmd)
-            if return_code != 0:
-                console.print(f"[red]❌ Validation failed: {kind} not found[/red]")
-                if stderr:
-                    console.print(f"[red]   Error: {stderr.strip()}[/red]")
-                return False
+        # 단순 존재 확인
+        return_code, stdout, stderr = run_command(cmd)
+        if return_code != 0:
+            console.print(f"[red]❌ Validation failed: {kind} not found[/red]")
+            if stderr:
+                console.print(f"[red]   Error: {stderr.strip()}[/red]")
+            return False
 
-            console.print(f"[green]✅ Validation passed: {kind} exists[/green]")
-            return True
+        console.print(f"[green]✅ Validation passed: {kind} exists[/green]")
+        return True
 
     def _check_task_dependencies(
         self,
@@ -778,8 +772,7 @@ class HookExecutor:
         completed_tasks: set[str],
         context: dict | None = None,
     ) -> bool:
-        """
-        Task 실행 전 의존성 검증.
+        """Task 실행 전 의존성 검증.
 
         Args:
             app_name: 앱 이름
@@ -789,6 +782,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         dependency = task.get("dependency")
         if not dependency:
@@ -878,8 +872,7 @@ class HookExecutor:
         task: dict,
         context: dict | None = None,
     ) -> bool:
-        """
-        Task 실패 시 rollback 정책 실행.
+        """Task 실패 시 rollback 정책 실행.
 
         Args:
             app_name: 앱 이름
@@ -888,6 +881,7 @@ class HookExecutor:
 
         Returns:
             성공 여부
+
         """
         rollback = task.get("rollback")
         if not rollback:
@@ -905,7 +899,7 @@ class HookExecutor:
                 "[yellow]⚠️  Rollback policy is 'manual', skipping automatic rollback[/yellow]"
             )
             return True
-        elif on_failure == "never":
+        if on_failure == "never":
             return True
 
         console.print(

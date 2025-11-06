@@ -200,4 +200,3 @@ def setup_test_environment(base_dir, app_dir, charts_dir, repos_dir, monkeypatch
 
     # monkeypatch.setattr('sbkube.commands.prepare.DEFAULT_CHARTS_DIR', charts_dir.name)
     # monkeypatch.setattr('sbkube.commands.prepare.DEFAULT_REPOS_DIR', repos_dir.name)
-    yield

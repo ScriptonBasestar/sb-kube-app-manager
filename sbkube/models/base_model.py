@@ -1,12 +1,11 @@
-"""
-Base model with configuration inheritance support.
+"""Base model with configuration inheritance support.
 
 This module provides base classes for configuration models with
 built-in support for inheritance, validation, and error handling.
 """
 
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Self, TypeVar
 
 import yaml
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -23,8 +22,7 @@ T = TypeVar("T", bound="ConfigBaseModel")
 
 
 class ConfigBaseModel(BaseModel, ValidatorMixin):
-    """
-    Base model for all configuration models with enhanced validation.
+    """Base model for all configuration models with enhanced validation.
 
     Features:
     - Automatic validation on instantiation
@@ -58,12 +56,11 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
 
     @classmethod
     def from_dict(
-        cls: type[T],
+        cls,
         data: dict[str, Any],
         context: dict[str, Any] | None = None,
-    ) -> T:
-        """
-        Create instance from dictionary with optional context.
+    ) -> Self:
+        """Create instance from dictionary with optional context.
 
         Args:
             data: Configuration data dictionary
@@ -71,6 +68,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
 
         Returns:
             Validated model instance
+
         """
         if context:
             # Store context for validators that need it
@@ -85,12 +83,11 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         return instance
 
     def merge_with(
-        self: T,
-        other: dict[str, Any] | T | None,
+        self,
+        other: dict[str, Any] | Self | None,
         deep: bool = True,
-    ) -> T:
-        """
-        Merge this configuration with another, creating a new instance.
+    ) -> Self:
+        """Merge this configuration with another, creating a new instance.
 
         Args:
             other: Configuration to merge with (dict or model instance)
@@ -98,6 +95,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
 
         Returns:
             New instance with merged configuration
+
         """
         if other is None:
             return self.model_copy()
@@ -118,8 +116,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
 
     @staticmethod
     def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
-        """
-        Perform deep merge of two dictionaries.
+        """Perform deep merge of two dictionaries.
 
         Args:
             base: Base dictionary
@@ -127,6 +124,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
 
         Returns:
             Merged dictionary
+
         """
         result = base.copy()
 
@@ -151,14 +149,14 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         return result
 
     def validate_against_schema(self, schema_path: Path) -> None:
-        """
-        Validate this model against a JSON schema.
+        """Validate this model against a JSON schema.
 
         Args:
             schema_path: Path to JSON schema file
 
         Raises:
             ConfigValidationError: If validation fails
+
         """
         try:
             import jsonschema
@@ -175,17 +173,17 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
                 f"Failed at path: {'.'.join(str(x) for x in e.path)}",
             )
         except Exception as e:
-            raise ConfigValidationError(f"Schema validation error: {str(e)}")
+            raise ConfigValidationError(f"Schema validation error: {e!s}")
 
     def to_yaml(self, path: Path | None = None) -> str:
-        """
-        Convert model to YAML string or save to file.
+        """Convert model to YAML string or save to file.
 
         Args:
             path: Optional path to save YAML file
 
         Returns:
             YAML string representation
+
         """
         data = self.model_dump(exclude_none=True)
         yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
@@ -197,15 +195,15 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         return yaml_str
 
     @classmethod
-    def from_yaml(cls: type[T], path: str | Path) -> T:
-        """
-        Load model from YAML file.
+    def from_yaml(cls, path: str | Path) -> Self:
+        """Load model from YAML file.
 
         Args:
             path: Path to YAML file
 
         Returns:
             Model instance
+
         """
         path = Path(path)
         if not path.exists():
@@ -221,12 +219,11 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
             return cls(**data)
 
         except yaml.YAMLError as e:
-            raise ConfigValidationError(f"Invalid YAML in {path}: {str(e)}")
+            raise ConfigValidationError(f"Invalid YAML in {path}: {e!s}")
 
 
 class InheritableConfigModel(ConfigBaseModel):
-    """
-    Base model with built-in inheritance support.
+    """Base model with built-in inheritance support.
 
     Supports:
     - Inheriting from parent configurations
@@ -266,17 +263,16 @@ class InheritableConfigModel(ConfigBaseModel):
 
 
 class ConfigLoader:
-    """
-    Utility class for loading configurations with inheritance and validation.
+    """Utility class for loading configurations with inheritance and validation.
     """
 
     def __init__(self, base_dir: Path, schema_dir: Path | None = None):
-        """
-        Initialize configuration loader.
+        """Initialize configuration loader.
 
         Args:
             base_dir: Base directory for configuration files
             schema_dir: Optional directory containing JSON schemas
+
         """
         self.base_dir = Path(base_dir)
         self.schema_dir = Path(schema_dir) if schema_dir else None
@@ -289,8 +285,7 @@ class ConfigLoader:
         validate_schema: bool = True,
         use_cache: bool = True,
     ) -> T:
-        """
-        Load and validate configuration file.
+        """Load and validate configuration file.
 
         Args:
             config_path: Path to configuration file
@@ -300,6 +295,7 @@ class ConfigLoader:
 
         Returns:
             Validated configuration instance
+
         """
         config_path = self.base_dir / config_path
         cache_key = f"{model_class.__name__}:{config_path}"

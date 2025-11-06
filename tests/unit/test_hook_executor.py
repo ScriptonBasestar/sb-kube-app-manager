@@ -1,5 +1,4 @@
-"""
-Hook executor 단위 테스트.
+"""Hook executor 단위 테스트.
 
 HookExecutor 클래스의 기능을 검증:
 - 명령어 훅 실행

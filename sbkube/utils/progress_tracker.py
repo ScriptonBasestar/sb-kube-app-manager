@@ -27,6 +27,7 @@ class ProgressTracker:
         Args:
             console: Rich Console 인스턴스
             disable: True면 진행 표시 비활성화 (dry-run, --no-progress 등)
+
         """
         self.console = console or Console()
         self.disable = disable
@@ -38,6 +39,7 @@ class ProgressTracker:
 
         Returns:
             설정된 Progress 인스턴스
+
         """
         return Progress(
             SpinnerColumn(),
@@ -69,6 +71,7 @@ class ProgressTracker:
                     # 작업 수행
                     tracker.update(task_id, advance=1)
             ```
+
         """
         if self.disable:
             yield None
@@ -99,6 +102,7 @@ class ProgressTracker:
             completed: 완료된 작업량 (절대값)
             description: 새로운 설명
             **kwargs: Progress.update()의 추가 인자
+
         """
         if self.disable or not self.progress or task_id is None:
             return
@@ -123,6 +127,7 @@ class ProgressTracker:
         Args:
             *args: print()의 위치 인자
             **kwargs: print()의 키워드 인자
+
         """
         if self.progress:
             self.progress.console.print(*args, **kwargs)
@@ -139,6 +144,7 @@ class DeploymentProgressTracker(ProgressTracker):
         Args:
             console: Rich Console 인스턴스
             disable: 진행 표시 비활성화 여부
+
         """
         super().__init__(console, disable)
         self.steps: dict[str, tuple[str, int]] = {
@@ -153,6 +159,7 @@ class DeploymentProgressTracker(ProgressTracker):
         Args:
             step: 단계 이름 (prepare, build, deploy)
             total: 전체 작업량
+
         """
         if step in self.steps:
             desc, _ = self.steps[step]
@@ -166,6 +173,7 @@ class DeploymentProgressTracker(ProgressTracker):
 
         Returns:
             단계 설명 문자열
+
         """
         return self.steps.get(step, (f"{step}", 0))[0]
 
@@ -177,6 +185,7 @@ class DeploymentProgressTracker(ProgressTracker):
 
         Returns:
             전체 작업량
+
         """
         return self.steps.get(step, ("", 0))[1]
 
@@ -190,6 +199,7 @@ def get_global_tracker() -> ProgressTracker:
 
     Returns:
         ProgressTracker 싱글톤 인스턴스
+
     """
     global _global_tracker
     if _global_tracker is None:

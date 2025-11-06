@@ -1,5 +1,4 @@
-"""
-Cluster configuration resolver.
+"""Cluster configuration resolver.
 
 Resolves cluster configuration with explicit priorities:
 1. CLI options (--kubeconfig, --context) - Override
@@ -26,8 +25,7 @@ def apply_cluster_config_to_command(
     kubeconfig: str | None,
     context: str | None,
 ) -> list[str]:
-    """
-    명령어에 kubeconfig와 context 옵션을 추가합니다.
+    """명령어에 kubeconfig와 context 옵션을 추가합니다.
 
     Args:
         cmd: 기본 명령어 리스트 (예: ["helm", "upgrade", ...])
@@ -36,6 +34,7 @@ def apply_cluster_config_to_command(
 
     Returns:
         kubeconfig/context가 추가된 명령어 리스트
+
     """
     if not kubeconfig or not context:
         return cmd
@@ -62,8 +61,7 @@ def resolve_cluster_config(
     cli_context: str | None,
     sources: SourceScheme | None,
 ) -> tuple[str, str]:
-    """
-    클러스터 설정 해석 및 검증.
+    """클러스터 설정 해석 및 검증.
 
     우선순위:
     1. CLI 옵션 (--kubeconfig, --context) - 오버라이드
@@ -82,6 +80,7 @@ def resolve_cluster_config(
 
     Raises:
         ClusterConfigError: 클러스터 설정이 없거나 유효하지 않은 경우
+
     """
     # CLI 옵션 최우선 (오버라이드)
     if cli_kubeconfig and cli_context:

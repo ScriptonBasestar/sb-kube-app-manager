@@ -211,9 +211,8 @@ def cmd(
             current_namespace = cli_namespace
         elif global_namespace_from_config:
             current_namespace = global_namespace_from_config
-        else:
-            if app_type == "helm":
-                current_namespace = "default"
+        elif app_type == "helm":
+            current_namespace = "default"
 
         if current_namespace:
             console.print(f"    [grey]ℹ️ 네임스페이스 사용: {current_namespace}[/grey]")
@@ -256,10 +255,9 @@ def cmd(
                     delete_skipped_apps += 1
                     console.print("")
                     continue
-                else:
-                    delete_skipped_apps += 1
-                    console.print("")
-                    continue
+                delete_skipped_apps += 1
+                console.print("")
+                continue
 
             helm_cmd = ["helm", "uninstall", app_release_name]
             if current_namespace:
@@ -447,13 +445,12 @@ def cmd(
                             console.print(f"    [red]STDERR:[/red] {stderr.strip()}")
                         delete_successful_for_app = False
                         break
-                    else:
-                        if stdout:
-                            console.print(f"    [grey]STDOUT:[/grey] {stdout.strip()}")
-                        console.print(
-                            f"[green]✅ 앱 '{app_name}': uninstall 스크립트 실행 완료 ('{raw_cmd_str}')[/green]",
-                        )
-                        delete_successful_for_app = True
+                    if stdout:
+                        console.print(f"    [grey]STDOUT:[/grey] {stdout.strip()}")
+                    console.print(
+                        f"[green]✅ 앱 '{app_name}': uninstall 스크립트 실행 완료 ('{raw_cmd_str}')[/green]",
+                    )
+                    delete_successful_for_app = True
                 delete_command_executed = True
 
         else:
@@ -464,9 +461,7 @@ def cmd(
             console.print("")
             continue
 
-        if delete_successful_for_app:
-            delete_success_apps += 1
-        elif not delete_command_executed and skip_not_found:
+        if delete_successful_for_app or (not delete_command_executed and skip_not_found):
             delete_success_apps += 1
 
         console.print("")

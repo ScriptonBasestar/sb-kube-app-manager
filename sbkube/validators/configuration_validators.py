@@ -1,5 +1,4 @@
-"""
-설정 파일 상세 검증기 모듈
+"""설정 파일 상세 검증기 모듈
 
 config.yaml과 sources.yaml 파일의 구조적/논리적 상세 검증을 수행합니다.
 기존 JSON 스키마 검증을 넘어서 실제 배포 가능성까지 검증합니다.
@@ -65,7 +64,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
                 risk_level="high",
                 affected_components=["config.yaml", "sources.yaml"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -74,14 +73,13 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
                 recommendation="선택적 설정 파일 생성을 고려해보세요.",
                 risk_level="low",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="설정 파일 구조가 올바릅니다",
-                details="모든 필수 필드와 구조가 정상적으로 구성되어 있습니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="설정 파일 구조가 올바릅니다",
+            details="모든 필수 필드와 구조가 정상적으로 구성되어 있습니다.",
+            risk_level="low",
+        )
 
     async def _validate_config_structure(self, config_file: Path) -> list[str]:
         """config.yaml 구조 검증"""
@@ -318,7 +316,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
                 risk_level="high",
                 affected_components=["config.yaml"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -327,14 +325,13 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
                 recommendation="권장사항을 검토하여 설정을 개선해보세요.",
                 risk_level="low",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="모든 설정값이 유효합니다",
-                details="설정값 유효성 및 참조 무결성이 정상적으로 확인되었습니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="모든 설정값이 유효합니다",
+            details="설정값 유효성 및 참조 무결성이 정상적으로 확인되었습니다.",
+            risk_level="low",
+        )
 
     async def _validate_config_content(
         self, config: dict[str, Any], base_path: Path
@@ -399,7 +396,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_install_helm_content(
         self, app_prefix: str, specs: dict[str, Any], base_path: Path
     ) -> list[str]:
-        """helm 앱 내용 검증"""
+        """Helm 앱 내용 검증"""
         issues = []
 
         # path 필드 검증
@@ -432,7 +429,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_pull_helm_content(
         self, app_prefix: str, specs: dict[str, Any]
     ) -> list[str]:
-        """helm 앱 내용 검증"""
+        """Helm 앱 내용 검증"""
         issues = []
 
         # 필수 필드 검증
@@ -508,7 +505,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_install_yaml_content(
         self, app_prefix: str, specs: dict[str, Any], base_path: Path
     ) -> list[str]:
-        """yaml 앱 내용 검증"""
+        """Yaml 앱 내용 검증"""
         issues = []
 
         # actions 검증
@@ -538,7 +535,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_exec_content(
         self, app_prefix: str, specs: dict[str, Any]
     ) -> list[str]:
-        """exec 앱 내용 검증"""
+        """Exec 앱 내용 검증"""
         issues = []
 
         # commands 검증
@@ -622,14 +619,13 @@ class SourcesIntegrityValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["config.yaml", "sources.yaml"],
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="모든 참조 무결성이 정상입니다",
-                details="config.yaml과 sources.yaml 간의 모든 참조가 올바르게 구성되어 있습니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="모든 참조 무결성이 정상입니다",
+            details="config.yaml과 sources.yaml 간의 모든 참조가 올바르게 구성되어 있습니다.",
+            risk_level="low",
+        )
 
     async def _validate_cross_references(
         self, config: dict[str, Any], sources: dict[str, Any]
@@ -756,14 +752,13 @@ class CrossReferenceValidator(ValidationCheck):
                 risk_level="high" if severity == ValidationSeverity.HIGH else "medium",
                 affected_components=["config.yaml"],
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="앱 간 의존성 및 충돌이 없습니다",
-                details="모든 앱이 올바르게 구성되어 있으며 의존성 충돌이 발견되지 않았습니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="앱 간 의존성 및 충돌이 없습니다",
+            details="모든 앱이 올바르게 구성되어 있으며 의존성 충돌이 발견되지 않았습니다.",
+            risk_level="low",
+        )
 
     async def _validate_app_dependencies(self, config: dict[str, Any]) -> list[str]:
         """앱 간 의존성 및 충돌 검증"""

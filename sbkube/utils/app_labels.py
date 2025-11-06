@@ -26,6 +26,7 @@ def extract_app_group_from_name(app_name: str) -> str | None:
         'app_000_infra_network'
         >>> extract_app_group_from_name("traefik")
         None
+
     """
     # Match pattern: app_XXX_... where XXX is 3 digits
     pattern = r"^(app_\d{3}(?:_[a-z0-9_]+)*)$"
@@ -57,6 +58,7 @@ def build_sbkube_labels(
             'sbkube.io/app-group': 'app_000_infra_network',
             'sbkube.io/app-name': 'traefik'
         }
+
     """
     labels = {
         "app.kubernetes.io/managed-by": "sbkube",
@@ -95,6 +97,7 @@ def build_sbkube_annotations(
             'sbkube.io/deployed-at': '2025-01-31T14:30:22Z',
             'sbkube.io/deployed-by': 'archmagece'
         }
+
     """
     annotations = {}
 
@@ -130,6 +133,7 @@ def build_helm_set_labels(labels: dict[str, str]) -> list[str]:
         - Uses --set-string to ensure values are treated as strings
         - Escapes dots in label keys (required by Helm)
         - Not all Helm charts support commonLabels - this will fail gracefully
+
     """
     helm_args = []
 
@@ -156,6 +160,7 @@ def build_helm_set_annotations(annotations: dict[str, str]) -> list[str]:
     Example:
         >>> build_helm_set_annotations({"sbkube.io/deployment-id": "dep_123"})
         ['--set-string', 'commonAnnotations.sbkube\\.io/deployment-id=dep_123']
+
     """
     helm_args = []
 

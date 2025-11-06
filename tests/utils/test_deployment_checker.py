@@ -287,7 +287,7 @@ class TestDeploymentChecker:
                 mock_dep.timestamp = "2025-10-30"
                 mock_dep.namespace = "infra"
                 return mock_dep
-            elif "a101_data" in app_config_dir:
+            if "a101_data" in app_config_dir:
                 mock_dep = MagicMock()
                 mock_dep.status = DeploymentStatus.SUCCESS
                 mock_dep.timestamp = "2025-10-30"

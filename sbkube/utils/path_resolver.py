@@ -15,7 +15,7 @@ def expand_repo_variables(
     repos_dir: Path,
     apps_config: dict[str, Any],
 ) -> str:
-    """manifests 경로에서 ${repos.app-name} 변수를 실제 경로로 확장합니다.
+    """Manifests 경로에서 ${repos.app-name} 변수를 실제 경로로 확장합니다.
 
     Args:
         manifest_path: 원본 경로 (변수 포함 가능)
@@ -35,6 +35,7 @@ def expand_repo_variables(
         ...     {"olm": {"type": "git", ...}}
         ... )
         ".sbkube/repos/olm/deploy/crds.yaml"
+
     """
     # 변수 구문 먼저 검증
     validate_variable_syntax(manifest_path)
@@ -84,6 +85,7 @@ def validate_variable_syntax(path: str) -> None:
     Examples:
         >>> validate_variable_syntax("${repos.olm}/file.yaml")  # OK
         >>> validate_variable_syntax("${repos.}/file.yaml")  # Raises SbkubeError
+
     """
     # ${repos.로 시작하는 변수 찾기
     if "${repos." not in path:

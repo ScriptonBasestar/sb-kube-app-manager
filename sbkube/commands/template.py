@@ -1,5 +1,4 @@
-"""
-SBKube template 명령어.
+"""SBKube template 명령어.
 
 빌드된 Helm 차트를 YAML로 렌더링:
 - build/ 디렉토리의 차트를 helm template으로 렌더링
@@ -30,8 +29,7 @@ def template_helm_app(
     rendered_dir: Path,
     output: OutputManager,
 ) -> bool:
-    """
-    Helm 앱을 YAML로 렌더링 (helm template).
+    """Helm 앱을 YAML로 렌더링 (helm template).
 
     Args:
         app_name: 앱 이름
@@ -45,6 +43,7 @@ def template_helm_app(
 
     Returns:
         성공 여부
+
     """
     output.print(f"[cyan]📄 Rendering Helm app: {app_name}[/cyan]", level="info")
 
@@ -56,26 +55,25 @@ def template_helm_app(
     if build_path.exists() and build_path.is_dir():
         chart_path = build_path
         output.print(f"  Using built chart: {chart_path}", level="info")
+    # build 없으면 원본 차트 사용
+    elif app.is_remote_chart():
+        chart_name = app.get_chart_name()
+        source_path = charts_dir / chart_name / chart_name
+        if source_path.exists():
+            chart_path = source_path
+            output.print(f"  Using remote chart: {chart_path}", level="info")
     else:
-        # build 없으면 원본 차트 사용
-        if app.is_remote_chart():
-            chart_name = app.get_chart_name()
-            source_path = charts_dir / chart_name / chart_name
-            if source_path.exists():
-                chart_path = source_path
-                output.print(f"  Using remote chart: {chart_path}", level="info")
+        # 로컬 차트
+        if app.chart.startswith("./"):
+            source_path = app_config_dir / app.chart[2:]
+        elif app.chart.startswith("/"):
+            source_path = Path(app.chart)
         else:
-            # 로컬 차트
-            if app.chart.startswith("./"):
-                source_path = app_config_dir / app.chart[2:]
-            elif app.chart.startswith("/"):
-                source_path = Path(app.chart)
-            else:
-                source_path = app_config_dir / app.chart
+            source_path = app_config_dir / app.chart
 
-            if source_path.exists():
-                chart_path = source_path
-                output.print(f"  Using local chart: {chart_path}", level="info")
+        if source_path.exists():
+            chart_path = source_path
+            output.print(f"  Using local chart: {chart_path}", level="info")
 
     if not chart_path or not chart_path.exists():
         output.print_error(
@@ -150,8 +148,7 @@ def template_yaml_app(
     rendered_dir: Path,
     output: OutputManager,
 ) -> bool:
-    """
-    YAML 앱 렌더링 (빌드 디렉토리에서 복사).
+    """YAML 앱 렌더링 (빌드 디렉토리에서 복사).
 
     Args:
         app_name: 앱 이름
@@ -164,6 +161,7 @@ def template_yaml_app(
 
     Returns:
         성공 여부
+
     """
     output.print(f"[cyan]📄 Rendering YAML app: {app_name}[/cyan]", level="info")
 
@@ -221,8 +219,7 @@ def template_http_app(
     rendered_dir: Path,
     output: OutputManager,
 ) -> bool:
-    """
-    HTTP 앱 렌더링 (다운로드된 파일 복사).
+    """HTTP 앱 렌더링 (다운로드된 파일 복사).
 
     Args:
         app_name: 앱 이름
@@ -235,6 +232,7 @@ def template_http_app(
 
     Returns:
         성공 여부
+
     """
     output.print(f"[cyan]📄 Rendering HTTP app: {app_name}[/cyan]", level="info")
 
@@ -259,22 +257,21 @@ def template_http_app(
 
         output.print_success("HTTP app files copied")
         return True
-    else:
-        # build 없으면 원본 다운로드 파일 사용
-        source_file = app_config_dir / app.dest
+    # build 없으면 원본 다운로드 파일 사용
+    source_file = app_config_dir / app.dest
 
-        if not source_file.exists():
-            output.print_error(
-                f"Downloaded file not found: {source_file}",
-                file=str(source_file),
-            )
-            output.print_warning("Run 'sbkube prepare' first")
-            return False
+    if not source_file.exists():
+        output.print_error(
+            f"Downloaded file not found: {source_file}",
+            file=str(source_file),
+        )
+        output.print_warning("Run 'sbkube prepare' first")
+        return False
 
-        dest_file = rendered_dir / f"{app_name}-{source_file.name}"
-        shutil.copy2(source_file, dest_file)
-        output.print_success(f"HTTP app file copied: {dest_file}")
-        return True
+    dest_file = rendered_dir / f"{app_name}-{source_file.name}"
+    shutil.copy2(source_file, dest_file)
+    output.print_success(f"HTTP app file copied: {dest_file}")
+    return True
 
 
 @click.command(name="template")
@@ -324,8 +321,7 @@ def cmd(
     app_name: str | None,
     dry_run: bool,
 ):
-    """
-    SBKube template 명령어.
+    """SBKube template 명령어.
 
     빌드된 차트를 YAML로 렌더링:
     - .sbkube/build/ 디렉토리의 차트를 helm template으로 렌더링
@@ -625,20 +621,19 @@ def cmd(
             errors=["Some app groups failed to template"],
         )
         raise click.Abort()
-    else:
-        output.print(
-            "\n[bold green]🎉 All app groups templated successfully![/bold green]",
-            level="success",
-        )
-        output.finalize(
-            status="success",
-            summary={
-                "app_groups_processed": len(app_config_dirs),
-                "rendered_files": str(RENDERED_DIR),
-                "status": "success",
-            },
-            next_steps=[
-                f"Review rendered files: ls {RENDERED_DIR}",
-                f"Deploy with: sbkube deploy --app-dir {app_config_dirs[0].name}",
-            ],
-        )
+    output.print(
+        "\n[bold green]🎉 All app groups templated successfully![/bold green]",
+        level="success",
+    )
+    output.finalize(
+        status="success",
+        summary={
+            "app_groups_processed": len(app_config_dirs),
+            "rendered_files": str(RENDERED_DIR),
+            "status": "success",
+        },
+        next_steps=[
+            f"Review rendered files: ls {RENDERED_DIR}",
+            f"Deploy with: sbkube deploy --app-dir {app_config_dirs[0].name}",
+        ],
+    )

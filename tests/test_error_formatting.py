@@ -120,7 +120,6 @@ def test_error_without_guide_uses_fallback():
     class CustomError(SbkubeError):
         """Custom error for testing."""
 
-        pass
 
     error = CustomError(message="Custom error message", exit_code=1)
     formatted = format_error_with_suggestions(error)

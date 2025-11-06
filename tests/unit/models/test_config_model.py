@@ -1,5 +1,4 @@
-"""
-SBKube Configuration Model Tests (v3 API)
+"""SBKube Configuration Model Tests (v3 API)
 
 Tests for all app types and the main SBKubeConfig model.
 """

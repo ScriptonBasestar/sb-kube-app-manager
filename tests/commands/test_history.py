@@ -150,8 +150,7 @@ class TestHistoryLLMOutput:
     """Tests for LLM-friendly output (Phase 3)."""
 
     def test_history_llm_list_output(self, runner, monkeypatch):
-        """sbkube history should emit compact LLM summary."""
-
+        """Sbkube history should emit compact LLM summary."""
         deployments = [
             DeploymentSummary(
                 deployment_id="dep-001",
@@ -190,8 +189,7 @@ class TestHistoryLLMOutput:
         assert "dep-001" in result.output
 
     def test_history_llm_detail_output(self, runner, monkeypatch):
-        """sbkube history --show should produce structured LLM detail."""
-
+        """Sbkube history --show should produce structured LLM detail."""
         detail = DeploymentDetail(
             deployment_id="dep-001",
             timestamp=datetime(2025, 1, 2, 8, 30, 0),

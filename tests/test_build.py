@@ -1,5 +1,4 @@
-"""
-SBKube v0.3.0 build 명령어 테스트.
+"""SBKube v0.3.0 build 명령어 테스트.
 """
 
 import pytest

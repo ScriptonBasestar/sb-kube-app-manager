@@ -33,7 +33,7 @@ class KubernetesConnectivityCheck(DiagnosticCheck):
 
             # 클러스터 연결 확인
             result = subprocess.run(
-                ["kubectl", "cluster-info"], capture_output=True, text=True, timeout=10
+                ["kubectl", "cluster-info"], check=False, capture_output=True, text=True, timeout=10
             )
 
             if result.returncode != 0:
@@ -48,7 +48,7 @@ class KubernetesConnectivityCheck(DiagnosticCheck):
             # 클러스터 버전 확인
             result = subprocess.run(
                 ["kubectl", "version", "--short"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -73,7 +73,7 @@ class KubernetesConnectivityCheck(DiagnosticCheck):
             return self.create_result(
                 DiagnosticLevel.ERROR,
                 "Kubernetes 연결 검사 실패",
-                f"오류 상세: {str(e)}",
+                f"오류 상세: {e!s}",
                 "kubectl version --client && kubectl cluster-info",
                 "kubectl 상태 확인",
             )
@@ -101,7 +101,7 @@ class HelmInstallationCheck(DiagnosticCheck):
             # Helm 버전 확인
             result = subprocess.run(
                 ["helm", "version", "--short"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=5,
             )
@@ -132,7 +132,7 @@ class HelmInstallationCheck(DiagnosticCheck):
 
         except Exception as e:
             return self.create_result(
-                DiagnosticLevel.ERROR, f"Helm 설치 확인 실패: {str(e)}"
+                DiagnosticLevel.ERROR, f"Helm 설치 확인 실패: {e!s}"
             )
 
 
@@ -245,12 +245,12 @@ class ConfigValidityCheck(DiagnosticCheck):
                 return self.create_result(
                     DiagnosticLevel.ERROR,
                     "설정 파일 YAML 문법 오류",
-                    f"YAML 파싱 실패: {str(e)}",
+                    f"YAML 파싱 실패: {e!s}",
                 )
 
         except Exception as e:
             return self.create_result(
-                DiagnosticLevel.ERROR, f"설정 파일 검사 실패: {str(e)}"
+                DiagnosticLevel.ERROR, f"설정 파일 검사 실패: {e!s}"
             )
 
 
@@ -283,7 +283,7 @@ class NetworkAccessCheck(DiagnosticCheck):
                             f"{name}: HTTP {response.status_code}"
                         )
                 except requests.RequestException as e:
-                    failed_connections.append(f"{name}: {str(e)}")
+                    failed_connections.append(f"{name}: {e!s}")
 
             if failed_connections:
                 return self.create_result(
@@ -300,7 +300,7 @@ class NetworkAccessCheck(DiagnosticCheck):
 
         except Exception as e:
             return self.create_result(
-                DiagnosticLevel.ERROR, f"네트워크 접근성 검사 실패: {str(e)}"
+                DiagnosticLevel.ERROR, f"네트워크 접근성 검사 실패: {e!s}"
             )
 
 
@@ -327,7 +327,7 @@ class PermissionsCheck(DiagnosticCheck):
                 try:
                     result = subprocess.run(
                         ["kubectl", "auth", "can-i", action, resource],
-                        capture_output=True,
+                        check=False, capture_output=True,
                         text=True,
                         timeout=5,
                     )
@@ -362,7 +362,7 @@ class PermissionsCheck(DiagnosticCheck):
         except Exception as e:
             return self.create_result(
                 DiagnosticLevel.WARNING,
-                f"권한 검사를 완료할 수 없습니다: {str(e)}",
+                f"권한 검사를 완료할 수 없습니다: {e!s}",
                 "수동으로 권한을 확인해주세요",
             )
 
@@ -378,7 +378,7 @@ class ResourceAvailabilityCheck(DiagnosticCheck):
             # 노드 상태 확인
             result = subprocess.run(
                 ["kubectl", "get", "nodes", "--no-headers"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -412,7 +412,7 @@ class ResourceAvailabilityCheck(DiagnosticCheck):
                     f"디스크 공간이 부족합니다 ({free_gb:.1f}GB 남음)",
                     "최소 1GB 이상의 여유 공간이 필요합니다",
                 )
-            elif free_gb < 5:
+            if free_gb < 5:
                 return self.create_result(
                     DiagnosticLevel.WARNING,
                     f"디스크 공간이 부족합니다 ({free_gb:.1f}GB 남음)",
@@ -433,5 +433,5 @@ class ResourceAvailabilityCheck(DiagnosticCheck):
             )
         except Exception as e:
             return self.create_result(
-                DiagnosticLevel.WARNING, f"리소스 가용성 검사 실패: {str(e)}"
+                DiagnosticLevel.WARNING, f"리소스 가용성 검사 실패: {e!s}"
             )

@@ -1,5 +1,4 @@
-"""
-Phase 3 HookExecutor 기능 테스트.
+"""Phase 3 HookExecutor 기능 테스트.
 
 Validation, Dependency, Rollback 기능 검증.
 """
@@ -123,7 +122,7 @@ def test_validate_task_result_failure(mock_apply_config, mock_run_command):
 
 
 def test_validate_task_result_no_validation():
-    """validation 필드가 없는 경우 테스트."""
+    """Validation 필드가 없는 경우 테스트."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
     task = {"name": "test-task"}  # validation 없음
@@ -228,7 +227,7 @@ def test_check_task_dependencies_wait_for_failure(mock_apply_config, mock_run_co
 
 
 def test_check_task_dependencies_no_dependency():
-    """dependency 필드가 없는 경우 테스트."""
+    """Dependency 필드가 없는 경우 테스트."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
     task = {"name": "task-a"}  # dependency 없음
@@ -335,7 +334,7 @@ def test_execute_rollback_disabled():
 
 
 def test_execute_rollback_no_rollback():
-    """rollback 필드가 없는 경우 테스트."""
+    """Rollback 필드가 없는 경우 테스트."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
     task = {"name": "test-task"}  # rollback 없음

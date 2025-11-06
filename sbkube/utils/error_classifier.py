@@ -157,6 +157,7 @@ class ErrorClassifier:
                 "matched_pattern": "password authentication failed",
                 "is_classified": True
             }
+
         """
         error_text = str(error_message).lower()
 
@@ -196,6 +197,7 @@ class ErrorClassifier:
                 "host": "postgresql.data.svc.cluster.local" | None,
                 "port": "5432" | None
             }
+
         """
         result: dict[str, str | None] = {
             "db_type": None,
@@ -244,6 +246,7 @@ class ErrorClassifier:
                 "namespace": "airflow" | None,
                 "chart": "apache/airflow" | None
             }
+
         """
         result: dict[str, str | None] = {
             "release_name": None,

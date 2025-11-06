@@ -1,5 +1,4 @@
-"""
-SBKube prepare 명령어.
+"""SBKube prepare 명령어.
 
 새로운 기능:
 - helm 타입: 자동으로 chart pull (repo/chart 형식 파싱)
@@ -27,14 +26,14 @@ from sbkube.utils.output_manager import OutputManager
 
 
 def parse_helm_chart(chart: str) -> tuple[str, str]:
-    """
-    'repo/chart' 형식을 파싱.
+    """'repo/chart' 형식을 파싱.
 
     Args:
         chart: "grafana/grafana" 형식의 문자열
 
     Returns:
         (repo_name, chart_name) 튜플
+
     """
     parts = chart.split("/")
     if len(parts) != 2:
@@ -55,8 +54,7 @@ def prepare_oci_chart(
     force: bool = False,
     dry_run: bool = False,
 ) -> bool:
-    """
-    OCI 레지스트리에서 Helm 차트를 Pull합니다.
+    """OCI 레지스트리에서 Helm 차트를 Pull합니다.
 
     OCI 레지스트리는 helm repo add/update가 필요없이
     helm pull oci://registry/chart 형식으로 직접 다운로드합니다.
@@ -76,6 +74,7 @@ def prepare_oci_chart(
 
     Returns:
         성공 여부
+
     """
     output.print(f"[cyan]📦 Preparing OCI chart: {app_name}[/cyan]")
 
@@ -183,8 +182,7 @@ def prepare_helm_app(
     force: bool = False,
     dry_run: bool = False,
 ) -> bool:
-    """
-    Helm 앱 준비 (chart pull).
+    """Helm 앱 준비 (chart pull).
 
     로컬 차트는 prepare 단계를 건너뜁니다.
     OCI 레지스트리와 일반 Helm 레지스트리를 모두 지원합니다.
@@ -201,6 +199,7 @@ def prepare_helm_app(
 
     Returns:
         성공 여부
+
     """
     output.print(f"[cyan]📦 Preparing Helm app: {app_name}[/cyan]")
 
@@ -371,8 +370,7 @@ def prepare_http_app(
     output: OutputManager,
     dry_run: bool = False,
 ) -> bool:
-    """
-    HTTP 앱 준비 (파일 다운로드).
+    """HTTP 앱 준비 (파일 다운로드).
 
     Args:
         app_name: 앱 이름
@@ -384,6 +382,7 @@ def prepare_http_app(
 
     Returns:
         성공 여부
+
     """
     output.print(f"[cyan]📦 Preparing HTTP app: {app_name}[/cyan]")
 
@@ -436,8 +435,7 @@ def prepare_git_app(
     force: bool = False,
     dry_run: bool = False,
 ) -> bool:
-    """
-    Git 앱 준비 (repo clone).
+    """Git 앱 준비 (repo clone).
 
     Args:
         app_name: 앱 이름
@@ -451,6 +449,7 @@ def prepare_git_app(
 
     Returns:
         성공 여부
+
     """
     output.print(f"[cyan]📦 Preparing Git app: {app_name}[/cyan]")
 
@@ -586,8 +585,7 @@ def cmd(
     force: bool,
     dry_run: bool,
 ):
-    """
-    SBKube prepare 명령어.
+    """SBKube prepare 명령어.
 
     외부 리소스를 준비합니다:
     - helm 타입: Helm chart pull
@@ -839,6 +837,5 @@ def cmd(
         output.print_error("Some app groups failed to prepare")
         output.finalize()
         raise click.Abort()
-    else:
-        output.print_success("All app groups prepared successfully!")
-        output.finalize()
+    output.print_success("All app groups prepared successfully!")
+    output.finalize()

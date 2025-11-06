@@ -1,5 +1,4 @@
-"""
-OutputManager: Human/LLM/JSON/YAML 출력을 통합 관리하는 매니저.
+"""OutputManager: Human/LLM/JSON/YAML 출력을 통합 관리하는 매니저.
 
 이 모듈은 SBKube 명령어의 출력을 통합 관리하여,
 human/llm/json/yaml 포맷 간 일관된 인터페이스를 제공합니다.
@@ -14,8 +13,7 @@ from sbkube.utils.output_formatter import OutputFormatter
 
 
 class OutputManager:
-    """
-    Human/LLM/JSON/YAML 출력을 통합 관리하는 매니저.
+    """Human/LLM/JSON/YAML 출력을 통합 관리하는 매니저.
 
     - human 모드: Rich Console로 컬러풀한 출력 (즉시 출력)
     - llm/json/yaml 모드: 구조화된 데이터 수집 후 최종 출력
@@ -29,11 +27,11 @@ class OutputManager:
     """
 
     def __init__(self, format_type: str = "human"):
-        """
-        OutputManager 초기화.
+        """OutputManager 초기화.
 
         Args:
             format_type: 출력 포맷 (human, llm, json, yaml)
+
         """
         self.format_type = format_type
         self.console = Console(quiet=(format_type != "human"))
@@ -45,8 +43,7 @@ class OutputManager:
 
     @staticmethod
     def _strip_markup(text: str) -> str:
-        """
-        Rich 마크업 제거 (LLM/JSON/YAML 출력용).
+        """Rich 마크업 제거 (LLM/JSON/YAML 출력용).
 
         Args:
             text: Rich 마크업이 포함된 텍스트
@@ -61,6 +58,7 @@ class OutputManager:
             'Title'
             >>> OutputManager._strip_markup("[dim red]Error[/dim red]")
             'Error'
+
         """
         # Remove Rich markup including complex styles like [bold cyan], [dim red], RGB colors, etc.
         # Supports: colors, styles, closing tags, combinations with spaces, RGB, hex colors
@@ -74,14 +72,14 @@ class OutputManager:
         emoji: str | None = None,
         **metadata: Any,
     ) -> None:
-        """
-        통합 출력 메서드.
+        """통합 출력 메서드.
 
         Args:
             message: 출력할 메시지
             level: 로그 레벨 (info, warning, error, success)
             emoji: 이모지 (human 모드에서만 사용)
             **metadata: 추가 메타데이터 (LLM/JSON/YAML 모드에서 사용)
+
         """
         if self.format_type == "human":
             self.console.print(message)
@@ -98,12 +96,12 @@ class OutputManager:
             )
 
     def print_section(self, title: str, **metadata: Any) -> None:
-        """
-        섹션 헤더 출력.
+        """섹션 헤더 출력.
 
         Args:
             title: 섹션 제목
             **metadata: 추가 메타데이터 (LLM/JSON/YAML 모드에서 사용)
+
         """
         if self.format_type == "human":
             self.console.print(f"\n[bold cyan]━━━ {title} ━━━[/bold cyan]")
@@ -119,13 +117,13 @@ class OutputManager:
     def print_error(
         self, message: str, error: str | None = None, **metadata: Any
     ) -> None:
-        """
-        에러 메시지 출력.
+        """에러 메시지 출력.
 
         Args:
             message: 에러 메시지
             error: 에러 상세 정보
             **metadata: 추가 메타데이터
+
         """
         # 에러 메시지 누적 (LLM/JSON/YAML 모드용)
         clean_message = self._strip_markup(message)
@@ -148,12 +146,12 @@ class OutputManager:
             )
 
     def print_warning(self, message: str, **metadata: Any) -> None:
-        """
-        경고 메시지 출력.
+        """경고 메시지 출력.
 
         Args:
             message: 경고 메시지
             **metadata: 추가 메타데이터
+
         """
         if self.format_type == "human":
             self.console.print(f"[yellow]⚠️  {message}[/yellow]")
@@ -168,12 +166,12 @@ class OutputManager:
             )
 
     def print_success(self, message: str, **metadata: Any) -> None:
-        """
-        성공 메시지 출력.
+        """성공 메시지 출력.
 
         Args:
             message: 성공 메시지
             **metadata: 추가 메타데이터
+
         """
         if self.format_type == "human":
             self.console.print(f"[green]✅ {message}[/green]")
@@ -188,12 +186,12 @@ class OutputManager:
             )
 
     def print_list(self, items: list[str], title: str | None = None) -> None:
-        """
-        리스트 출력.
+        """리스트 출력.
 
         Args:
             items: 출력할 항목 리스트
             title: 리스트 제목 (선택)
+
         """
         if self.format_type == "human":
             if title:
@@ -216,14 +214,14 @@ class OutputManager:
         status: str,
         version: str | None = None,
     ) -> None:
-        """
-        배포 정보 기록 (LLM/JSON/YAML 출력용).
+        """배포 정보 기록 (LLM/JSON/YAML 출력용).
 
         Args:
             name: 앱 이름
             namespace: 네임스페이스
             status: 배포 상태 (deployed, failed, skipped 등)
             version: 차트 버전 (선택)
+
         """
         self.deployments.append(
             {
@@ -241,14 +239,14 @@ class OutputManager:
         next_steps: list[str] | None = None,
         errors: list[str] | None = None,
     ) -> None:
-        """
-        최종 출력 (LLM/JSON/YAML 모드에서 구조화된 데이터 출력).
+        """최종 출력 (LLM/JSON/YAML 모드에서 구조화된 데이터 출력).
 
         Args:
             status: 최종 상태 (success, failed, warning). 생략 시 에러 여부를 기반으로 추론.
             summary: 요약 정보. 생략 시 기본 요약(이벤트/배포/에러 개수) 사용.
             next_steps: 다음 단계 제안 (선택)
             errors: 에러 목록 (선택)
+
         """
         if self._finalized:
             return  # 중복 호출 방지
@@ -300,8 +298,7 @@ class OutputManager:
         next_steps: list[str] | None = None,
         errors: list[str] | None = None,
     ) -> None:
-        """
-        최종 출력 (history 전용 구조화 데이터 출력).
+        """최종 출력 (history 전용 구조화 데이터 출력).
 
         Args:
             status: 최종 상태 (success, failed, warning)
@@ -309,6 +306,7 @@ class OutputManager:
             history: 히스토리 데이터 목록
             next_steps: 다음 단계 제안 (선택)
             errors: 에러 목록 (선택)
+
         """
         if self._finalized:
             return
@@ -336,10 +334,10 @@ class OutputManager:
         self.formatter.print_output(result)
 
     def get_console(self) -> Console:
-        """
-        Rich Console 객체 반환 (고급 기능용).
+        """Rich Console 객체 반환 (고급 기능용).
 
         Returns:
             Rich Console 객체
+
         """
         return self.console

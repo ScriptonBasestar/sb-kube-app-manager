@@ -1,5 +1,4 @@
-"""
-로깅 유틸리티 모듈
+"""로깅 유틸리티 모듈
 
 sbkube 전체에서 사용할 수 있는 통합 로깅 시스템
 verbose, debug, info, warning, error 레벨 지원

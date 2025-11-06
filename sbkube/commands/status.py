@@ -564,10 +564,9 @@ def _format_health(health: str) -> str:
     """Format health status with color."""
     if health == "healthy":
         return "[green]✅ Healthy[/green]"
-    elif health == "degraded":
+    if health == "degraded":
         return "[yellow]⚠️ Degraded[/yellow]"
-    else:
-        return "[red]❌ Unhealthy[/red]"
+    return "[red]❌ Unhealthy[/red]"
 
 
 def _format_release_status(status: str) -> str:
@@ -603,14 +602,13 @@ def _format_age(seconds: float | None) -> str:
 
     if seconds < 60:
         return f"{int(seconds)}s"
-    elif seconds < 3600:
+    if seconds < 3600:
         minutes = int(seconds / 60)
         remaining_seconds = int(seconds % 60)
         return f"{minutes}m {remaining_seconds}s"
-    else:
-        hours = int(seconds / 3600)
-        minutes = int((seconds % 3600) / 60)
-        return f"{hours}h {minutes}m"
+    hours = int(seconds / 3600)
+    minutes = int((seconds % 3600) / 60)
+    return f"{hours}h {minutes}m"
 
 
 def _format_duration(seconds: float) -> str:
@@ -719,7 +717,7 @@ def _detect_circular_dependencies(dep_map: dict[str, list[str]]) -> list[list[st
         path.pop()
         rec_stack.remove(node)
 
-    for app_name in dep_map.keys():
+    for app_name in dep_map:
         if app_name not in visited:
             dfs(app_name, [])
 
@@ -735,9 +733,7 @@ def _find_root_apps(apps: list, dep_map: dict[str, list[str]]) -> list:
     # Apps that are not dependencies of others, or have no deps themselves
     roots = []
     for app in apps:
-        if not dep_map.get(app.name):  # No dependencies
-            roots.append(app)
-        elif app.name not in all_deps:  # Not a dependency of others
+        if not dep_map.get(app.name) or app.name not in all_deps:  # No dependencies
             roots.append(app)
 
     # If no clear roots, return all apps without deps
@@ -850,7 +846,7 @@ def _get_pod_health_status(pod: dict) -> str:
 
     if phase == "Failed":
         return "Pod failed"
-    elif phase == "Pending":
+    if phase == "Pending":
         # Check for image pull errors or scheduling issues
         for cond in conditions:
             if cond.get("type") == "PodScheduled" and cond.get("status") != "True":
@@ -879,30 +875,28 @@ def _get_pod_health_status(pod: dict) -> str:
 
     if issues:
         return ", ".join(issues)
-    elif phase == "Running" and ready_containers == total_containers:
+    if phase == "Running" and ready_containers == total_containers:
         return "Healthy"
-    elif phase == "Succeeded":
+    if phase == "Succeeded":
         return "Completed"
-    else:
-        return phase
+    return phase
 
 
 def _get_health_icon(health_status: str) -> str:
     """Get appropriate icon for health status."""
     if "Healthy" in health_status:
         return "✅"
-    elif "Completed" in health_status:
+    if "Completed" in health_status:
         return "🏁"
-    elif "failed" in health_status.lower():
+    if "failed" in health_status.lower():
         return "❌"
-    elif "Not ready" in health_status or "Only" in health_status:
+    if "Not ready" in health_status or "Only" in health_status:
         return "⚠️"
-    elif "Waiting" in health_status or "Pending" in health_status:
+    if "Waiting" in health_status or "Pending" in health_status:
         return "⏳"
-    elif "restart" in health_status.lower():
+    if "restart" in health_status.lower():
         return "🔄"
-    else:
-        return "ℹ️"
+    return "ℹ️"
 
 
 def _finalize_status_output(
@@ -977,4 +971,3 @@ def _finalize_status_output(
     """Finalize structured output for LLM/JSON/YAML formats."""
     # Already added deployments via add_deployment() calls
     # This is a placeholder for any additional structured output finalization
-    pass

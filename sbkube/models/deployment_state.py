@@ -1,5 +1,4 @@
-"""
-Deployment state tracking models for rollback functionality.
+"""Deployment state tracking models for rollback functionality.
 
 This module provides SQLAlchemy models and Pydantic schemas for tracking
 deployment states and enabling rollback operations.

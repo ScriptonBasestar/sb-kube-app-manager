@@ -28,6 +28,7 @@ def format_deployment_error(
         step_number: 단계 번호 (1, 2, 3)
         total_steps: 전체 단계 수
         console: Rich Console 인스턴스 (None이면 새로 생성)
+
     """
     if console is None:
         console = Console()
@@ -161,6 +162,7 @@ def format_simple_error(
         error: 발생한 예외
         context: 에러 발생 컨텍스트 (옵션)
         console: Rich Console 인스턴스
+
     """
     if console is None:
         console = Console()
@@ -204,6 +206,7 @@ def create_error_panel(
 
     Returns:
         Rich Panel 객체
+
     """
     border_styles = {
         "error": "red",

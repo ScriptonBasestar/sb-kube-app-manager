@@ -262,7 +262,7 @@ def main_with_exception_handling() -> None:
                         import subprocess
 
                         logger.info(f"🔧 실행: {quick_fix}")
-                        result = subprocess.run(shlex.split(quick_fix), shell=False)
+                        result = subprocess.run(shlex.split(quick_fix), check=False, shell=False)
                         if result.returncode == 0:
                             logger.info(
                                 "✅ 자동 수정이 완료되었습니다. 다시 시도해 주세요."

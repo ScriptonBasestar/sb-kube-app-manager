@@ -1,5 +1,4 @@
-"""
-Retry mechanisms for network operations and external command execution.
+"""Retry mechanisms for network operations and external command execution.
 
 This module provides decorators and utilities for retrying operations that may
 fail due to transient network issues or temporary unavailability of external services.
@@ -34,8 +33,7 @@ class RetryConfig:
         jitter: bool = True,
         retryable_exceptions: list[type[Exception]] | None = None,
     ):
-        """
-        Initialize retry configuration.
+        """Initialize retry configuration.
 
         Args:
             max_attempts: Maximum number of retry attempts
@@ -44,6 +42,7 @@ class RetryConfig:
             exponential_base: Base for exponential backoff
             jitter: Whether to add random jitter to delays
             retryable_exceptions: List of exception types that should trigger retries
+
         """
         self.max_attempts = max_attempts
         self.base_delay = base_delay
@@ -62,8 +61,7 @@ class RetryConfig:
 
 
 def calculate_delay(attempt: int, config: RetryConfig) -> float:
-    """
-    Calculate delay for the given attempt number.
+    """Calculate delay for the given attempt number.
 
     Args:
         attempt: Current attempt number (0-based)
@@ -71,6 +69,7 @@ def calculate_delay(attempt: int, config: RetryConfig) -> float:
 
     Returns:
         float: Delay in seconds
+
     """
     # Exponential backoff
     delay = config.base_delay * (config.exponential_base**attempt)
@@ -88,8 +87,7 @@ def calculate_delay(attempt: int, config: RetryConfig) -> float:
 
 
 def is_retryable_exception(exc: Exception, config: RetryConfig) -> bool:
-    """
-    Check if an exception is retryable based on configuration.
+    """Check if an exception is retryable based on configuration.
 
     Args:
         exc: The exception to check
@@ -97,6 +95,7 @@ def is_retryable_exception(exc: Exception, config: RetryConfig) -> bool:
 
     Returns:
         bool: True if the exception should trigger a retry
+
     """
     # Check if exception type is in retryable list
     for exc_type in config.retryable_exceptions:
@@ -124,14 +123,14 @@ def is_retryable_exception(exc: Exception, config: RetryConfig) -> bool:
 
 
 def retry_operation(config: RetryConfig | None = None):
-    """
-    Decorator for retrying operations with configurable behavior.
+    """Decorator for retrying operations with configurable behavior.
 
     Args:
         config: Retry configuration. If None, uses default configuration.
 
     Returns:
         Decorated function with retry behavior
+
     """
     if config is None:
         config = RetryConfig()
@@ -239,8 +238,7 @@ def run_command_with_retry(
     config: RetryConfig | None = None,
     **subprocess_kwargs,
 ) -> subprocess.CompletedProcess:
-    """
-    Run a subprocess command with retry logic.
+    """Run a subprocess command with retry logic.
 
     Args:
         cmd: Command and arguments as list
@@ -253,6 +251,7 @@ def run_command_with_retry(
     Raises:
         subprocess.CalledProcessError: If command fails after all retries
         subprocess.TimeoutExpired: If command times out after all retries
+
     """
     if config is None:
         config = NETWORK_RETRY_CONFIG

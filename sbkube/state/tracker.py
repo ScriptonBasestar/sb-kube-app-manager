@@ -1,5 +1,4 @@
-"""
-Deployment state tracker for integration with deployment commands.
+"""Deployment state tracker for integration with deployment commands.
 
 This module provides the DeploymentTracker class that tracks deployment
 operations and enables rollback functionality.
@@ -31,19 +30,18 @@ logger = get_logger()
 
 
 class DeploymentTracker:
-    """
-    Tracks deployment operations and provides rollback functionality.
+    """Tracks deployment operations and provides rollback functionality.
 
     This class integrates with deployment commands to capture state
     before and after operations, enabling rollback capabilities.
     """
 
     def __init__(self, db_path: str | Path | None = None):
-        """
-        Initialize deployment tracker.
+        """Initialize deployment tracker.
 
         Args:
             db_path: Optional path to database file
+
         """
         self.db = DeploymentDatabase(db_path)
         self.current_deployment_id: str | None = None
@@ -76,8 +74,7 @@ class DeploymentTracker:
         command_args: dict[str, Any] | None = None,
         dry_run: bool = False,
     ):
-        """
-        Context manager to track a deployment operation.
+        """Context manager to track a deployment operation.
 
         Args:
             cluster: Target cluster
@@ -92,6 +89,7 @@ class DeploymentTracker:
 
         Yields:
             Deployment ID for tracking
+
         """
         if not self._tracking_enabled or dry_run:
             yield None
@@ -158,8 +156,7 @@ class DeploymentTracker:
         app_namespace: str | None,
         app_config: dict[str, Any],
     ):
-        """
-        Context manager to track an individual app deployment.
+        """Context manager to track an individual app deployment.
 
         Args:
             app_name: Application name
@@ -169,6 +166,7 @@ class DeploymentTracker:
 
         Yields:
             App deployment ID
+
         """
         if not self._tracking_enabled or not self.current_deployment_record_id:
             yield None
@@ -217,8 +215,7 @@ class DeploymentTracker:
         chart_version: str | None = None,
         values: dict[str, Any] | None = None,
     ):
-        """
-        Track a Helm release deployment.
+        """Track a Helm release deployment.
 
         Args:
             release_name: Helm release name
@@ -226,6 +223,7 @@ class DeploymentTracker:
             chart: Chart name/path
             chart_version: Chart version
             values: Values used for deployment
+
         """
         if not self._tracking_enabled or not self.current_app_deployment_id:
             return
@@ -272,14 +270,14 @@ class DeploymentTracker:
         source_file: str | None = None,
         previous_state: dict[str, Any] | None = None,
     ):
-        """
-        Track a Kubernetes resource deployment.
+        """Track a Kubernetes resource deployment.
 
         Args:
             manifest: Resource manifest
             action: Action taken (create, update, delete)
             source_file: Source YAML file
             previous_state: Previous state for updates
+
         """
         if not self._tracking_enabled or not self.current_app_deployment_id:
             return
@@ -320,8 +318,7 @@ class DeploymentTracker:
         name: str,
         namespace: str | None = None,
     ) -> dict[str, Any] | None:
-        """
-        Get current state of a Kubernetes resource.
+        """Get current state of a Kubernetes resource.
 
         Args:
             api_version: API version
@@ -331,6 +328,7 @@ class DeploymentTracker:
 
         Returns:
             Current resource state or None
+
         """
         try:
             # Build kubectl command

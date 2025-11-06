@@ -163,10 +163,9 @@ class TestProgressManager:
         manager.add_step("test", "테스트")
 
         # track_step은 예외를 전파하므로 pytest.raises로 캐치
-        with pytest.raises(ValueError):
-            with manager.track_step("test") as tracker:
-                tracker.update(50)
-                raise ValueError("테스트 오류")
+        with pytest.raises(ValueError), manager.track_step("test") as tracker:
+            tracker.update(50)
+            raise ValueError("테스트 오류")
 
         # 예외 발생 시 step.state는 RUNNING 상태로 남음 (예외 처리 없음)
         # 이는 의도된 동작이므로 FAILED 체크하지 않음

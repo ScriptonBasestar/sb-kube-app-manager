@@ -1,5 +1,4 @@
-"""
-Database manager for deployment state tracking.
+"""Database manager for deployment state tracking.
 
 This module provides the database connection and session management
 for the deployment state tracking system.
@@ -36,19 +35,18 @@ logger = get_logger()
 
 
 class DeploymentDatabase:
-    """
-    Manager for deployment state database.
+    """Manager for deployment state database.
 
     Handles database initialization, connections, and provides
     high-level methods for deployment state management.
     """
 
     def __init__(self, db_path: str | Path | None = None):
-        """
-        Initialize deployment database.
+        """Initialize deployment database.
 
         Args:
             db_path: Path to SQLite database file. If None, uses default location.
+
         """
         if db_path is None:
             # Default to ~/.sbkube/deployments.db
@@ -95,11 +93,11 @@ class DeploymentDatabase:
 
     @contextmanager
     def get_session(self) -> Session:
-        """
-        Get a database session with automatic cleanup.
+        """Get a database session with automatic cleanup.
 
         Yields:
             SQLAlchemy session
+
         """
         session = self.SessionLocal()
         try:
@@ -112,14 +110,14 @@ class DeploymentDatabase:
             session.close()
 
     def create_deployment(self, deployment_data: DeploymentCreate) -> Deployment:
-        """
-        Create a new deployment record.
+        """Create a new deployment record.
 
         Args:
             deployment_data: Deployment creation data
 
         Returns:
             Created deployment object
+
         """
         with self.get_session() as session:
             deployment = Deployment(
@@ -150,8 +148,7 @@ class DeploymentDatabase:
         deployment_id: int,
         app_data: AppDeploymentCreate,
     ) -> AppDeployment:
-        """
-        Add an app deployment to a deployment.
+        """Add an app deployment to a deployment.
 
         Args:
             deployment_id: Parent deployment ID
@@ -159,6 +156,7 @@ class DeploymentDatabase:
 
         Returns:
             Created app deployment object
+
         """
         with self.get_session() as session:
             app_deployment = AppDeployment(
@@ -190,8 +188,7 @@ class DeploymentDatabase:
         app_deployment_id: int,
         resource_info: ResourceInfo,
     ) -> DeployedResource:
-        """
-        Add a deployed resource record.
+        """Add a deployed resource record.
 
         Args:
             app_deployment_id: Parent app deployment ID
@@ -199,6 +196,7 @@ class DeploymentDatabase:
 
         Returns:
             Created resource object
+
         """
         with self.get_session() as session:
             resource = DeployedResource(
@@ -235,8 +233,7 @@ class DeploymentDatabase:
         app_deployment_id: int,
         release_info: HelmReleaseInfo,
     ) -> HelmRelease:
-        """
-        Add a Helm release record.
+        """Add a Helm release record.
 
         Args:
             app_deployment_id: Parent app deployment ID
@@ -244,6 +241,7 @@ class DeploymentDatabase:
 
         Returns:
             Created Helm release object
+
         """
         with self.get_session() as session:
             release = HelmRelease(
@@ -279,13 +277,13 @@ class DeploymentDatabase:
         status: DeploymentStatus,
         error_message: str | None = None,
     ):
-        """
-        Update deployment status.
+        """Update deployment status.
 
         Args:
             deployment_id: Deployment ID
             status: New status
             error_message: Optional error message
+
         """
         with self.get_session() as session:
             deployment = (
@@ -304,14 +302,14 @@ class DeploymentDatabase:
         error_message: str | None = None,
         rollback_info: dict[str, Any] | None = None,
     ):
-        """
-        Update app deployment status.
+        """Update app deployment status.
 
         Args:
             app_deployment_id: App deployment ID
             status: New status
             error_message: Optional error message
             rollback_info: Optional rollback information
+
         """
         with self.get_session() as session:
             app_deployment = session.query(AppDeployment).get(app_deployment_id)
@@ -324,14 +322,14 @@ class DeploymentDatabase:
                     app_deployment.rollback_info = rollback_info
 
     def get_deployment(self, deployment_id: str) -> DeploymentDetail | None:
-        """
-        Get detailed deployment information.
+        """Get detailed deployment information.
 
         Args:
             deployment_id: Deployment ID
 
         Returns:
             Deployment details or None if not found
+
         """
         with self.get_session() as session:
             deployment = (
@@ -418,8 +416,7 @@ class DeploymentDatabase:
         limit: int = 50,
         offset: int = 0,
     ) -> list[DeploymentSummary]:
-        """
-        List deployments with optional filtering.
+        """List deployments with optional filtering.
 
         Args:
             cluster: Filter by cluster
@@ -430,6 +427,7 @@ class DeploymentDatabase:
 
         Returns:
             List of deployment summaries
+
         """
         with self.get_session() as session:
             query = session.query(Deployment)
@@ -489,8 +487,7 @@ class DeploymentDatabase:
         namespace: str,
         app_config_dir: str,
     ) -> DeploymentDetail | None:
-        """
-        Get the latest deployment for a specific configuration.
+        """Get the latest deployment for a specific configuration.
 
         Args:
             cluster: Cluster name
@@ -499,6 +496,7 @@ class DeploymentDatabase:
 
         Returns:
             Latest deployment details or None
+
         """
         with self.get_session() as session:
             deployment = (
@@ -522,8 +520,7 @@ class DeploymentDatabase:
         cluster: str,
         app_config_dir: str,
     ) -> DeploymentDetail | None:
-        """
-        Get the latest deployment for an app regardless of namespace.
+        """Get the latest deployment for an app regardless of namespace.
 
         Useful for dependency validation where the dependency may be
         deployed in a different namespace than the current app.
@@ -534,6 +531,7 @@ class DeploymentDatabase:
 
         Returns:
             Latest deployment details or None if never deployed
+
         """
         with self.get_session() as session:
             deployment = (
@@ -556,8 +554,7 @@ class DeploymentDatabase:
         days_to_keep: int = 30,
         max_deployments_per_app: int = 10,
     ) -> int:
-        """
-        Clean up old deployment records.
+        """Clean up old deployment records.
 
         Args:
             days_to_keep: Number of days to keep deployments
@@ -565,6 +562,7 @@ class DeploymentDatabase:
 
         Returns:
             Number of deployments deleted
+
         """
         with self.get_session() as session:
             # Delete deployments older than specified days
@@ -588,14 +586,14 @@ class DeploymentDatabase:
 
     @staticmethod
     def compute_resource_checksum(resource_data: dict[str, Any]) -> str:
-        """
-        Compute checksum for a resource.
+        """Compute checksum for a resource.
 
         Args:
             resource_data: Resource data dictionary
 
         Returns:
             SHA256 checksum hex string
+
         """
         # Remove volatile fields before computing checksum
         data_copy = resource_data.copy()
@@ -628,8 +626,7 @@ class DeploymentDatabase:
         deployment_id1: str,
         deployment_id2: str,
     ) -> dict[str, Any] | None:
-        """
-        Compare two deployments and return differences.
+        """Compare two deployments and return differences.
 
         Args:
             deployment_id1: First deployment ID
@@ -637,6 +634,7 @@ class DeploymentDatabase:
 
         Returns:
             Dictionary containing comparison results or None if either deployment not found
+
         """
         deployment1 = self.get_deployment(deployment_id1)
         deployment2 = self.get_deployment(deployment_id2)
@@ -696,8 +694,7 @@ class DeploymentDatabase:
         deployment_id1: str,
         deployment_id2: str,
     ) -> dict[str, Any] | None:
-        """
-        Compare Helm values between two deployments.
+        """Compare Helm values between two deployments.
 
         Args:
             deployment_id1: First deployment ID
@@ -705,6 +702,7 @@ class DeploymentDatabase:
 
         Returns:
             Dictionary containing Helm values comparison or None if either deployment not found
+
         """
         deployment1 = self.get_deployment(deployment_id1)
         deployment2 = self.get_deployment(deployment_id2)

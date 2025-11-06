@@ -1,5 +1,4 @@
-"""
-Enhanced command base class with integrated validation and inheritance support.
+"""Enhanced command base class with integrated validation and inheritance support.
 
 This module provides an improved base class for all sbkube commands
 with automatic configuration validation and inheritance capabilities.
@@ -33,8 +32,7 @@ class EnhancedBaseCommand:
         use_inheritance: bool = True,
         output_format: str = "human",
     ):
-        """
-        Initialize enhanced base command.
+        """Initialize enhanced base command.
 
         Args:
             base_dir: Project root directory
@@ -45,6 +43,7 @@ class EnhancedBaseCommand:
             validate_on_load: Whether to validate configurations on load
             use_inheritance: Whether to enable configuration inheritance
             output_format: Output format (human, llm, json, yaml)
+
         """
         # 디렉토리 경로 (명령어들과 일관성을 위해 대문자 상수 사용)
         self.BASE_DIR = Path(base_dir).resolve()
@@ -134,8 +133,7 @@ class EnhancedBaseCommand:
             raise click.Abort()
 
     def needs_sources(self) -> bool:
-        """
-        Check if this command needs sources configuration.
+        """Check if this command needs sources configuration.
         Override in subclasses as needed.
         """
         # By default, check if any apps need repository references
@@ -154,17 +152,16 @@ class EnhancedBaseCommand:
                 logger.error(f"Specified config file not found: {config_path}")
                 raise click.Abort()
             return config_path
-        else:
-            # Auto-detect
-            for ext in [".yaml", ".yml", ".toml"]:
-                candidate = self.APP_CONFIG_DIR / f"config{ext}"
-                if candidate.exists() and candidate.is_file():
-                    return candidate
+        # Auto-detect
+        for ext in [".yaml", ".yml", ".toml"]:
+            candidate = self.APP_CONFIG_DIR / f"config{ext}"
+            if candidate.exists() and candidate.is_file():
+                return candidate
 
-            logger.error(
-                f"App config file not found: {self.APP_CONFIG_DIR}/config.[yaml|yml|toml]",
-            )
-            raise click.Abort()
+        logger.error(
+            f"App config file not found: {self.APP_CONFIG_DIR}/config.[yaml|yml|toml]",
+        )
+        raise click.Abort()
 
     def load_config(self) -> SBKubeConfig:
         """Load and validate configuration file."""
@@ -218,8 +215,7 @@ class EnhancedBaseCommand:
             raise ConfigValidationError(f"Failed to load sources: {e}")
 
     def get_environment(self) -> str | None:
-        """
-        Determine environment name from config or CLI.
+        """Determine environment name from config or CLI.
         Override in subclasses to implement custom logic.
         """
         # Could be extended to support --profile CLI option
@@ -247,8 +243,7 @@ class EnhancedBaseCommand:
         app_types: list[str] | None = None,
         app_name: str | None = None,
     ) -> list:
-        """
-        Parse and filter app information with validation.
+        """Parse and filter app information with validation.
 
         Args:
             app_types: List of app types to process (None for all types)
@@ -256,6 +251,7 @@ class EnhancedBaseCommand:
 
         Returns:
             Filtered list of apps
+
         """
         if not self.app_group:
             logger.error("Configuration not loaded")
@@ -308,8 +304,7 @@ class EnhancedBaseCommand:
         return parsed_apps
 
     def get_namespace(self, app_info) -> str | None:
-        """
-        Determine namespace for the app.
+        """Determine namespace for the app.
         Priority: CLI > App config > Global config
         """
         if self.cli_namespace:
@@ -329,11 +324,11 @@ class EnhancedBaseCommand:
         return None
 
     def _find_sources_file(self) -> Path | None:
-        """
-        Find sources file for determining .sbkube directory location.
+        """Find sources file for determining .sbkube directory location.
 
         Returns:
             Path to sources.yaml if found, None otherwise
+
         """
         # Try APP_CONFIG_DIR first
         sources_path = self.APP_CONFIG_DIR / self.sources_file
@@ -403,12 +398,12 @@ class EnhancedBaseCommand:
         return check_required_cli_tools(self.app_info_list)
 
     def process_apps_with_stats(self, process_func, operation_name: str = "processing"):
-        """
-        Process app list and output statistics.
+        """Process app list and output statistics.
 
         Args:
             process_func: Function to process each app (takes app_info, returns bool)
             operation_name: Operation name for logging
+
         """
         if not self.app_info_list:
             logger.warning(f"No apps to {operation_name} in config file")
@@ -452,12 +447,12 @@ class EnhancedBaseCommand:
         output_path: str | Path,
         format: str = "yaml",
     ):
-        """
-        Export validated configuration to file.
+        """Export validated configuration to file.
 
         Args:
             output_path: Output file path
             format: Output format (yaml or json)
+
         """
         if not self.app_group:
             logger.error("No configuration loaded to export")
@@ -480,8 +475,7 @@ class EnhancedBaseCommand:
         command_name: str,  # "prepare", "deploy" 등
         dry_run: bool = False,
     ) -> bool:
-        """
-        명령어 수준 전역 훅 실행.
+        """명령어 수준 전역 훅 실행.
 
         Args:
             hook_phase: "pre", "post", "on_failure"
@@ -490,6 +484,7 @@ class EnhancedBaseCommand:
 
         Returns:
             성공 여부
+
         """
         if not self.app_group or not self.app_group.hooks:
             return True
@@ -517,8 +512,7 @@ class EnhancedBaseCommand:
         context: dict | None = None,
         dry_run: bool = False,
     ) -> bool:
-        """
-        앱별 훅 실행.
+        """앱별 훅 실행.
 
         Args:
             app_info: 앱 정보 객체 (AppConfig)
@@ -528,6 +522,7 @@ class EnhancedBaseCommand:
 
         Returns:
             성공 여부
+
         """
         if not hasattr(app_info, "hooks") or not app_info.hooks:
             return True

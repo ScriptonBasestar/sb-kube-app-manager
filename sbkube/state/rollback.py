@@ -1,5 +1,4 @@
-"""
-Rollback functionality for deployment states.
+"""Rollback functionality for deployment states.
 
 This module provides the rollback mechanism to restore previous
 deployment states using tracked deployment information.
@@ -25,25 +24,23 @@ logger = get_logger()
 
 
 class RollbackManager:
-    """
-    Manages rollback operations for deployments.
+    """Manages rollback operations for deployments.
 
     Provides functionality to rollback deployments to previous states
     using tracked deployment information.
     """
 
     def __init__(self, db_path: Path | None = None):
-        """
-        Initialize rollback manager.
+        """Initialize rollback manager.
 
         Args:
             db_path: Optional path to database file
+
         """
         self.db = DeploymentDatabase(db_path)
 
     def rollback_deployment(self, rollback_request: RollbackRequest) -> dict[str, Any]:
-        """
-        Rollback a deployment to a previous state.
+        """Rollback a deployment to a previous state.
 
         Args:
             rollback_request: Rollback request details
@@ -53,6 +50,7 @@ class RollbackManager:
 
         Raises:
             RollbackError: If rollback fails
+
         """
         # Get current deployment details
         current_deployment = self.db.get_deployment(rollback_request.deployment_id)
@@ -83,12 +81,11 @@ class RollbackManager:
                 target_deployment,
                 rollback_request,
             )
-        else:
-            return self._execute_rollback(
-                current_deployment,
-                target_deployment,
-                rollback_request,
-            )
+        return self._execute_rollback(
+            current_deployment,
+            target_deployment,
+            rollback_request,
+        )
 
     def _validate_rollback(
         self,
@@ -96,8 +93,7 @@ class RollbackManager:
         target_deployment: DeploymentDetail | None,
         request: RollbackRequest,
     ):
-        """
-        Validate that rollback can be performed.
+        """Validate that rollback can be performed.
 
         Args:
             current_deployment: Current deployment state
@@ -106,6 +102,7 @@ class RollbackManager:
 
         Raises:
             RollbackError: If validation fails
+
         """
         # Check deployment status
         if current_deployment.status not in [
@@ -136,8 +133,7 @@ class RollbackManager:
         target_deployment: DeploymentDetail | None,
         request: RollbackRequest,
     ) -> dict[str, Any]:
-        """
-        Simulate rollback without making changes.
+        """Simulate rollback without making changes.
 
         Args:
             current_deployment: Current deployment state
@@ -146,6 +142,7 @@ class RollbackManager:
 
         Returns:
             Simulation results
+
         """
         results = {
             "dry_run": True,
@@ -223,8 +220,7 @@ class RollbackManager:
         target_deployment: DeploymentDetail | None,
         request: RollbackRequest,
     ) -> dict[str, Any]:
-        """
-        Execute the rollback operation.
+        """Execute the rollback operation.
 
         Args:
             current_deployment: Current deployment state
@@ -233,6 +229,7 @@ class RollbackManager:
 
         Returns:
             Rollback results
+
         """
         results = {
             "dry_run": False,
@@ -268,8 +265,7 @@ class RollbackManager:
         app: dict[str, Any],
         deployment: DeploymentDetail,
     ) -> dict[str, Any]:
-        """
-        Rollback a single application.
+        """Rollback a single application.
 
         Args:
             app: Application deployment info
@@ -277,6 +273,7 @@ class RollbackManager:
 
         Returns:
             Rollback result for the app
+
         """
         app_type = app["type"]
         rollback_info = app.get("rollback_info", {})
@@ -379,13 +376,13 @@ class RollbackManager:
         namespace: str,
         current_revision: int,
     ):
-        """
-        Rollback a Helm release to previous revision.
+        """Rollback a Helm release to previous revision.
 
         Args:
             release_name: Helm release name
             namespace: Release namespace
             current_revision: Current revision number
+
         """
         target_revision = max(1, current_revision - 1)
 
@@ -408,14 +405,14 @@ class RollbackManager:
         name: str,
         namespace: str | None = None,
     ):
-        """
-        Delete a Kubernetes resource.
+        """Delete a Kubernetes resource.
 
         Args:
             api_version: API version
             kind: Resource kind
             name: Resource name
             namespace: Resource namespace
+
         """
         cmd = ["kubectl", "delete", f"{kind}.{api_version}", name]
 
@@ -434,11 +431,11 @@ class RollbackManager:
                 raise RollbackError(f"Failed to delete resource: {e.stderr}")
 
     def _restore_resource(self, resource_state: dict[str, Any]):
-        """
-        Restore a resource to its previous state.
+        """Restore a resource to its previous state.
 
         Args:
             resource_state: Previous resource state
+
         """
         # Write resource to temporary file
         import tempfile
@@ -473,8 +470,7 @@ class RollbackManager:
         app_config_dir: str,
         limit: int = 10,
     ) -> list[dict[str, Any]]:
-        """
-        List available rollback points for a configuration.
+        """List available rollback points for a configuration.
 
         Args:
             cluster: Cluster name
@@ -484,6 +480,7 @@ class RollbackManager:
 
         Returns:
             List of rollback points
+
         """
         deployments = self.db.list_deployments(
             cluster=cluster,

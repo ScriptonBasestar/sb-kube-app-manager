@@ -1,5 +1,4 @@
-"""
-Tests for the retry mechanisms and network operations.
+"""Tests for the retry mechanisms and network operations.
 """
 
 import subprocess

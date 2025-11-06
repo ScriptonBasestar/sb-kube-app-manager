@@ -81,7 +81,6 @@ def cmd(
     app_group: str | None,
 ) -> None:
     """Display deployment history with LLM-friendly output."""
-
     output_format = _resolve_output_format(ctx, format_override)
     output = OutputManager(format_type=output_format)
 

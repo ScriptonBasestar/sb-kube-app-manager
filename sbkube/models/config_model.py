@@ -1,5 +1,4 @@
-"""
-SBKube Configuration Models
+"""SBKube Configuration Models
 
 설정 구조:
 - apps: dict (key = app name)
@@ -24,8 +23,7 @@ from .base_model import ConfigBaseModel
 
 
 class ManifestsHookTask(ConfigBaseModel):
-    """
-    Manifests 타입 Hook Task.
+    """Manifests 타입 Hook Task.
 
     YAML manifest 파일들을 배포합니다 (kubectl apply).
 
@@ -45,6 +43,7 @@ class ManifestsHookTask(ConfigBaseModel):
             enabled: true
             manifests:
               - manifests/cleanup-issuers.yaml
+
     """
 
     type: Literal["manifests"] = "manifests"
@@ -72,8 +71,7 @@ class ManifestsHookTask(ConfigBaseModel):
 
 
 class InlineHookTask(ConfigBaseModel):
-    """
-    Inline 타입 Hook Task.
+    """Inline 타입 Hook Task.
 
     YAML 콘텐츠를 인라인으로 배포합니다.
 
@@ -97,6 +95,7 @@ class InlineHookTask(ConfigBaseModel):
           dependency:
             depends_on:
               - deploy-issuers
+
     """
 
     type: Literal["inline"] = "inline"
@@ -121,8 +120,7 @@ class InlineHookTask(ConfigBaseModel):
 
 
 class CommandHookTask(ConfigBaseModel):
-    """
-    Command 타입 Hook Task (개선된 shell 명령어 실행).
+    """Command 타입 Hook Task (개선된 shell 명령어 실행).
 
     Shell 명령어를 실행하며, retry 및 on_failure 정책을 지원합니다.
 
@@ -142,6 +140,7 @@ class CommandHookTask(ConfigBaseModel):
               - kind: Pod
                 label_selector: app=coredns
                 condition: Ready
+
     """
 
     type: Literal["command"] = "command"
@@ -184,8 +183,7 @@ HookTask = Annotated[
 
 
 class ValidationRule(ConfigBaseModel):
-    """
-    Hook Task 실행 후 검증 규칙.
+    """Hook Task 실행 후 검증 규칙.
 
     Examples:
         validation:
@@ -196,6 +194,7 @@ class ValidationRule(ConfigBaseModel):
           conditions:
             - type: Ready
               status: "True"
+
     """
 
     kind: str | None = Field(
@@ -234,8 +233,7 @@ class ValidationRule(ConfigBaseModel):
 
 
 class DependencyConfig(ConfigBaseModel):
-    """
-    Hook Task 간 의존성 설정.
+    """Hook Task 간 의존성 설정.
 
     Examples:
         depends_on:
@@ -246,6 +244,7 @@ class DependencyConfig(ConfigBaseModel):
             label_selector: app=database
             condition: Ready
             timeout: 180
+
     """
 
     depends_on: list[str] = Field(
@@ -271,8 +270,7 @@ class DependencyConfig(ConfigBaseModel):
 
 
 class RollbackPolicy(ConfigBaseModel):
-    """
-    실패 시 롤백 정책.
+    """실패 시 롤백 정책.
 
     Examples:
         rollback:
@@ -283,6 +281,7 @@ class RollbackPolicy(ConfigBaseModel):
           commands:
             - kubectl delete certificate wildcard-cert
             - ./scripts/restore-backup.sh
+
     """
 
     enabled: bool = Field(
@@ -309,8 +308,7 @@ class RollbackPolicy(ConfigBaseModel):
 
 
 class CommandHooks(ConfigBaseModel):
-    """
-    명령어별 훅 설정.
+    """명령어별 훅 설정.
 
     Examples:
         hooks:
@@ -322,6 +320,7 @@ class CommandHooks(ConfigBaseModel):
               - echo "Deployment completed"
             on_failure:
               - ./scripts/rollback.sh
+
     """
 
     pre: list[str] = Field(default_factory=list, description="명령어 실행 전 훅")
@@ -330,8 +329,7 @@ class CommandHooks(ConfigBaseModel):
 
 
 class AppHooks(ConfigBaseModel):
-    """
-    앱별 훅 설정.
+    """앱별 훅 설정.
 
     Examples:
         # Shell 명령어 hooks (기존 방식)
@@ -358,6 +356,7 @@ class AppHooks(ConfigBaseModel):
             post_deploy_manifests:
               - manifests/issuers/cluster-issuer-letsencrypt-prd.yaml
               - manifests/issuers/cluster-issuer-letsencrypt-stg.yaml
+
     """
 
     # Shell command hooks (기존)
@@ -463,8 +462,7 @@ class AppHooks(ConfigBaseModel):
 
 
 class HookApp(ConfigBaseModel):
-    """
-    Hook 타입 앱 (독립적인 리소스 관리).
+    """Hook 타입 앱 (독립적인 리소스 관리).
 
     Phase 3의 HookTask를 앱 레벨로 승격한 형태.
     다른 앱의 post_deploy_tasks를 별도 앱으로 분리하여 관리.
@@ -503,6 +501,7 @@ class HookApp(ConfigBaseModel):
                     name: wildcard-cert
                   spec:
                     secretName: wildcard-cert-tls
+
     """
 
     type: Literal["hook"] = "hook"
@@ -581,8 +580,7 @@ class HookApp(ConfigBaseModel):
 
 
 class HelmApp(ConfigBaseModel):
-    """
-    Helm 차트 배포 앱.
+    """Helm 차트 배포 앱.
 
     지원하는 chart 형식:
     1. Remote chart: "repo/chart" (예: "grafana/grafana")
@@ -607,6 +605,7 @@ class HelmApp(ConfigBaseModel):
           chart: ./charts/my-app
           values:
             - values.yaml
+
     """
 
     type: Literal["helm"] = "helm"
@@ -674,8 +673,7 @@ class HelmApp(ConfigBaseModel):
     @field_validator("chart")
     @classmethod
     def validate_chart(cls, v: str) -> str:
-        """
-        chart 형식 검증.
+        """Chart 형식 검증.
 
         허용되는 형식:
         - "repo/chart" (remote)
@@ -687,11 +685,11 @@ class HelmApp(ConfigBaseModel):
         return v.strip()
 
     def is_remote_chart(self) -> bool:
-        """
-        Remote chart 여부 판단.
+        """Remote chart 여부 판단.
 
         Returns:
             True if "repo/chart" 형식, False if local path
+
         """
         # 로컬 경로 패턴
         if self.chart.startswith("./") or self.chart.startswith("/"):
@@ -703,11 +701,11 @@ class HelmApp(ConfigBaseModel):
         return False
 
     def is_oci_chart(self) -> bool:
-        """
-        OCI 레지스트리 chart 여부 판단.
+        """OCI 레지스트리 chart 여부 판단.
 
         Returns:
             True if chart가 OCI 레지스트리를 사용하는 경우
+
         """
         # OCI 프로토콜로 시작하는 경우
         if self.chart.startswith("oci://"):
@@ -717,22 +715,22 @@ class HelmApp(ConfigBaseModel):
         return False
 
     def get_repo_name(self) -> str | None:
-        """
-        repo 이름 추출 (remote chart만).
+        """Repo 이름 추출 (remote chart만).
 
         Returns:
             repo 이름 (예: 'grafana/grafana' → 'grafana') 또는 None (local chart)
+
         """
         if not self.is_remote_chart():
             return None
         return self.chart.split("/")[0]
 
     def get_chart_name(self) -> str:
-        """
-        chart 이름 추출.
+        """Chart 이름 추출.
 
         Returns:
             chart 이름 (예: 'grafana/grafana' → 'grafana', './my-chart' → 'my-chart')
+
         """
         if self.is_remote_chart():
             return self.chart.split("/")[1]
@@ -741,8 +739,7 @@ class HelmApp(ConfigBaseModel):
 
 
 class YamlApp(ConfigBaseModel):
-    """
-    YAML 매니페스트 직접 배포 앱.
+    """YAML 매니페스트 직접 배포 앱.
 
     kubectl apply -f 로 배포.
 
@@ -753,6 +750,7 @@ class YamlApp(ConfigBaseModel):
             - deployment.yaml
             - service.yaml
           namespace: custom-ns
+
     """
 
     type: Literal["yaml"] = "yaml"
@@ -790,8 +788,7 @@ class YamlApp(ConfigBaseModel):
 
 
 class ActionSpec(ConfigBaseModel):
-    """
-    Action specification for ActionApp.
+    """Action specification for ActionApp.
 
     Defines a single action to be executed during deployment.
     Supported action types: apply, delete.
@@ -802,6 +799,7 @@ class ActionSpec(ConfigBaseModel):
           namespace: default
         - type: delete
           path: manifests/old-resource.yaml
+
     """
 
     type: Literal["apply", "delete"] = Field(
@@ -839,8 +837,7 @@ class ActionSpec(ConfigBaseModel):
 
 
 class ActionApp(ConfigBaseModel):
-    """
-    커스텀 액션 실행 앱 (apply/delete).
+    """커스텀 액션 실행 앱 (apply/delete).
 
     Actions are a list of ActionSpec objects that define individual
     kubectl apply/delete operations to be executed in sequence.
@@ -856,6 +853,7 @@ class ActionApp(ConfigBaseModel):
               namespace: default
             - type: delete
               path: old-resource.yaml
+
     """
 
     type: Literal["action"] = "action"
@@ -883,8 +881,7 @@ class ActionApp(ConfigBaseModel):
 
 
 class ExecApp(ConfigBaseModel):
-    """
-    커스텀 명령어 실행 앱.
+    """커스텀 명령어 실행 앱.
 
     Examples:
         post-install:
@@ -892,6 +889,7 @@ class ExecApp(ConfigBaseModel):
           commands:
             - echo "Deployment completed"
             - kubectl get pods
+
     """
 
     type: Literal["exec"] = "exec"
@@ -908,8 +906,7 @@ class ExecApp(ConfigBaseModel):
 
 
 class GitApp(ConfigBaseModel):
-    """
-    Git 리포지토리에서 매니페스트 가져오기 앱.
+    """Git 리포지토리에서 매니페스트 가져오기 앱.
 
     Examples:
         my-repo:
@@ -917,6 +914,7 @@ class GitApp(ConfigBaseModel):
           repo: https://github.com/user/repo
           path: k8s/
           branch: main
+
     """
 
     type: Literal["git"] = "git"
@@ -953,14 +951,14 @@ class GitApp(ConfigBaseModel):
 
 
 class KustomizeApp(ConfigBaseModel):
-    """
-    Kustomize 기반 배포 앱.
+    """Kustomize 기반 배포 앱.
 
     Examples:
         kustomize-app:
           type: kustomize
           path: overlays/production
           namespace: prod
+
     """
 
     type: Literal["kustomize"] = "kustomize"
@@ -978,14 +976,14 @@ class KustomizeApp(ConfigBaseModel):
 
 
 class HttpApp(ConfigBaseModel):
-    """
-    HTTP URL에서 파일 다운로드 앱.
+    """HTTP URL에서 파일 다운로드 앱.
 
     Examples:
         external-manifest:
           type: http
           url: https://raw.githubusercontent.com/example/repo/main/manifest.yaml
           dest: manifests/external.yaml
+
     """
 
     type: Literal["http"] = "http"
@@ -1022,8 +1020,7 @@ class HttpApp(ConfigBaseModel):
 
 
 class NoopApp(ConfigBaseModel):
-    """
-    No-operation 앱 (수동 작업 또는 외부 의존성 표현).
+    """No-operation 앱 (수동 작업 또는 외부 의존성 표현).
 
     실제로 아무것도 배포하지 않지만 의존성 체인에서 수동 작업이나
     외부에서 관리되는 리소스를 표현하는 데 사용됩니다.
@@ -1037,6 +1034,7 @@ class NoopApp(ConfigBaseModel):
         external-database:
           type: noop
           description: "외부 RDS 인스턴스 (AWS 콘솔에서 관리)"
+
     """
 
     type: Literal["noop"] = "noop"
@@ -1070,8 +1068,7 @@ AppConfig = Annotated[
 
 
 class SBKubeConfig(ConfigBaseModel):
-    """
-    SBKube 메인 설정 모델.
+    """SBKube 메인 설정 모델.
 
     Breaking Changes:
     - apps: list → dict (key = app name)
@@ -1103,6 +1100,7 @@ class SBKubeConfig(ConfigBaseModel):
             type: yaml
             files:
               - deployment.yaml
+
     """
 
     namespace: str
@@ -1128,14 +1126,13 @@ class SBKubeConfig(ConfigBaseModel):
     @classmethod
     def validate_app_names(cls, v: dict[str, AppConfig]) -> dict[str, AppConfig]:
         """앱 이름이 Kubernetes 네이밍 규칙을 따르는지 검증."""
-        for app_name in v.keys():
+        for app_name in v:
             cls.validate_kubernetes_name(app_name, "app_name")
         return v
 
     @model_validator(mode="after")
     def apply_namespace_inheritance(self) -> "SBKubeConfig":
-        """
-        네임스페이스 상속 및 글로벌 레이블/어노테이션 적용.
+        """네임스페이스 상속 및 글로벌 레이블/어노테이션 적용.
 
         앱에 namespace가 없으면 전역 namespace 사용.
         """
@@ -1151,8 +1148,7 @@ class SBKubeConfig(ConfigBaseModel):
 
     @model_validator(mode="after")
     def validate_dependencies(self) -> "SBKubeConfig":
-        """
-        의존성 검증:
+        """의존성 검증:
         1. 존재하지 않는 앱에 대한 의존성 체크
         2. 순환 의존성 체크
         """
@@ -1201,11 +1197,11 @@ class SBKubeConfig(ConfigBaseModel):
         return {name: app for name, app in self.apps.items() if app.enabled}
 
     def get_deployment_order(self) -> list[str]:
-        """
-        의존성을 고려한 배포 순서 반환 (위상 정렬).
+        """의존성을 고려한 배포 순서 반환 (위상 정렬).
 
         Returns:
             배포할 앱 이름 리스트 (순서대로)
+
         """
         enabled_apps = self.get_enabled_apps()
         in_degree = dict.fromkeys(enabled_apps, 0)

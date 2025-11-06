@@ -1,5 +1,4 @@
-"""
-배포 전 종합 안전성 검증기 모듈
+"""배포 전 종합 안전성 검증기 모듈
 
 실제 배포 전 모든 구성 요소의 안전성과 배포 가능성을 종합적으로 검증합니다.
 롤백 계획 및 위험도 평가를 포함하여 안전한 배포를 보장합니다.
@@ -90,7 +89,7 @@ class DeploymentSimulator(ValidationCheck):
                     "total_resources": total_resources,
                 },
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -103,18 +102,17 @@ class DeploymentSimulator(ValidationCheck):
                     "total_resources": total_resources,
                 },
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message=f"배포 시뮬레이션 성공 ({total_resources}개 리소스)",
-                details=f"모든 앱의 배포 시뮬레이션이 성공적으로 완료되었습니다. 총 {total_resources}개의 Kubernetes 리소스가 생성될 예정입니다.",
-                risk_level="low",
-                metadata={
-                    "simulation_results": simulation_results,
-                    "total_resources": total_resources,
-                },
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message=f"배포 시뮬레이션 성공 ({total_resources}개 리소스)",
+            details=f"모든 앱의 배포 시뮬레이션이 성공적으로 완료되었습니다. 총 {total_resources}개의 Kubernetes 리소스가 생성될 예정입니다.",
+            risk_level="low",
+            metadata={
+                "simulation_results": simulation_results,
+                "total_resources": total_resources,
+            },
+        )
 
     async def _get_deployment_apps(
         self, context: ValidationContext
@@ -165,7 +163,7 @@ class DeploymentSimulator(ValidationCheck):
                     # 네임스페이스 존재 확인
                     result = subprocess.run(
                         ["kubectl", "get", "namespace", namespace],
-                        capture_output=True,
+                        check=False, capture_output=True,
                         text=True,
                         timeout=10,
                     )
@@ -182,7 +180,7 @@ class DeploymentSimulator(ValidationCheck):
                                 "-o",
                                 "yaml",
                             ],
-                            capture_output=True,
+                            check=False, capture_output=True,
                             text=True,
                             timeout=10,
                         )
@@ -265,7 +263,7 @@ class DeploymentSimulator(ValidationCheck):
             cmd.extend(["--namespace", namespace])
 
             result_proc = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=60
+                cmd, check=False, capture_output=True, text=True, timeout=60
             )
 
             if result_proc.returncode != 0:
@@ -381,7 +379,7 @@ class DeploymentSimulator(ValidationCheck):
     async def _test_kubectl_dry_run(
         self, yaml_content: str, namespace: str
     ) -> list[str]:
-        """kubectl apply --dry-run 테스트"""
+        """Kubectl apply --dry-run 테스트"""
         issues = []
 
         try:
@@ -402,7 +400,7 @@ class DeploymentSimulator(ValidationCheck):
                         "--namespace",
                         namespace,
                     ],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=30,
                 )
@@ -596,7 +594,7 @@ class RiskAssessmentValidator(ValidationCheck):
             # Ingress 리소스 확인
             result = subprocess.run(
                 ["kubectl", "get", "ingress", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -614,7 +612,7 @@ class RiskAssessmentValidator(ValidationCheck):
             # LoadBalancer 서비스 확인
             result = subprocess.run(
                 ["kubectl", "get", "service", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -652,7 +650,7 @@ class RiskAssessmentValidator(ValidationCheck):
             # PVC 확인
             result = subprocess.run(
                 ["kubectl", "get", "pvc", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -705,7 +703,7 @@ class RiskAssessmentValidator(ValidationCheck):
             # ServiceAccount 확인
             result = subprocess.run(
                 ["kubectl", "get", "serviceaccount", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -731,7 +729,7 @@ class RiskAssessmentValidator(ValidationCheck):
             # Role/RoleBinding 확인
             result = subprocess.run(
                 ["kubectl", "get", "role,rolebinding", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -751,7 +749,7 @@ class RiskAssessmentValidator(ValidationCheck):
         return {"factors": factors, "score": score}
 
     def _has_privileged_settings(self, values_data: dict[str, Any]) -> bool:
-        """values 파일에서 높은 권한 설정 탐지"""
+        """Values 파일에서 높은 권한 설정 탐지"""
         if not isinstance(values_data, dict):
             return False
 
@@ -787,14 +785,13 @@ class RiskAssessmentValidator(ValidationCheck):
         """위험도별 권장사항 생성"""
         if risk_level == "CRITICAL":
             return "배포를 중단하고 위험 요소를 해결한 후 다시 시도하세요. 클러스터 관리자와 상의가 필요합니다."
-        elif risk_level == "HIGH":
+        if risk_level == "HIGH":
             return "배포 전 위험 요소를 신중히 검토하고 필요시 백업을 수행하세요. 모니터링을 강화하여 배포하세요."
-        elif risk_level == "MEDIUM":
+        if risk_level == "MEDIUM":
             return (
                 "위험 요소를 검토하고 배포 후 모니터링을 통해 시스템 상태를 확인하세요."
             )
-        else:
-            return "안전한 배포입니다. 배포를 진행할 수 있습니다."
+        return "안전한 배포입니다. 배포를 진행할 수 있습니다."
 
     async def _get_namespace(self, context: ValidationContext) -> str:
         """네임스페이스 추출"""
@@ -864,7 +861,7 @@ class RollbackPlanValidator(ValidationCheck):
                 risk_level="high",
                 metadata={"rollback_plan": rollback_plan},
             )
-        elif rollback_warnings:
+        if rollback_warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -874,15 +871,14 @@ class RollbackPlanValidator(ValidationCheck):
                 risk_level="medium",
                 metadata={"rollback_plan": rollback_plan},
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="롤백 계획이 수립되었습니다",
-                details="롤백 가능성이 확인되었으며 필요시 안전한 롤백이 가능합니다.",
-                risk_level="low",
-                metadata={"rollback_plan": rollback_plan},
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="롤백 계획이 수립되었습니다",
+            details="롤백 가능성이 확인되었으며 필요시 안전한 롤백이 가능합니다.",
+            risk_level="low",
+            metadata={"rollback_plan": rollback_plan},
+        )
 
     async def _assess_helm_rollback(self, context: ValidationContext) -> dict[str, Any]:
         """Helm 기반 롤백 평가"""
@@ -894,7 +890,7 @@ class RollbackPlanValidator(ValidationCheck):
 
             result = subprocess.run(
                 ["helm", "list", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=15,
             )
@@ -924,7 +920,7 @@ class RollbackPlanValidator(ValidationCheck):
                             "-o",
                             "json",
                         ],
-                        capture_output=True,
+                        check=False, capture_output=True,
                         text=True,
                         timeout=10,
                     )
@@ -955,7 +951,7 @@ class RollbackPlanValidator(ValidationCheck):
             # Velero 백업 도구 확인
             result = subprocess.run(
                 ["kubectl", "get", "deployment", "velero", "-n", "velero"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -967,7 +963,7 @@ class RollbackPlanValidator(ValidationCheck):
             # etcd 백업 가능성 (클러스터 관리자 권한 필요)
             result = subprocess.run(
                 ["kubectl", "get", "nodes", "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -1001,7 +997,7 @@ class RollbackPlanValidator(ValidationCheck):
             # PVC 및 PV 확인
             result = subprocess.run(
                 ["kubectl", "get", "pvc", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -1126,7 +1122,7 @@ class ImpactAnalysisValidator(ValidationCheck):
                 risk_level="high",
                 metadata={"impact_analysis": impact_analysis},
             )
-        elif impact_warnings:
+        if impact_warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -1136,15 +1132,14 @@ class ImpactAnalysisValidator(ValidationCheck):
                 risk_level="medium",
                 metadata={"impact_analysis": impact_analysis},
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="기존 워크로드에 영향이 없습니다",
-                details="배포가 기존 시스템에 미치는 영향이 최소화되었습니다.",
-                risk_level="low",
-                metadata={"impact_analysis": impact_analysis},
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="기존 워크로드에 영향이 없습니다",
+            details="배포가 기존 시스템에 미치는 영향이 최소화되었습니다.",
+            risk_level="low",
+            metadata={"impact_analysis": impact_analysis},
+        )
 
     async def _analyze_namespace_impact(
         self, context: ValidationContext
@@ -1166,7 +1161,7 @@ class ImpactAnalysisValidator(ValidationCheck):
                     "-o",
                     "json",
                 ],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=15,
             )
@@ -1207,7 +1202,7 @@ class ImpactAnalysisValidator(ValidationCheck):
             for resource_type in ["deployments", "services", "configmaps", "secrets"]:
                 result = subprocess.run(
                     ["kubectl", "get", resource_type, "-n", namespace, "-o", "json"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=10,
                 )
@@ -1245,7 +1240,7 @@ class ImpactAnalysisValidator(ValidationCheck):
             # 기존 서비스의 포트 확인
             result = subprocess.run(
                 ["kubectl", "get", "services", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -1294,7 +1289,7 @@ class ImpactAnalysisValidator(ValidationCheck):
             # 노드 리소스 사용량 확인
             result = subprocess.run(
                 ["kubectl", "top", "nodes", "--no-headers"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=15,
             )
@@ -1337,7 +1332,7 @@ class ImpactAnalysisValidator(ValidationCheck):
             namespace = await self._get_namespace(context)
             result = subprocess.run(
                 ["kubectl", "top", "pods", "-n", namespace, "--no-headers"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )

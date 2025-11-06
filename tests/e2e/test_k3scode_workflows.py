@@ -1,5 +1,4 @@
-"""
-E2E tests for k3scode example workflows.
+"""E2E tests for k3scode example workflows.
 
 These tests use the actual examples/k3scode/ directory to verify
 complete sbkube workflows with real configuration files.
@@ -16,8 +15,7 @@ class TestK3scodeAIWorkflow:
     """Test k3scode AI application workflow."""
 
     def test_ai_prepare(self, runner, examples_dir, tmp_path, list_directory_contents):
-        """
-        Test k3scode AI prepare phase.
+        """Test k3scode AI prepare phase.
 
         This test verifies that the prepare command correctly downloads
         Helm charts and Git repositories specified in examples/k3scode/ai/config.yaml.
@@ -69,8 +67,7 @@ class TestK3scodeAIWorkflow:
         )
 
     def test_ai_build(self, runner, examples_dir, tmp_path, list_directory_contents):
-        """
-        Test k3scode AI build phase.
+        """Test k3scode AI build phase.
 
         This test runs prepare first (to get dependencies), then builds
         the application using examples/k3scode/ai configuration.
@@ -128,8 +125,7 @@ class TestK3scodeDevOpsWorkflow:
     def test_devops_prepare(
         self, runner, examples_dir, tmp_path, list_directory_contents
     ):
-        """
-        Test k3scode DevOps prepare phase.
+        """Test k3scode DevOps prepare phase.
 
         This test verifies that the prepare command correctly handles
         the DevOps configuration in examples/k3scode/devops/.
@@ -170,8 +166,7 @@ class TestK3scodeDevOpsWorkflow:
     def test_devops_build(
         self, runner, examples_dir, tmp_path, list_directory_contents
     ):
-        """
-        Test k3scode DevOps build phase.
+        """Test k3scode DevOps build phase.
 
         This test runs prepare first, then builds the DevOps application.
         """
@@ -225,8 +220,7 @@ class TestK3scodeMemoryWorkflow:
     """Test k3scode Memory application workflow."""
 
     def test_memory_prepare(self, runner, examples_dir, tmp_path):
-        """
-        Test k3scode Memory prepare phase.
+        """Test k3scode Memory prepare phase.
 
         This test verifies prepare for the memory configuration.
         """
@@ -266,8 +260,7 @@ class TestK3scodeRDBWorkflow:
     """Test k3scode RDB application workflow."""
 
     def test_rdb_prepare(self, runner, examples_dir, tmp_path):
-        """
-        Test k3scode RDB prepare phase.
+        """Test k3scode RDB prepare phase.
 
         This test verifies prepare for the RDB configuration.
         """

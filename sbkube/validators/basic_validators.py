@@ -1,5 +1,4 @@
-"""
-기본 검증기 모듈
+"""기본 검증기 모듈
 
 ValidationEngine의 기본 동작을 테스트하기 위한 예시 검증기들입니다.
 """
@@ -51,17 +50,16 @@ class FileExistenceValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=missing_files,
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="모든 필수 설정 파일이 존재합니다",
-                details=(
-                    f"확인된 파일: "
-                    f"{', '.join([str(f.relative_to(base_path)) for f in required_files])}"
-                ),
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="모든 필수 설정 파일이 존재합니다",
+            details=(
+                f"확인된 파일: "
+                f"{', '.join([str(f.relative_to(base_path)) for f in required_files])}"
+            ),
+            risk_level="low",
+        )
 
 
 class ConfigSyntaxValidator(ValidationCheck):
@@ -93,11 +91,11 @@ class ConfigSyntaxValidator(ValidationCheck):
                     yaml.safe_load(f)
                 valid_files.append(str(file_path.relative_to(base_path)))
             except yaml.YAMLError as e:
-                error_msg = f"{file_path.relative_to(base_path)}: {str(e)}"
+                error_msg = f"{file_path.relative_to(base_path)}: {e!s}"
                 syntax_errors.append(error_msg)
             except Exception as e:
                 error_msg = (
-                    f"{file_path.relative_to(base_path)}: 파일 읽기 오류 - {str(e)}"
+                    f"{file_path.relative_to(base_path)}: 파일 읽기 오류 - {e!s}"
                 )
                 syntax_errors.append(error_msg)
 
@@ -112,7 +110,7 @@ class ConfigSyntaxValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=[error.split(":")[0] for error in syntax_errors],
             )
-        elif valid_files:
+        if valid_files:
             return self.create_validation_result(
                 level=DiagnosticLevel.SUCCESS,
                 severity=ValidationSeverity.INFO,
@@ -120,15 +118,14 @@ class ConfigSyntaxValidator(ValidationCheck):
                 details=f"검증된 파일: {', '.join(valid_files)}",
                 risk_level="low",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.WARNING,
-                severity=ValidationSeverity.MEDIUM,
-                message="검증할 설정 파일이 없습니다",
-                details="config.yaml 또는 sources.yaml 파일이 존재하지 않습니다.",
-                recommendation="필요한 설정 파일을 생성하세요.",
-                risk_level="medium",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.WARNING,
+            severity=ValidationSeverity.MEDIUM,
+            message="검증할 설정 파일이 없습니다",
+            details="config.yaml 또는 sources.yaml 파일이 존재하지 않습니다.",
+            recommendation="필요한 설정 파일을 생성하세요.",
+            risk_level="medium",
+        )
 
 
 class BasicSystemValidator(ValidationCheck):
@@ -174,11 +171,10 @@ class BasicSystemValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["file_system", "permissions"],
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="기본 시스템 요구사항을 충족합니다",
-                details="파일 시스템 권한 및 기본 요구사항이 정상입니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="기본 시스템 요구사항을 충족합니다",
+            details="파일 시스템 권한 및 기본 요구사항이 정상입니다.",
+            risk_level="low",
+        )

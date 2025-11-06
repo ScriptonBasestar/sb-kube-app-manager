@@ -1,5 +1,4 @@
-"""
-SBKube 주요 에러 시나리오 테스트.
+"""SBKube 주요 에러 시나리오 테스트.
 
 간소화된 에러 케이스 테스트:
 - 설정 파일 관련 에러
@@ -18,7 +17,7 @@ class TestConfigValidationErrors:
     """설정 파일 검증 에러 테스트."""
 
     def test_config_missing_namespace(self):
-        """namespace 필드 누락."""
+        """Namespace 필드 누락."""
         with pytest.raises((ConfigValidationError, Exception)):
             SBKubeConfig(
                 # namespace 누락
@@ -78,9 +77,8 @@ class TestYAMLParsingErrors:
         config_file = tmp_path / "invalid.yaml"
         config_file.write_text("invalid: yaml: ::: syntax")
 
-        with pytest.raises(yaml.YAMLError):
-            with open(config_file) as f:
-                yaml.safe_load(f)
+        with pytest.raises(yaml.YAMLError), open(config_file) as f:
+            yaml.safe_load(f)
 
     def test_yaml_missing_required_keys(self, tmp_path):
         """필수 키 누락."""
@@ -107,9 +105,8 @@ class TestFileSystemErrors:
         """존재하지 않는 파일."""
         non_existent = tmp_path / "non_existent.yaml"
 
-        with pytest.raises(FileNotFoundError):
-            with open(non_existent) as f:
-                yaml.safe_load(f)
+        with pytest.raises(FileNotFoundError), open(non_existent) as f:
+            yaml.safe_load(f)
 
     def test_directory_not_found(self, tmp_path):
         """존재하지 않는 디렉토리."""
@@ -126,9 +123,8 @@ class TestFileSystemErrors:
         restricted_file.chmod(0o000)
 
         try:
-            with pytest.raises(PermissionError):
-                with open(restricted_file) as f:
-                    f.read()
+            with pytest.raises(PermissionError), open(restricted_file) as f:
+                f.read()
         finally:
             # 정리를 위해 권한 복원
             restricted_file.chmod(0o644)
@@ -214,7 +210,6 @@ class TestRuntimeErrors:
 # 에러 카운트 통계
 def test_error_test_count():
     """추가된 에러 테스트 개수 확인."""
-
     # 모든 테스트 클래스 수집
     test_classes = [
         TestConfigValidationErrors,

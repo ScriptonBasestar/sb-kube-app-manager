@@ -1,5 +1,4 @@
-"""
-앱 디렉토리 해석 유틸리티.
+"""앱 디렉토리 해석 유틸리티.
 
 sources.yaml 또는 자동 탐색을 통해 앱 그룹 디렉토리 목록을 결정합니다.
 """
@@ -21,8 +20,7 @@ def resolve_app_dirs(
     config_file_name: str,
     sources_file_name: str = "sources.yaml",
 ) -> list[Path]:
-    """
-    앱 그룹 디렉토리 목록을 결정합니다.
+    """앱 그룹 디렉토리 목록을 결정합니다.
 
     우선순위:
     1. --app-dir 옵션으로 명시적 지정
@@ -40,6 +38,7 @@ def resolve_app_dirs(
 
     Raises:
         ValueError: 앱 디렉토리를 찾을 수 없거나 sources.yaml 오류 시
+
     """
     # sources.yaml 로드 시도
     sources_file_path = base_dir / sources_file_name

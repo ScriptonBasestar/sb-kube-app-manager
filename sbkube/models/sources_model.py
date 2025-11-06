@@ -1,5 +1,4 @@
-"""
-Enhanced sources model with validation and inheritance support.
+"""Enhanced sources model with validation and inheritance support.
 
 This module provides improved Pydantic models for sbkube sources configuration
 with comprehensive validation and error handling.
@@ -111,8 +110,7 @@ class OciRepoScheme(ConfigBaseModel):
 
 
 class SourceScheme(InheritableConfigModel):
-    """
-    Main sources configuration with mandatory cluster targeting.
+    """Main sources configuration with mandatory cluster targeting.
 
     **Design Principle**:
     - Explicit cluster configuration is REQUIRED
@@ -312,8 +310,7 @@ class SourceScheme(InheritableConfigModel):
         return self.oci_registries.get(name)
 
     def get_app_dirs(self, base_dir, config_file_name: str = "config.yaml") -> list:
-        """
-        Get list of app directories to process.
+        """Get list of app directories to process.
 
         This method supports two modes:
         1. Explicit mode (app_dirs specified): Use the exact list from sources.yaml
@@ -335,6 +332,7 @@ class SourceScheme(InheritableConfigModel):
 
             # sources.yaml without app_dirs (auto-discovery)
             # (field not specified)
+
         """
         from pathlib import Path
 
@@ -374,14 +372,14 @@ class SourceScheme(InheritableConfigModel):
         return find_all_app_dirs(base_path, config_file_name)
 
     def validate_repo_references(self, app_configs: list[dict[str, Any]]) -> list[str]:
-        """
-        Validate that all repository references in app configs exist.
+        """Validate that all repository references in app configs exist.
 
         Args:
             app_configs: List of application configurations
 
         Returns:
             List of validation errors (empty if all valid)
+
         """
         errors = []
 

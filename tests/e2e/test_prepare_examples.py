@@ -1,5 +1,4 @@
-"""
-E2E tests for prepare command examples.
+"""E2E tests for prepare command examples.
 
 These tests use the actual examples/prepare/ directory to verify
 prepare command functionality with real configuration files.
@@ -16,8 +15,7 @@ class TestPrepareExamples:
     """Test prepare command with various example configurations."""
 
     def test_prepare_pull_helm_oci(self, runner, examples_dir, tmp_path):
-        """
-        Test prepare with OCI Helm chart pulling.
+        """Test prepare with OCI Helm chart pulling.
 
         This test verifies that prepare correctly pulls Helm charts
         from OCI registries as specified in examples/prepare/helm-oci/config.yaml.

@@ -8,8 +8,7 @@ from sbkube.utils.logger import logger
 
 
 def common_click_options(func):
-    """
-    Click 명령어에 공통 옵션을 추가하는 데코레이터.
+    """Click 명령어에 공통 옵션을 추가하는 데코레이터.
 
     다음 옵션들을 자동으로 추가합니다:
     - --app-dir: 앱 설정 디렉토리
@@ -24,6 +23,7 @@ def common_click_options(func):
 
     Returns:
         데코레이트된 함수
+
     """
     options = [
         click.option(
@@ -66,7 +66,6 @@ def execute_command_with_logging(
     timeout: int = 300,
 ):
     """명령어 실행 및 로깅 처리"""
-
     logger.command(" ".join(cmd))
 
     try:
@@ -103,8 +102,7 @@ def execute_command_with_logging(
 
 
 def check_required_cli_tools(app_info_list: list):
-    """
-    앱 목록에 필요한 CLI 도구들을 체크합니다.
+    """앱 목록에 필요한 CLI 도구들을 체크합니다.
 
     앱 타입에 따라 필요한 도구(helm, kubectl, git)를 확인하고,
     설치되지 않은 경우 프로그램을 종료합니다.
@@ -117,6 +115,7 @@ def check_required_cli_tools(app_info_list: list):
 
     Raises:
         click.Abort: 필수 CLI 도구가 설치되지 않은 경우
+
     """
     import click
 
@@ -159,8 +158,7 @@ def run_command(
     timeout: int | None = None,
     **kwargs,
 ) -> tuple[int, str, str]:
-    """
-    명령어를 실행하고 결과를 반환합니다.
+    """명령어를 실행하고 결과를 반환합니다.
 
     Args:
         cmd: 실행할 명령어 (리스트 또는 문자열)
@@ -174,6 +172,7 @@ def run_command(
 
     Returns:
         Tuple[int, str, str]: (return_code, stdout, stderr)
+
     """
     # 문자열인 경우 shlex로 분할
     if isinstance(cmd, str):
@@ -206,8 +205,7 @@ def run_command(
 
 
 def get_absolute_path(path: str | Path, base: str | Path) -> Path:
-    """
-    상대 경로를 절대 경로로 변환합니다.
+    """상대 경로를 절대 경로로 변환합니다.
 
     Args:
         path: 변환할 경로
@@ -215,12 +213,12 @@ def get_absolute_path(path: str | Path, base: str | Path) -> Path:
 
     Returns:
         Path: 절대 경로
+
     """
     path = Path(path)
     if path.is_absolute():
         return path
-    else:
-        return Path(base) / path
+    return Path(base) / path
 
 
 def check_resource_exists(
@@ -229,8 +227,7 @@ def check_resource_exists(
     namespace: str | None = None,
     env: dict[str, str] | None = None,
 ) -> bool:
-    """
-    Kubernetes 리소스의 존재 여부를 확인합니다.
+    """Kubernetes 리소스의 존재 여부를 확인합니다.
 
     Args:
         resource_type: 리소스 타입 (예: "release", "deployment", "pod")
@@ -240,6 +237,7 @@ def check_resource_exists(
 
     Returns:
         bool: 리소스가 존재하면 True, 그렇지 않으면 False
+
     """
     if resource_type == "release":
         # Helm 릴리스 확인
@@ -259,8 +257,7 @@ def check_resource_exists(
 def find_all_app_dirs(
     base_dir: Path, config_file_name: str = "config.yaml"
 ) -> list[Path]:
-    """
-    base_dir 하위의 모든 앱 그룹 디렉토리를 찾습니다.
+    """base_dir 하위의 모든 앱 그룹 디렉토리를 찾습니다.
 
     config.yaml 파일이 존재하는 모든 하위 디렉토리를 반환합니다.
     숨김 디렉토리(. 시작)와 시스템 디렉토리는 제외합니다.
@@ -281,6 +278,7 @@ def find_all_app_dirs(
         >>> #   └── nginx/config.yaml
         >>> find_all_app_dirs(Path("/project"))
         [Path("/project/nginx"), Path("/project/postgres"), Path("/project/redis")]
+
     """
     excluded_dirs = {
         "charts",
@@ -330,8 +328,7 @@ def find_sources_file(
     app_config_dir: Path,
     sources_file_name: str = "sources.yaml",
 ) -> Path | None:
-    """
-    sources.yaml 파일을 찾습니다.
+    """sources.yaml 파일을 찾습니다.
 
     다음 순서로 검색합니다:
     1. app_config_dir (현재 작업 디렉토리, .)
@@ -360,6 +357,7 @@ def find_sources_file(
         >>> # cd app1 && sbkube apply
         >>> find_sources_file(Path("/project/app1"), Path("/project/app1"))
         Path("/project/sources.yaml")  # 상위 디렉토리에서 발견
+
     """
     # 1. app_config_dir에서 sources.yaml 찾기 (현재 디렉토리)
     sources_path = app_config_dir / sources_file_name

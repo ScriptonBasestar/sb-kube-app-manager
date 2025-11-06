@@ -1,5 +1,4 @@
-"""
-Import tests to ensure all core dependencies are available.
+"""Import tests to ensure all core dependencies are available.
 """
 
 import pytest

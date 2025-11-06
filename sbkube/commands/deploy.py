@@ -1,5 +1,4 @@
-"""
-SBKube deploy 명령어.
+"""SBKube deploy 명령어.
 
 새로운 기능:
 - helm 타입: Helm install/upgrade
@@ -63,8 +62,7 @@ _CONNECTION_ERROR_KEYWORDS: tuple[str, ...] = (
 
 
 def _get_connection_error_reason(stdout: str, stderr: str) -> str | None:
-    """
-    Detects common Kubernetes connection error patterns in command output.
+    """Detects common Kubernetes connection error patterns in command output.
 
     Args:
         stdout: 표준 출력
@@ -72,6 +70,7 @@ def _get_connection_error_reason(stdout: str, stderr: str) -> str | None:
 
     Returns:
         감지된 경우 오류 메시지, 없으면 None
+
     """
     combined = f"{stdout}\n{stderr}".lower()
     for keyword in _CONNECTION_ERROR_KEYWORDS:
@@ -96,8 +95,7 @@ def deploy_helm_app(
     operator: str | None = None,
     progress_tracker: Any = None,
 ) -> bool:
-    """
-    Helm 앱 배포 (install/upgrade).
+    """Helm 앱 배포 (install/upgrade).
 
     Args:
         app_name: 앱 이름
@@ -116,6 +114,7 @@ def deploy_helm_app(
 
     Returns:
         성공 여부
+
     """
     console = output.get_console()
     # Progress tracking setup
@@ -152,38 +151,37 @@ def deploy_helm_app(
     if build_path.exists() and build_path.is_dir():
         chart_path = build_path
         console.print(f"  Using built chart: {chart_path}")
+    # 2. build 없으면 원본 차트 사용
+    elif app.is_remote_chart():
+        # Remote chart: .sbkube/charts/ 디렉토리에서 찾기
+        chart_name = app.get_chart_name()
+        source_path = (
+            charts_dir / chart_name / chart_name
+        )  # .sbkube/charts/redis/redis
+
+        if not source_path.exists():
+            output.print_error(f"Chart not found: {source_path}")
+            output.print_warning("Run 'sbkube prepare' first")
+            return False
+        chart_path = source_path
     else:
-        # 2. build 없으면 원본 차트 사용
-        if app.is_remote_chart():
-            # Remote chart: .sbkube/charts/ 디렉토리에서 찾기
-            chart_name = app.get_chart_name()
-            source_path = (
-                charts_dir / chart_name / chart_name
-            )  # .sbkube/charts/redis/redis
-
-            if not source_path.exists():
-                output.print_error(f"Chart not found: {source_path}")
-                output.print_warning("Run 'sbkube prepare' first")
-                return False
-            chart_path = source_path
+        # Local chart: 상대 경로 또는 절대 경로
+        if app.chart.startswith("./"):
+            # 상대 경로: app_config_dir 기준
+            source_path = app_config_dir / app.chart[2:]  # "./" 제거
+        elif app.chart.startswith("/"):
+            # 절대 경로
+            source_path = Path(app.chart)
         else:
-            # Local chart: 상대 경로 또는 절대 경로
-            if app.chart.startswith("./"):
-                # 상대 경로: app_config_dir 기준
-                source_path = app_config_dir / app.chart[2:]  # "./" 제거
-            elif app.chart.startswith("/"):
-                # 절대 경로
-                source_path = Path(app.chart)
-            else:
-                # 그냥 chart 이름만 있는 경우: app_config_dir 기준
-                source_path = app_config_dir / app.chart
+            # 그냥 chart 이름만 있는 경우: app_config_dir 기준
+            source_path = app_config_dir / app.chart
 
-            if not source_path.exists():
-                output.print_error(f"Local chart not found: {source_path}")
-                return False
+        if not source_path.exists():
+            output.print_error(f"Local chart not found: {source_path}")
+            return False
 
-            chart_path = source_path
-            console.print(f"  Using local chart: {chart_path}")
+        chart_path = source_path
+        console.print(f"  Using local chart: {chart_path}")
 
     # Helm install/upgrade 명령어
     cmd = ["helm", "upgrade", release_name, str(chart_path), "--install"]
@@ -330,8 +328,7 @@ def deploy_yaml_app(
     sbkube_work_dir: Path | None = None,
     config_namespace: str | None = None,
 ) -> bool:
-    """
-    YAML 앱 배포 (kubectl apply).
+    """YAML 앱 배포 (kubectl apply).
 
     Args:
         app_name: 앱 이름
@@ -348,6 +345,7 @@ def deploy_yaml_app(
 
     Returns:
         성공 여부
+
     """
     # 순환 import 방지를 위해 함수 내부에서 import
     from sbkube.utils.path_resolver import expand_repo_variables
@@ -436,8 +434,7 @@ def deploy_action_app(
     dry_run: bool = False,
     config_namespace: str | None = None,
 ) -> bool:
-    """
-    Action 앱 배포 (커스텀 액션).
+    """Action 앱 배포 (커스텀 액션).
 
     Args:
         app_name: 앱 이름
@@ -452,6 +449,7 @@ def deploy_action_app(
 
     Returns:
         성공 여부
+
     """
     console = output.get_console()
     output.print(f"[cyan]🚀 Deploying Action app: {app_name}[/cyan]")
@@ -504,8 +502,7 @@ def deploy_exec_app(
     output: OutputManager,
     dry_run: bool = False,
 ) -> bool:
-    """
-    Exec 앱 실행 (커스텀 명령어).
+    """Exec 앱 실행 (커스텀 명령어).
 
     Args:
         app_name: 앱 이름
@@ -516,6 +513,7 @@ def deploy_exec_app(
 
     Returns:
         성공 여부
+
     """
     console = output.get_console()
     output.print(f"[cyan]🚀 Executing commands: {app_name}[/cyan]")
@@ -553,8 +551,7 @@ def deploy_kustomize_app(
     dry_run: bool = False,
     config_namespace: str | None = None,
 ) -> bool:
-    """
-    Kustomize 앱 배포 (kubectl apply -k).
+    """Kustomize 앱 배포 (kubectl apply -k).
 
     Args:
         app_name: 앱 이름
@@ -569,6 +566,7 @@ def deploy_kustomize_app(
 
     Returns:
         성공 여부
+
     """
     console = output.get_console()
     output.print(f"[cyan]🚀 Deploying Kustomize app: {app_name}[/cyan]")
@@ -615,8 +613,7 @@ def deploy_noop_app(
     output: OutputManager,
     dry_run: bool = False,
 ) -> bool:
-    """
-    Noop 앱 배포 (실제로는 아무것도 하지 않음).
+    """Noop 앱 배포 (실제로는 아무것도 하지 않음).
 
     Args:
         app_name: 앱 이름
@@ -628,6 +625,7 @@ def deploy_noop_app(
 
     Returns:
         항상 True (성공)
+
     """
     console = output.get_console()
     output.print(f"[cyan]🚀 Processing Noop app: {app_name}[/cyan]")
@@ -653,8 +651,7 @@ def deploy_hook_app(
     namespace: str | None = None,
     dry_run: bool = False,
 ) -> bool:
-    """
-    Hook 앱 배포 (Phase 4: Hook as First-class App).
+    """Hook 앱 배포 (Phase 4: Hook as First-class App).
 
     HookApp은 독립적인 리소스 관리 앱으로, Phase 2/3의 HookTask를 재사용합니다.
 
@@ -671,6 +668,7 @@ def deploy_hook_app(
 
     Returns:
         성공 여부
+
     """
     console = output.get_console()
     output.print(f"[cyan]🪝 Deploying Hook app: {app_name}[/cyan]")
@@ -757,8 +755,7 @@ def cmd(
     app_name: str | None,
     dry_run: bool,
 ):
-    """
-    SBKube deploy 명령어.
+    """SBKube deploy 명령어.
 
     애플리케이션을 Kubernetes 클러스터에 배포합니다:
     - helm 타입: Helm install/upgrade
@@ -910,7 +907,7 @@ def cmd(
                 }
 
                 # Phase 2: pre_deploy_tasks 우선 실행
-                if "pre_deploy_tasks" in app_hooks and app_hooks["pre_deploy_tasks"]:
+                if app_hooks.get("pre_deploy_tasks"):
                     if not hook_executor.execute_hook_tasks(
                         app_name=app_name_iter,
                         tasks=app_hooks["pre_deploy_tasks"],
@@ -1053,8 +1050,7 @@ def cmd(
 
                     # Phase 2: tasks (우선순위: tasks > manifests > commands)
                     if (
-                        "post_deploy_tasks" in app_hooks
-                        and app_hooks["post_deploy_tasks"]
+                        app_hooks.get("post_deploy_tasks")
                     ):
                         hook_executor.execute_hook_tasks(
                             app_name=app_name_iter,
@@ -1113,10 +1109,9 @@ def cmd(
             errors=None,  # OutputManager will use accumulated errors
         )
         raise click.Abort()
-    else:
-        output.finalize(
-            status="success",
-            summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
-            next_steps=["Verify deployment with: kubectl get pods"],
-            errors=[],
-        )
+    output.finalize(
+        status="success",
+        summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
+        next_steps=["Verify deployment with: kubectl get pods"],
+        errors=[],
+    )

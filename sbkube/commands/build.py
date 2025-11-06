@@ -1,5 +1,4 @@
-"""
-SBKube build 명령어.
+"""SBKube build 명령어.
 
 빌드 디렉토리 준비 + 커스터마이징:
 - Remote chart: charts/ → build/ 복사
@@ -30,8 +29,7 @@ def build_helm_app(
     output: OutputManager,
     dry_run: bool = False,
 ) -> bool:
-    """
-    Helm 앱 빌드 + 커스터마이징.
+    """Helm 앱 빌드 + 커스터마이징.
 
     Args:
         app_name: 앱 이름
@@ -45,6 +43,7 @@ def build_helm_app(
 
     Returns:
         성공 여부
+
     """
     output.print(f"[cyan]🔨 Building Helm app: {app_name}[/cyan]", level="info")
 
@@ -250,22 +249,21 @@ def build_helm_app(
                     output.print_warning(
                         f"    Remove target not found: {remove_pattern}"
                     )
-            else:
-                if remove_target.exists():
-                    if remove_target.is_dir():
-                        shutil.rmtree(remove_target)
-                        output.print(
-                            f"    ✓ Removed directory: {remove_pattern}", level="info"
-                        )
-                    elif remove_target.is_file():
-                        remove_target.unlink()
-                        output.print(
-                            f"    ✓ Removed file: {remove_pattern}", level="info"
-                        )
-                else:
-                    output.print_warning(
-                        f"    Remove target not found: {remove_pattern}"
+            elif remove_target.exists():
+                if remove_target.is_dir():
+                    shutil.rmtree(remove_target)
+                    output.print(
+                        f"    ✓ Removed directory: {remove_pattern}", level="info"
                     )
+                elif remove_target.is_file():
+                    remove_target.unlink()
+                    output.print(
+                        f"    ✓ Removed file: {remove_pattern}", level="info"
+                    )
+            else:
+                output.print_warning(
+                    f"    Remove target not found: {remove_pattern}"
+                )
 
     output.print_success(f"Helm app built: {app_name}")
     return True
@@ -280,8 +278,7 @@ def build_http_app(
     output: OutputManager,
     dry_run: bool = False,
 ) -> bool:
-    """
-    HTTP 앱 빌드 (다운로드된 파일을 build/로 복사).
+    """HTTP 앱 빌드 (다운로드된 파일을 build/로 복사).
 
     Args:
         app_name: 앱 이름
@@ -294,6 +291,7 @@ def build_http_app(
 
     Returns:
         성공 여부
+
     """
     output.print(f"[cyan]🔨 Building HTTP app: {app_name}[/cyan]", level="info")
 
@@ -365,8 +363,7 @@ def cmd(
     app_name: str | None,
     dry_run: bool,
 ):
-    """
-    SBKube build 명령어.
+    """SBKube build 명령어.
 
     빌드 디렉토리 준비 및 커스터마이징:
     - Remote chart를 charts/에서 build/로 복사
@@ -596,13 +593,12 @@ def cmd(
             errors=["Some apps failed to build"],
         )
         raise click.Abort()
-    else:
-        output.print(
-            "\n[bold green]🎉 All app groups built successfully![/bold green]",
-            level="success",
-        )
-        output.finalize(
-            status="success",
-            summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
-            next_steps=["Run 'sbkube deploy' to deploy to cluster"],
-        )
+    output.print(
+        "\n[bold green]🎉 All app groups built successfully![/bold green]",
+        level="success",
+    )
+    output.finalize(
+        status="success",
+        summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
+        next_steps=["Run 'sbkube deploy' to deploy to cluster"],
+    )

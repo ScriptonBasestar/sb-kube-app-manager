@@ -1,5 +1,4 @@
-"""
-SBKube v0.3.0 설정 모델 테스트.
+"""SBKube v0.3.0 설정 모델 테스트.
 """
 
 import pytest
@@ -221,7 +220,7 @@ class TestSBKubeConfig:
         assert "backend" in yaml_apps
 
     def test_deps_field_parsing(self):
-        """deps 필드 파싱 검증 (v0.4.10+)."""
+        """Deps 필드 파싱 검증 (v0.4.10+)."""
         config = SBKubeConfig(
             namespace="harbor",
             deps=["a000_infra_network", "a101_data_rdb", "a100_data_memory"],
@@ -238,7 +237,7 @@ class TestSBKubeConfig:
         assert "a100_data_memory" in config.deps
 
     def test_deps_field_optional(self):
-        """deps 필드가 없어도 정상 동작 (후방 호환성)."""
+        """Deps 필드가 없어도 정상 동작 (후방 호환성)."""
         config = SBKubeConfig(
             namespace="production",
             apps={

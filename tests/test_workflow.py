@@ -1,5 +1,4 @@
-"""
-SBKube v0.3.0 통합 워크플로우 테스트.
+"""SBKube v0.3.0 통합 워크플로우 테스트.
 
 prepare → build → template → deploy 전체 워크플로우를 검증합니다.
 """
@@ -14,8 +13,7 @@ class TestWorkflowV3:
     """v0.3.0 워크플로우 통합 테스트."""
 
     def test_full_workflow_with_overrides(self, tmp_path):
-        """
-        전체 워크플로우 테스트: prepare → build → (deploy 제외).
+        """전체 워크플로우 테스트: prepare → build → (deploy 제외).
 
         overrides가 올바르게 적용되는지 검증합니다.
         """
@@ -98,8 +96,7 @@ class TestWorkflowV3:
         assert (mock_chart_dir / "README.md").exists()
 
     def test_config_v3_dependency_resolution(self, tmp_path):
-        """
-        의존성 해결 테스트.
+        """의존성 해결 테스트.
 
         depends_on 필드가 올바르게 처리되는지 검증합니다.
         """
@@ -141,8 +138,7 @@ class TestWorkflowV3:
         )
 
     def test_local_chart_workflow(self, tmp_path):
-        """
-        로컬 차트 워크플로우 테스트.
+        """로컬 차트 워크플로우 테스트.
 
         로컬 차트도 overrides/removes가 올바르게 적용되는지 검증합니다.
         """
@@ -196,8 +192,7 @@ class TestWorkflowV3:
         assert (local_chart_dir / "LICENSE").exists()
 
     def test_http_app_workflow(self, tmp_path):
-        """
-        HttpApp 워크플로우 테스트.
+        """HttpApp 워크플로우 테스트.
 
         HTTP 다운로드 → build 단계를 검증합니다.
         """

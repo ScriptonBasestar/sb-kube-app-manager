@@ -1,5 +1,4 @@
-"""
-Phase 3 Models 검증 테스트.
+"""Phase 3 Models 검증 테스트.
 
 ValidationRule, DependencyConfig, RollbackPolicy 모델 및
 HookTask에 통합된 Phase 3 필드 테스트.

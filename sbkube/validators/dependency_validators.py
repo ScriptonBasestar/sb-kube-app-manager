@@ -1,5 +1,4 @@
-"""
-Helm 차트 및 의존성 검증기 모듈
+"""Helm 차트 및 의존성 검증기 모듈
 
 Helm 차트 유효성, values 파일 정합성, 의존성 해결 가능성을 검증합니다.
 네트워크 연결성 및 외부 의존성도 함께 검증하여 안전한 배포를 보장합니다.
@@ -89,7 +88,7 @@ class HelmChartValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["helm-charts", "templates"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -98,21 +97,20 @@ class HelmChartValidator(ValidationCheck):
                 recommendation="권장사항을 검토하여 차트 품질을 개선해보세요.",
                 risk_level="medium",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="모든 Helm 차트가 유효합니다",
-                details="차트 구조, 템플릿, 의존성이 모두 정상적으로 확인되었습니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="모든 Helm 차트가 유효합니다",
+            details="차트 구조, 템플릿, 의존성이 모두 정상적으로 확인되었습니다.",
+            risk_level="low",
+        )
 
     async def _check_helm_installation(self) -> str | None:
         """Helm 설치 상태 확인"""
         try:
             result = subprocess.run(
                 ["helm", "version", "--short"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -183,7 +181,7 @@ class HelmChartValidator(ValidationCheck):
     async def _validate_install_helm_chart(
         self, app_name: str, specs: dict[str, Any], context: ValidationContext
     ) -> list[str]:
-        """helm 타입 차트 검증"""
+        """Helm 타입 차트 검증"""
         issues = []
         base_path = Path(context.base_dir)
 
@@ -241,7 +239,7 @@ class HelmChartValidator(ValidationCheck):
     async def _validate_pull_helm_chart(
         self, app_name: str, specs: dict[str, Any], context: ValidationContext
     ) -> list[str]:
-        """helm 타입 차트 검증"""
+        """Helm 타입 차트 검증"""
         issues = []
 
         # 필수 필드 확인
@@ -372,7 +370,7 @@ class HelmChartValidator(ValidationCheck):
     async def _validate_values_file(
         self, app_name: str, values_path: Path
     ) -> list[str]:
-        """values 파일 검증"""
+        """Values 파일 검증"""
         issues = []
 
         try:
@@ -399,7 +397,7 @@ class HelmChartValidator(ValidationCheck):
     async def _test_helm_template(
         self, app_name: str, chart_path: Path, specs: dict[str, Any], base_path: Path
     ) -> list[str]:
-        """helm template 명령어로 렌더링 테스트"""
+        """Helm template 명령어로 렌더링 테스트"""
         issues = []
 
         try:
@@ -415,7 +413,7 @@ class HelmChartValidator(ValidationCheck):
             # 임시 네임스페이스 사용
             cmd.extend(["--namespace", "validation-test"])
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
                 error_msg = result.stderr.strip()
@@ -507,7 +505,7 @@ class HelmChartValidator(ValidationCheck):
             if version:
                 cmd.extend(["--version", version])
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=15)
 
             if result.returncode != 0:
                 issues.append(
@@ -540,7 +538,7 @@ class ValuesCompatibilityValidator(ValidationCheck):
         )
 
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """values 파일과 차트 호환성을 검증합니다"""
+        """Values 파일과 차트 호환성을 검증합니다"""
         issues = []
         warnings = []
 
@@ -578,7 +576,7 @@ class ValuesCompatibilityValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["values-files", "chart-templates"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -587,14 +585,13 @@ class ValuesCompatibilityValidator(ValidationCheck):
                 recommendation="권장사항을 검토하여 values 설정을 개선해보세요.",
                 risk_level="medium",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="모든 values 파일이 호환됩니다",
-                details="values 파일과 차트 템플릿 간의 호환성이 정상적으로 확인되었습니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="모든 values 파일이 호환됩니다",
+            details="values 파일과 차트 템플릿 간의 호환성이 정상적으로 확인되었습니다.",
+            risk_level="low",
+        )
 
     async def _find_helm_apps(
         self, context: ValidationContext
@@ -703,7 +700,7 @@ class ValuesCompatibilityValidator(ValidationCheck):
         default_values: dict[str, Any],
         custom_values: dict[str, Any],
     ) -> list[str]:
-        """values 구조 호환성 확인"""
+        """Values 구조 호환성 확인"""
         issues = []
 
         if not isinstance(custom_values, dict):
@@ -735,7 +732,7 @@ class ValuesCompatibilityValidator(ValidationCheck):
     async def _test_values_with_templates(
         self, app_name: str, chart_path: Path, values_path: Path
     ) -> list[str]:
-        """values 파일로 템플릿 렌더링 테스트"""
+        """Values 파일로 템플릿 렌더링 테스트"""
         issues = []
 
         try:
@@ -749,7 +746,7 @@ class ValuesCompatibilityValidator(ValidationCheck):
                 "validation-test",
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=30)
 
             if result.returncode != 0:
                 error_msg = result.stderr.strip()
@@ -818,7 +815,7 @@ class DependencyResolutionValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["chart-dependencies", "repositories"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -827,14 +824,13 @@ class DependencyResolutionValidator(ValidationCheck):
                 recommendation="권장사항을 검토하여 의존성 관리를 개선해보세요.",
                 risk_level="medium",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="모든 차트 의존성이 해결 가능합니다",
-                details="차트 의존성이 정상적으로 해결되며 배포에 문제가 없습니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="모든 차트 의존성이 해결 가능합니다",
+            details="차트 의존성이 정상적으로 해결되며 배포에 문제가 없습니다.",
+            risk_level="low",
+        )
 
     async def _find_helm_apps(
         self, context: ValidationContext
@@ -973,7 +969,7 @@ class DependencyResolutionValidator(ValidationCheck):
     async def _test_dependency_update(
         self, app_name: str, chart_path: Path
     ) -> list[str]:
-        """helm dependency update 시뮬레이션"""
+        """Helm dependency update 시뮬레이션"""
         issues = []
 
         try:
@@ -996,7 +992,7 @@ class DependencyResolutionValidator(ValidationCheck):
                     # helm dependency update 실행
                     result = subprocess.run(
                         ["helm", "dependency", "update", str(temp_chart_path)],
-                        capture_output=True,
+                        check=False, capture_output=True,
                         text=True,
                         timeout=60,
                     )
@@ -1068,7 +1064,7 @@ class NetworkConnectivityValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["external-repositories", "network"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -1077,14 +1073,13 @@ class NetworkConnectivityValidator(ValidationCheck):
                 recommendation="권장사항을 검토하여 네트워크 안정성을 개선해보세요.",
                 risk_level="medium",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="모든 외부 저장소 연결이 정상입니다",
-                details="설정된 모든 외부 저장소와 서비스에 정상적으로 연결됩니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="모든 외부 저장소 연결이 정상입니다",
+            details="설정된 모든 외부 저장소와 서비스에 정상적으로 연결됩니다.",
+            risk_level="low",
+        )
 
     async def _get_configured_repositories(
         self, context: ValidationContext

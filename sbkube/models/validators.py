@@ -1,5 +1,4 @@
-"""
-Custom validators for configuration schema validation.
+"""Custom validators for configuration schema validation.
 
 This module provides reusable validators for Pydantic models
 to ensure configuration data integrity and consistency.
@@ -129,8 +128,7 @@ class ValidatorMixin:
 
 
 def validate_spec_fields(app_type: str, specs: dict[str, Any]) -> dict[str, Any]:
-    """
-    Validate that required fields are present in specs based on app type.
+    """Validate that required fields are present in specs based on app type.
 
     This function checks for required fields specific to each application type.
     """
@@ -159,8 +157,7 @@ def validate_spec_fields(app_type: str, specs: dict[str, Any]) -> dict[str, Any]
 
 
 def validate_cross_field_dependencies(data: dict[str, Any]) -> dict[str, Any]:
-    """
-    Validate cross-field dependencies in configuration.
+    """Validate cross-field dependencies in configuration.
 
     For example:
     - If release_name is specified, namespace should also be specified

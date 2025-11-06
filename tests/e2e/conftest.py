@@ -1,5 +1,4 @@
-"""
-E2E test fixtures and utilities.
+"""E2E test fixtures and utilities.
 
 This module provides fixtures and helper functions for E2E tests
 that use actual examples/ directory files.
@@ -18,29 +17,28 @@ from sbkube.cli import main
 
 @pytest.fixture
 def examples_dir() -> Path:
-    """
-    Return the examples directory path.
+    """Return the examples directory path.
 
     Returns:
         Path: Path to examples/ directory
+
     """
     return Path("examples")
 
 
 @pytest.fixture
 def runner() -> CliRunner:
-    """
-    Provide a Click CLI test runner.
+    """Provide a Click CLI test runner.
 
     Returns:
         CliRunner: Click test runner instance
+
     """
     return CliRunner()
 
 
 def verify_example_exists(example_path: Path, required_files: list[str] | None = None):
-    """
-    Verify that an example directory exists and contains required files.
+    """Verify that an example directory exists and contains required files.
 
     Args:
         example_path: Path to the example directory
@@ -48,6 +46,7 @@ def verify_example_exists(example_path: Path, required_files: list[str] | None =
 
     Raises:
         AssertionError: If directory or required files don't exist
+
     """
     if required_files is None:
         required_files = ["config.yaml"]
@@ -71,8 +70,7 @@ def run_sbkube_command(
     expected_exit_code: int = 0,
     debug_info: dict | None = None,
 ) -> "click.testing.Result":
-    """
-    Run sbkube command and verify exit code with detailed error reporting.
+    """Run sbkube command and verify exit code with detailed error reporting.
 
     Args:
         runner: Click test runner
@@ -85,6 +83,7 @@ def run_sbkube_command(
 
     Raises:
         AssertionError: If exit code doesn't match expected value
+
     """
     result = runner.invoke(main, command_args)
 
@@ -126,19 +125,18 @@ def run_sbkube_command(
 
 @pytest.fixture
 def verify_charts_downloaded(tmp_path: Path):
-    """
-    Fixture that returns a function to verify charts were downloaded.
+    """Fixture that returns a function to verify charts were downloaded.
 
     Args:
         tmp_path: Temporary directory path
 
     Returns:
         Callable: Function that verifies chart existence
+
     """
 
     def _verify(chart_name: str, base_dir: Path | None = None):
-        """
-        Verify that a Helm chart was downloaded.
+        """Verify that a Helm chart was downloaded.
 
         Args:
             chart_name: Name of the chart
@@ -146,6 +144,7 @@ def verify_charts_downloaded(tmp_path: Path):
 
         Raises:
             AssertionError: If chart directory doesn't exist
+
         """
         if base_dir is None:
             base_dir = tmp_path
@@ -166,19 +165,18 @@ def verify_charts_downloaded(tmp_path: Path):
 
 @pytest.fixture
 def verify_build_output(tmp_path: Path):
-    """
-    Fixture that returns a function to verify build output.
+    """Fixture that returns a function to verify build output.
 
     Args:
         tmp_path: Temporary directory path
 
     Returns:
         Callable: Function that verifies build output
+
     """
 
     def _verify(app_name: str, app_dir: Path):
-        """
-        Verify that build output exists.
+        """Verify that build output exists.
 
         Args:
             app_name: Name of the application
@@ -186,6 +184,7 @@ def verify_build_output(tmp_path: Path):
 
         Raises:
             AssertionError: If build output doesn't exist
+
         """
         build_dir = app_dir / "build" / app_name
         assert build_dir.exists(), f"Build directory not found: {build_dir}"
@@ -196,16 +195,15 @@ def verify_build_output(tmp_path: Path):
 
 @pytest.fixture
 def list_directory_contents():
-    """
-    Fixture that returns a function to list directory contents for debugging.
+    """Fixture that returns a function to list directory contents for debugging.
 
     Returns:
         Callable: Function that returns directory listing
+
     """
 
     def _list(directory: Path, pattern: str = "**/*") -> list[str]:
-        """
-        List all files in a directory matching pattern.
+        """List all files in a directory matching pattern.
 
         Args:
             directory: Directory to list
@@ -213,6 +211,7 @@ def list_directory_contents():
 
         Returns:
             List[str]: List of file paths relative to directory
+
         """
         if not directory.exists():
             return [f"Directory does not exist: {directory}"]
@@ -237,36 +236,36 @@ def list_directory_contents():
 
 @pytest.fixture(scope="session")
 def helm_available() -> bool:
-    """
-    Check if helm is available in PATH.
+    """Check if helm is available in PATH.
 
     Returns:
         bool: True if helm is available, False otherwise
+
     """
     return shutil.which("helm") is not None
 
 
 @pytest.fixture(scope="session")
 def kubectl_available() -> bool:
-    """
-    Check if kubectl is available in PATH.
+    """Check if kubectl is available in PATH.
 
     Returns:
         bool: True if kubectl is available, False otherwise
+
     """
     return shutil.which("kubectl") is not None
 
 
 @pytest.fixture(scope="session")
 def helm_version(helm_available) -> str | None:
-    """
-    Get helm version if available.
+    """Get helm version if available.
 
     Args:
         helm_available: Helm availability fixture
 
     Returns:
         str | None: Helm version string or None if not available
+
     """
     if not helm_available:
         return None
@@ -285,8 +284,7 @@ def helm_version(helm_available) -> str | None:
 
 @pytest.fixture(autouse=True, scope="function")
 def skip_if_helm_unavailable(request, helm_available):
-    """
-    Auto-skip tests marked with requires_helm if helm is not available.
+    """Auto-skip tests marked with requires_helm if helm is not available.
 
     This fixture runs automatically for all E2E tests and checks if the test
     requires helm. If helm is not available, the test is skipped with a clear message.
@@ -294,6 +292,7 @@ def skip_if_helm_unavailable(request, helm_available):
     Args:
         request: pytest request object
         helm_available: Helm availability fixture
+
     """
     if request.node.get_closest_marker("requires_helm"):
         if not helm_available:
@@ -319,8 +318,7 @@ def is_k8s_cluster_reachable():
 
 @pytest.fixture(autouse=True, scope="function")
 def skip_if_k8s_unavailable(request, kubectl_available):
-    """
-    Auto-skip tests marked with requires_k8s if kubectl is not available or cluster is unreachable.
+    """Auto-skip tests marked with requires_k8s if kubectl is not available or cluster is unreachable.
 
     This fixture runs automatically for all E2E tests and checks if the test
     requires kubectl and a reachable cluster. If either is not available, the test is skipped.
@@ -328,6 +326,7 @@ def skip_if_k8s_unavailable(request, kubectl_available):
     Args:
         request: pytest request object
         kubectl_available: kubectl availability fixture
+
     """
     if request.node.get_closest_marker("requires_k8s"):
         if not kubectl_available:

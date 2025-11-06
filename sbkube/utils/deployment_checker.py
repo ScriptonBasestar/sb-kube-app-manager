@@ -6,11 +6,11 @@ from sbkube.state.database import DeploymentDatabase, DeploymentStatus
 
 
 def get_current_cluster() -> str:
-    """
-    Get current cluster from kubectl context.
+    """Get current cluster from kubectl context.
 
     Returns:
         str: Current cluster name, or "unknown" if not available
+
     """
     import subprocess
 
@@ -31,8 +31,7 @@ def get_current_cluster() -> str:
 
 
 class DeploymentChecker:
-    """
-    Utility class for checking deployment status of app-groups.
+    """Utility class for checking deployment status of app-groups.
 
     This class provides methods to validate whether app-groups are deployed
     in the cluster, which is useful for dependency validation.
@@ -44,13 +43,13 @@ class DeploymentChecker:
         cluster: str | None = None,
         namespace: str | None = None,
     ):
-        """
-        Initialize DeploymentChecker.
+        """Initialize DeploymentChecker.
 
         Args:
             base_dir: Base directory containing app-group directories
             cluster: Kubernetes cluster name (defaults to current context)
             namespace: Kubernetes namespace (optional, can be per-app-group)
+
         """
         self.base_dir = Path(base_dir)
         self.cluster = cluster or get_current_cluster()
@@ -60,8 +59,7 @@ class DeploymentChecker:
     def check_app_group_deployed(
         self, app_config_dir: str, namespace: str | None = None
     ) -> tuple[bool, str]:
-        """
-        Check if an app-group is successfully deployed.
+        """Check if an app-group is successfully deployed.
 
         If namespace is not provided, automatically detects the namespace
         from deployment history. This allows dependencies to be in different
@@ -75,6 +73,7 @@ class DeploymentChecker:
             tuple[bool, str]: (is_deployed, status_message)
                 - is_deployed: True if successfully deployed, False otherwise
                 - status_message: Human-readable status description with namespace info
+
         """
         # Resolve full path to app-group directory
         app_dir_path = str((self.base_dir / app_config_dir).resolve())
@@ -119,8 +118,7 @@ class DeploymentChecker:
         return True, f"deployed at {latest.timestamp} in namespace '{deployed_ns}'"
 
     def check_dependencies(self, deps: list[str], namespace: str | None = None) -> dict:
-        """
-        Check deployment status of multiple dependencies.
+        """Check deployment status of multiple dependencies.
 
         Args:
             deps: List of app-group directory names
@@ -131,6 +129,7 @@ class DeploymentChecker:
                 - "all_deployed" (bool): True if all deps are deployed
                 - "missing" (list[str]): List of undeployed dep names
                 - "details" (dict[str, tuple[bool, str]]): Per-dep status details
+
         """
         details = {}
         missing = []
@@ -150,8 +149,7 @@ class DeploymentChecker:
     def get_deployment_info(
         self, app_config_dir: str, namespace: str | None = None
     ) -> dict | None:
-        """
-        Get detailed deployment information for an app-group.
+        """Get detailed deployment information for an app-group.
 
         Args:
             app_config_dir: App-group directory name
@@ -159,6 +157,7 @@ class DeploymentChecker:
 
         Returns:
             Optional[dict]: Deployment details or None if not found
+
         """
         app_dir_path = str((self.base_dir / app_config_dir).resolve())
         ns = namespace or self.namespace or "default"

@@ -1,5 +1,4 @@
-"""
-Hooks 통합 테스트.
+"""Hooks 통합 테스트.
 
 실제 명령어(prepare, build, deploy, template, apply)에서 hooks가 올바르게 작동하는지 검증:
 - 글로벌 훅 실행
@@ -111,7 +110,7 @@ helm_repos:
 
 
 def test_prepare_with_hooks_dry_run(tmp_project):
-    """prepare 명령어 hooks (dry-run 모드) 테스트."""
+    """Prepare 명령어 hooks (dry-run 모드) 테스트."""
     project_dir, config_dir = tmp_project
 
     runner = CliRunner()
@@ -133,7 +132,7 @@ def test_prepare_with_hooks_dry_run(tmp_project):
 
 
 def test_deploy_with_hooks_dry_run(tmp_project):
-    """deploy 명령어 hooks (dry-run 모드) 테스트."""
+    """Deploy 명령어 hooks (dry-run 모드) 테스트."""
     project_dir, config_dir = tmp_project
 
     runner = CliRunner()
@@ -154,7 +153,7 @@ def test_deploy_with_hooks_dry_run(tmp_project):
 
 
 def test_template_with_hooks_dry_run(tmp_project):
-    """template 명령어 hooks (dry-run 모드) 테스트."""
+    """Template 명령어 hooks (dry-run 모드) 테스트."""
     project_dir, config_dir = tmp_project
 
     runner = CliRunner()
@@ -175,7 +174,7 @@ def test_template_with_hooks_dry_run(tmp_project):
 
 
 def test_apply_with_hooks_dry_run(tmp_project):
-    """apply 명령어 hooks (dry-run 모드) 테스트."""
+    """Apply 명령어 hooks (dry-run 모드) 테스트."""
     project_dir, config_dir = tmp_project
 
     runner = CliRunner()

@@ -1,5 +1,4 @@
-"""
-Kubernetes 환경 종합 검증기 모듈
+"""Kubernetes 환경 종합 검증기 모듈
 
 Kubernetes 클러스터 환경, 권한, 리소스 가용성을 종합적으로 검증합니다.
 배포 전 환경 적합성을 사전 점검하여 안전한 배포를 보장합니다.
@@ -64,7 +63,7 @@ class ClusterResourceValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["cluster", "nodes", "storage"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -73,14 +72,13 @@ class ClusterResourceValidator(ValidationCheck):
                 recommendation="권장사항을 검토하여 클러스터 안정성을 개선해보세요.",
                 risk_level="medium",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="클러스터 리소스가 충분합니다",
-                details="CPU, 메모리, 스토리지 모든 리소스가 배포 요구사항을 충족합니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="클러스터 리소스가 충분합니다",
+            details="CPU, 메모리, 스토리지 모든 리소스가 배포 요구사항을 충족합니다.",
+            risk_level="low",
+        )
 
     async def _check_node_resources(self) -> list[str]:
         """노드 리소스 상태 확인"""
@@ -90,7 +88,7 @@ class ClusterResourceValidator(ValidationCheck):
             # 노드 목록 및 상태 확인
             result = subprocess.run(
                 ["kubectl", "get", "nodes", "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=15,
             )
@@ -194,7 +192,7 @@ class ClusterResourceValidator(ValidationCheck):
                 # 리소스 쿼터 확인
                 result = subprocess.run(
                     ["kubectl", "get", "resourcequota", "-n", namespace, "-o", "json"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=10,
                 )
@@ -244,7 +242,7 @@ class ClusterResourceValidator(ValidationCheck):
         try:
             result = subprocess.run(
                 ["kubectl", "get", "storageclass", "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -286,10 +284,9 @@ class ClusterResourceValidator(ValidationCheck):
 
         if cpu_str.endswith("m"):
             return float(cpu_str[:-1]) / 1000.0
-        elif cpu_str.endswith("n"):
+        if cpu_str.endswith("n"):
             return float(cpu_str[:-1]) / 1000000000.0
-        else:
-            return float(cpu_str)
+        return float(cpu_str)
 
     def _parse_memory_resource(self, memory_str: str) -> int:
         """메모리 리소스 문자열을 바이트로 변환"""
@@ -361,7 +358,7 @@ class NamespacePermissionValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["namespace", "rbac", "serviceaccount"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -370,14 +367,13 @@ class NamespacePermissionValidator(ValidationCheck):
                 recommendation="권장사항을 검토하여 보안 설정을 개선해보세요.",
                 risk_level="medium",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="네임스페이스 권한이 적절합니다",
-                details="모든 필수 권한이 확인되었으며 배포 가능한 상태입니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="네임스페이스 권한이 적절합니다",
+            details="모든 필수 권한이 확인되었으며 배포 가능한 상태입니다.",
+            risk_level="low",
+        )
 
     async def _get_target_namespace(self, context: ValidationContext) -> str:
         """대상 네임스페이스 추출"""
@@ -402,7 +398,7 @@ class NamespacePermissionValidator(ValidationCheck):
             # 네임스페이스 존재 확인
             result = subprocess.run(
                 ["kubectl", "get", "namespace", namespace],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -411,7 +407,7 @@ class NamespacePermissionValidator(ValidationCheck):
                 # 네임스페이스가 없는 경우 생성 권한 확인
                 create_result = subprocess.run(
                     ["kubectl", "auth", "can-i", "create", "namespaces"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=5,
                 )
@@ -430,7 +426,7 @@ class NamespacePermissionValidator(ValidationCheck):
             # 네임스페이스 내 리소스 목록 권한 확인
             result = subprocess.run(
                 ["kubectl", "get", "pods", "-n", namespace, "--no-headers"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -468,7 +464,7 @@ class NamespacePermissionValidator(ValidationCheck):
             try:
                 result = subprocess.run(
                     ["kubectl", "auth", "can-i", action, resource, "-n", namespace],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=5,
                 )
@@ -492,7 +488,7 @@ class NamespacePermissionValidator(ValidationCheck):
         try:
             result = subprocess.run(
                 ["kubectl", "get", "serviceaccount", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -554,7 +550,7 @@ class NetworkPolicyValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["network", "dns", "registry"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -563,14 +559,13 @@ class NetworkPolicyValidator(ValidationCheck):
                 recommendation="권장사항을 검토하여 네트워크 보안과 성능을 개선해보세요.",
                 risk_level="medium",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="네트워크 설정이 적절합니다",
-                details="모든 필수 네트워크 연결이 정상이며 배포에 문제가 없습니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="네트워크 설정이 적절합니다",
+            details="모든 필수 네트워크 연결이 정상이며 배포에 문제가 없습니다.",
+            risk_level="low",
+        )
 
     async def _test_network_connectivity(self) -> list[str]:
         """네트워크 연결성 테스트"""
@@ -601,9 +596,9 @@ class NetworkPolicyValidator(ValidationCheck):
             except requests.exceptions.Timeout:
                 issues.append(f"{name} 연결 시간 초과 (>{timeout}초)")
             except requests.exceptions.ConnectionError as e:
-                issues.append(f"{name} 연결 실패: {str(e)}")
+                issues.append(f"{name} 연결 실패: {e!s}")
             except requests.exceptions.RequestException as e:
-                issues.append(f"{name} 요청 실패: {str(e)}")
+                issues.append(f"{name} 요청 실패: {e!s}")
 
         return issues
 
@@ -616,7 +611,7 @@ class NetworkPolicyValidator(ValidationCheck):
 
             result = subprocess.run(
                 ["kubectl", "get", "networkpolicy", "-n", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -667,7 +662,7 @@ class NetworkPolicyValidator(ValidationCheck):
                     "-o",
                     "json",
                 ],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -765,7 +760,7 @@ class SecurityContextValidator(ValidationCheck):
                 risk_level="high",
                 affected_components=["rbac", "security-policy", "pod-security"],
             )
-        elif warnings:
+        if warnings:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.MEDIUM,
@@ -774,14 +769,13 @@ class SecurityContextValidator(ValidationCheck):
                 recommendation="권장사항을 검토하여 보안 수준을 강화해보세요.",
                 risk_level="medium",
             )
-        else:
-            return self.create_validation_result(
-                level=DiagnosticLevel.SUCCESS,
-                severity=ValidationSeverity.INFO,
-                message="보안 설정이 적절합니다",
-                details="RBAC 및 보안 정책이 올바르게 구성되어 있습니다.",
-                risk_level="low",
-            )
+        return self.create_validation_result(
+            level=DiagnosticLevel.SUCCESS,
+            severity=ValidationSeverity.INFO,
+            message="보안 설정이 적절합니다",
+            details="RBAC 및 보안 정책이 올바르게 구성되어 있습니다.",
+            risk_level="low",
+        )
 
     async def _check_rbac_configuration(self) -> list[str]:
         """RBAC 설정 확인"""
@@ -791,7 +785,7 @@ class SecurityContextValidator(ValidationCheck):
             # RBAC가 활성화되어 있는지 확인
             result = subprocess.run(
                 ["kubectl", "auth", "can-i", "create", "clusterroles"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=5,
             )
@@ -801,7 +795,7 @@ class SecurityContextValidator(ValidationCheck):
             # 현재 사용자의 권한 확인
             result = subprocess.run(
                 ["kubectl", "auth", "can-i", "--list"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -832,7 +826,7 @@ class SecurityContextValidator(ValidationCheck):
             # 네임스페이스 레이블 확인
             result = subprocess.run(
                 ["kubectl", "get", "namespace", namespace, "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -875,7 +869,7 @@ class SecurityContextValidator(ValidationCheck):
             # Pod Security Policy 확인 (deprecated이지만 여전히 사용될 수 있음)
             result = subprocess.run(
                 ["kubectl", "get", "podsecuritypolicy", "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -892,7 +886,7 @@ class SecurityContextValidator(ValidationCheck):
             # Security Context Constraints 확인 (OpenShift)
             result = subprocess.run(
                 ["kubectl", "get", "securitycontextconstraints", "-o", "json"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=5,
             )

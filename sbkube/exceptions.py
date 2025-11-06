@@ -1,5 +1,4 @@
-"""
-Standardized exception hierarchy for sbkube.
+"""Standardized exception hierarchy for sbkube.
 
 This module provides a comprehensive exception hierarchy to ensure consistent
 error handling across the entire application.
@@ -33,7 +32,6 @@ class SbkubeError(Exception):
 class ConfigurationError(SbkubeError):
     """Base class for configuration-related errors."""
 
-    pass
 
 
 class ConfigFileNotFoundError(ConfigurationError):
@@ -76,7 +74,6 @@ class SchemaValidationError(ConfigurationError):
 class ToolError(SbkubeError):
     """Base class for external tool-related errors."""
 
-    pass
 
 
 class CliToolNotFoundError(ToolError):
@@ -150,7 +147,6 @@ class CliToolVersionError(ToolError):
 class KubernetesError(SbkubeError):
     """Base class for Kubernetes-related errors."""
 
-    pass
 
 
 class KubernetesConnectionError(KubernetesError):
@@ -216,7 +212,6 @@ class KubernetesResourceError(KubernetesError):
 class HelmError(SbkubeError):
     """Base class for Helm-related errors."""
 
-    pass
 
 
 class HelmChartNotFoundError(HelmError):
@@ -282,7 +277,6 @@ class HelmInstallationError(HelmError):
 class GitError(SbkubeError):
     """Base class for Git-related errors."""
 
-    pass
 
 
 class GitRepositoryError(GitError):
@@ -315,7 +309,6 @@ class GitRepositoryError(GitError):
 class FileSystemError(SbkubeError):
     """Base class for file system-related errors."""
 
-    pass
 
 
 class FileOperationError(FileSystemError):
@@ -350,7 +343,6 @@ class DirectoryNotFoundError(FileSystemError):
 class SecurityError(SbkubeError):
     """Base class for security-related errors."""
 
-    pass
 
 
 class PathTraversalError(SecurityError):
@@ -369,7 +361,6 @@ class PathTraversalError(SecurityError):
 class ValidationError(SbkubeError):
     """Base class for validation errors."""
 
-    pass
 
 
 class InputValidationError(ValidationError):
@@ -389,7 +380,6 @@ class InputValidationError(ValidationError):
 class NetworkError(SbkubeError):
     """Base class for network-related errors."""
 
-    pass
 
 
 class DownloadError(NetworkError):
@@ -434,7 +424,6 @@ class RepositoryConnectionError(NetworkError):
 class StateError(SbkubeError):
     """Base class for state management errors."""
 
-    pass
 
 
 class StateCorruptionError(StateError):
@@ -452,18 +441,15 @@ class StateCorruptionError(StateError):
 class DeploymentError(SbkubeError):
     """Base class for deployment-related errors."""
 
-    pass
 
 
 class RollbackError(SbkubeError):
     """Base class for rollback-related errors."""
 
-    pass
 
 
 def handle_exception(exc: Exception, logger=None) -> int:
-    """
-    Centralized exception handler for sbkube.
+    """Centralized exception handler for sbkube.
 
     Args:
         exc: The exception to handle
@@ -471,6 +457,7 @@ def handle_exception(exc: Exception, logger=None) -> int:
 
     Returns:
         int: Exit code for the application
+
     """
     if isinstance(exc, SbkubeError):
         if logger:
@@ -480,24 +467,23 @@ def handle_exception(exc: Exception, logger=None) -> int:
         else:
             print(f"Error: {exc}", file=sys.stderr)
         return exc.exit_code
+    # Handle unexpected exceptions
+    if logger:
+        logger.error(f"Unexpected error: {exc}")
     else:
-        # Handle unexpected exceptions
-        if logger:
-            logger.error(f"Unexpected error: {exc}")
-        else:
-            print(f"Unexpected error: {exc}", file=sys.stderr)
-        return 1
+        print(f"Unexpected error: {exc}", file=sys.stderr)
+    return 1
 
 
 def format_error_with_suggestions(exc: SbkubeError) -> str:
-    """
-    Format error with helpful suggestions based on error type.
+    """Format error with helpful suggestions based on error type.
 
     Args:
         exc: The SbkubeError to format
 
     Returns:
         str: Formatted error message with suggestions
+
     """
     from sbkube.utils.error_suggestions import format_suggestions
 
@@ -510,38 +496,37 @@ def format_error_with_suggestions(exc: SbkubeError) -> str:
     if suggestions:
         # Use comprehensive suggestions from ERROR_GUIDE
         message += suggestions
-    else:
-        # Fallback to legacy inline suggestions for backward compatibility
-        if isinstance(exc, CliToolNotFoundError):
-            message += f"\n💡 Install {exc.tool_name}:"
-            if exc.suggested_install:
-                message += f"\n   {exc.suggested_install}"
-            else:
-                message += f"\n   Please check the official documentation for {exc.tool_name} installation"
+    # Fallback to legacy inline suggestions for backward compatibility
+    elif isinstance(exc, CliToolNotFoundError):
+        message += f"\n💡 Install {exc.tool_name}:"
+        if exc.suggested_install:
+            message += f"\n   {exc.suggested_install}"
+        else:
+            message += f"\n   Please check the official documentation for {exc.tool_name} installation"
 
-        elif isinstance(exc, ConfigFileNotFoundError):
-            message += f"\n💡 Expected configuration file at: {exc.file_path}"
-            if exc.searched_paths:
-                message += f"\n   Searched paths: {', '.join(exc.searched_paths)}"
-            message += "\n   Create the configuration file or check the path"
+    elif isinstance(exc, ConfigFileNotFoundError):
+        message += f"\n💡 Expected configuration file at: {exc.file_path}"
+        if exc.searched_paths:
+            message += f"\n   Searched paths: {', '.join(exc.searched_paths)}"
+        message += "\n   Create the configuration file or check the path"
 
-        elif isinstance(exc, KubernetesConnectionError):
-            message += "\n💡 Check your Kubernetes connection:"
-            message += "\n   kubectl config current-context"
-            message += "\n   kubectl cluster-info"
-            if exc.kubeconfig:
-                message += f"\n   Verify kubeconfig file: {exc.kubeconfig}"
+    elif isinstance(exc, KubernetesConnectionError):
+        message += "\n💡 Check your Kubernetes connection:"
+        message += "\n   kubectl config current-context"
+        message += "\n   kubectl cluster-info"
+        if exc.kubeconfig:
+            message += f"\n   Verify kubeconfig file: {exc.kubeconfig}"
 
-        elif isinstance(exc, HelmChartNotFoundError):
-            message += "\n💡 Check chart availability:"
-            message += "\n   helm search repo <chart_name>"
-            message += "\n   helm repo update"
-            if exc.repo:
-                message += f"\n   helm repo list (verify {exc.repo} is added)"
+    elif isinstance(exc, HelmChartNotFoundError):
+        message += "\n💡 Check chart availability:"
+        message += "\n   helm search repo <chart_name>"
+        message += "\n   helm repo update"
+        if exc.repo:
+            message += f"\n   helm repo list (verify {exc.repo} is added)"
 
-        elif isinstance(exc, GitRepositoryError):
-            message += "\n💡 Check repository access:"
-            message += f"\n   git ls-remote {exc.repository_url}"
-            message += "\n   Verify repository URL and credentials"
+    elif isinstance(exc, GitRepositoryError):
+        message += "\n💡 Check repository access:"
+        message += f"\n   git ls-remote {exc.repository_url}"
+        message += "\n   Verify repository URL and credentials"
 
     return message

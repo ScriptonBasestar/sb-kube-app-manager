@@ -1,5 +1,4 @@
-"""
-Deployment state tracking and rollback functionality.
+"""Deployment state tracking and rollback functionality.
 
 This package provides deployment state management capabilities including:
 - Tracking deployment operations

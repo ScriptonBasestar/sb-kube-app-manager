@@ -1,5 +1,4 @@
-"""
-SBKube 차트 커스터마이징 통합 테스트.
+"""SBKube 차트 커스터마이징 통합 테스트.
 
 overrides와 removes 기능의 실전 시나리오를 검증합니다.
 """
@@ -90,7 +89,7 @@ class TestChartCustomization:
         assert (build_dir / "grafana" / "templates" / "ingress.yaml").exists()
 
     def test_override_entire_templates_directory(self, tmp_path, output_manager):
-        """templates 디렉토리 전체를 교체하는 시나리오."""
+        """Templates 디렉토리 전체를 교체하는 시나리오."""
         # 원본 차트
         chart_dir = tmp_path / "charts" / "myapp" / "myapp"
         chart_dir.mkdir(parents=True)

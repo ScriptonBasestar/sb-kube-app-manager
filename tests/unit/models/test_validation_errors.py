@@ -1,5 +1,4 @@
-"""
-Tests for validation errors and edge cases.
+"""Tests for validation errors and edge cases.
 """
 
 import pytest

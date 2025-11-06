@@ -31,6 +31,7 @@ class ClusterCache:
             cache_dir: Directory for cache storage (.sbkube/cluster_status/)
             context: kubeconfig context name
             cluster: cluster identifier (from sources.yaml)
+
         """
         self.cache_dir = Path(cache_dir)
         self.context = context
@@ -47,6 +48,7 @@ class ClusterCache:
         Args:
             data: Cluster status data to cache
             ttl_seconds: Time to live in seconds (default: 300 = 5 minutes)
+
         """
         # Ensure cache directory exists
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -82,6 +84,7 @@ class ClusterCache:
 
         Returns:
             Cached data if valid, None if cache doesn't exist or is invalid
+
         """
         if not self.cache_file.exists():
             return None
@@ -102,6 +105,7 @@ class ClusterCache:
 
         Returns:
             True if cache exists and hasn't expired, False otherwise
+
         """
         data = self.load()
         if not data:
@@ -136,6 +140,7 @@ class ClusterCache:
 
         Returns:
             Age in seconds, or None if cache doesn't exist or is invalid
+
         """
         data = self.load()
         if not data:
@@ -160,6 +165,7 @@ class ClusterCache:
 
         Returns:
             Remaining seconds until expiration, or None if expired/invalid
+
         """
         data = self.load()
         if not data:
@@ -186,5 +192,6 @@ class ClusterCache:
 
         Returns:
             True if cache file exists, False otherwise
+
         """
         return self.cache_file.exists()

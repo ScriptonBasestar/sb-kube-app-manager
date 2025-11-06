@@ -1,5 +1,4 @@
-"""
-Tests for the standardized exception hierarchy.
+"""Tests for the standardized exception hierarchy.
 """
 
 from sbkube.exceptions import (

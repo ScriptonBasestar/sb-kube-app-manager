@@ -1,5 +1,4 @@
-"""
-Output formatter for LLM-friendly and structured output.
+"""Output formatter for LLM-friendly and structured output.
 
 This module provides utilities to format command outputs in different modes:
 - human: Rich Console output (default)
@@ -34,11 +33,11 @@ class OutputFormatter:
     """Format command outputs for different consumers (humans, LLMs, machines)."""
 
     def __init__(self, format_type: OutputFormat | str = OutputFormat.HUMAN):
-        """
-        Initialize output formatter.
+        """Initialize output formatter.
 
         Args:
             format_type: Output format (human, llm, json, yaml)
+
         """
         if isinstance(format_type, str):
             format_type = OutputFormat(format_type)
@@ -51,8 +50,7 @@ class OutputFormatter:
         cli_format: str | None = None,
         env_var: str = "SBKUBE_OUTPUT_FORMAT",
     ) -> "OutputFormatter":
-        """
-        Create formatter from CLI option or environment variable.
+        """Create formatter from CLI option or environment variable.
 
         Priority: CLI option > Environment variable > Default (human)
 
@@ -62,6 +60,7 @@ class OutputFormatter:
 
         Returns:
             OutputFormatter instance
+
         """
         format_str = cli_format or os.environ.get(env_var, "human")
         try:
@@ -78,8 +77,7 @@ class OutputFormatter:
         next_steps: list[str] | None = None,
         errors: list[str] | None = None,
     ) -> str | dict:
-        """
-        Format deployment result in the selected format.
+        """Format deployment result in the selected format.
 
         Args:
             status: Overall status ("success", "failed", "partial")
@@ -90,20 +88,21 @@ class OutputFormatter:
 
         Returns:
             Formatted output (str for human/llm, dict for json/yaml)
+
         """
         if self.format == OutputFormat.HUMAN:
             return self._format_human_deployment(
                 status, summary, deployments, next_steps, errors
             )
-        elif self.format == OutputFormat.LLM:
+        if self.format == OutputFormat.LLM:
             return self._format_llm_deployment(
                 status, summary, deployments, next_steps, errors
             )
-        elif self.format == OutputFormat.JSON:
+        if self.format == OutputFormat.JSON:
             return self._format_json_deployment(
                 status, summary, deployments, next_steps, errors
             )
-        elif self.format == OutputFormat.YAML:
+        if self.format == OutputFormat.YAML:
             return self._format_yaml_deployment(
                 status, summary, deployments, next_steps, errors
             )
@@ -116,8 +115,7 @@ class OutputFormatter:
         next_steps: list[str],
         errors: list[str],
     ) -> str | dict:
-        """
-        Format deployment history output in the selected format.
+        """Format deployment history output in the selected format.
 
         Args:
             status: Overall status ("success", "failed", "warning")
@@ -128,6 +126,7 @@ class OutputFormatter:
 
         Returns:
             Formatted output (str for human/llm, dict for json/yaml)
+
         """
         if self.format == OutputFormat.HUMAN:
             return "Human format (rendered directly in command)"
@@ -205,8 +204,7 @@ class OutputFormatter:
             lines.append("ERRORS:")
         for error in errors:
             lines.append(f"- {error}")
-        else:
-            lines.append("ERRORS: none")
+        lines.append("ERRORS: none")
 
         return "\n".join(lines)
 
@@ -486,11 +484,11 @@ class OutputFormatter:
         return yaml.dump(result, allow_unicode=True, default_flow_style=False)
 
     def print_output(self, output: str | dict):
-        """
-        Print formatted output.
+        """Print formatted output.
 
         Args:
             output: Formatted output (str or dict)
+
         """
         if isinstance(output, dict):
             # JSON or YAML dict → convert to string
@@ -505,14 +503,14 @@ class OutputFormatter:
 
 
 def get_output_format_from_context(ctx: Any) -> OutputFormat:
-    """
-    Extract output format from Click context.
+    """Extract output format from Click context.
 
     Args:
         ctx: Click context
 
     Returns:
         OutputFormat enum value
+
     """
     # Try to get format from context params
     if hasattr(ctx, "params") and "format" in ctx.params:

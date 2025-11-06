@@ -16,8 +16,7 @@ def run_cmd_with_logging(
     timeout: int = 300,
     cwd: Path | None = None,
 ) -> bool:
-    """
-    Run command with logging and structured error handling.
+    """Run command with logging and structured error handling.
 
     Args:
         cmd: Command and arguments as list
@@ -30,6 +29,7 @@ def run_cmd_with_logging(
     Raises:
         CliToolExecutionError: When command execution fails
         CliToolNotFoundError: When command tool is not found
+
     """
     logger.command(" ".join(map(str, cmd)))
 
@@ -85,8 +85,7 @@ def run_cmd_with_logging(
 
 
 def run_cmd_safely(cmd: list, timeout: int = 300, cwd: Path | None = None) -> bool:
-    """
-    Run command safely without raising exceptions.
+    """Run command safely without raising exceptions.
 
     This is a wrapper around run_cmd_with_logging that catches exceptions
     and returns False instead of raising them.
@@ -98,6 +97,7 @@ def run_cmd_safely(cmd: list, timeout: int = 300, cwd: Path | None = None) -> bo
 
     Returns:
         bool: True if command succeeded, False otherwise
+
     """
     try:
         return run_cmd_with_logging(cmd, timeout, cwd)
@@ -111,8 +111,7 @@ def run_network_cmd_with_retry(
     cwd: Path | None = None,
     max_attempts: int = 3,
 ) -> bool:
-    """
-    Run network-related command with retry mechanism.
+    """Run network-related command with retry mechanism.
 
     This function is specifically designed for commands that involve network
     operations and may fail due to transient network issues.
@@ -129,6 +128,7 @@ def run_network_cmd_with_retry(
     Raises:
         CliToolExecutionError: When command execution fails after all retries
         CliToolNotFoundError: When command tool is not found
+
     """
     if not cmd:
         raise ValueError("Command cannot be empty")
@@ -189,8 +189,7 @@ def run_helm_cmd_with_retry(
     timeout: int = 300,
     cwd: Path | None = None,
 ) -> bool:
-    """
-    Run Helm command with appropriate retry configuration.
+    """Run Helm command with appropriate retry configuration.
 
     Args:
         cmd: Command and arguments as list (should start with 'helm')
@@ -199,6 +198,7 @@ def run_helm_cmd_with_retry(
 
     Returns:
         bool: True if command succeeded, False otherwise
+
     """
     try:
         run_helm_command_with_retry(cmd, timeout=timeout, cwd=str(cwd) if cwd else None)
@@ -213,8 +213,7 @@ def run_git_cmd_with_retry(
     timeout: int = 300,
     cwd: Path | None = None,
 ) -> bool:
-    """
-    Run Git command with appropriate retry configuration.
+    """Run Git command with appropriate retry configuration.
 
     Args:
         cmd: Command and arguments as list (should start with 'git')
@@ -223,6 +222,7 @@ def run_git_cmd_with_retry(
 
     Returns:
         bool: True if command succeeded, False otherwise
+
     """
     try:
         run_git_command_with_retry(cmd, timeout=timeout, cwd=str(cwd) if cwd else None)

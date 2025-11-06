@@ -1,5 +1,4 @@
-"""
-Tests for resource constraint and edge case scenarios.
+"""Tests for resource constraint and edge case scenarios.
 """
 
 import os

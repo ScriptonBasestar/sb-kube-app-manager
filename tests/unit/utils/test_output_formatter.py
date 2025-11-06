@@ -1,5 +1,4 @@
-"""
-Tests for output formatter utility.
+"""Tests for output formatter utility.
 """
 
 import json

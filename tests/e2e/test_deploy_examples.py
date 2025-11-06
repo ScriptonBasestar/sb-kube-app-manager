@@ -1,5 +1,4 @@
-"""
-E2E tests for deploy command examples.
+"""E2E tests for deploy command examples.
 
 These tests use the actual examples/deploy/ directory to verify
 deploy command functionality with real configuration files.
@@ -18,8 +17,7 @@ class TestDeployExamples:
     """Test deploy command with various example configurations."""
 
     def test_deploy_install_yaml_dry_run(self, runner, examples_dir, tmp_path):
-        """
-        Test deploy with YAML manifest installation (dry-run).
+        """Test deploy with YAML manifest installation (dry-run).
 
         This test verifies that deploy correctly handles YAML manifests
         as specified in examples/deploy/yaml/config.yaml.
@@ -52,8 +50,7 @@ class TestDeployExamples:
         assert "deploy" in result.output.lower() or "배포" in result.output
 
     def test_deploy_install_action_dry_run(self, runner, examples_dir, tmp_path):
-        """
-        Test deploy with custom action installation (dry-run).
+        """Test deploy with custom action installation (dry-run).
 
         This test verifies that deploy correctly handles custom actions
         as specified in examples/deploy/install-action/config.yaml.
@@ -86,8 +83,7 @@ class TestDeployExamples:
         assert "deploy" in result.output.lower() or "배포" in result.output
 
     def test_deploy_exec_dry_run(self, runner, examples_dir, tmp_path):
-        """
-        Test deploy with exec command (dry-run).
+        """Test deploy with exec command (dry-run).
 
         This test verifies that deploy correctly handles exec commands
         as specified in examples/deploy/exec/config.yaml.

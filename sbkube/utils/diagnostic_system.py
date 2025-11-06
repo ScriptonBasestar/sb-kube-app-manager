@@ -54,7 +54,6 @@ class DiagnosticCheck(ABC):
     @abstractmethod
     async def run(self) -> DiagnosticResult:
         """진단 실행"""
-        pass
 
     def create_result(
         self,

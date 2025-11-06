@@ -1,5 +1,4 @@
-"""
-Phase 4 HookApp E2E 테스트.
+"""Phase 4 HookApp E2E 테스트.
 
 실제 Kubernetes 클러스터에서 HookApp 배포 테스트.
 """
@@ -17,7 +16,6 @@ def test_hook_app_basic_deployment():
     # 1. examples/hooks-phase4 디렉토리 사용
     # 2. sbkube apply 실행
     # 3. 배포 결과 확인
-    pass
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
@@ -27,7 +25,6 @@ def test_hook_app_dependency_chain():
     # 1. cert-manager → setup-issuers → create-certificates → verify-deployment
     # 2. 각 단계별 배포 순서 확인
     # 3. 의존성이 올바르게 해결되는지 확인
-    pass
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
@@ -38,7 +35,6 @@ def test_hook_app_validation_phase3():
     # 2. wait_for_ready 검증
     # 3. Certificate 배포
     # 4. validation 통과 확인
-    pass
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
@@ -48,7 +44,6 @@ def test_hook_app_rollback_phase3():
     # 1. 의도적으로 실패하는 HookApp 배포
     # 2. rollback 자동 실행 확인
     # 3. 리소스 정리 확인
-    pass
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
@@ -59,7 +54,6 @@ def test_hook_app_skip_in_prepare_build_template():
     # 2. sbkube build → "HookApp does not require build" 메시지 확인
     # 3. sbkube template → "HookApp does not support template" 메시지 확인
     # 4. sbkube deploy → HookApp 정상 실행 확인
-    pass
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
@@ -69,7 +63,6 @@ def test_hook_app_dry_run():
     # 1. sbkube deploy --dry-run
     # 2. 리소스가 실제로 생성되지 않았는지 확인
     # 3. dry-run 로그 출력 확인
-    pass
 
 
 # ============================================================================

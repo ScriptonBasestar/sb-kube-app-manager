@@ -1,5 +1,4 @@
-"""
-SBKube apply 명령어.
+"""SBKube apply 명령어.
 
 통합 명령어: prepare → deploy를 자동으로 실행.
 의존성을 고려하여 올바른 순서로 배포합니다.
@@ -94,8 +93,7 @@ def cmd(
     skip_deps_check: bool,
     no_progress: bool,
 ):
-    """
-    SBKube apply 명령어.
+    """SBKube apply 명령어.
 
     전체 워크플로우를 한 번에 실행합니다:
     1. prepare: 외부 리소스 준비 (Helm chart pull, Git clone, HTTP download 등)
@@ -520,16 +518,15 @@ def cmd(
             # errors는 OutputManager가 자동으로 수집한 것을 사용
         )
         raise click.Abort()
-    else:
-        output.print(
-            "\n[bold green]🎉 All app groups applied successfully![/bold green]",
-            level="success",
-        )
-        output.finalize(
-            status="success",
-            summary={
-                "app_groups_processed": len(app_config_dirs),
-                "status": "success",
-            },
-            next_steps=["Verify deployment with: kubectl get pods"],
-        )
+    output.print(
+        "\n[bold green]🎉 All app groups applied successfully![/bold green]",
+        level="success",
+    )
+    output.finalize(
+        status="success",
+        summary={
+            "app_groups_processed": len(app_config_dirs),
+            "status": "success",
+        },
+        next_steps=["Verify deployment with: kubectl get pods"],
+    )

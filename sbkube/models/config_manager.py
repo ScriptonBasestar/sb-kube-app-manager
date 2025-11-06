@@ -1,5 +1,4 @@
-"""
-Configuration manager with inheritance and validation support.
+"""Configuration manager with inheritance and validation support.
 
 This module provides a centralized configuration management system
 with support for inheritance, validation, and multi-environment configs.
@@ -22,8 +21,7 @@ logger = get_logger()
 
 
 class ConfigManager:
-    """
-    Centralized configuration manager for sbkube.
+    """Centralized configuration manager for sbkube.
 
     Features:
     - Configuration inheritance
@@ -38,12 +36,12 @@ class ConfigManager:
         base_dir: str | Path,
         schema_dir: str | Path | None = None,
     ):
-        """
-        Initialize configuration manager.
+        """Initialize configuration manager.
 
         Args:
             base_dir: Base directory for configuration files
             schema_dir: Optional directory containing JSON schemas
+
         """
         self.base_dir = Path(base_dir)
         self.schema_dir = Path(schema_dir) if schema_dir else self.base_dir / "schemas"
@@ -60,8 +58,7 @@ class ConfigManager:
         environment: str | None = None,
         validate: bool = True,
     ) -> SourceScheme:
-        """
-        Load sources configuration with optional environment overlay.
+        """Load sources configuration with optional environment overlay.
 
         Args:
             sources_file: Base sources configuration file
@@ -70,6 +67,7 @@ class ConfigManager:
 
         Returns:
             Loaded and validated SourceScheme
+
         """
         cache_key = f"{sources_file}:{environment or 'default'}"
 
@@ -106,8 +104,7 @@ class ConfigManager:
         inherit_from: str | None = None,
         validate: bool = True,
     ) -> SBKubeConfig:
-        """
-        Load application configuration with inheritance support.
+        """Load application configuration with inheritance support.
 
         Args:
             app_dir: Application configuration directory
@@ -117,6 +114,7 @@ class ConfigManager:
 
         Returns:
             Loaded and validated SBKubeConfig
+
         """
         config_path = Path(app_dir) / config_file
         cache_key = f"{config_path}:{inherit_from or 'no-parent'}"
@@ -149,8 +147,7 @@ class ConfigManager:
         config_path: Path,
         parent_path: str,
     ) -> dict[str, Any]:
-        """
-        Load configuration with inheritance from parent.
+        """Load configuration with inheritance from parent.
 
         Args:
             config_path: Path to child configuration
@@ -158,6 +155,7 @@ class ConfigManager:
 
         Returns:
             Merged configuration dictionary
+
         """
         # Load parent configuration
         parent_config = self.load_app_config(parent_path)
@@ -181,8 +179,7 @@ class ConfigManager:
         base: dict[str, Any],
         overlay: dict[str, Any],
     ) -> dict[str, Any]:
-        """
-        Deep merge two dictionaries.
+        """Deep merge two dictionaries.
 
         Args:
             base: Base dictionary
@@ -190,6 +187,7 @@ class ConfigManager:
 
         Returns:
             Merged dictionary
+
         """
         result = base.copy()
 
@@ -209,14 +207,14 @@ class ConfigManager:
         return result
 
     def _apply_defaults(self, config: SBKubeConfig) -> SBKubeConfig:
-        """
-        Apply default values to configuration.
+        """Apply default values to configuration.
 
         Args:
             config: Configuration to apply defaults to
 
         Returns:
             Configuration with defaults applied
+
         """
         # Apply namespace default
         if "namespace" in self._defaults and not config.namespace:
@@ -233,11 +231,11 @@ class ConfigManager:
         return config
 
     def set_defaults(self, defaults: dict[str, Any]):
-        """
-        Set default values for configurations.
+        """Set default values for configurations.
 
         Args:
             defaults: Dictionary of default values
+
         """
         self._defaults = defaults
 
@@ -246,8 +244,7 @@ class ConfigManager:
         app_config: SBKubeConfig,
         sources: SourceScheme,
     ) -> list[str]:
-        """
-        Validate that all references in app config exist in sources.
+        """Validate that all references in app config exist in sources.
 
         Args:
             app_config: Application configuration
@@ -255,6 +252,7 @@ class ConfigManager:
 
         Returns:
             List of validation errors (empty if valid)
+
         """
         errors = []
 
@@ -280,8 +278,7 @@ class ConfigManager:
         environment: str | None = None,
         validate: bool = True,
     ) -> dict[str, SBKubeConfig]:
-        """
-        Load multiple application configurations.
+        """Load multiple application configurations.
 
         Args:
             app_dirs: List of application directories
@@ -291,6 +288,7 @@ class ConfigManager:
 
         Returns:
             Dictionary mapping app_dir to SBKubeConfig
+
         """
         configs = {}
 
@@ -326,13 +324,13 @@ class ConfigManager:
         output_path: str | Path,
         format: str = "yaml",
     ):
-        """
-        Export merged configuration to file.
+        """Export merged configuration to file.
 
         Args:
             app_config: Application configuration to export
             output_path: Output file path
             format: Output format (yaml or json)
+
         """
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)

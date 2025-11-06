@@ -50,6 +50,7 @@ def group_releases_by_app_group(
                 "total_unmanaged_releases": 1
             }
         }
+
     """
     grouped: dict[str, dict[str, Any]] = defaultdict(
         lambda: {"apps": {}, "namespace": None}
@@ -165,6 +166,7 @@ def filter_by_app_group(
 
     Returns:
         App-group data or None if not found
+
     """
     managed = grouped_data.get("managed_app_groups", {})
     return managed.get(app_group)
@@ -178,6 +180,7 @@ def get_app_group_summary(grouped_data: dict[str, Any]) -> dict[str, Any]:
 
     Returns:
         Summary dict with counts and health status
+
     """
     summary = grouped_data.get("summary", {})
     managed_groups = grouped_data.get("managed_app_groups", {})

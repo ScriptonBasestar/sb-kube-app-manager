@@ -1,5 +1,4 @@
-"""
-Hook Task 모델 단위 테스트 (Phase 2).
+"""Hook Task 모델 단위 테스트 (Phase 2).
 
 HookTask 모델들의 Pydantic validation 검증:
 - ManifestsHookTask

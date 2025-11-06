@@ -44,14 +44,14 @@ class ValidateCommand:
         self.custom_schema_path = custom_schema_path
 
     def validate_dependencies(self, config: SBKubeConfig) -> bool:
-        """
-        Validate app-group dependencies declared in config.deps.
+        """Validate app-group dependencies declared in config.deps.
 
         Args:
             config: Validated SBKubeConfig instance
 
         Returns:
             bool: True if all dependencies are deployed, False otherwise
+
         """
         if not config.deps:
             logger.info("앱 그룹 의존성 없음 (config.deps) - 검증 건너뜀")
@@ -79,20 +79,19 @@ class ValidateCommand:
             for dep, (deployed, msg) in result["details"].items():
                 logger.info(f"  ✓ {dep}: {msg}")
             return True
-        else:
-            logger.error(f"❌ {len(result['missing'])}개 의존성이 배포되지 않음:")
-            for dep in result["missing"]:
-                _, msg = result["details"][dep]
-                logger.error(f"  ✗ {dep}: {msg}")
+        logger.error(f"❌ {len(result['missing'])}개 의존성이 배포되지 않음:")
+        for dep in result["missing"]:
+            _, msg = result["details"][dep]
+            logger.error(f"  ✗ {dep}: {msg}")
 
-            logger.warning("배포가 실패할 수 있습니다. 의존성을 먼저 배포하세요:")
-            for dep in result["missing"]:
-                logger.info(f"  sbkube deploy --app-dir {dep}")
+        logger.warning("배포가 실패할 수 있습니다. 의존성을 먼저 배포하세요:")
+        for dep in result["missing"]:
+            logger.info(f"  sbkube deploy --app-dir {dep}")
 
-            return False
+        return False
 
     def execute(self):
-        """validate 명령 실행"""
+        """Validate 명령 실행"""
         logger.heading(f"Validate 시작 - 파일: {self.target_file}")
         target_path = Path(self.target_file)
         filename = target_path.name
@@ -256,11 +255,9 @@ def cmd(
     verbose: bool,
     debug: bool,
 ):
-    """
-    config.yaml/toml 또는 sources.yaml/toml 파일을 JSON 스키마 및 데이터 모델로 검증합니다.
+    """config.yaml/toml 또는 sources.yaml/toml 파일을 JSON 스키마 및 데이터 모델로 검증합니다.
 
     Examples:
-
         # Validate all app groups (auto-discovery)
         sbkube validate
 
@@ -272,6 +269,7 @@ def cmd(
 
         # Custom config file name
         sbkube validate --app-dir redis --config-file custom.yaml
+
     """
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
@@ -378,7 +376,6 @@ def cmd(
     if not overall_success:
         console.print("\n[bold red]❌ Some app groups failed validation[/bold red]")
         raise click.Abort()
-    else:
-        console.print(
-            "\n[bold green]🎉 All app groups validated successfully![/bold green]"
-        )
+    console.print(
+        "\n[bold green]🎉 All app groups validated successfully![/bold green]"
+    )

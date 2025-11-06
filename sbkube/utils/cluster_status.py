@@ -30,6 +30,7 @@ class ClusterStatusCollector:
         Args:
             kubeconfig: Path to kubeconfig file (optional, uses default if None)
             context: kubeconfig context name (optional, uses current-context if None)
+
         """
         self.kubeconfig = Path(kubeconfig).expanduser() if kubeconfig else None
         self.context = context
@@ -69,6 +70,7 @@ class ClusterStatusCollector:
         Raises:
             subprocess.CalledProcessError: if command fails
             subprocess.TimeoutExpired: if command times out
+
         """
         cmd = self._kubectl_base_cmd + args
         return subprocess.run(
@@ -94,6 +96,7 @@ class ClusterStatusCollector:
         Raises:
             subprocess.CalledProcessError: if command fails
             subprocess.TimeoutExpired: if command times out
+
         """
         cmd = self._helm_base_cmd + args
         return subprocess.run(
@@ -109,6 +112,7 @@ class ClusterStatusCollector:
 
         Returns:
             Dictionary containing cluster_info, nodes, namespaces, and helm_releases
+
         """
         result: dict[str, Any] = {}
 
@@ -153,6 +157,7 @@ class ClusterStatusCollector:
 
         Returns:
             Dictionary with api_server and version keys
+
         """
         info: dict[str, Any] = {}
 
@@ -190,6 +195,7 @@ class ClusterStatusCollector:
 
         Returns:
             List of node information dictionaries
+
         """
         result = self._run_kubectl(["get", "nodes", "-o", "json"])
         data = json.loads(result.stdout)
@@ -238,6 +244,7 @@ class ClusterStatusCollector:
 
         Returns:
             List of namespace names
+
         """
         result = self._run_kubectl(["get", "namespaces", "-o", "json"])
         data = json.loads(result.stdout)
@@ -254,6 +261,7 @@ class ClusterStatusCollector:
 
         Returns:
             List of Helm release information dictionaries
+
         """
         result = self._run_helm(["list", "--all-namespaces", "-o", "json"])
         data = json.loads(result.stdout)

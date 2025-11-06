@@ -144,7 +144,6 @@ class ValidationCheck(DiagnosticCheck):
     @abstractmethod
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
         """검증 실행 (확장된 컨텍스트 사용)"""
-        pass
 
     async def run(self) -> DiagnosticResult:
         """기존 DiagnosticCheck 인터페이스 호환성"""
@@ -366,7 +365,7 @@ class ValidationEngine(DiagnosticEngine):
                             category=validator.category,
                             level=DiagnosticLevel.ERROR,
                             severity=ValidationSeverity.HIGH,
-                            message=f"검증 실행 실패: {str(e)}",
+                            message=f"검증 실행 실패: {e!s}",
                             details=f"검증기 '{validator.description}' 실행 중 오류가 발생했습니다.",
                             risk_level="high",
                         )
@@ -385,7 +384,7 @@ class ValidationEngine(DiagnosticEngine):
                         category=validator.category,
                         level=DiagnosticLevel.ERROR,
                         severity=ValidationSeverity.HIGH,
-                        message=f"검증 실행 실패: {str(e)}",
+                        message=f"검증 실행 실패: {e!s}",
                         details=f"검증기 '{validator.description}' 실행 중 오류가 발생했습니다.",
                         risk_level="high",
                     )

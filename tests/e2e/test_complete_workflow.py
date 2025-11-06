@@ -1,5 +1,4 @@
-"""
-E2E tests for complete workflow example.
+"""E2E tests for complete workflow example.
 
 This test uses the examples/complete-workflow/ directory to verify
 the entire sbkube workflow from prepare through deploy.
@@ -17,8 +16,7 @@ class TestCompleteWorkflow:
     """Test complete sbkube workflow with all phases."""
 
     def test_complete_workflow_prepare_phase(self, runner, examples_dir, tmp_path):
-        """
-        Test prepare phase of complete workflow.
+        """Test prepare phase of complete workflow.
 
         This test verifies that prepare correctly handles the configuration
         in examples/complete-workflow/config.yaml which includes various
@@ -59,8 +57,7 @@ class TestCompleteWorkflow:
         assert "prepare" in result.output.lower() or "준비" in result.output
 
     def test_complete_workflow_build_phase(self, runner, examples_dir, tmp_path):
-        """
-        Test build phase of complete workflow.
+        """Test build phase of complete workflow.
 
         This test runs prepare first, then builds the application.
         """
@@ -111,8 +108,7 @@ class TestCompleteWorkflow:
     def test_complete_workflow_deploy_phase_dry_run(
         self, runner, examples_dir, tmp_path
     ):
-        """
-        Test deploy phase of complete workflow (dry-run).
+        """Test deploy phase of complete workflow (dry-run).
 
         This test runs prepare and build first, then deploys with --dry-run.
         """

@@ -238,6 +238,7 @@ def get_error_suggestions(error_type: str) -> dict[str, Any] | None:
 
     Returns:
         에러 가이드 딕셔너리 또는 None
+
     """
     return ERROR_GUIDE.get(error_type)
 
@@ -250,6 +251,7 @@ def format_suggestions(error_type: str) -> str:
 
     Returns:
         포맷팅된 제안 문자열
+
     """
     guide = get_error_suggestions(error_type)
     if not guide:
@@ -283,6 +285,7 @@ def get_quick_fix_command(error_type: str) -> str | None:
 
     Returns:
         빠른 해결 명령어 또는 None
+
     """
     guide = get_error_suggestions(error_type)
     if not guide:
@@ -298,6 +301,7 @@ def is_auto_recoverable(error_type: str) -> bool:
 
     Returns:
         자동 복구 가능 여부
+
     """
     guide = get_error_suggestions(error_type)
     if not guide:

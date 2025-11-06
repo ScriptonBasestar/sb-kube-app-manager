@@ -35,7 +35,6 @@ def cmd(ctx, detailed, check, config_dir):
         sbkube doctor --detailed          # 상세 결과 표시
         sbkube doctor --check k8s_connectivity  # 특정 검사만 실행
     """
-
     try:
         # 진단 엔진 초기화
         engine = DiagnosticEngine(console)

@@ -36,8 +36,12 @@ make lint-check
 # Strict mode (all rules)
 make lint-strict
 
+# Strict mode with auto-fix (recommended for cleanup)
+make lint-strict-fix
+
 # With unsafe fixes
 make lint-fix UNSAFE_FIXES=1
+make lint-strict-fix UNSAFE_FIXES=1
 ```
 
 ## Testing

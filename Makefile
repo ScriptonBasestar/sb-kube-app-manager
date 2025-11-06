@@ -30,6 +30,8 @@ help:
 	@echo "  make lint-fix UNSAFE_FIXES=1  Run linters with unsafe auto-fix"
 	@echo "  make lint-check      Run linters with diff output (no auto-fix)"
 	@echo "  make lint-strict     Run strict linters for high quality standards"
+	@echo "  make lint-strict-fix Run strict linters with auto-fix"
+	@echo "  make lint-strict-fix UNSAFE_FIXES=1  Strict with unsafe auto-fix"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean           Clean build artifacts and caches"
@@ -178,6 +180,23 @@ lint-strict:
 	uv run mypy $(LINT_DIRS_CORE) --strict --ignore-missing-imports $(EXCLUDE_DIRS)
 	@echo "Running bandit with strict settings..."
 	@uv run bandit -r $(LINT_DIRS_SECURITY) --severity-level low --exclude "*/tests/*,*/scripts/*,*/debug/*,*/examples/*"
+
+# lint-strict-fix: 엄격한 코드 품질 검사 + 자동 수정
+# - ruff check --select ALL --fix: 모든 규칙 적용하고 자동 수정
+# - ruff format: 코드 포맷팅
+# - mypy --strict: 엄격한 타입 검사 (수정 불가, 경고만)
+# - 사용법: make lint-strict-fix UNSAFE_FIXES=1 (위험한 수정 포함)
+lint-strict-fix:
+	@echo "Running strict lint with auto-fix..."
+	@echo "Running ruff check with all rules and auto-fix..."
+	uv run ruff check $(LINT_DIRS) --select ALL --ignore E501,B008,C901,COM812,B904,B017,B007,D100,D101,D102,D103,D104,D105,D106,D107 --fix $(UNSAFE_FLAG) $(EXCLUDE_DIRS)
+	@echo "Running ruff format..."
+	uv run ruff format $(LINT_DIRS) $(EXCLUDE_DIRS)
+	@echo "Running mypy with strict settings..."
+	uv run mypy $(LINT_DIRS_CORE) --strict --ignore-missing-imports $(EXCLUDE_DIRS) || echo "⚠️  Type check completed with warnings"
+	@echo "Running mdformat..."
+	uv run mdformat *.md docs/**/*.md --wrap 120
+	@echo "✅ Strict lint with auto-fix completed!"
 
 # Pre-commit integration
 pre-commit-install:

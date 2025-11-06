@@ -1,10 +1,6 @@
----
-type: User Guide
-audience: End User, Developer
-topics: [migration, upgrade, breaking-changes]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: User Guide audience: End User, Developer topics: [migration, upgrade, breaking-changes] llm_priority: medium last_updated: 2025-01-04
 
 # SBKube Migration Guide
 
@@ -36,16 +32,14 @@ ______________________________________________________________________
 
 ## Overview
 
-SBKube follows semantic versioning with clear upgrade paths between releases. Each major or minor version may introduce breaking changes that require configuration migration.
+SBKube follows semantic versioning with clear upgrade paths between releases. Each major or minor version may introduce
+breaking changes that require configuration migration.
 
 ### Version History
 
-| Version | Release Date | Major Changes |
-|---------|-------------|---------------|
-| v0.6.1  | 2025-01-03  | LLM output integration |
-| v0.6.0  | 2024-12-15  | State management, helm format |
-| v0.5.0  | 2024-11-01  | Working directory consolidation |
-| v0.4.x  | 2024-09-01  | Initial stable release |
+| Version | Release Date | Major Changes | |---------|-------------|---------------| | v0.6.1 | 2025-01-03 | LLM output
+integration | | v0.6.0 | 2024-12-15 | State management, helm format | | v0.5.0 | 2024-11-01 | Working directory
+consolidation | | v0.4.x | 2024-09-01 | Initial stable release |
 
 ______________________________________________________________________
 
@@ -54,17 +48,20 @@ ______________________________________________________________________
 ### Pre-Migration Checklist
 
 1. **Backup Configuration**:
+
    ```bash
    cp -r config/ config.backup/
    cp sources.yaml sources.yaml.backup
    ```
 
-2. **Check Current Version**:
+1. **Check Current Version**:
+
    ```bash
    sbkube --version
    ```
 
-3. **Review Changelog**:
+1. **Review Changelog**:
+
    ```bash
    cat CHANGELOG.md | head -50
    ```
@@ -72,11 +69,13 @@ ______________________________________________________________________
 ### Migration Steps
 
 1. **Validate Current Config**:
+
    ```bash
    sbkube validate --app-dir <path>
    ```
 
-2. **Run Migration** (if available):
+1. **Run Migration** (if available):
+
    ```bash
    # Dry run first
    sbkube migrate --app-dir <path> --dry-run
@@ -85,7 +84,8 @@ ______________________________________________________________________
    sbkube migrate --app-dir <path>
    ```
 
-3. **Test Deployment**:
+1. **Test Deployment**:
+
    ```bash
    sbkube apply --dry-run --namespace test
    ```
@@ -93,16 +93,19 @@ ______________________________________________________________________
 ### Post-Migration Verification
 
 1. **Check Doctor**:
+
    ```bash
    sbkube doctor
    ```
 
-2. **Run Tests**:
+1. **Run Tests**:
+
    ```bash
    make test-quick
    ```
 
-3. **Deploy to Staging**:
+1. **Deploy to Staging**:
+
    ```bash
    sbkube deploy --profile staging --dry-run
    ```
@@ -118,6 +121,7 @@ ______________________________________________________________________
 #### Directory Structure Change
 
 **Before (v0.4.x)**:
+
 ```
 project/
 ├── charts/          # Helm charts
@@ -129,6 +133,7 @@ project/
 ```
 
 **After (v0.5.0+)**:
+
 ```
 project/
 ├── .sbkube/         # All working directories consolidated
@@ -143,6 +148,7 @@ project/
 #### Migration Steps
 
 **Option 1: Automatic Migration**
+
 ```bash
 # Create .sbkube directory
 mkdir -p .sbkube
@@ -158,6 +164,7 @@ echo ".sbkube/" >> .gitignore
 ```
 
 **Option 2: Clean Regeneration**
+
 ```bash
 # Remove old directories
 rm -rf charts repos build rendered
@@ -175,12 +182,14 @@ sbkube build
 Update pipeline scripts that reference old paths:
 
 **Before**:
+
 ```yaml
 - name: Check rendered files
   run: ls -la rendered/
 ```
 
 **After**:
+
 ```yaml
 - name: Check rendered files
   run: ls -la .sbkube/rendered/
@@ -191,6 +200,7 @@ ______________________________________________________________________
 ### Migration to v0.6.0
 
 **Major Changes**:
+
 - Helm chart format simplification
 - CLI option renaming
 - State management introduction
@@ -198,6 +208,7 @@ ______________________________________________________________________
 #### 1. Helm Chart Format
 
 **Before (v0.2.x-v0.5.x)**:
+
 ```yaml
 apps:
   grafana:
@@ -208,6 +219,7 @@ apps:
 ```
 
 **After (v0.6.0+)**:
+
 ```yaml
 apps:
   grafana:
@@ -218,12 +230,11 @@ apps:
 
 #### 2. CLI Options Renamed
 
-| Old (v0.5.x) | New (v0.6.0+) | Purpose |
-|--------------|---------------|---------|
-| `--env` | `--profile` | Environment profile selection |
-| `--sources` | `--source` | Source configuration file |
+| Old (v0.5.x) | New (v0.6.0+) | Purpose | |--------------|---------------|---------| | `--env` | `--profile` |
+Environment profile selection | | `--sources` | `--source` | Source configuration file |
 
 **Example**:
+
 ```bash
 # Before
 sbkube deploy --env production --sources sources.yaml
@@ -261,16 +272,18 @@ sbkube migrate --config <path>/config.yaml
 ```
 
 The migration tool will:
+
 1. Back up original files to `.backup`
-2. Convert `repo:` + `chart:` → `chart: repo/chart`
-3. Update deprecated field names
-4. Validate new format
+1. Convert `repo:` + `chart:` → `chart: repo/chart`
+1. Update deprecated field names
+1. Validate new format
 
 ______________________________________________________________________
 
 ### Migration to v0.6.1
 
 **Major Changes**:
+
 - LLM-friendly output formatting
 - Enhanced command base class
 - Improved error messages
@@ -278,6 +291,7 @@ ______________________________________________________________________
 #### New Features (No Breaking Changes)
 
 1. **LLM Output Support**:
+
    ```bash
    # Human-readable (default)
    sbkube status
@@ -289,8 +303,8 @@ ______________________________________________________________________
    sbkube status --format json
    ```
 
-2. **Enhanced Commands**:
-   All commands now support:
+1. **Enhanced Commands**: All commands now support:
+
    - `--quiet` for minimal output
    - `--format` for output formatting
    - Better error context
@@ -304,23 +318,28 @@ ______________________________________________________________________
 ### v0.6.0 Breaking Changes
 
 1. **Configuration Format**:
+
    - `repo` + `chart` fields → single `chart: repo/chart`
    - Removed deprecated `chart_patches` (use `overrides`)
 
-2. **CLI Options**:
+1. **CLI Options**:
+
    - `--env` → `--profile`
    - `--sources` → `--source`
 
-3. **Working Directory**:
+1. **Working Directory**:
+
    - Inherited from v0.5.0: `.sbkube/` consolidation
 
 ### v0.5.0 Breaking Changes
 
 1. **Directory Structure**:
+
    - All working directories moved to `.sbkube/`
    - Simplified `.gitignore` requirements
 
-2. **Default Paths**:
+1. **Default Paths**:
+
    - `template` output: `rendered/` → `.sbkube/rendered/`
    - `build` output: `build/` → `.sbkube/build/`
 
@@ -341,17 +360,19 @@ Yes, but review all intermediate breaking changes. The migration tool handles mu
 ### Q: What if migration fails?
 
 1. Restore from backup:
+
    ```bash
    cp config.yaml.backup config.yaml
    ```
 
-2. Manually fix issues based on error messages
+1. Manually fix issues based on error messages
 
-3. Use `sbkube validate` to check configuration
+1. Use `sbkube validate` to check configuration
 
 ### Q: How to handle OCI registries?
 
 **Before (v0.5.x)**:
+
 ```yaml
 apps:
   browserless:
@@ -360,6 +381,7 @@ apps:
 ```
 
 **After (v0.6.0+)**:
+
 ```yaml
 apps:
   browserless:
@@ -367,6 +389,7 @@ apps:
 ```
 
 With `sources.yaml`:
+
 ```yaml
 helm_sources:
   browserless:
@@ -389,16 +412,19 @@ apps:
 ### Q: How to rollback a migration?
 
 1. **Downgrade SBKube**:
+
    ```bash
    uv pip install sbkube==0.4.9  # or desired version
    ```
 
-2. **Restore configuration**:
+1. **Restore configuration**:
+
    ```bash
    cp config.yaml.backup config.yaml
    ```
 
-3. **For v0.5.0 directory changes**:
+1. **For v0.5.0 directory changes**:
+
    ```bash
    # Move directories back
    mv .sbkube/charts ./
@@ -411,6 +437,7 @@ apps:
 ### Q: CI/CD pipeline updates needed?
 
 Yes, if your pipelines reference:
+
 - File paths (charts/, repos/, etc.)
 - CLI options (--env vs --profile)
 - Output locations
@@ -426,6 +453,7 @@ ______________________________________________________________________
 **Cause**: Using old format in v0.6.0+
 
 **Solution**: Combine repo and chart:
+
 ```yaml
 # Wrong
 repo: grafana
@@ -440,6 +468,7 @@ chart: grafana/grafana
 **Cause**: Missing repository definition
 
 **Solution**: Ensure `sources.yaml` contains:
+
 ```yaml
 helm_sources:
   grafana:
@@ -452,6 +481,7 @@ helm_sources:
 **Cause**: Running older version
 
 **Solution**: Update SBKube:
+
 ```bash
 uv pip install --upgrade sbkube
 sbkube --version  # Should show 0.6.0+
@@ -462,6 +492,7 @@ sbkube --version  # Should show 0.6.0+
 **Cause**: Corrupted state in v0.6.0+
 
 **Solution**: Reset state:
+
 ```bash
 rm -f .sbkube/state.db
 sbkube doctor  # Reinitialize
@@ -478,6 +509,4 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-**Document Version**: 1.0
-**Last Updated**: 2025-01-04
-**Target Version**: v0.6.1+
+**Document Version**: 1.0 **Last Updated**: 2025-01-04 **Target Version**: v0.6.1+

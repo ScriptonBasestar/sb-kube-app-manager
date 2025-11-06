@@ -1,10 +1,6 @@
----
-type: User Guide
-audience: End User
-topics: [app-types, web, worker, scheduled, helm]
-llm_priority: high
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: User Guide audience: End User topics: [app-types, web, worker, scheduled, helm] llm_priority: high last_updated: 2025-01-04
 
 # 🎯 SBKube 애플리케이션 타입 가이드
 
@@ -185,12 +181,14 @@ apps:
 ```
 
 **우선순위**:
+
 1. **매니페스트 내부** `metadata.namespace` (최우선)
-2. **앱별** `app.namespace`
-3. **전역** `config.namespace`
-4. **kubectl 기본값** (`default` 네임스페이스)
+1. **앱별** `app.namespace`
+1. **전역** `config.namespace`
+1. **kubectl 기본값** (`default` 네임스페이스)
 
 **권장 사항**:
+
 - 매니페스트에는 namespace를 명시하지 않고 config.yaml에서 관리 (DRY 원칙)
 - 앱별 오버라이드는 명확한 이유가 있을 때만 사용
 
@@ -334,6 +332,7 @@ apps:
 **해결 방법**:
 
 1. **올바른 형식 확인**: 각 action에 반드시 `path` 필드가 있어야 합니다:
+
    ```yaml
    # ✅ 올바른 형식
    actions:
@@ -345,7 +344,8 @@ apps:
      - type: apply
    ```
 
-2. **명령어 vs 파일 경로**: `action` 타입은 YAML 파일 경로를 사용합니다. 명령어를 실행하려면 `exec` 타입을 사용하세요:
+1. **명령어 vs 파일 경로**: `action` 타입은 YAML 파일 경로를 사용합니다. 명령어를 실행하려면 `exec` 타입을 사용하세요:
+
    ```yaml
    # ❌ 잘못된 사용 (명령어를 path에 넣음)
    monitoring-setup:
@@ -361,7 +361,7 @@ apps:
        - kubectl label node polypia-sheepdog1 topology.kubernetes.io/zone=polypia-sheepdog1 --overwrite
    ```
 
-3. **지원되는 action type**: `apply`와 `delete`만 지원됩니다 (`create`는 v0.6.1부터 지원하지 않음)
+1. **지원되는 action type**: `apply`와 `delete`만 지원됩니다 (`create`는 v0.6.1부터 지원하지 않음)
 
 ______________________________________________________________________
 

@@ -6,15 +6,16 @@ import difflib
 import hashlib
 import json
 from collections import Counter
-from typing import Any, Iterable, Tuple
+from collections.abc import Iterable
+from typing import Any
 
 import click
 from rich.table import Table
 
 from sbkube.models.deployment_state import (
     DeploymentDetail,
-    DeploymentSummary,
     DeploymentStatus,
+    DeploymentSummary,
 )
 from sbkube.state.database import DeploymentDatabase
 from sbkube.utils.output_manager import OutputManager
@@ -38,7 +39,12 @@ STATUS_ICONS = {
 @click.command(name="history")
 @click.option("--cluster", help="Filter by cluster name")
 @click.option("--namespace", "-n", help="Filter by namespace")
-@click.option("--limit", default=20, show_default=True, help="Maximum number of deployments to show")
+@click.option(
+    "--limit",
+    default=20,
+    show_default=True,
+    help="Maximum number of deployments to show",
+)
 @click.option(
     "--format",
     "format_override",
@@ -79,7 +85,11 @@ def cmd(
     output_format = _resolve_output_format(ctx, format_override)
     output = OutputManager(format_type=output_format)
 
-    if format_override and format_override.lower() == "table" and output.format_type == "human":
+    if (
+        format_override
+        and format_override.lower() == "table"
+        and output.format_type == "human"
+    ):
         output.print_warning(
             "Option '--format table' is deprecated; use `sbkube --format human` or SBKUBE_OUTPUT_FORMAT=human.",
             deprecated_option="--format table",
@@ -296,7 +306,9 @@ def _handle_values_diff(
 
 
 def _serialize_summary(dep: DeploymentSummary) -> dict[str, Any]:
-    status = dep.status.value if isinstance(dep.status, DeploymentStatus) else dep.status
+    status = (
+        dep.status.value if isinstance(dep.status, DeploymentStatus) else dep.status
+    )
     return {
         "deployment_id": dep.deployment_id,
         "timestamp": dep.timestamp.isoformat(),
@@ -341,7 +353,9 @@ def _serialize_detail(deployment: DeploymentDetail) -> dict[str, Any]:
                 "kind": resource.kind,
                 "name": resource.name,
                 "namespace": resource.namespace,
-                "action": resource.action.value if hasattr(resource.action, "value") else resource.action,
+                "action": resource.action.value
+                if hasattr(resource.action, "value")
+                else resource.action,
             }
         )
 
@@ -372,7 +386,9 @@ def _serialize_detail(deployment: DeploymentDetail) -> dict[str, Any]:
         "resources": resources,
         "helm_releases": helm_releases,
         "config_snapshot": deployment.config_snapshot,
-        "sources_snapshot": deployment.sources_snapshot if hasattr(deployment, "sources_snapshot") else None,
+        "sources_snapshot": deployment.sources_snapshot
+        if hasattr(deployment, "sources_snapshot")
+        else None,
     }
 
 
@@ -412,7 +428,9 @@ def _serialize_diff_side(data: dict[str, Any]) -> dict[str, Any]:
 def _serialize_values_diff(diff_result: dict[str, Any]) -> dict[str, Any]:
     values_diff = diff_result.get("values_diff", {})
 
-    summary_counts = Counter(info.get("status", "unknown") for info in values_diff.values())
+    summary_counts = Counter(
+        info.get("status", "unknown") for info in values_diff.values()
+    )
 
     releases = [
         {"name": name, "status": info.get("status")}
@@ -573,7 +591,9 @@ def _print_values_diff(output: OutputManager, diff_result: dict[str, Any]) -> No
     )
 
     values_diff = diff_result.get("values_diff", {})
-    status_counter = Counter(info.get("status", "unknown") for info in values_diff.values())
+    status_counter = Counter(
+        info.get("status", "unknown") for info in values_diff.values()
+    )
     console.print("\n[bold]Summary[/bold]")
     for key in ("added", "removed", "modified", "unchanged"):
         console.print(f"  {key.capitalize():<9}: {status_counter.get(key, 0)}")
@@ -593,8 +613,16 @@ def _print_values_diff(output: OutputManager, diff_result: dict[str, Any]) -> No
                 color = "green" if status == "added" else "red"
                 console.print(f"[{color}]{prefix} {line}[/{color}]")
         elif status == "modified" and yaml:
-            before = yaml.dump(info.get("values_before"), default_flow_style=False) if info.get("values_before") else ""
-            after = yaml.dump(info.get("values_after"), default_flow_style=False) if info.get("values_after") else ""
+            before = (
+                yaml.dump(info.get("values_before"), default_flow_style=False)
+                if info.get("values_before")
+                else ""
+            )
+            after = (
+                yaml.dump(info.get("values_after"), default_flow_style=False)
+                if info.get("values_after")
+                else ""
+            )
             diff_lines = list(
                 difflib.unified_diff(
                     before.splitlines(),
@@ -642,12 +670,14 @@ def _derive_overall_status(status_counts: Counter) -> str:
     return "success"
 
 
-def _parse_pair(value: str, option_name: str) -> Tuple[str, str]:
+def _parse_pair(value: str, option_name: str) -> tuple[str, str]:
     try:
         first, second = value.split(",", 1)
         return first.strip(), second.strip()
     except ValueError as err:
-        raise ValueError(f"Invalid {option_name} format. Use: {option_name} ID1,ID2") from err
+        raise ValueError(
+            f"Invalid {option_name} format. Use: {option_name} ID1,ID2"
+        ) from err
 
 
 def _hash_config(config: Any) -> str | None:
@@ -697,4 +727,3 @@ def _finalize_history_failure(output: OutputManager, errors: Iterable[str]) -> N
         next_steps=[],
         errors=list(errors),
     )
-

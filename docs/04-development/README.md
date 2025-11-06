@@ -1,10 +1,6 @@
----
-type: Developer Guide
-audience: Developer
-topics: [development, setup, environment, contributing]
-llm_priority: high
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Developer Guide audience: Developer topics: [development, setup, environment, contributing] llm_priority: high last_updated: 2025-01-04
 
 # 👨‍💻 개발자 가이드
 

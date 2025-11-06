@@ -1,14 +1,11 @@
----
-type: Product Specification
-audience: Developer
-topics: [features, requirements, architecture, workflow, automation]
-llm_priority: high
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Product Specification audience: Developer topics: [features, requirements, architecture, workflow, automation] llm_priority: high last_updated: 2025-01-04
 
 # SBKube 기능 명세서
 
 ## TL;DR
+
 - **Purpose**: Detailed functional specifications for SBKube's deployment automation system
 - **Key Points**:
   - Core workflow: prepare→build→template→deploy pipeline
@@ -17,7 +14,8 @@ last_updated: 2025-01-04
   - State management: SQLAlchemy-based deployment tracking
   - Extensible hooks system for deployment customization
 - **Quick Reference**: Section 1 covers workflow automation, Section 2-5 detail each component
-- **Related**: [PRODUCT.md](../../PRODUCT.md), [ARCHITECTURE.md](../10-modules/sbkube/ARCHITECTURE.md), [config-schema.md](../03-configuration/config-schema.md)
+- **Related**: [PRODUCT.md](../../PRODUCT.md), [ARCHITECTURE.md](../10-modules/sbkube/ARCHITECTURE.md),
+  [config-schema.md](../03-configuration/config-schema.md)
 
 ## 기능 개요
 

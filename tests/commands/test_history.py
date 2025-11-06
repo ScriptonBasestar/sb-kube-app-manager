@@ -178,7 +178,9 @@ class TestHistoryLLMOutput:
             def get_deployment_values_diff(self, *args, **kwargs):
                 return None
 
-        monkeypatch.setattr("sbkube.commands.history.DeploymentDatabase", lambda: FakeDB())
+        monkeypatch.setattr(
+            "sbkube.commands.history.DeploymentDatabase", lambda: FakeDB()
+        )
 
         result = runner.invoke(main, ["--format", "llm", "history"])
 
@@ -223,9 +225,13 @@ class TestHistoryLLMOutput:
             def get_deployment_values_diff(self, *args, **kwargs):
                 return None
 
-        monkeypatch.setattr("sbkube.commands.history.DeploymentDatabase", lambda: FakeDB())
+        monkeypatch.setattr(
+            "sbkube.commands.history.DeploymentDatabase", lambda: FakeDB()
+        )
 
-        result = runner.invoke(main, ["--format", "llm", "history", "--show", "dep-001"])
+        result = runner.invoke(
+            main, ["--format", "llm", "history", "--show", "dep-001"]
+        )
 
         assert result.exit_code == 0
         assert "DEPLOYMENT ID: dep-001" in result.output

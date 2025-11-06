@@ -5,8 +5,6 @@ Unit tests for OutputManager.
 from io import StringIO
 from unittest.mock import patch
 
-import pytest
-
 from sbkube.utils.output_manager import OutputManager
 
 
@@ -52,7 +50,10 @@ class TestOutputManager:
         )
 
         # Test markup with uppercase and numbers
-        assert OutputManager._strip_markup("[RGB(255,0,0)]Red Text[/RGB(255,0,0)]") == "Red Text"
+        assert (
+            OutputManager._strip_markup("[RGB(255,0,0)]Red Text[/RGB(255,0,0)]")
+            == "Red Text"
+        )
 
         # Test hex colors
         assert OutputManager._strip_markup("[#FF0000]Red[/#FF0000]") == "Red"
@@ -298,7 +299,9 @@ class TestOutputManager:
         manager = OutputManager(format_type="llm")
 
         # Add some deployments
-        manager.add_deployment(name="app1", namespace="default", status="deployed", version="1.0")
+        manager.add_deployment(
+            name="app1", namespace="default", status="deployed", version="1.0"
+        )
         manager.add_deployment(name="app2", namespace="prod", status="skipped")
 
         # Add some events

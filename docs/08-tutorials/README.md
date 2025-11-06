@@ -1,10 +1,6 @@
----
-type: Tutorial Index
-audience: End User
-topics: [tutorials, learning-path, hands-on]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Tutorial Index audience: End User topics: [tutorials, learning-path, hands-on] llm_priority: medium last_updated: 2025-01-04
 
 # 📚 SBKube 튜토리얼
 

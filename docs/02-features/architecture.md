@@ -1,10 +1,6 @@
----
-type: Technical Documentation
-audience: Developer
-topics: [architecture, system-design, overview]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Technical Documentation audience: Developer topics: [architecture, system-design, overview] llm_priority: medium last_updated: 2025-01-04
 
 # 🏗️ SBKube 아키텍처 가이드
 

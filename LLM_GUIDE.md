@@ -1,22 +1,15 @@
----
-type: External Reference
-audience: AI Agent
-topics: [quickstart, commands, configuration, examples]
-llm_priority: high
-external_reference: true
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: External Reference audience: AI Agent topics: [quickstart, commands, configuration, examples] llm_priority: high external_reference: true last_updated: 2025-01-04
 
 # SBKube LLM Guide
 
 > **AI-Optimized Documentation for Using SBKube in Other Projects**
 >
-> **Target Audience**: AI assistants helping developers use SBKube
-> **Format**: Token-optimized, section-based reference
-> **Version**: v0.6.1
-> **Last Updated**: 2025-01-04
+> **Target Audience**: AI assistants helping developers use SBKube **Format**: Token-optimized, section-based reference
+> **Version**: v0.6.1 **Last Updated**: 2025-01-04
 
----
+______________________________________________________________________
 
 ## 📋 Table of Contents
 
@@ -28,13 +21,14 @@ last_updated: 2025-01-04
 
 **Total**: ~10KB, 3500 tokens
 
----
+______________________________________________________________________
 
 ## Quick Start
 
 ### What is SBKube?
 
-SBKube is a Kubernetes deployment automation CLI for k3s that simplifies the process of deploying applications using a unified workflow: `prepare → build → template → deploy`.
+SBKube is a Kubernetes deployment automation CLI for k3s that simplifies the process of deploying applications using a
+unified workflow: `prepare → build → template → deploy`.
 
 ### Core Workflow
 
@@ -52,6 +46,7 @@ sbkube deploy    # Deploy to k3s cluster
 ### Minimal Setup
 
 **1. Install SBKube**:
+
 ```bash
 pip install sbkube
 # or
@@ -59,6 +54,7 @@ uv pip install sbkube
 ```
 
 **2. Create `sources.yaml`** (defines what to deploy):
+
 ```yaml
 apps:
   - name: myapp
@@ -69,6 +65,7 @@ apps:
 ```
 
 **3. Deploy**:
+
 ```bash
 sbkube apply
 ```
@@ -83,7 +80,7 @@ sbkube apply
   - `rendered/`: Final Kubernetes manifests
 - **App Types**: `web`, `worker`, `scheduled`, `helm`, `yaml`, `git`, `http`, `kustomize`
 
----
+______________________________________________________________________
 
 ## Commands Reference
 
@@ -94,17 +91,20 @@ sbkube apply
 **Purpose**: Execute complete deployment workflow (most commonly used)
 
 **Usage**:
+
 ```bash
 sbkube apply [OPTIONS]
 ```
 
 **Key Options**:
+
 - `--dry-run`: Preview deployment without applying
 - `--quiet`: Minimal output
 - `--format {human|llm|json|yaml}`: Output format (default: human)
 - `--profile PROFILE`: Use specific configuration profile
 
 **Example**:
+
 ```bash
 # Standard deployment
 sbkube apply
@@ -116,79 +116,87 @@ sbkube apply --dry-run
 sbkube apply --format llm --quiet
 ```
 
----
+______________________________________________________________________
 
 #### `sbkube prepare`
 
 **Purpose**: Download and prepare sources (Helm charts, Git repos)
 
 **Supported Sources**:
+
 - Helm charts (from remote repos or local paths)
 - Git repositories
 - HTTP(S) URLs
 - Kustomize directories
 
 **Usage**:
+
 ```bash
 sbkube prepare [OPTIONS]
 ```
 
 **Output**: `.sbkube/charts/`, `.sbkube/repos/`
 
----
+______________________________________________________________________
 
 #### `sbkube build`
 
 **Purpose**: Build and customize applications
 
 **Capabilities**:
+
 - Apply Helm chart overrides
 - Extract specific paths from Git repos
 - Run Kustomize builds
 - Docker image builds (if configured)
 
 **Usage**:
+
 ```bash
 sbkube build [OPTIONS]
 ```
 
 **Output**: `.sbkube/build/`
 
----
+______________________________________________________________________
 
 #### `sbkube template`
 
 **Purpose**: Render Kubernetes manifests with environment-specific values
 
 **Supported Formats**:
+
 - Helm chart rendering
 - YAML template processing (Jinja2)
 - Kustomize overlays
 
 **Usage**:
+
 ```bash
 sbkube template [OPTIONS]
 ```
 
 **Output**: `.sbkube/rendered/`
 
----
+______________________________________________________________________
 
 #### `sbkube deploy`
 
 **Purpose**: Deploy rendered manifests to k3s cluster
 
 **Methods**:
+
 - Helm releases
 - kubectl apply
 - Kustomize apply
 
 **Usage**:
+
 ```bash
 sbkube deploy [OPTIONS]
 ```
 
----
+______________________________________________________________________
 
 ### Utility Commands
 
@@ -197,44 +205,50 @@ sbkube deploy [OPTIONS]
 **Purpose**: Initialize new project (run once)
 
 **Usage**:
+
 ```bash
 sbkube init [OPTIONS]
 ```
 
 **Creates**:
+
 - `sources.yaml` template
 - `.sbkube/` directory structure
 - Example configuration files
 
----
+______________________________________________________________________
 
 #### `sbkube validate`
 
 **Purpose**: Validate configuration files
 
 **Usage**:
+
 ```bash
 sbkube validate [OPTIONS]
 ```
 
 **Checks**:
+
 - YAML syntax
 - Pydantic schema validation
 - Dependency resolution
 - Required fields
 
----
+______________________________________________________________________
 
 #### `sbkube doctor`
 
 **Purpose**: System diagnostic and health check
 
 **Usage**:
+
 ```bash
 sbkube doctor [OPTIONS]
 ```
 
 **Checks**:
+
 - kubectl connectivity
 - Helm installation
 - Network access
@@ -242,43 +256,48 @@ sbkube doctor [OPTIONS]
 - Dependency directories (for app-group deps)
 
 **Example**:
+
 ```bash
 sbkube doctor --detailed
 ```
 
----
+______________________________________________________________________
 
 #### `sbkube status`
 
 **Purpose**: Check deployment status (v0.6.0+)
 
 **Usage**:
+
 ```bash
 sbkube status [OPTIONS]
 ```
 
 **Features**:
+
 - Real-time cluster state
 - Cached state for performance
 - Health checks
 
----
+______________________________________________________________________
 
 #### `sbkube history`
 
 **Purpose**: View deployment history (v0.6.0+)
 
 **Usage**:
+
 ```bash
 sbkube history [OPTIONS]
 ```
 
 **Features**:
+
 - Deployment timeline
 - Diff between revisions
 - Values diff
 
----
+______________________________________________________________________
 
 ### Management Commands
 
@@ -287,17 +306,19 @@ sbkube history [OPTIONS]
 **Purpose**: Upgrade Helm releases
 
 **Usage**:
+
 ```bash
 sbkube upgrade [APP_NAME] [OPTIONS]
 ```
 
----
+______________________________________________________________________
 
 #### `sbkube delete`
 
 **Purpose**: Delete deployed resources
 
 **Usage**:
+
 ```bash
 sbkube delete [OPTIONS]
 
@@ -305,18 +326,19 @@ sbkube delete [OPTIONS]
 sbkube delete --dry-run
 ```
 
----
+______________________________________________________________________
 
 #### `sbkube rollback`
 
 **Purpose**: Rollback to previous deployment
 
 **Usage**:
+
 ```bash
 sbkube rollback [APP_NAME] [REVISION] [OPTIONS]
 ```
 
----
+______________________________________________________________________
 
 ### Common Options (All Commands)
 
@@ -325,7 +347,7 @@ sbkube rollback [APP_NAME] [REVISION] [OPTIONS]
 - `--app NAME`: Process specific app only
 - `--help`: Show command help
 
----
+______________________________________________________________________
 
 ## Configuration Guide
 
@@ -334,6 +356,7 @@ sbkube rollback [APP_NAME] [REVISION] [OPTIONS]
 **Location**: Project root (defines location of `.sbkube/` working directory)
 
 **Basic Structure**:
+
 ```yaml
 apps:
   - name: app-name          # Required: Application name
@@ -345,7 +368,7 @@ apps:
     # Type-specific fields below
 ```
 
----
+______________________________________________________________________
 
 ### Application Types
 
@@ -363,12 +386,13 @@ apps:
 ```
 
 **Fields**:
+
 - `git`: Git repository URL
 - `dockerfile_path`: Path to Dockerfile (for build)
 - `helm_chart`: Path to Helm chart in repo
 - `values`: List of values files
 
----
+______________________________________________________________________
 
 #### 2. `worker` - Background Worker
 
@@ -383,7 +407,7 @@ apps:
 
 **Use Case**: Celery workers, queue processors, background jobs
 
----
+______________________________________________________________________
 
 #### 3. `scheduled` - Scheduled Job (CronJob)
 
@@ -398,9 +422,10 @@ apps:
 ```
 
 **Fields**:
+
 - `schedule`: Cron expression
 
----
+______________________________________________________________________
 
 #### 4. `helm` - Pure Helm Chart
 
@@ -419,7 +444,7 @@ apps:
 
 **Use Case**: Deploy existing Helm charts (Prometheus, Grafana, etc.)
 
----
+______________________________________________________________________
 
 #### 5. `yaml` - Plain YAML Manifests
 
@@ -433,7 +458,7 @@ apps:
 
 **Use Case**: Deploy raw Kubernetes YAML files
 
----
+______________________________________________________________________
 
 #### 6. `git` - Git Repository
 
@@ -447,7 +472,7 @@ apps:
       path: k8s/
 ```
 
----
+______________________________________________________________________
 
 #### 7. `kustomize` - Kustomize
 
@@ -459,7 +484,7 @@ apps:
       path: overlays/production
 ```
 
----
+______________________________________________________________________
 
 ### Advanced Configuration
 
@@ -480,11 +505,12 @@ apps:
     git: https://github.com/user/backend
 ```
 
----
+______________________________________________________________________
 
 #### App-Group Dependencies (v0.6.0+)
 
 **Directory Structure**:
+
 ```
 project/
 ├── a000_infra_network/
@@ -496,6 +522,7 @@ project/
 ```
 
 **sources.yaml** (in `a302_devops/`):
+
 ```yaml
 namespace: devops
 deps:
@@ -511,10 +538,11 @@ apps:
 ```
 
 **Validation**:
+
 - `sbkube doctor`: Checks if dependency directories exist
 - `sbkube apply`: Verifies dependencies are deployed before proceeding
 
----
+______________________________________________________________________
 
 #### Helm Chart Overrides
 
@@ -535,7 +563,7 @@ apps:
         - custom-values.yaml
 ```
 
----
+______________________________________________________________________
 
 #### Environment Profiles
 
@@ -552,11 +580,12 @@ apps:
 ```
 
 **Usage**:
+
 ```bash
 sbkube apply --profile prod
 ```
 
----
+______________________________________________________________________
 
 ## Examples
 
@@ -565,6 +594,7 @@ sbkube apply --profile prod
 **Scenario**: Deploy a Python Flask app with PostgreSQL
 
 **Directory Structure**:
+
 ```
 myproject/
 ├── sources.yaml
@@ -574,6 +604,7 @@ myproject/
 ```
 
 **sources.yaml**:
+
 ```yaml
 apps:
   - name: database
@@ -598,6 +629,7 @@ apps:
 ```
 
 **values/db-values.yaml**:
+
 ```yaml
 auth:
   username: appuser
@@ -606,6 +638,7 @@ auth:
 ```
 
 **values/app-values.yaml**:
+
 ```yaml
 image:
   repository: myregistry/flask-app
@@ -616,17 +649,19 @@ env:
 ```
 
 **Deploy**:
+
 ```bash
 sbkube apply
 ```
 
----
+______________________________________________________________________
 
 ### Example 2: Multi-Tier Application with Dependencies
 
 **Scenario**: Deploy monitoring stack (Prometheus + Grafana)
 
 **sources.yaml**:
+
 ```yaml
 apps:
   - name: prometheus
@@ -653,6 +688,7 @@ apps:
 ```
 
 **grafana-values.yaml**:
+
 ```yaml
 datasources:
   datasources.yaml:
@@ -664,13 +700,14 @@ datasources:
         isDefault: true
 ```
 
----
+______________________________________________________________________
 
 ### Example 3: App-Group Management (v0.6.0+)
 
 **Scenario**: Deploy Harbor registry with infrastructure dependencies
 
 **Directory Structure**:
+
 ```
 k8s-apps/
 ├── a000_infra_network/
@@ -682,6 +719,7 @@ k8s-apps/
 ```
 
 **a302_devops/sources.yaml**:
+
 ```yaml
 namespace: devops
 deps:
@@ -701,19 +739,21 @@ apps:
 ```
 
 **Deploy**:
+
 ```bash
 cd k8s-apps/a302_devops
 sbkube doctor  # Verifies dependency dirs exist
 sbkube apply   # Verifies dependencies are deployed
 ```
 
----
+______________________________________________________________________
 
 ### Example 4: Customizing Existing Helm Chart
 
 **Scenario**: Remove default Ingress and add custom one
 
 **sources.yaml**:
+
 ```yaml
 apps:
   - name: nginx
@@ -733,6 +773,7 @@ apps:
 ```
 
 **custom-manifests/custom-ingress.yaml**:
+
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -752,18 +793,20 @@ spec:
                   number: 80
 ```
 
----
+______________________________________________________________________
 
 ### Example 5: LLM-Friendly Output
 
 **Scenario**: Get deployment status in structured format for AI processing
 
 **Command**:
+
 ```bash
 sbkube status --format llm --quiet
 ```
 
 **Output**:
+
 ```yaml
 status: success
 apps:
@@ -779,7 +822,7 @@ apps:
 
 **Use Case**: Parse output in AI workflows, automation scripts
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -790,18 +833,20 @@ apps:
 **Cause**: Running `sbkube` in wrong directory
 
 **Fix**:
+
 ```bash
 cd /path/to/project  # Directory containing sources.yaml
 sbkube apply
 ```
 
----
+______________________________________________________________________
 
 #### Error: "kubectl not found"
 
 **Cause**: kubectl not installed or not in PATH
 
 **Fix**:
+
 ```bash
 # Install kubectl
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -812,13 +857,14 @@ sudo mv kubectl /usr/local/bin/
 sbkube doctor
 ```
 
----
+______________________________________________________________________
 
 #### Error: "Helm chart not found"
 
 **Cause**: Helm repository not added
 
 **Fix**:
+
 ```bash
 # Add repository
 helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -828,13 +874,14 @@ helm repo update
 sbkube prepare
 ```
 
----
+______________________________________________________________________
 
 #### Error: "Dependency not deployed"
 
 **Cause**: App-group dependency validation failed (v0.6.0+)
 
 **Error Message**:
+
 ```
 ❌ Error: 2 dependencies not deployed:
   - a101_data_rdb (never deployed)
@@ -842,6 +889,7 @@ sbkube prepare
 ```
 
 **Fix**:
+
 ```bash
 # Option 1: Deploy missing dependencies first
 cd ../a101_data_rdb
@@ -857,13 +905,14 @@ for dir in a000_* a100_* a101_* a302_*; do
 done
 ```
 
----
+______________________________________________________________________
 
 #### Error: "Invalid sources.yaml schema"
 
 **Cause**: Configuration validation failed
 
 **Fix**:
+
 ```bash
 # Check validation errors
 sbkube validate
@@ -874,57 +923,63 @@ sbkube validate
 # - YAML syntax errors
 ```
 
----
+______________________________________________________________________
 
 ### Diagnostic Commands
 
 **Full system check**:
+
 ```bash
 sbkube doctor --detailed
 ```
 
 **Validate configuration**:
+
 ```bash
 sbkube validate
 ```
 
 **Preview deployment**:
+
 ```bash
 sbkube apply --dry-run
 ```
 
 **Check deployment status**:
+
 ```bash
 sbkube status
 ```
 
 **View deployment history**:
+
 ```bash
 sbkube history
 ```
 
----
+______________________________________________________________________
 
 ### Best Practices
 
 1. **Always run `sbkube doctor` first** when setting up new environment
-2. **Use `--dry-run`** before actual deployment
-3. **Version Helm charts explicitly** (avoid `latest`)
-4. **Use app dependencies** for proper deployment order
-5. **Use app-group dependencies** for cross-directory dependencies (v0.6.0+)
-6. **Keep `.sbkube/` in `.gitignore`** (working directory, not source)
-7. **Use `--format llm`** for structured output in automation
+1. **Use `--dry-run`** before actual deployment
+1. **Version Helm charts explicitly** (avoid `latest`)
+1. **Use app dependencies** for proper deployment order
+1. **Use app-group dependencies** for cross-directory dependencies (v0.6.0+)
+1. **Keep `.sbkube/` in `.gitignore`** (working directory, not source)
+1. **Use `--format llm`** for structured output in automation
 
----
+______________________________________________________________________
 
 ## Additional Resources
 
 - **Full Documentation**: [docs/](https://github.com/USER/sb-kube-app-manager/tree/master/docs)
 - **Product Spec**: [PRODUCT.md](https://github.com/USER/sb-kube-app-manager/blob/master/PRODUCT.md)
 - **Examples**: [examples/](https://github.com/USER/sb-kube-app-manager/tree/master/examples)
-- **Troubleshooting**: [docs/07-troubleshooting/](https://github.com/USER/sb-kube-app-manager/tree/master/docs/07-troubleshooting)
+- **Troubleshooting**:
+  [docs/07-troubleshooting/](https://github.com/USER/sb-kube-app-manager/tree/master/docs/07-troubleshooting)
 
----
+______________________________________________________________________
 
 ## Usage from Other Projects
 
@@ -933,13 +988,14 @@ sbkube history
 When a user asks about SBKube in another project:
 
 1. **Fetch this guide**:
+
    ```
    WebFetch("https://raw.githubusercontent.com/USER/sb-kube-app-manager/master/LLM_GUIDE.md")
    ```
 
-2. **Reference specific sections** by searching for markdown headers
+1. **Reference specific sections** by searching for markdown headers
 
-3. **Provide concise answers** using examples from this guide
+1. **Provide concise answers** using examples from this guide
 
 ### For Developers
 
@@ -957,8 +1013,6 @@ Add this to your project's `CLAUDE.md`:
 - See full docs at URL above
 ```
 
----
+______________________________________________________________________
 
-**Document Version**: 1.0
-**SBKube Version**: v0.6.1+
-**Last Updated**: 2025-01-04
+**Document Version**: 1.0 **SBKube Version**: v0.6.1+ **Last Updated**: 2025-01-04

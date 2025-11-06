@@ -93,7 +93,9 @@ def build_helm_app(
     else:
         # 기존 디렉토리 삭제
         if dest_path.exists():
-            output.print(f"  Removing existing build directory: {dest_path}", level="info")
+            output.print(
+                f"  Removing existing build directory: {dest_path}", level="info"
+            )
             shutil.rmtree(dest_path)
 
         output.print(f"  Copying chart: {source_path} → {dest_path}", level="info")
@@ -105,9 +107,7 @@ def build_helm_app(
     # 3.1. Warn if override directory exists but not configured
     if overrides_base.exists() and overrides_base.is_dir() and not app.overrides:
         output.print("", level="warning")
-        output.print_warning(
-            f"Override directory found but not configured: {app_name}"
-        )
+        output.print_warning(f"Override directory found but not configured: {app_name}")
 
         try:
             rel_path = overrides_base.relative_to(Path.cwd())
@@ -139,7 +139,9 @@ def build_helm_app(
             # Show up to 3 files with full path mapping explanation
             for i, f in enumerate(override_files[:3]):
                 rel_file_path = f.relative_to(overrides_base)
-                output.print(f"[yellow]           - {rel_file_path}[/yellow]", level="warning")
+                output.print(
+                    f"[yellow]           - {rel_file_path}[/yellow]", level="warning"
+                )
                 if i == 0:
                     output.print(
                         f"[dim yellow]             # → build/{app_name}/{rel_file_path}[/dim yellow]",
@@ -154,12 +156,12 @@ def build_helm_app(
 
     # 3.2. Apply overrides if configured
     if app.overrides:
-        output.print(f"  Processing {len(app.overrides)} override patterns...", level="info")
+        output.print(
+            f"  Processing {len(app.overrides)} override patterns...", level="info"
+        )
 
         if not overrides_base.exists():
-            output.print_warning(
-                f"Overrides directory not found: {overrides_base}"
-            )
+            output.print_warning(f"Overrides directory not found: {overrides_base}")
         else:
             total_files_copied = 0
 
@@ -195,7 +197,9 @@ def build_helm_app(
                             else:
                                 dst_file.parent.mkdir(parents=True, exist_ok=True)
                                 shutil.copy2(src_file, dst_file)
-                                output.print(f"      ✓ {override_rel_path}", level="info")
+                                output.print(
+                                    f"      ✓ {override_rel_path}", level="info"
+                                )
                                 total_files_copied += 1
                 else:
                     # Exact file path - existing behavior
@@ -212,15 +216,17 @@ def build_helm_app(
                             # 대상 디렉토리 생성
                             dst_file.parent.mkdir(parents=True, exist_ok=True)
                             shutil.copy2(src_file, dst_file)
-                            output.print(f"    ✓ Override: {override_pattern}", level="info")
+                            output.print(
+                                f"    ✓ Override: {override_pattern}", level="info"
+                            )
                             total_files_copied += 1
                     else:
-                        output.print_warning(
-                            f"    Override file not found: {src_file}"
-                        )
+                        output.print_warning(f"    Override file not found: {src_file}")
 
             if total_files_copied > 0:
-                output.print(f"  Total files copied: {total_files_copied}", level="info")
+                output.print(
+                    f"  Total files copied: {total_files_copied}", level="info"
+                )
 
     # 4. Removes 적용
     if app.removes:
@@ -248,10 +254,14 @@ def build_helm_app(
                 if remove_target.exists():
                     if remove_target.is_dir():
                         shutil.rmtree(remove_target)
-                        output.print(f"    ✓ Removed directory: {remove_pattern}", level="info")
+                        output.print(
+                            f"    ✓ Removed directory: {remove_pattern}", level="info"
+                        )
                     elif remove_target.is_file():
                         remove_target.unlink()
-                        output.print(f"    ✓ Removed file: {remove_pattern}", level="info")
+                        output.print(
+                            f"    ✓ Removed file: {remove_pattern}", level="info"
+                        )
                 else:
                     output.print_warning(
                         f"    Remove target not found: {remove_pattern}"
@@ -404,7 +414,9 @@ def cmd(
             overall_success = False
             continue
 
-        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info")
+        output.print(
+            f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info"
+        )
         config_data = load_config_file(config_file_path)
 
         try:
@@ -508,7 +520,13 @@ def cmd(
                     success = True  # 건너뛰어도 성공으로 간주
             elif isinstance(app, HttpApp):
                 success = build_http_app(
-                    app_name_iter, app, BASE_DIR, BUILD_DIR, APP_CONFIG_DIR, output, dry_run
+                    app_name_iter,
+                    app,
+                    BASE_DIR,
+                    BUILD_DIR,
+                    APP_CONFIG_DIR,
+                    output,
+                    dry_run,
                 )
             else:
                 output.print(
@@ -568,7 +586,9 @@ def cmd(
 
     # 전체 결과
     if not overall_success:
-        output.print("\n[bold red]❌ Some app groups failed to build[/bold red]", level="error")
+        output.print(
+            "\n[bold red]❌ Some app groups failed to build[/bold red]", level="error"
+        )
         output.finalize(
             status="failed",
             summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},

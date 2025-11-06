@@ -1,10 +1,6 @@
----
-type: Best Practices Guide
-audience: End User, Developer
-topics: [organization, structure, app-groups, naming]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Best Practices Guide audience: End User, Developer topics: [organization, structure, app-groups, naming] llm_priority: medium last_updated: 2025-01-04
 
 # SBKube 디렉토리 구조 베스트 프랙티스
 

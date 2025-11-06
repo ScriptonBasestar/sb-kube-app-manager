@@ -1,10 +1,6 @@
----
-type: Tutorial
-audience: End User
-topics: [multi-app, dependencies, orchestration]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Tutorial audience: End User topics: [multi-app, dependencies, orchestration] llm_priority: medium last_updated: 2025-01-04
 
 # 🔗 다중 애플리케이션 배포
 

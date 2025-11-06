@@ -1,11 +1,6 @@
----
-type: Product Overview
-audience: End User, Developer, AI Agent
-topics: [overview, quickstart, core-concepts, workflow]
-llm_priority: high
-entry_point: true
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Product Overview audience: End User, Developer, AI Agent topics: [overview, quickstart, core-concepts, workflow] llm_priority: high entry_point: true last_updated: 2025-01-04
 
 # SBKube - Kubernetes 배포 자동화 도구
 

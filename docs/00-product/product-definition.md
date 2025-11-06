@@ -1,10 +1,6 @@
----
-type: Product Definition
-audience: End User, Developer, AI Agent
-topics: [product-definition, overview, core-concepts, mission]
-llm_priority: high
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Product Definition audience: End User, Developer, AI Agent topics: [product-definition, overview, core-concepts, mission] llm_priority: high last_updated: 2025-01-04
 
 # SBKube 제품 정의서
 

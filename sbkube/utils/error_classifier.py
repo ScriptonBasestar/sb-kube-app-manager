@@ -211,7 +211,9 @@ class ErrorClassifier:
             result["db_type"] = "mysql"
 
         # User 추출
-        user_match = re.search(r"user\s+['\"]?([^'\"@\s]+)['\"]?", error_message, re.IGNORECASE)
+        user_match = re.search(
+            r"user\s+['\"]?([^'\"@\s]+)['\"]?", error_message, re.IGNORECASE
+        )
         if user_match:
             result["user"] = user_match.group(1)
 
@@ -264,7 +266,9 @@ class ErrorClassifier:
             result["namespace"] = namespace_match.group(1)
 
         # Chart 추출
-        chart_match = re.search(r'chart[:\s]+"?([^"\s]+)"?', error_message, re.IGNORECASE)
+        chart_match = re.search(
+            r'chart[:\s]+"?([^"\s]+)"?', error_message, re.IGNORECASE
+        )
         if chart_match:
             result["chart"] = chart_match.group(1)
 

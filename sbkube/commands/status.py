@@ -137,7 +137,9 @@ def cmd(
     # Load sources.yaml
     if not sources_file.exists():
         output.print_error(f"sources.yaml not found in {base_dir}")
-        output.print("\n[yellow]Hint: Run 'sbkube init' to create a sources.yaml file[/yellow]")
+        output.print(
+            "\n[yellow]Hint: Run 'sbkube init' to create a sources.yaml file[/yellow]"
+        )
         sys.exit(1)
 
     try:
@@ -283,7 +285,9 @@ def _display_status(
     # Header
     cluster_name = data.get("cluster_name", "unknown")
     context = data.get("context", "unknown")
-    output.print(f"[bold cyan]Status: {cluster_name}[/bold cyan] (context: {context})\n")
+    output.print(
+        f"[bold cyan]Status: {cluster_name}[/bold cyan] (context: {context})\n"
+    )
 
     # Get Helm releases
     helm_releases = data.get("helm_releases", [])
@@ -410,7 +414,9 @@ def _display_grouped_status(
         db = DeploymentDatabase()
     except Exception:
         db = None
-        output.print_warning("Could not connect to State DB, grouping may be incomplete")
+        output.print_warning(
+            "Could not connect to State DB, grouping may be incomplete"
+        )
 
     # Group releases
     grouped_data = group_releases_by_app_group(helm_releases, db)
@@ -448,7 +454,9 @@ def _display_grouped_status(
     # Display summary
     if output.format_type == "human":
         output.print(f"[bold]App Groups:[/bold] {summary['total_app_groups']}")
-        output.print(f"[bold]Managed Releases:[/bold] {summary['total_managed_releases']}")
+        output.print(
+            f"[bold]Managed Releases:[/bold] {summary['total_managed_releases']}"
+        )
         if not managed:
             output.print(
                 f"[bold]Unmanaged Releases:[/bold] {summary['total_unmanaged_releases']}"
@@ -524,7 +532,9 @@ def _display_single_app_group(
         console.print()
 
 
-def _display_app_group_summary(app_group: str, group_data: dict, output: OutputManager) -> None:
+def _display_app_group_summary(
+    app_group: str, group_data: dict, output: OutputManager
+) -> None:
     """Display summary for an app-group."""
     summary = group_data.get("summary", {})
     total = summary.get("total_apps", 0)
@@ -573,9 +583,7 @@ def _format_release_status(status: str) -> str:
     return status_map.get(status, status)
 
 
-def _display_cache_info(
-    cache: ClusterCache, output: OutputManager, show: bool
-) -> None:
+def _display_cache_info(cache: ClusterCache, output: OutputManager, show: bool) -> None:
     """Display cache metadata."""
     if not show:
         return
@@ -610,7 +618,9 @@ def _format_duration(seconds: float) -> str:
     return _format_age(seconds)
 
 
-def _display_dependency_tree(base_path: Path, app_group: str | None, output: OutputManager) -> None:
+def _display_dependency_tree(
+    base_path: Path, app_group: str | None, output: OutputManager
+) -> None:
     """Display dependency tree for applications (Phase 6)."""
     output.print("\n[bold cyan]🔗 Dependency Tree[/bold cyan]\n")
 
@@ -939,7 +949,11 @@ def _finalize_status_output(
     # Next steps
     next_steps = []
     if by_group or app_group:
-        next_steps.append(f"kubectl get pods -n {app_group}" if app_group else "kubectl get pods --all-namespaces")
+        next_steps.append(
+            f"kubectl get pods -n {app_group}"
+            if app_group
+            else "kubectl get pods --all-namespaces"
+        )
     else:
         next_steps.append("kubectl get nodes")
         next_steps.append("kubectl get pods --all-namespaces")
@@ -951,6 +965,7 @@ def _finalize_status_output(
         next_steps=next_steps,
         errors=output.error_messages if output.error_messages else None,
     )
+
 
 def _finalize_status_output(
     output: OutputManager,

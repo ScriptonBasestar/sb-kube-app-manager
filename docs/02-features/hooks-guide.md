@@ -1,20 +1,17 @@
----
-type: User Guide
-audience: End User
-topics: [hooks, automation, lifecycle]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: User Guide audience: End User topics: [hooks, automation, lifecycle] llm_priority: medium last_updated: 2025-01-04
 
 # SBKube Hooks Guide
 
-SBKube hooks enable custom script execution before/after commands and deployments, providing powerful automation capabilities for your Kubernetes workflows.
+SBKube hooks enable custom script execution before/after commands and deployments, providing powerful automation
+capabilities for your Kubernetes workflows.
 
 ## TL;DR
 
 - **Purpose**: Execute custom scripts before/after commands and deployments
 - **Levels**: Command-level (global) and App-level (per-app)
-- **Key Hooks**: pre_*, post_*, on_*_failure
+- **Key Hooks**: pre\_*, post\_*, on\_\*\_failure
 - **Related**: [Hooks Reference](hooks-reference.md)
 
 ## Overview
@@ -22,7 +19,7 @@ SBKube hooks enable custom script execution before/after commands and deployment
 Hooks operate at two levels:
 
 1. **Command-level**: Global hooks applying to all app deployments
-2. **App-level**: App-specific hooks for individual applications
+1. **App-level**: App-specific hooks for individual applications
 
 ## Hook Types
 
@@ -174,11 +171,9 @@ apps:
 
 Hooks automatically receive these environment variables:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SBKUBE_APP_NAME` | Current app name | `redis` |
-| `SBKUBE_NAMESPACE` | Deployment namespace | `production` |
-| `SBKUBE_RELEASE_NAME` | Helm release name | `my-redis` |
+| Variable | Description | Example | |----------|-------------|---------| | `SBKUBE_APP_NAME` | Current app name |
+`redis` | | `SBKUBE_NAMESPACE` | Deployment namespace | `production` | | `SBKUBE_RELEASE_NAME` | Helm release name |
+`my-redis` |
 
 ### Usage Example
 
@@ -488,15 +483,18 @@ hooks:
 ### Common Issues
 
 1. **Hook scripts not found**
+
    - Verify the working directory matches `--app-dir`
    - Use relative paths from the app directory
    - Check script permissions (must be executable)
 
-2. **Environment variables missing**
+1. **Environment variables missing**
+
    - Verify using: `env | grep SBKUBE`
    - Check SBKube version supports the expected variables
 
-3. **Hooks not executing**
+1. **Hooks not executing**
+
    - Enable verbose mode: `sbkube deploy --verbose`
    - Check hook naming conventions (snake_case for app-level)
    - Verify YAML indentation
@@ -525,28 +523,28 @@ hooks:
 
 ### Overview
 
-Phase 4 allows hooks to be defined as independent apps (`type: hook`), making them reusable and independently manageable.
+Phase 4 allows hooks to be defined as independent apps (`type: hook`), making them reusable and independently
+manageable.
 
 ### HookApp Features
 
-| Feature | Description | Benefit |
-|---------|-------------|---------|
-| **First-class App** | `type: hook` for independent apps | Managed like other apps |
-| **Simplified Lifecycle** | Skip `prepare`, `build`, `template` | Execute only during `deploy` |
-| **Reusable** | Use across projects | Eliminate duplication |
-| **Enabled Flag** | `enabled: false` to disable | Easy on/off |
-| **Dependency Support** | Inter-app dependencies | Control execution order |
-| **Individual Deployment** | `sbkube deploy --app setup-issuers` | Independent management |
+| Feature | Description | Benefit | |---------|-------------|---------| | **First-class App** | `type: hook` for
+independent apps | Managed like other apps | | **Simplified Lifecycle** | Skip `prepare`, `build`, `template` | Execute
+only during `deploy` | | **Reusable** | Use across projects | Eliminate duplication | | **Enabled Flag** |
+`enabled: false` to disable | Easy on/off | | **Dependency Support** | Inter-app dependencies | Control execution order
+| | **Individual Deployment** | `sbkube deploy --app setup-issuers` | Independent management |
 
 ### When to Use HookApp
 
 **Use HookApp when:**
+
 - ✅ Reusing across multiple projects/environments
 - ✅ Complex initialization logic (multiple tasks)
 - ✅ Need to independently enable/disable
 - ✅ Clear dependency relationships with other apps
 
 **Use regular hooks when:**
+
 - ✅ App-specific operations only
 - ✅ Simple shell commands
 - ✅ One-time use
@@ -575,13 +573,10 @@ apps:
 
 SBKube hooks and Helm hooks are different concepts:
 
-| Aspect | SBKube Hooks | Helm Hooks |
-|--------|--------------|------------|
-| **Definition** | SBKube command execution points | Helm release lifecycle |
-| **Execution** | SBKube CLI | Helm/Kubernetes |
-| **Location** | Local machine | Kubernetes cluster |
-| **Purpose** | Deployment automation, validation | In-cluster operations |
-| **Examples** | Backup, notifications, external integration | DB migration, initialization |
+| Aspect | SBKube Hooks | Helm Hooks | |--------|--------------|------------| | **Definition** | SBKube command
+execution points | Helm release lifecycle | | **Execution** | SBKube CLI | Helm/Kubernetes | | **Location** | Local
+machine | Kubernetes cluster | | **Purpose** | Deployment automation, validation | In-cluster operations | |
+**Examples** | Backup, notifications, external integration | DB migration, initialization |
 
 Both can be used together:
 
@@ -615,10 +610,12 @@ spec:
 ## Additional Resources
 
 ### Documentation
+
 - **[Hooks Reference](./hooks-reference.md)** - Complete hook types, naming conventions, environment variables
 - **[Application Types](./application-types.md)** - HookApp type details
 
 ### Examples
+
 - `examples/hooks/` - Basic hook usage
 - `examples/hooks-basic-all/` - All hook types
 - `examples/hooks-manifests/` - Phase 1: Manifests

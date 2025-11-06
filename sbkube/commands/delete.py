@@ -85,9 +85,7 @@ def cmd(
 
     # Load sources.yaml and resolve cluster configuration
     sources_file_name = ctx.obj.get("sources_file", "sources.yaml")
-    sources_file_path = find_sources_file(
-        BASE_DIR, APP_CONFIG_DIR, sources_file_name
-    )
+    sources_file_path = find_sources_file(BASE_DIR, APP_CONFIG_DIR, sources_file_name)
 
     sources = None
     if sources_file_path and sources_file_path.exists():
@@ -243,7 +241,9 @@ def cmd(
             effective_kubeconfig = kubeconfig if not app_context else None
 
             installed_charts = get_installed_charts(
-                current_namespace, context=effective_context, kubeconfig=effective_kubeconfig
+                current_namespace,
+                context=effective_context,
+                kubeconfig=effective_kubeconfig,
             )
             if app_release_name not in installed_charts:
                 console.print(

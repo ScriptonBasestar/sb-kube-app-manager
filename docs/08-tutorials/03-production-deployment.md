@@ -1,10 +1,6 @@
----
-type: Tutorial
-audience: End User, Developer
-topics: [production, best-practices, operations]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Tutorial audience: End User, Developer topics: [production, best-practices, operations] llm_priority: medium last_updated: 2025-01-04
 
 # 🏭 프로덕션 배포 Best Practices
 

@@ -1,17 +1,14 @@
----
-type: Error Reference
-audience: Developer
-topics: [errors, error-messages, diagnostics, fixes]
-llm_priority: low
-load_on_demand: true
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Error Reference audience: Developer topics: [errors, error-messages, diagnostics, fixes] llm_priority: low load_on_demand: true last_updated: 2025-01-04
 
 # Complete Error Reference
 
-> **Note**: This is a comprehensive error catalog. For common issues and quick fixes, see the [Troubleshooting Guide](README.md).
+> **Note**: This is a comprehensive error catalog. For common issues and quick fixes, see the
+> [Troubleshooting Guide](README.md).
 
-This document contains a complete catalog of all error messages you might encounter in SBKube, organized by category and command.
+This document contains a complete catalog of all error messages you might encounter in SBKube, organized by category and
+command.
 
 ______________________________________________________________________
 
@@ -39,6 +36,7 @@ ERROR: Python 3.12 is required, but you have 3.11
 **Cause:** SBKube requires Python 3.12 or higher.
 
 **Solution:**
+
 ```bash
 # Install Python 3.12+
 # Ubuntu/Debian
@@ -63,11 +61,13 @@ bash: sbkube: command not found
 ```
 
 **Possible Causes:**
+
 1. SBKube not installed
-2. PATH not configured correctly
-3. Virtual environment not activated
+1. PATH not configured correctly
+1. Virtual environment not activated
 
 **Solutions:**
+
 ```bash
 # Install SBKube
 pip install sbkube
@@ -93,6 +93,7 @@ OSError: [Errno 13] Permission denied: '~/.sbkube/'
 ```
 
 **Solutions:**
+
 ```bash
 # Fix ownership
 sudo chown -R $USER:$USER ~/.sbkube/
@@ -119,11 +120,13 @@ Error: Cannot find sources.yaml in any search path
 ```
 
 **Search Order (v0.4.7+):**
+
 1. Current directory (.)
-2. Parent directory (..)
-3. base-dir (--base-dir option)
+1. Parent directory (..)
+1. base-dir (--base-dir option)
 
 **Solution:**
+
 ```bash
 # Create sources.yaml in any of these locations
 cat > sources.yaml << 'EOF'
@@ -161,12 +164,14 @@ yaml.constructor.ConstructorError: could not determine a constructor for tag
 ```
 
 **Common Causes:**
+
 - Tabs instead of spaces
 - Incorrect indentation
 - Unclosed quotes
 - Invalid special characters
 
 **Solutions:**
+
 ```bash
 # Validate YAML syntax
 python -c "import yaml; yaml.safe_load(open('config.yaml'))"
@@ -194,6 +199,7 @@ ValidationError: extra fields not permitted (type=value_error.extra)
 ```
 
 **Supported App Types:**
+
 - `helm` - Helm charts
 - `git` - Git repositories
 - `http` - HTTP downloads
@@ -204,6 +210,7 @@ ValidationError: extra fields not permitted (type=value_error.extra)
 - `noop` - No operation (placeholder)
 
 **Solution:**
+
 ```bash
 # Validate configuration
 sbkube validate
@@ -231,6 +238,7 @@ RuntimeError: Maximum recursion depth exceeded in dependency resolution
 ```
 
 **Solution:**
+
 ```yaml
 # Wrong configuration
 apps:
@@ -261,12 +269,14 @@ ValidationError: Port number 99999 is out of range (1-65535)
 ```
 
 **Kubernetes Naming Rules:**
+
 - Lowercase letters, numbers, hyphens only
 - Must start and end with alphanumeric
 - Max 63 characters for names
 - Max 253 characters for DNS names
 
 **Solution:**
+
 ```yaml
 # Valid names
 namespace: my-namespace  # Good
@@ -291,6 +301,7 @@ Error: kubeconfig validation failed: file does not exist
 ```
 
 **Solutions:**
+
 ```bash
 # Check kubeconfig existence
 ls -la ~/.kube/config
@@ -321,10 +332,12 @@ Available contexts in this kubeconfig:
 ```
 
 **Important Context vs Cluster Distinction:**
+
 - `cluster` field: Human-readable label (any name you want)
 - `kubeconfig_context`: Actual kubectl context name (must match exactly)
 
 **Solution:**
+
 ```bash
 # 1. List available contexts
 kubectl config get-contexts
@@ -354,6 +367,7 @@ Error from server (Forbidden): deployments.apps is forbidden
 ```
 
 **Solutions:**
+
 ```bash
 # Check current user
 kubectl auth whoami
@@ -386,6 +400,7 @@ FileNotFoundError: [Errno 2] No such file or directory: 'kubectl'
 ```
 
 **Solution:**
+
 ```bash
 # Install kubectl (Linux)
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -411,6 +426,7 @@ Error: Cannot find helm binary in PATH
 ```
 
 **Solution:**
+
 ```bash
 # Install Helm
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -437,6 +453,7 @@ SSL certificate problem: unable to get local issuer certificate
 ```
 
 **Solutions:**
+
 ```bash
 # Temporary: Disable SSL verification (NOT RECOMMENDED)
 git config --global http.sslVerify false
@@ -465,6 +482,7 @@ Error: failed to update cache: failed to fetch index.yaml
 ```
 
 **Solutions:**
+
 ```bash
 # Test connectivity
 curl -I https://grafana.github.io/helm-charts/index.yaml
@@ -499,6 +517,7 @@ Error: failed to fetch chart: 404 Not Found
 ```
 
 **Solutions:**
+
 ```bash
 # Update repositories
 helm repo update
@@ -522,13 +541,15 @@ apps:
 ```
 
 **Common Causes:**
+
 1. **OCI Registry**: Should be in `oci_registries` not `helm_repos`
-2. **Name Mismatch**: Typo between sources.yaml and config.yaml
-3. **Deprecated Repository**: Using old/unsupported repositories
+1. **Name Mismatch**: Typo between sources.yaml and config.yaml
+1. **Deprecated Repository**: Using old/unsupported repositories
 
 **Solutions:**
 
 **Case 1: OCI Registry Chart**
+
 ```yaml
 # sources.yaml
 oci_registries:
@@ -545,6 +566,7 @@ apps:
 ```
 
 **Case 2: Repository Name Typo**
+
 ```yaml
 # ✅ Correct - names match
 # sources.yaml
@@ -559,6 +581,7 @@ apps:
 ```
 
 **Case 3: Deprecated Repository**
+
 ```yaml
 # ❌ Wrong - Helm Stable deprecated in 2020
 helm_repos:
@@ -581,6 +604,7 @@ Error: a release named grafana already exists
 ```
 
 **Solutions:**
+
 ```bash
 # List existing releases
 helm list -n my-namespace
@@ -613,6 +637,7 @@ Error: the namespace from the provided object "my-namespace" does not exist
 ```
 
 **Solutions:**
+
 ```bash
 # Create namespace
 kubectl create namespace my-namespace
@@ -644,6 +669,7 @@ grafana-5f7b4c5d9-abcde    0/1     Pending   0          5m
 **Common Causes & Solutions:**
 
 **1. Insufficient Resources**
+
 ```bash
 # Check node resources
 kubectl top nodes
@@ -660,6 +686,7 @@ resources:
 ```
 
 **2. PVC Mount Failure**
+
 ```bash
 # Check PVC status
 kubectl get pvc -n test-namespace
@@ -674,6 +701,7 @@ persistence:
 ```
 
 **3. Node Selector/Affinity Mismatch**
+
 ```bash
 # Check node labels
 kubectl get nodes --show-labels
@@ -694,6 +722,7 @@ grafana-5f7b4c5d9-abcde    0/1     ImagePullBackOff   0          2m
 ```
 
 **Solutions:**
+
 ```bash
 # Check events for details
 kubectl describe pod grafana-5f7b4c5d9-abcde -n test-namespace
@@ -730,6 +759,7 @@ grafana-5f7b4c5d9-abcde    0/1     CrashLoopBackOff   5          3m
 ```
 
 **Diagnosis and Solutions:**
+
 ```bash
 # Check logs
 kubectl logs grafana-5f7b4c5d9-abcde -n test-namespace
@@ -773,12 +803,14 @@ Error: One or more phases failed during apply
 ```
 
 **Common Issues:**
+
 1. Configuration validation errors
-2. Dependency resolution problems
-3. Hook execution failures
-4. Resource creation failures
+1. Dependency resolution problems
+1. Hook execution failures
+1. Resource creation failures
 
 **Solutions:**
+
 ```bash
 # Debug step by step
 sbkube validate
@@ -801,6 +833,7 @@ Error: failed to download "grafana/grafana" at version "6.50.0"
 ```
 
 **Solution:**
+
 ```bash
 # Check available versions
 helm search repo grafana/grafana --versions | head -20
@@ -825,6 +858,7 @@ fatal: could not read Username for 'https://github.com': terminal prompts disabl
 ```
 
 **Solutions:**
+
 ```bash
 # Use SSH URL in sources.yaml
 git_repos:
@@ -852,6 +886,7 @@ ssh-add ~/.ssh/id_rsa
 ```
 
 **Solution:**
+
 ```bash
 # Force re-download if needed
 sbkube prepare --force
@@ -869,6 +904,7 @@ sbkube prepare --force
 **Cause:** Override files exist in `overrides/myapp/` but not configured in config.yaml
 
 **Solution:**
+
 ```yaml
 # config.yaml - Add overrides field
 apps:
@@ -888,6 +924,7 @@ apps:
 ```
 
 **Explanation:** SBKube skips building when:
+
 - Using local chart (`chart: ./charts/myapp`)
 - No `overrides` configured
 - No `removes` configured
@@ -895,6 +932,7 @@ apps:
 This is **normal optimization behavior**.
 
 **Solutions if build is needed:**
+
 ```yaml
 # Option 1: Add overrides
 myapp:
@@ -920,6 +958,7 @@ Error: template: myapp/templates/configmap.yaml:5:20: executing "myapp/templates
 **Cause:** Files referenced in templates not included in chart
 
 **Solution:**
+
 ```yaml
 # config.yaml - Include files directory
 apps:
@@ -948,6 +987,7 @@ Error: YAML parse error on myapp/templates/service.yaml
 ```
 
 **Solutions:**
+
 ```bash
 # Debug template rendering
 helm template test-release charts-built/myapp --debug
@@ -969,6 +1009,7 @@ Error: uninstall: Release not loaded: grafana: release: not found
 ```
 
 **Solution:**
+
 ```bash
 # Check if release exists
 helm list -n namespace
@@ -994,6 +1035,7 @@ Error: State database is being used by another process
 ```
 
 **Solutions:**
+
 ```bash
 # Check for other sbkube processes
 ps aux | grep sbkube
@@ -1019,6 +1061,7 @@ sbkube history  # Recreates database
 ```
 
 **Manual State Verification:**
+
 ```bash
 # Check actual cluster state
 kubectl get all -A
@@ -1043,6 +1086,7 @@ Error: The system cannot find the path specified: 'config\app.yaml'
 ```
 
 **Solutions:**
+
 ```powershell
 # Run in PowerShell
 python -m sbkube.cli deploy
@@ -1063,6 +1107,7 @@ Error: Permission denied @ rb_sysopen - /usr/local/Homebrew/.github
 ```
 
 **Solutions:**
+
 ```bash
 # Fix Homebrew permissions
 sudo chown -R $(whoami) /usr/local/Homebrew
@@ -1083,6 +1128,7 @@ Error: SELinux is preventing /usr/bin/python3.12 from read access
 ```
 
 **Solutions:**
+
 ```bash
 # Check SELinux status
 getenforce
@@ -1111,6 +1157,7 @@ Error: post_deploy_tasks validation failed
 ```
 
 **Solutions:**
+
 ```bash
 # 1. Check file exists and has execute permission
 ls -la ./scripts/backup.sh
@@ -1145,6 +1192,7 @@ Error: Manifest file not found: manifests/cluster-issuer.yaml
 ```
 
 **Solution:**
+
 ```bash
 # Check relative path from app_dir
 ls manifests/cluster-issuer.yaml
@@ -1169,6 +1217,7 @@ Resource certificate/my-cert not ready after 300s
 ```
 
 **Solution:**
+
 ```yaml
 # Extend timeout
 post_deploy_tasks:
@@ -1185,6 +1234,7 @@ post_deploy_tasks:
 ```
 
 **Related Documentation:**
+
 - **[Hooks Reference](../02-features/hooks-reference.md)** - All hook types and environment variables
 - **[Hooks Guide](../02-features/hooks-guide.md)** - Practical examples and best practices
 - **[Hooks Migration Guide](../02-features/hooks-migration-guide.md)** - Phase transition guide
@@ -1202,6 +1252,7 @@ ______________________________________________________________________
 ```
 
 **Solutions:**
+
 ```bash
 # Optimize parallelization
 export SBKUBE_MAX_WORKERS=8
@@ -1228,6 +1279,7 @@ sbkube build --app app2
 ```
 
 **Solutions:**
+
 ```bash
 # Monitor memory
 top -p $(pgrep -f sbkube)
@@ -1257,4 +1309,5 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-*This document is automatically loaded on-demand when specific error details are needed. For quick troubleshooting, start with the [Troubleshooting Guide](README.md).*
+*This document is automatically loaded on-demand when specific error details are needed. For quick troubleshooting,
+start with the [Troubleshooting Guide](README.md).*

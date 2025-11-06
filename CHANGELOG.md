@@ -1,11 +1,6 @@
----
-type: Historical Reference
-audience: Developer
-topics: [changelog, version-history, releases]
-llm_priority: low
-exclude_from_context: true
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Historical Reference audience: Developer topics: [changelog, version-history, releases] llm_priority: low exclude_from_context: true last_updated: 2025-01-04
 
 # Changelog - SBKube
 
@@ -18,6 +13,7 @@ last_updated: 2025-01-04
 **LLM-Friendly Output System** (2025-01-03)
 
 **Phase 1: Infrastructure** (2025-01-03)
+
 - ✅ **NEW**: Multiple output formats for LLM agents and automation
   - `human` - Rich Console output (default)
   - `llm` - LLM-optimized compact text (80-90% token savings)
@@ -29,6 +25,7 @@ last_updated: 2025-01-04
 - ✅ **ENHANCED**: `EnhancedBaseCommand` with built-in formatter support
 
 **Phase 2: Command Integration** (2025-01-03)
+
 - ✅ **INTEGRATED**: `prepare` command - LLM-friendly output for chart/repo downloads
 - ✅ **INTEGRATED**: `build` command - LLM-friendly output for chart customization
 - ✅ **INTEGRATED**: `deploy` command - LLM-friendly output for deployments
@@ -36,6 +33,7 @@ last_updated: 2025-01-04
 - ✅ **INTEGRATED**: `template` command - LLM-friendly output for YAML rendering
 
 **Phase 3: Operational Commands** (2025-01-03)
+
 - ✅ **INTEGRATED**: `status` command - LLM-friendly cluster status output
   - Cluster and node information
   - Helm release status by app-group or namespace
@@ -43,6 +41,7 @@ last_updated: 2025-01-04
   - 80-85% token savings for status queries
 
 **Usage Example**:
+
 ```bash
 # LLM-optimized output (note: --format before subcommand)
 sbkube --format llm apply
@@ -63,6 +62,7 @@ sbkube status --managed  # Show only managed apps in LLM format
 ```
 
 **Token Efficiency**:
+
 - Simple deployment (3 apps): 500-1000 tokens → 80-100 tokens (80-90% savings)
 - Complex deployment (10 apps): 2000-3000 tokens → 200-300 tokens (85-90% savings)
 - Full workflow (prepare+build+template+deploy): 1500-2000 tokens → 150-200 tokens (85-90% savings)
@@ -70,11 +70,13 @@ sbkube status --managed  # Show only managed apps in LLM format
 - Status queries: 800-1200 tokens → 120-180 tokens (80-85% savings)
 
 **New Files**:
+
 - `sbkube/utils/output_formatter.py` - Output formatting utilities
 - `docs/02-features/llm-friendly-output.md` - Complete usage guide
 - `tests/unit/utils/test_output_formatter.py` - Test suite (17 tests, 84% coverage)
 
 **Modified Files**:
+
 - `sbkube/commands/prepare.py` - LLM output support
 - `sbkube/commands/build.py` - LLM output support
 - `sbkube/commands/deploy.py` - LLM output support
@@ -102,6 +104,7 @@ sbkube status --managed  # Show only managed apps in LLM format
   - `UnknownError` - Fallback for unclassified errors
 
 **New Error Display Format**:
+
 ```
 ❌ 배포 실패: airflow
 (3/3 단계에서 실패)
@@ -124,17 +127,20 @@ sbkube status --managed  # Show only managed apps in LLM format
 ```
 
 **New Files**:
+
 - `sbkube/utils/error_classifier.py` - Pattern-based error classification
 - `sbkube/utils/error_formatter.py` - Rich error formatting utilities
 - `docs/07-troubleshooting/deployment-failures.md` - Comprehensive troubleshooting guide
 - `tests/unit/utils/test_error_classifier.py` - Test suite (9 tests, 92% coverage)
 
 **Updated Files**:
+
 - `sbkube/commands/apply.py` - Integrated step-by-step error formatting
 - `sbkube/utils/error_suggestions.py` - Extended ERROR_GUIDE database
 - `docs/02-features/commands.md` - Added error handling documentation
 
 **Technical Details**:
+
 - Pattern-based classification using regex for common error types
 - Severity levels: critical, high, medium, low, unknown
 - Phase tracking: load_config, prepare, build, deploy
@@ -143,6 +149,7 @@ sbkube status --managed  # Show only managed apps in LLM format
 - Helm detail extraction (release_name, namespace, chart)
 
 **User Impact**:
+
 - Faster problem diagnosis with categorized errors
 - Clear step identification reduces debugging time
 - Automatic suggestions guide users to resolution
@@ -151,7 +158,7 @@ sbkube status --managed  # Show only managed apps in LLM format
 
 **Reference**: Issue - Airflow deployment failure with PostgreSQL authentication error
 
----
+______________________________________________________________________
 
 **Real-time Progress Tracking for Deployments** (2025-01-04)
 
@@ -162,6 +169,7 @@ sbkube status --managed  # Show only managed apps in LLM format
 - ✅ **ENHANCED**: deploy_helm_app에 progress 지원 추가
 
 **Progress 바 표시**:
+
 ```
 ━━━ myapp (helm) ━━━
 ⠋ Deploying myapp ━━━━━━━━━━ 1/3 • 0:00:05
@@ -169,6 +177,7 @@ sbkube status --managed  # Show only managed apps in LLM format
 ```
 
 **Features**:
+
 - 각 앱 배포 시 prepare/build/deploy 단계별 진행 상황
 - 스피너 애니메이션으로 작업 진행 표시
 - 경과 시간 표시 (TimeElapsedColumn)
@@ -176,16 +185,20 @@ sbkube status --managed  # Show only managed apps in LLM format
 - dry-run 시 자동 비활성화
 
 **New CLI Options**:
+
 - `sbkube apply --no-progress`: Progress 바 비활성화 (기존 모드)
 
 **New Files**:
+
 - `sbkube/utils/progress_tracker.py` - Progress tracking utilities
 
 **Updated Files**:
+
 - `sbkube/commands/apply.py` - Progress 바 통합 + --no-progress 옵션
 - `sbkube/commands/deploy.py` - deploy_helm_app에 progress_tracker 파라미터
 
 **Technical Details**:
+
 - Rich Progress 라이브러리 활용
 - SpinnerColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn
 - disable 플래그로 CI/CD 환경 지원
@@ -193,6 +206,7 @@ sbkube status --managed  # Show only managed apps in LLM format
 - 컨텍스트 매니저 패턴 (track_task)
 
 **User Impact**:
+
 - 실시간 진행 상황 확인으로 더 나은 UX
 - 여러 앱 배포 시 특히 유용
 - 각 단계 소요 시간 파악 가능
@@ -205,12 +219,14 @@ sbkube status --managed  # Show only managed apps in LLM format
 **Namespace Inheritance Bug** (2025-11-04)
 
 - ✅ **CRITICAL**: Fixed YAML/Action/Kustomize apps not respecting `config.namespace`
-- ✅ Resources were being deployed to `default` namespace instead of the configured global namespace when `app.namespace` was not explicitly set
+- ✅ Resources were being deployed to `default` namespace instead of the configured global namespace when `app.namespace`
+  was not explicitly set
 - ✅ All app types now consistently inherit from `config.namespace` when `app.namespace` is None
 - ✅ Backward compatible: Apps with explicit `app.namespace` continue to work identically
 - ✅ Affected users: All deployments using YAML/Action/Kustomize apps without explicit app-level namespace
 
 **Technical Details**:
+
 - Modified `deploy_yaml_app()`, `deploy_action_app()`, `deploy_kustomize_app()` to accept `config_namespace` parameter
 - Added namespace fallback logic: `namespace = app.namespace or config_namespace`
 - Updated all deployer call sites to pass `config.namespace`
@@ -232,11 +248,13 @@ sbkube status --managed  # Show only managed apps in LLM format
 - ✅ Full support for multi-cluster deployments in a single config.yaml
 
 **Context Priority**:
+
 1. **app.context** (highest): Per-app context in config.yaml
-2. **sources.yaml context**: Project-level default (kubeconfig_context)
-3. **current context** (lowest): System kubectl context
+1. **sources.yaml context**: Project-level default (kubeconfig_context)
+1. **current context** (lowest): System kubectl context
 
 **Example**:
+
 ```yaml
 apps:
   prod-app:

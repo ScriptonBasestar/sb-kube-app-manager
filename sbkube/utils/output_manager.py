@@ -116,7 +116,9 @@ class OutputManager:
                 }
             )
 
-    def print_error(self, message: str, error: str | None = None, **metadata: Any) -> None:
+    def print_error(
+        self, message: str, error: str | None = None, **metadata: Any
+    ) -> None:
         """
         에러 메시지 출력.
 
@@ -263,19 +265,23 @@ class OutputManager:
         final_errors = errors if errors is not None else self.error_messages
         if not final_errors:
             # 최후의 수단: events에서 추출
-            final_errors = [e["message"] for e in self.events if e.get("level") == "error"]
+            final_errors = [
+                e["message"] for e in self.events if e.get("level") == "error"
+            ]
 
         inferred_status = (
-            status
-            if status is not None
-            else ("failed" if final_errors else "success")
+            status if status is not None else ("failed" if final_errors else "success")
         )
 
-        inferred_summary = summary if summary is not None else {
-            "events_recorded": len(self.events),
-            "deployments_recorded": len(self.deployments),
-            "errors": len(final_errors),
-        }
+        inferred_summary = (
+            summary
+            if summary is not None
+            else {
+                "events_recorded": len(self.events),
+                "deployments_recorded": len(self.deployments),
+                "errors": len(final_errors),
+            }
+        )
 
         result = self.formatter.format_deployment_result(
             status=inferred_status,

@@ -1,10 +1,6 @@
----
-type: Tutorial
-audience: End User
-topics: [customization, helm-overrides, advanced]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Tutorial audience: End User topics: [customization, helm-overrides, advanced] llm_priority: medium last_updated: 2025-01-04
 
 # 🎨 Helm 차트 커스터마이징
 

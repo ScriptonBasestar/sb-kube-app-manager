@@ -222,8 +222,7 @@ def deploy_helm_app(
                 create_return_code, _, create_stderr = run_command(create_cmd)
                 if create_return_code != 0:
                     output.print_error(
-                        f"Failed to create namespace '{namespace}'",
-                        error=create_stderr
+                        f"Failed to create namespace '{namespace}'", error=create_stderr
                     )
                     return False
 
@@ -374,7 +373,9 @@ def deploy_yaml_app(
         expanded_file = yaml_file
         if "${repos." in yaml_file:
             if apps_config is None:
-                output.print_error(f"Cannot expand variable '{yaml_file}': apps_config not provided")
+                output.print_error(
+                    f"Cannot expand variable '{yaml_file}': apps_config not provided"
+                )
                 return False
             try:
                 expanded_file = expand_repo_variables(yaml_file, repos_dir, apps_config)
@@ -384,7 +385,9 @@ def deploy_yaml_app(
                         f"  [dim]Variable expanded: {yaml_file} → {expanded_file}[/dim]"
                     )
             except Exception as e:
-                output.print_error(f"Failed to expand variable in '{yaml_file}'", error=str(e))
+                output.print_error(
+                    f"Failed to expand variable in '{yaml_file}'", error=str(e)
+                )
                 return False
 
         # 경로 해석: 절대경로면 그대로, 상대경로면 app_config_dir 기준
@@ -914,7 +917,9 @@ def cmd(
                         hook_type="pre_deploy",
                         context=hook_context,
                     ):
-                        output.print_error(f"Pre-deploy tasks failed for app: {app_name_iter}")
+                        output.print_error(
+                            f"Pre-deploy tasks failed for app: {app_name_iter}"
+                        )
                         deployment_failed = True
                         continue
 
@@ -925,7 +930,9 @@ def cmd(
                     hook_type="pre_deploy",
                     context=hook_context,
                 ):
-                    output.print_error(f"Pre-deploy hook failed for app: {app_name_iter}")
+                    output.print_error(
+                        f"Pre-deploy hook failed for app: {app_name_iter}"
+                    )
                     deployment_failed = True
                     continue
 
@@ -978,7 +985,9 @@ def cmd(
                         config_namespace=config.namespace,
                     )
                 elif isinstance(app, ExecApp):
-                    success = deploy_exec_app(app_name_iter, app, BASE_DIR, output, dry_run)
+                    success = deploy_exec_app(
+                        app_name_iter, app, BASE_DIR, output, dry_run
+                    )
                 elif isinstance(app, KustomizeApp):
                     success = deploy_kustomize_app(
                         app_name_iter,
@@ -1008,12 +1017,14 @@ def cmd(
                         dry_run,
                     )
                 else:
-                    output.print_warning(f"Unsupported app type '{app.type}': {app_name_iter}")
+                    output.print_warning(
+                        f"Unsupported app type '{app.type}': {app_name_iter}"
+                    )
                     continue
             except KubernetesConnectionError as exc:
                 output.print_error(
                     f"Kubernetes cluster connection error detected while processing app: {app_name_iter}",
-                    error=exc.reason if exc.reason else None
+                    error=exc.reason if exc.reason else None,
                 )
                 output.print_warning("Check your cluster connectivity and try again.")
                 deployment_failed = True

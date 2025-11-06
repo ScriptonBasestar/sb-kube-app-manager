@@ -1,11 +1,6 @@
----
-type: Internal Planning
-audience: Developer
-topics: [planning, roadmap, hooks]
-llm_priority: low
-exclude_from_context: true
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Internal Planning audience: Developer topics: [planning, roadmap, hooks] llm_priority: low exclude_from_context: true last_updated: 2025-01-04
 
 # Hooks 시스템 개선 (Phase 1-4)
 

@@ -388,7 +388,9 @@ def cmd(
             overall_success = False
             continue
 
-        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info")
+        output.print(
+            f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info"
+        )
         config_data = load_config_file(config_file_path)
 
         try:
@@ -408,7 +410,9 @@ def cmd(
         # 글로벌 pre-template 훅 실행
         if config.hooks and "template" in config.hooks:
             template_hooks = config.hooks["template"].model_dump()
-            output.print("[cyan]🪝 Executing global pre-template hooks...[/cyan]", level="info")
+            output.print(
+                "[cyan]🪝 Executing global pre-template hooks...[/cyan]", level="info"
+            )
             if not hook_executor.execute_command_hooks(
                 template_hooks, "pre", "template"
             ):
@@ -553,7 +557,10 @@ def cmd(
             # 글로벌 post-template 훅 실행 (성공 시에만)
             if not failed and config.hooks and "template" in config.hooks:
                 template_hooks = config.hooks["template"].model_dump()
-                output.print("[cyan]🪝 Executing global post-template hooks...[/cyan]", level="info")
+                output.print(
+                    "[cyan]🪝 Executing global post-template hooks...[/cyan]",
+                    level="info",
+                )
                 if not hook_executor.execute_command_hooks(
                     template_hooks, "post", "template"
                 ):
@@ -592,14 +599,19 @@ def cmd(
             success_count=success_count,
             total_count=total_count,
         )
-        output.print(f"[cyan]📁 Rendered files saved to: {RENDERED_DIR}[/cyan]", level="info")
+        output.print(
+            f"[cyan]📁 Rendered files saved to: {RENDERED_DIR}[/cyan]", level="info"
+        )
 
         if success_count < total_count or failed:
             overall_success = False
 
     # 전체 결과
     if not overall_success:
-        output.print("\n[bold red]❌ Some app groups failed to template[/bold red]", level="error")
+        output.print(
+            "\n[bold red]❌ Some app groups failed to template[/bold red]",
+            level="error",
+        )
         output.finalize(
             status="failed",
             summary={

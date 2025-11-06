@@ -1,10 +1,6 @@
----
-type: User Guide
-audience: End User, Developer
-topics: [troubleshooting, debugging, common-errors]
-llm_priority: high
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: User Guide audience: End User, Developer topics: [troubleshooting, debugging, common-errors] llm_priority: high last_updated: 2025-01-04
 
 # 🔍 SBKube Troubleshooting Guide
 
@@ -15,15 +11,18 @@ Quick reference guide for common issues encountered with SBKube.
 - **Quick Fixes**: Check kubectl, Helm, sources.yaml syntax
 - **Commands**: `sbkube doctor`, `sbkube validate`
 - **Common Errors**: Network, permissions, config validation
-- **Related**: [Complete Error Reference](error-reference.md), [Common Dev Issues](common-dev-issues.md), [Deployment Failures](deployment-failures.md)
+- **Related**: [Complete Error Reference](error-reference.md), [Common Dev Issues](common-dev-issues.md),
+  [Deployment Failures](deployment-failures.md)
 
 ______________________________________________________________________
 
 ## 📚 Quick Navigation
 
 ### Troubleshooting Documents
+
 - **[Complete Error Reference](error-reference.md)** - Full catalog of all error messages and solutions
-- **[Common Dev Issues](common-dev-issues.md)** - Development environment problems (test failures, type errors, import errors, uv issues)
+- **[Common Dev Issues](common-dev-issues.md)** - Development environment problems (test failures, type errors, import
+  errors, uv issues)
 - **[Deployment Failures](deployment-failures.md)** - Production deployment specific issues
 - **[FAQ](faq.md)** - Frequently asked questions
 
@@ -67,6 +66,7 @@ Error: sources.yaml not found in: ./sources.yaml, ../sources.yaml
 ```
 
 **Quick Fix:**
+
 ```bash
 # Create sources.yaml
 cat > sources.yaml << 'EOF'
@@ -88,6 +88,7 @@ yaml.scanner.ScannerError: found character '\t' that cannot start any token
 ```
 
 **Quick Fix:**
+
 ```bash
 # Validate YAML syntax
 python -c "import yaml; yaml.safe_load(open('config.yaml'))"
@@ -104,6 +105,7 @@ ValidationError: 'invalid-type' is not one of ['exec', 'helm', ...]
 ```
 
 **Quick Fix:**
+
 ```bash
 # Validate configuration
 sbkube validate
@@ -123,6 +125,7 @@ Kubeconfig file not found (path: ~/.kube/config)
 ```
 
 **Quick Fix:**
+
 ```bash
 # Check kubeconfig existence
 ls -la ~/.kube/config
@@ -142,6 +145,7 @@ sbkube --kubeconfig /path/to/kubeconfig deploy
 ```
 
 **Quick Fix:**
+
 ```bash
 # List available contexts
 kubectl config get-contexts
@@ -158,6 +162,7 @@ Error: Forbidden (403): User cannot access resource
 ```
 
 **Quick Fix:**
+
 ```bash
 # Check current user
 kubectl auth whoami
@@ -179,6 +184,7 @@ Error: failed to download chart: chart not found
 ```
 
 **Quick Fix:**
+
 ```bash
 # Update Helm repositories
 helm repo add grafana https://grafana.github.io/helm-charts
@@ -196,6 +202,7 @@ Error: namespaces "my-namespace" not found
 ```
 
 **Quick Fix:**
+
 ```bash
 # Create namespace
 kubectl create namespace my-namespace
@@ -219,6 +226,7 @@ ______________________________________________________________________
 ## 🔍 Troubleshooting Workflow
 
 ### 1. Information Gathering
+
 ```bash
 sbkube --version
 kubectl cluster-info
@@ -228,6 +236,7 @@ sbkube history
 ```
 
 ### 2. Log Analysis
+
 ```bash
 sbkube --verbose <command>
 kubectl logs <pod-name> -n <namespace>
@@ -235,6 +244,7 @@ kubectl describe <resource> <name> -n <namespace>
 ```
 
 ### 3. Configuration Validation
+
 ```bash
 sbkube validate
 yamllint config.yaml
@@ -242,6 +252,7 @@ helm lint charts-built/<chart>
 ```
 
 ### 4. Step-by-Step Testing
+
 ```bash
 sbkube prepare
 sbkube build
@@ -255,7 +266,9 @@ ______________________________________________________________________
 ## 📋 Command-Specific Issues
 
 ### apply Command
+
 Common issues with `sbkube apply`:
+
 - Configuration validation errors
 - Dependency resolution problems
 - Hook execution failures
@@ -263,7 +276,9 @@ Common issues with `sbkube apply`:
 > **Detailed errors**: See [Complete Error Reference](error-reference.md#apply-command-errors)
 
 ### prepare Command
+
 Common issues with `sbkube prepare`:
+
 - Chart pull failures
 - Git clone authentication
 - Repository access problems
@@ -271,7 +286,9 @@ Common issues with `sbkube prepare`:
 > **Detailed errors**: See [Complete Error Reference](error-reference.md#prepare-command-errors)
 
 ### build Command
+
 Common issues with `sbkube build`:
+
 - Override not applied warnings
 - Build directory empty
 - Template compilation errors
@@ -279,7 +296,9 @@ Common issues with `sbkube build`:
 > **Detailed errors**: See [Complete Error Reference](error-reference.md#build-command-errors)
 
 ### deploy Command
+
 Common issues with `sbkube deploy`:
+
 - Pod scheduling issues
 - Image pull failures
 - Resource constraints
@@ -376,4 +395,5 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-*If your issue is not resolved, please check the [Complete Error Reference](error-reference.md) or contact us via the [issue tracker](https://github.com/ScriptonBasestar/kube-app-manager/issues).*
+*If your issue is not resolved, please check the [Complete Error Reference](error-reference.md) or contact us via the
+[issue tracker](https://github.com/ScriptonBasestar/kube-app-manager/issues).*

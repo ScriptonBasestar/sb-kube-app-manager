@@ -128,7 +128,9 @@ class TestStatusLLMOutput:
 
     def test_status_requires_sources_even_with_llm_format(self, runner, tmp_path):
         """Test status with --format llm still requires sources.yaml."""
-        result = runner.invoke(main, ["--format", "llm", "status", "--base-dir", str(tmp_path)])
+        result = runner.invoke(
+            main, ["--format", "llm", "status", "--base-dir", str(tmp_path)]
+        )
         assert result.exit_code != 0
         # Should still show error about missing sources.yaml
 

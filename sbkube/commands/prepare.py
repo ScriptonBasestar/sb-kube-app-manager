@@ -23,7 +23,6 @@ from sbkube.utils.cluster_config import (
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
-from sbkube.utils.output_formatter import OutputFormatter
 from sbkube.utils.output_manager import OutputManager
 
 
@@ -741,7 +740,9 @@ def cmd(
                     hook_type="pre_prepare",
                     context={},
                 ):
-                    output.print_error(f"Pre-prepare hook failed for app: {app_name_iter}")
+                    output.print_error(
+                        f"Pre-prepare hook failed for app: {app_name_iter}"
+                    )
                     preparation_failed = True
                     continue
 
@@ -749,7 +750,9 @@ def cmd(
 
             if isinstance(app, HookApp):
                 # HookApp은 prepare 단계 불필요 (deploy 시에만 실행)
-                output.print_warning(f"HookApp does not require prepare: {app_name_iter}")
+                output.print_warning(
+                    f"HookApp does not require prepare: {app_name_iter}"
+                )
                 success = True
             elif isinstance(app, HelmApp):
                 success = prepare_helm_app(

@@ -1,10 +1,6 @@
----
-type: User Guide
-audience: End User
-topics: [installation, quickstart, first-deployment]
-llm_priority: high
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: User Guide audience: End User topics: [installation, quickstart, first-deployment] llm_priority: high last_updated: 2025-01-04
 
 # 🚀 Getting Started with SBKube
 
@@ -380,12 +376,9 @@ sbkube apply --skip-build
 
 ### Troubleshooting Quick Fixes
 
-| Problem | Solution |
-|---------|----------|
-| Helm repo unreachable | Run `helm repo add` manually |
-| Pod not starting | Check `kubectl describe pod` for events |
-| sbkube apply fails | Run `sbkube doctor` for diagnostics |
-| Permission denied | Verify RBAC with `kubectl auth can-i` |
+| Problem | Solution | |---------|----------| | Helm repo unreachable | Run `helm repo add` manually | | Pod not
+starting | Check `kubectl describe pod` for events | | sbkube apply fails | Run `sbkube doctor` for diagnostics | |
+Permission denied | Verify RBAC with `kubectl auth can-i` |
 
 ______________________________________________________________________
 
@@ -433,4 +426,5 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-*Thank you for using SBKube! For issues or questions, visit our [GitHub repository](https://github.com/ScriptonBasestar/kube-app-manager).*
+*Thank you for using SBKube! For issues or questions, visit our
+[GitHub repository](https://github.com/ScriptonBasestar/kube-app-manager).*

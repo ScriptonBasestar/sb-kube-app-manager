@@ -1,10 +1,6 @@
----
-type: Feature Index
-audience: End User, Developer
-topics: [features, overview, cli-commands]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Feature Index audience: End User, Developer topics: [features, overview, cli-commands] llm_priority: medium last_updated: 2025-01-04
 
 # 🚀 SBKube CLI 주요 기능
 

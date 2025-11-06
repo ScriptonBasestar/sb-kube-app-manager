@@ -1,11 +1,6 @@
----
-type: Internal Documentation
-audience: Developer
-topics: [meta, documentation, guidelines]
-llm_priority: low
-exclude_from_context: true
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Internal Documentation audience: Developer topics: [meta, documentation, guidelines] llm_priority: low exclude_from_context: true last_updated: 2025-01-04
 
 # 📖 Documentation Guidelines - LLM-Friendly Writing
 

@@ -1,14 +1,11 @@
----
-type: API Reference
-audience: End User
-topics: [configuration, schema, yaml, validation, apps]
-llm_priority: high
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: API Reference audience: End User topics: [configuration, schema, yaml, validation, apps] llm_priority: high last_updated: 2025-01-04
 
 # 📋 config.yaml 스키마 가이드
 
 ## TL;DR
+
 - **Purpose**: Complete schema reference for SBKube's main configuration file (config.yaml)
 - **Key Points**:
   - Apps use dictionary structure with name as key (not list)
@@ -17,7 +14,8 @@ last_updated: 2025-01-04
   - Strong validation with Pydantic models
   - Dependency management at both global and app level
 - **Quick Reference**: See "📂 파일 구조 개요" for basic structure
-- **Related**: [sources.yaml](sources-schema.md), [commands.md](../02-features/commands.md), [examples/](../../examples/)
+- **Related**: [sources.yaml](sources-schema.md), [commands.md](../02-features/commands.md),
+  [examples/](../../examples/)
 
 SBKube의 메인 설정 파일인 `config.yaml`의 완전한 스키마 문서입니다.
 
@@ -258,8 +256,8 @@ apps:
 모든 앱 타입 (helm, yaml, action, kustomize)에서 동일하게 동작합니다:
 
 1. **명시적 앱 네임스페이스 우선**: `app.namespace`가 설정되어 있으면 이를 사용
-2. **전역 네임스페이스 폴백**: `app.namespace`가 `None`이면 `config.namespace` 사용
-3. **kubectl 기본값**: 둘 다 없으면 `default` 네임스페이스 (kubectl 기본 동작)
+1. **전역 네임스페이스 폴백**: `app.namespace`가 `None`이면 `config.namespace` 사용
+1. **kubectl 기본값**: 둘 다 없으면 `default` 네임스페이스 (kubectl 기본 동작)
 
 **예제**:
 
@@ -295,6 +293,7 @@ apps:
 - **v0.6.1+**: 모든 앱 타입이 동일하게 전역 네임스페이스를 상속 (수정됨)
 
 **권장 사항**:
+
 - 대부분의 경우 전역 `namespace`만 설정하고 앱별 `namespace`는 생략
 - 특정 앱만 다른 네임스페이스가 필요한 경우에만 앱별 오버라이드 사용
 
@@ -432,16 +431,19 @@ apps:
 ```
 
 **Context 우선순위**:
+
 1. **app.context** (최우선): config.yaml의 앱별 context 필드
-2. **sources.yaml context**: 프로젝트 기본 context (kubeconfig_context)
-3. **현재 context**: kubectl의 현재 활성 context
+1. **sources.yaml context**: 프로젝트 기본 context (kubeconfig_context)
+1. **현재 context**: kubectl의 현재 활성 context
 
 **사용 사례**:
+
 - 멀티 클러스터 관리: 하나의 config.yaml로 여러 클러스터에 배포
 - 개발/스테이징/프로덕션 분리: 앱별로 다른 클러스터 지정
 - 마이그레이션: 일부 앱만 새 클러스터로 이동
 
 **주의사항**:
+
 - context는 ~/.kube/config 또는 KUBECONFIG 환경변수의 kubeconfig 파일에 정의되어 있어야 합니다
 - app.context 지정 시 sources.yaml의 kubeconfig는 사용되지 않습니다 (시스템 기본 kubeconfig 사용)
 

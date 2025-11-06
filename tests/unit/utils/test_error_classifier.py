@@ -1,7 +1,5 @@
 """Tests for error_classifier module."""
 
-import pytest
-
 from sbkube.utils.error_classifier import ErrorClassifier
 
 
@@ -89,7 +87,9 @@ class TestErrorClassifier:
 
     def test_database_connection_error_classification(self):
         """데이터베이스 연결 에러 분류 테스트."""
-        error_message = "connection to server at localhost, port 5432 failed: connection refused"
+        error_message = (
+            "connection to server at localhost, port 5432 failed: connection refused"
+        )
 
         result = ErrorClassifier.classify(error_message)
 

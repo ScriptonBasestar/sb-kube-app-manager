@@ -1,14 +1,11 @@
----
-type: API Reference
-audience: End User
-topics: [commands, cli, workflow, deployment, kubernetes]
-llm_priority: high
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: API Reference audience: End User topics: [commands, cli, workflow, deployment, kubernetes] llm_priority: high last_updated: 2025-01-04
 
 # 📋 SBKube 명령어 상세 가이드
 
 ## TL;DR
+
 - **Purpose**: Complete reference for all SBKube CLI commands and their options
 - **Key Points**:
   - Main workflow: `sbkube apply` (runs prepare→build→template→deploy)
@@ -17,26 +14,22 @@ last_updated: 2025-01-04
   - Troubleshooting: `sbkube doctor` for comprehensive system diagnostics
   - All commands support `--format` option for LLM-friendly output
 - **Quick Reference**: See command table below
-- **Related**: [PRODUCT.md](../../PRODUCT.md), [config-schema.md](../03-configuration/config-schema.md), [llm-friendly-output.md](llm-friendly-output.md)
+- **Related**: [PRODUCT.md](../../PRODUCT.md), [config-schema.md](../03-configuration/config-schema.md),
+  [llm-friendly-output.md](llm-friendly-output.md)
 
 ## 🚀 Quick Reference Table
 
-| Command | Category | Purpose | Key Options |
-|---------|----------|---------|-------------|
-| **apply** ⭐ | 통합 | Complete workflow (prepare→build→template→deploy) | --dry-run, --profile, --from-step, --resume |
-| **prepare** | 핵심 | Download sources (Helm charts, Git repos) | --app, --force |
-| **build** | 핵심 | Build and customize applications | --app, overrides support |
-| **template** | 핵심 | Render Kubernetes manifests | --app, --output-dir |
-| **deploy** | 핵심 | Deploy to k3s cluster | --app, --dry-run |
-| **init** | 유틸리티 | Initialize project structure | --template, --force |
-| **validate** | 유틸리티 | Validate configuration files | --strict, --app-dir |
-| **doctor** | 유틸리티 | System diagnostics | --detailed, --check |
-| **status** ⭐ | 상태관리 | Check deployment status (v0.6.0+) | --by-group, --managed, --unhealthy |
-| **history** | 상태관리 | View deployment history (v0.6.0+) | --show, --diff, --values-diff |
-| **rollback** | 상태관리 | Rollback to previous revision (v0.6.0+) | --dry-run, --force |
-| **upgrade** | 관리 | Upgrade Helm releases | --app |
-| **delete** | 관리 | Delete deployed resources | --app, --dry-run, --skip-not-found |
-| **version** | 유틸리티 | Show version info | |
+| Command | Category | Purpose | Key Options | |---------|----------|---------|-------------| | **apply** ⭐ | 통합 |
+Complete workflow (prepare→build→template→deploy) | --dry-run, --profile, --from-step, --resume | | **prepare** | 핵심 |
+Download sources (Helm charts, Git repos) | --app, --force | | **build** | 핵심 | Build and customize applications |
+--app, overrides support | | **template** | 핵심 | Render Kubernetes manifests | --app, --output-dir | | **deploy** | 핵심 |
+Deploy to k3s cluster | --app, --dry-run | | **init** | 유틸리티 | Initialize project structure | --template, --force | |
+**validate** | 유틸리티 | Validate configuration files | --strict, --app-dir | | **doctor** | 유틸리티 | System diagnostics |
+--detailed, --check | | **status** ⭐ | 상태관리 | Check deployment status (v0.6.0+) | --by-group, --managed, --unhealthy | |
+**history** | 상태관리 | View deployment history (v0.6.0+) | --show, --diff, --values-diff | | **rollback** | 상태관리 |
+Rollback to previous revision (v0.6.0+) | --dry-run, --force | | **upgrade** | 관리 | Upgrade Helm releases | --app | |
+**delete** | 관리 | Delete deployed resources | --app, --dry-run, --skip-not-found | | **version** | 유틸리티 | Show version
+info | |
 
 ### 워크플로우별 명령어 조합
 
@@ -63,6 +56,7 @@ sbkube delete && sbkube apply # 재배포
 ## Common Options
 
 ### 전역 옵션 (All commands)
+
 - `--kubeconfig PATH`: Kubernetes config file (env: KUBECONFIG)
 - `--context NAME`: Kubernetes context to use
 - `--namespace NS`: Default namespace (env: KUBE_NAMESPACE)
@@ -71,12 +65,14 @@ sbkube delete && sbkube apply # 재배포
 - `--help`: Show command help
 
 ### 공통 워크플로우 옵션
+
 - `--app-dir PATH`: Configuration directory (default: current directory)
 - `--base-dir PATH`: Working directory (default: .)
 - `--app NAME`: Process specific app only
 - `--config-file NAME`: Custom config filename
 
 ### 배포 관련 옵션
+
 - `--dry-run`: Preview changes without applying
 - `--profile NAME`: Use specific configuration profile (development/staging/production)
 - `--quiet`: Minimal output (suppress progress, show only results)
@@ -92,6 +88,7 @@ sbkube delete && sbkube apply # 재배포
 **Usage**: `sbkube apply [OPTIONS]`
 
 **Unique Options**:
+
 - `--from-step {prepare|build|template|deploy}`: Start from specific step
 - `--to-step {prepare|build|template|deploy}`: End at specific step
 - `--only STEP`: Execute only specific step
@@ -101,6 +98,7 @@ sbkube delete && sbkube apply # 재배포
 - `--skip-deps-check`: Skip app group dependency validation
 
 **Examples**:
+
 ```bash
 # Standard deployment
 sbkube apply
@@ -118,6 +116,7 @@ sbkube apply --retry-failed        # Retry failed apps only
 ```
 
 **Features**:
+
 - Automatic 4-step execution
 - Smart restart from failure point
 - Profile-based environment management
@@ -125,8 +124,8 @@ sbkube apply --retry-failed        # Retry failed apps only
 - State saved in `.sbkube/runs/`
 - Auto dependency validation via `deps` field
 
-**Error Handling** (v0.6.1+):
-Enhanced error messages with solutions for:
+**Error Handling** (v0.6.1+): Enhanced error messages with solutions for:
+
 - DatabaseAuthenticationError
 - DatabaseConnectionError
 - HelmReleaseError
@@ -135,7 +134,7 @@ Enhanced error messages with solutions for:
 
 **See Also**: prepare, build, template, deploy
 
----
+______________________________________________________________________
 
 #### prepare
 
@@ -144,15 +143,18 @@ Enhanced error messages with solutions for:
 **Usage**: `sbkube prepare [OPTIONS]`
 
 **Unique Options**:
+
 - `--source FILE`: Source config file (default: sources.yaml)
 - `--force`: Force re-download existing resources
 
 **Idempotency** (v0.4.6+):
+
 - Default: Skip existing charts/repos
 - `--force`: Delete and re-download
 - Safe for re-execution
 
 **Examples**:
+
 ```bash
 sbkube prepare               # Download all sources (idempotent)
 sbkube prepare --app nginx   # Specific app
@@ -161,7 +163,7 @@ sbkube prepare --force       # Force re-download
 
 **Creates**: `.sbkube/charts/`, `.sbkube/repos/`
 
----
+______________________________________________________________________
 
 #### build
 
@@ -170,11 +172,13 @@ sbkube prepare --force       # Force re-download
 **Usage**: `sbkube build [OPTIONS]`
 
 **Override System**:
+
 - Overrides must be explicitly listed in `config.yaml`
 - Supports file replacement and additions
 - Glob patterns supported (v0.4.9+)
 
 **Examples**:
+
 ```bash
 sbkube build                 # Build all apps
 sbkube build --app database  # Specific app
@@ -194,7 +198,7 @@ apps:
 
 **See Also**: [config-schema.md](../03-configuration/config-schema.md) for override details
 
----
+______________________________________________________________________
 
 #### template
 
@@ -203,9 +207,11 @@ apps:
 **Usage**: `sbkube template [OPTIONS]`
 
 **Unique Options**:
+
 - `--output-dir DIR`: Output directory (default: .sbkube/rendered)
 
 **Examples**:
+
 ```bash
 sbkube template                         # Render all
 sbkube template --namespace production  # With namespace
@@ -214,7 +220,7 @@ sbkube template --output-dir /tmp/out  # Custom output
 
 **Creates**: `.sbkube/rendered/`
 
----
+______________________________________________________________________
 
 #### deploy
 
@@ -223,12 +229,14 @@ sbkube template --output-dir /tmp/out  # Custom output
 **Usage**: `sbkube deploy [OPTIONS]`
 
 **Supports**:
+
 - `helm`: Helm chart installation
 - `yaml`: kubectl apply
 - `action`: Custom scripts
 - `exec`: Arbitrary commands
 
 **Examples**:
+
 ```bash
 sbkube deploy             # Deploy all
 sbkube deploy --dry-run   # Preview only
@@ -244,6 +252,7 @@ sbkube deploy --app web   # Specific app
 **Usage**: `sbkube status [APP_GROUP] [OPTIONS]`
 
 **Unique Options**:
+
 - `--by-group`: Group by app-groups
 - `--managed`: Show only sbkube-managed apps
 - `--unhealthy`: Show only problematic resources
@@ -253,6 +262,7 @@ sbkube deploy --app web   # Specific app
 - `--watch`: Auto-refresh every 10s
 
 **Examples**:
+
 ```bash
 sbkube status                           # Overall status
 sbkube status --by-group                # Grouped view
@@ -263,7 +273,7 @@ sbkube status --deps                    # Dependency tree
 
 **Replaces**: `sbkube cluster status` (deprecated)
 
----
+______________________________________________________________________
 
 #### history
 
@@ -272,6 +282,7 @@ sbkube status --deps                    # Dependency tree
 **Usage**: `sbkube history [APP_GROUP] [OPTIONS]`
 
 **Unique Options**:
+
 - `--show ID`: Show deployment details
 - `--diff ID1,ID2`: Compare deployments (Phase 5)
 - `--values-diff ID1,ID2`: Compare Helm values (Phase 5)
@@ -279,6 +290,7 @@ sbkube status --deps                    # Dependency tree
 - `--limit N`: Limit results (default: 50)
 
 **Examples**:
+
 ```bash
 sbkube history                          # Recent deployments
 sbkube history --show dep_123           # Deployment details
@@ -288,7 +300,7 @@ sbkube history --values-diff old,new    # Compare Helm values
 
 **Replaces**: `sbkube state list/show` (deprecated)
 
----
+______________________________________________________________________
 
 #### rollback
 
@@ -297,9 +309,11 @@ sbkube history --values-diff old,new    # Compare Helm values
 **Usage**: `sbkube rollback <DEPLOYMENT_ID> [OPTIONS]`
 
 **Unique Options**:
+
 - `--list`: Show rollback candidates
 
 **Examples**:
+
 ```bash
 sbkube rollback --list                  # List candidates
 sbkube rollback dep_123 --dry-run       # Preview rollback
@@ -317,13 +331,14 @@ sbkube rollback dep_123 --force         # Force rollback
 **Usage**: `sbkube init [OPTIONS]`
 
 **Unique Options**:
+
 - `--template {basic|web-app|microservice}`: Project template (default: basic)
 - `--name NAME`: Project name (default: directory name)
 - `--non-interactive`: Skip prompts
 
 **Creates**: `config.yaml`, `sources.yaml`, `.sbkube/`
 
----
+______________________________________________________________________
 
 #### validate
 
@@ -332,10 +347,12 @@ sbkube rollback dep_123 --force         # Force rollback
 **Usage**: `sbkube validate [FILE] [OPTIONS]`
 
 **Unique Options**:
+
 - `--schema-type {config|sources}`: Schema type (auto-detected)
 - `--schema-path PATH`: Custom schema file
 
 **Examples**:
+
 ```bash
 sbkube validate                         # Current directory
 sbkube validate config.yaml             # Specific file
@@ -343,12 +360,13 @@ sbkube validate --app-dir redis         # App directory
 ```
 
 **Validates**:
+
 - JSON schema compliance
 - Pydantic model validation
 - Required fields
 - App group dependencies
 
----
+______________________________________________________________________
 
 #### doctor
 
@@ -357,23 +375,26 @@ sbkube validate --app-dir redis         # App directory
 **Usage**: `sbkube doctor [OPTIONS]`
 
 **Unique Options**:
+
 - `--detailed`: Verbose diagnostics
 - `--check NAME`: Run specific check only
 
 **Checks**:
+
 - Kubernetes connectivity
 - Helm installation
 - Configuration validity
 - Permissions and resources
 
 **Examples**:
+
 ```bash
 sbkube doctor                           # Basic diagnostics
 sbkube doctor --detailed                # Verbose output
 sbkube doctor --check k8s_connectivity  # Specific check
 ```
 
----
+______________________________________________________________________
 
 #### version
 
@@ -392,12 +413,13 @@ sbkube doctor --check k8s_connectivity  # Specific check
 **Supports**: Helm releases only
 
 **Examples**:
+
 ```bash
 sbkube upgrade                # Upgrade all
 sbkube upgrade --app database # Specific app
 ```
 
----
+______________________________________________________________________
 
 #### delete
 
@@ -406,14 +428,17 @@ sbkube upgrade --app database # Specific app
 **Usage**: `sbkube delete [OPTIONS]`
 
 **Unique Options**:
+
 - `--skip-not-found`: Ignore missing resources
 
 **Supports**:
+
 - `helm`: helm uninstall
 - `yaml`: kubectl delete
 - `action`: Custom uninstall scripts
 
 **Examples**:
+
 ```bash
 sbkube delete --dry-run        # Preview deletion
 sbkube delete --app nginx      # Delete specific app
@@ -423,6 +448,7 @@ sbkube delete --skip-not-found # Ignore if not found
 ## Advanced Usage Patterns
 
 ### Environment Management
+
 ```bash
 # Development → Staging → Production
 sbkube apply --profile development
@@ -431,6 +457,7 @@ sbkube apply --profile production
 ```
 
 ### Failure Recovery
+
 ```bash
 # Auto-resume from failure
 sbkube apply --resume
@@ -443,7 +470,9 @@ sbkube apply --continue-from template
 ```
 
 ### Dependency Management
+
 Apps can declare dependencies via `deps` field:
+
 ```yaml
 apps:
   - name: app_020_backend
@@ -464,6 +493,7 @@ All commands support multiple output formats via `--format`:
 - `yaml`: YAML format
 
 Example:
+
 ```bash
 sbkube status --format llm
 sbkube history --format json
@@ -475,11 +505,8 @@ See [llm-friendly-output.md](llm-friendly-output.md) for details.
 
 The following will be removed in v1.0.0:
 
-| Old (Deprecated) | New (Recommended) |
-|-----------------|-------------------|
-| `sbkube cluster status` | `sbkube status` |
-| `sbkube state list` | `sbkube history` |
-| `sbkube state show <id>` | `sbkube history --show <id>` |
+| Old (Deprecated) | New (Recommended) | |-----------------|-------------------| | `sbkube cluster status` |
+`sbkube status` | | `sbkube state list` | `sbkube history` | | `sbkube state show <id>` | `sbkube history --show <id>` |
 | `sbkube state rollback <id>` | `sbkube rollback <id>` |
 
 ## Related Documentation

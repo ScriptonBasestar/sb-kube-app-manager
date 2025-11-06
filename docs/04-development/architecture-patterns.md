@@ -1,10 +1,6 @@
----
-type: Technical Documentation
-audience: Developer
-topics: [architecture, patterns, design, best-practices]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Technical Documentation audience: Developer topics: [architecture, patterns, design, best-practices] llm_priority: medium last_updated: 2025-01-04
 
 # Core Architecture Patterns
 

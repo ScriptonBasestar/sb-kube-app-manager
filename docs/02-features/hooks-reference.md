@@ -1,10 +1,6 @@
----
-type: Reference
-audience: Developer
-topics: [hooks, api, reference]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: Reference audience: Developer topics: [hooks, api, reference] llm_priority: medium last_updated: 2025-01-04
 
 # SBKube Hooks 통합 레퍼런스
 

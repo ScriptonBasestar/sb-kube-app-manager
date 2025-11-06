@@ -134,7 +134,10 @@ class TestFormatDeploymentResult:
         """Test LLM format output with errors."""
         formatter = OutputFormatter(OutputFormat.LLM)
         sample_data["status"] = "failed"
-        sample_data["errors"] = ["Database connection failed", "Timeout waiting for pod"]
+        sample_data["errors"] = [
+            "Database connection failed",
+            "Timeout waiting for pod",
+        ]
 
         result = formatter.format_deployment_result(
             status=sample_data["status"],

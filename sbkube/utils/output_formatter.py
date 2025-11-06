@@ -107,6 +107,7 @@ class OutputFormatter:
             return self._format_yaml_deployment(
                 status, summary, deployments, next_steps, errors
             )
+
     def format_history_result(
         self,
         status: str,
@@ -131,11 +132,17 @@ class OutputFormatter:
         if self.format == OutputFormat.HUMAN:
             return "Human format (rendered directly in command)"
         if self.format == OutputFormat.LLM:
-            return self._format_llm_history(status, summary, history, next_steps, errors)
+            return self._format_llm_history(
+                status, summary, history, next_steps, errors
+            )
         if self.format == OutputFormat.JSON:
-            return self._format_json_history(status, summary, history, next_steps, errors)
+            return self._format_json_history(
+                status, summary, history, next_steps, errors
+            )
         if self.format == OutputFormat.YAML:
-            return self._format_yaml_history(status, summary, history, next_steps, errors)
+            return self._format_yaml_history(
+                status, summary, history, next_steps, errors
+            )
         return ""
 
     def _format_human_deployment(
@@ -163,7 +170,9 @@ class OutputFormatter:
         lines = []
 
         # Status line
-        status_icon = "✅" if status == "success" else "❌" if status == "failed" else "⚠️"
+        status_icon = (
+            "✅" if status == "success" else "❌" if status == "failed" else "⚠️"
+        )
         lines.append(f"STATUS: {status} {status_icon}")
 
         # Summary
@@ -200,6 +209,7 @@ class OutputFormatter:
             lines.append("ERRORS: none")
 
         return "\n".join(lines)
+
     def _format_llm_history(
         self,
         status: str,
@@ -209,6 +219,7 @@ class OutputFormatter:
         errors: list[str] | None,
     ) -> str:
         """Format history result for LLM consumption."""
+
         def icon_for_state(state: str) -> str:
             mapping = {
                 "success": "✅",
@@ -251,7 +262,9 @@ class OutputFormatter:
                 lines.append("RECENT DEPLOYMENTS:")
                 for entry in history:
                     entry_status = entry.get("status", "unknown")
-                    entry_icon = entry.get("status_icon") or icon_for_state(entry_status)
+                    entry_icon = entry.get("status_icon") or icon_for_state(
+                        entry_status
+                    )
                     apps_info = entry.get("apps", {})
                     success_count = apps_info.get("success", 0)
                     total_count = apps_info.get("total", 0)
@@ -267,7 +280,9 @@ class OutputFormatter:
             entry = history[0] if history else {}
             entry_status = entry.get("status", status)
             entry_icon = icon_for_state(entry_status)
-            lines.append(f"DEPLOYMENT ID: {entry.get('deployment_id', 'unknown')} {entry_icon}")
+            lines.append(
+                f"DEPLOYMENT ID: {entry.get('deployment_id', 'unknown')} {entry_icon}"
+            )
             lines.append(f"TIMESTAMP: {entry.get('timestamp')}")
             lines.append(
                 f"CONTEXT: {entry.get('cluster', '-')}/{entry.get('namespace', '-')}"
@@ -298,7 +313,9 @@ class OutputFormatter:
                 lines.append("")
                 lines.append(f"RESOURCES ({len(resources)}):")
                 for resource in resources[:10]:
-                    ns_str = f"/{resource['namespace']}" if resource.get("namespace") else ""
+                    ns_str = (
+                        f"/{resource['namespace']}" if resource.get("namespace") else ""
+                    )
                     lines.append(
                         f"- {resource.get('action', '').upper()} "
                         f"{resource.get('kind', '?')}{ns_str}/{resource.get('name', '?')}"
@@ -355,7 +372,9 @@ class OutputFormatter:
             summary_counts = entry.get("summary", {})
             if summary_counts:
                 formatted_counts = ", ".join(
-                    f"{key}:{summary_counts[key]}" for key in ("added", "removed", "modified", "unchanged") if key in summary_counts
+                    f"{key}:{summary_counts[key]}"
+                    for key in ("added", "removed", "modified", "unchanged")
+                    if key in summary_counts
                 )
                 lines.append(f"HELM RELEASES: {formatted_counts}")
             releases = entry.get("releases") or []
@@ -425,6 +444,7 @@ class OutputFormatter:
             "errors": errors or [],
         }
         return yaml.dump(result, allow_unicode=True, default_flow_style=False)
+
     def _format_json_history(
         self,
         status: str,
@@ -453,7 +473,9 @@ class OutputFormatter:
     ) -> str:
         """Format history result as YAML."""
         if yaml is None:
-            return self._format_json_history(status, summary, history, next_steps, errors)
+            return self._format_json_history(
+                status, summary, history, next_steps, errors
+            )
         result = {
             "status": status,
             "summary": summary,

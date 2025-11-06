@@ -130,7 +130,9 @@ def format_deployment_error(
 
         if guide["quick_fix"]:
             console.print()
-            console.print(f"[bold green]⚡ 빠른 해결:[/bold green] [cyan]{guide['quick_fix']}[/cyan]")
+            console.print(
+                f"[bold green]⚡ 빠른 해결:[/bold green] [cyan]{guide['quick_fix']}[/cyan]"
+            )
 
         if guide["doc_link"]:
             console.print()
@@ -141,7 +143,9 @@ def format_deployment_error(
         console.print("[bold yellow]💡 일반적인 해결 방법:[/bold yellow]")
         console.print("  • 전체 에러 로그 확인")
         console.print("  • [cyan]sbkube doctor[/cyan]: 시스템 진단")
-        console.print("  • [cyan]kubectl get pods,svc -n <namespace>[/cyan]: 리소스 확인")
+        console.print(
+            "  • [cyan]kubectl get pods,svc -n <namespace>[/cyan]: 리소스 확인"
+        )
 
     console.print()
 
@@ -177,7 +181,9 @@ def format_simple_error(
     guide = get_error_suggestions(classification["category"])
     if guide and guide.get("quick_fix"):
         console.print()
-        console.print(f"[bold green]⚡ 빠른 해결:[/bold green] [cyan]{guide['quick_fix']}[/cyan]")
+        console.print(
+            f"[bold green]⚡ 빠른 해결:[/bold green] [cyan]{guide['quick_fix']}[/cyan]"
+        )
 
     console.print()
 

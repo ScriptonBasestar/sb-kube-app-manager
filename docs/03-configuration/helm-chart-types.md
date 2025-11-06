@@ -1,10 +1,6 @@
----
-type: API Reference
-audience: End User
-topics: [helm, chart-types, configuration]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: API Reference audience: End User topics: [helm, chart-types, configuration] llm_priority: medium last_updated: 2025-01-04
 
 # Helm Chart Types in SBKube
 

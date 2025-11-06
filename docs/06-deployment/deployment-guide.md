@@ -1,10 +1,6 @@
----
-type: User Guide
-audience: End User, Developer
-topics: [deployment, kubernetes, k3s, operations]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: User Guide audience: End User, Developer topics: [deployment, kubernetes, k3s, operations] llm_priority: medium last_updated: 2025-01-04
 
 # 🚀 SBKube 배포 가이드
 

@@ -1,10 +1,6 @@
----
-type: User Guide
-audience: End User, Developer
-topics: [helm, customization, overrides, values]
-llm_priority: medium
-last_updated: 2025-01-04
----
+______________________________________________________________________
+
+## type: User Guide audience: End User, Developer topics: [helm, customization, overrides, values] llm_priority: medium last_updated: 2025-01-04
 
 # Helm Chart Customization
 

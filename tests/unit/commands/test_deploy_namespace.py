@@ -430,9 +430,7 @@ metadata:
         )
 
         # Create app with empty string namespace (simulates YAML parsing edge case)
-        app = YamlApp(
-            type="yaml", enabled=True, manifests=["test.yaml"], namespace=""
-        )
+        app = YamlApp(type="yaml", enabled=True, manifests=["test.yaml"], namespace="")
 
         # Act
         result = deploy_yaml_app(

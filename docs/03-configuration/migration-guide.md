@@ -342,6 +342,53 @@ metadata:
 - Application directory must follow naming pattern: `app_XXX_category_subcategory`
 - Example: `app_000_infra_network/traefik/`
 
+### Disabling Label Injection for Strict Schema Charts (v0.7.1+)
+
+Some Helm charts (e.g., Authelia, cert-manager) use strict schema validation and reject `commonLabels`/`commonAnnotations`. For these charts, you can disable automatic label injection:
+
+**config.yaml**:
+```yaml
+apps:
+  authelia:
+    type: helm
+    chart: authelia/authelia
+    helm_label_injection: false  # Disable automatic label injection
+    values:
+      - authelia.yaml
+```
+
+**Alternative: Add labels via values file** (optional):
+```yaml
+# authelia.yaml
+labels:  # Use chart's native label support
+  app.kubernetes.io/managed-by: sbkube
+  sbkube.io/app-group: app_405_security_auth
+  sbkube.io/app-name: authelia
+```
+
+**Impact**:
+- `sbkube status`: App tracking still works via State DB and name patterns
+- `sbkube history`: State DB-based tracking (fully functional)
+- `sbkube rollback`: State DB-based rollback (fully functional)
+
+**Why it works**: SBKube uses a priority-based classification system:
+1. Labels (sbkube.io/app-group) - Recommended
+2. **State DB** - Falls back when labels are disabled
+3. Release name pattern - `app_XXX_*` matching
+4. Namespace pattern - `app_XXX_*` matching
+
+**When to disable**:
+- Charts with strict schema validation (Authelia, cert-manager, some operator charts)
+- Charts that don't support `commonLabels`/`commonAnnotations`
+- OCI registry charts with limited customization
+
+**Error symptoms**:
+```
+Error: values don't meet the specifications of the schema(s):
+  authelia:
+    - at '': additional properties 'commonAnnotations', 'commonLabels' not allowed
+```
+
 ### Migration Path
 
 #### For Manual kubectl Users (Existing Resources)

@@ -258,31 +258,41 @@ def deploy_helm_app(
         # Try parent directory (for nested apps)
         app_group = extract_app_group_from_name(app_config_dir.parent.name)
 
-    if app_group:
-        # Build labels
-        labels = build_sbkube_labels(
-            app_name=app_name,
-            app_group=app_group,
-            deployment_id=deployment_id,
-        )
-        label_args = build_helm_set_labels(labels)
-        cmd.extend(label_args)
-        console.print(f"  [dim]Injecting labels: app-group={app_group}[/dim]")
+    # Check if automatic label injection is enabled (default: True)
+    if app.helm_label_injection:
+        if app_group:
+            # Build labels
+            labels = build_sbkube_labels(
+                app_name=app_name,
+                app_group=app_group,
+                deployment_id=deployment_id,
+            )
+            label_args = build_helm_set_labels(labels)
+            cmd.extend(label_args)
+            console.print(f"  [dim]Injecting labels: app-group={app_group}[/dim]")
 
-        # Build annotations
-        annotations = build_sbkube_annotations(
-            deployment_id=deployment_id,
-            operator=operator,
-        )
-        annotation_args = build_helm_set_annotations(annotations)
-        cmd.extend(annotation_args)
+            # Build annotations
+            annotations = build_sbkube_annotations(
+                deployment_id=deployment_id,
+                operator=operator,
+            )
+            annotation_args = build_helm_set_annotations(annotations)
+            cmd.extend(annotation_args)
+        else:
+            console.print(
+                f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
+            )
+            console.print(
+                "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
+            )
     else:
         console.print(
-            f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
+            "  [dim]Label injection disabled (helm_label_injection: false)[/dim]"
         )
-        console.print(
-            "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
-        )
+        if app_group:
+            console.print(
+                f"  [dim]App tracking will use State DB and name pattern (app-group={app_group})[/dim]"
+            )
 
     if dry_run:
         cmd.append("--dry-run")

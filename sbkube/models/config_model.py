@@ -658,6 +658,11 @@ class HelmApp(ConfigBaseModel):
     wait: bool = True
     timeout: str = "5m"
     atomic: bool = False
+    helm_label_injection: bool = Field(
+        default=True,
+        description="Enable automatic label/annotation injection via commonLabels/commonAnnotations. "
+        "Set to false for charts with strict schema validation (e.g., Authelia).",
+    )
 
     # 메타데이터
     labels: dict[str, str] = Field(default_factory=dict)  # Kubernetes labels

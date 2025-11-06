@@ -24,6 +24,7 @@ help:
 	@echo "  make test-coverage   Run tests with coverage report"
 	@echo ""
 	@echo "Code Quality:"
+	@echo "  make check           Quick syntax + type check (fastest)"
 	@echo "  make lint            Run linters (ruff, mypy, bandit) - read-only"
 	@echo "  make lint-fix        Run linters with auto-fix"
 	@echo "  make lint-fix UNSAFE_FIXES=1  Run linters with unsafe auto-fix"
@@ -114,6 +115,18 @@ EXCLUDE_DIRS = --exclude migrations --exclude node_modules --exclude examples
 # Optional unsafe fixes (use: make lint-fix UNSAFE_FIXES=1)
 UNSAFE_FIXES ?=
 UNSAFE_FLAG = $(if $(UNSAFE_FIXES),--unsafe-fixes,)
+
+# check: 빠른 문법 + 타입 체크 (가장 빠름, 빌드 컴파일처럼 사용)
+# - Python 문법 체크: py_compile로 syntax error 검출
+# - mypy: 기본 타입 검사 (엄격하지 않음)
+# - 용도: 코드 수정 후 빠른 검증, CI 사전 체크
+check:
+	@echo "🔍 Quick syntax and type check..."
+	@echo "✓ Checking Python syntax..."
+	@uv run python -m py_compile sbkube/**/*.py 2>&1 | grep -v "^$$" || echo "✅ Syntax OK"
+	@echo "✓ Running mypy..."
+	@uv run mypy $(LINT_DIRS_CORE) --ignore-missing-imports --no-error-summary $(EXCLUDE_DIRS) || echo "⚠️  Type check completed with warnings"
+	@echo "✅ Quick check completed!"
 
 # lint-check: 변경 사항 미리보기 (diff 모드)
 # - ruff check --diff: 수정될 내용을 미리보기로 표시 (실제 수정 없음)

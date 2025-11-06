@@ -28,6 +28,9 @@ uv pip install -e .       # Install in editable mode
 ## Code Quality
 
 ```bash
+# Quick syntax + type check (fastest, like build compile)
+make check
+
 # Auto-fix linting issues (recommended)
 make lint-fix
 

@@ -9,7 +9,7 @@ ______________________________________________________________________
 ### 1.1 프로젝트 정보
 
 - **프로젝트명**: SBKube
-- **버전**: 0.1.10
+- **버전**: 0.7.0
 - **라이선스**: MIT
 - **개발자**: archmagece <archmagece@users.noreply.github.com>
 - **저장소**: https://github.com/ScriptonBasestar/kube-app-manaer

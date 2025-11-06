@@ -1,8 +1,11 @@
 ______________________________________________________________________
 
-## type: Product Documentation audience: Product Manager, Developer topics: [users, personas, use-cases, market] llm_priority: medium last_updated: 2025-01-04
+## type: Product Documentation audience: Product Manager, Developer topics: [users, personas, use-cases, market] llm_priority: medium last_updated: 2025-01-06
 
 # SBKube 대상 사용자 분석
+
+> **주의**: 이 문서는 [PRODUCT.md](../../PRODUCT.md) Section 3 (누구를 위한가)의 상세 버전입니다.
+> 주요 페르소나 요약은 PRODUCT.md를 우선 참조하세요.
 
 ## 주요 사용자 페르소나
 
@@ -310,8 +313,15 @@ sbkube history
 
 ______________________________________________________________________
 
-**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
+## 관련 문서
 
-- [제품 정의서](product-definition.md)
-- [기능 명세서](product-spec.md)
-- [빠른 시작 가이드](../01-getting-started/README.md)
+- **상위 문서**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
+- **제품 정의**: [product-definition.md](product-definition.md) - 완전한 제품 정의
+- **기능 명세**: [product-spec.md](product-spec.md) - 전체 기능 목록
+- **사용 가이드**: [../01-getting-started/README.md](../01-getting-started/README.md) - 빠른 시작
+
+______________________________________________________________________
+
+**문서 버전**: 1.1
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

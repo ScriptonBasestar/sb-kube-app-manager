@@ -1,8 +1,10 @@
 ______________________________________________________________________
 
-## type: Product Definition audience: End User, Developer, AI Agent topics: [product-definition, overview, core-concepts, mission] llm_priority: high last_updated: 2025-01-04
+## type: Product Definition audience: End User, Developer, AI Agent topics: [product-definition, overview, core-concepts, mission] llm_priority: high last_updated: 2025-01-06
 
 # SBKube 제품 정의서
+
+> **주의**: 이 문서는 [PRODUCT.md](../../PRODUCT.md)의 상세 버전입니다. 핵심 정보는 PRODUCT.md를 우선 참조하세요.
 
 ## 제품 개요
 
@@ -12,7 +14,8 @@ ______________________________________________________________________
 
 ### 버전 정보
 
-- \*\*현재 버전: 0.6.0
+- **현재 버전**: v0.7.0 (개발 중)
+- **안정 버전**: v0.6.0
 - **타겟 플랫폼**: Kubernetes (k3s 최적화)
 - **런타임**: Python 3.12+
 
@@ -198,17 +201,24 @@ Pydantic | ❌ 없음 | ❌ 없음 | ⚠️ 기본 검증 | | **사용자 정의
 
 ## 향후 발전 방향
 
-### 단기 로드맵 (v0.4.x - v0.5.x)
+### 완료된 마일스톤
 
 - ✅ v0.4.10: sources.yaml 클러스터 설정 필수화, deps 필드 지원
+- ✅ v0.5.0: 통합 워크플로우 (`apply` 명령어), Hooks 시스템 기초
+- ✅ v0.6.0: 앱 그룹 의존성 검증, 네임스페이스 자동 감지, 라벨 기반 분류
+
+### 단기 로드맵 (v0.7.x - v0.8.x)
+
+- 🟡 v0.7.0 (진행 중): LLM 친화적 출력 시스템 (Phase 1-3 완료), 향상된 에러 처리
+- Hooks 고도화 (Manifests Hooks, Task 시스템)
 - 플러그인 시스템 도입 (사용자 정의 명령어 확장)
 - 성능 최적화 (병렬 처리, 캐싱)
-- 웹 UI 프로토타입 (상태 관리 대시보드)
 
-### 중장기 로드맵 (v0.6.x - v1.0.x)
+### 중장기 로드맵 (v0.9.x - v1.0.x)
 
 - 멀티 클러스터 지원
 - 고급 상태 관리 (분산 잠금, 동기화)
+- 웹 UI 프로토타입 (상태 관리 대시보드)
 - GitOps 통합 (Flux, ArgoCD 연동)
 
 ### 장기 비전
@@ -221,4 +231,16 @@ Pydantic | ❌ 없음 | ❌ 없음 | ⚠️ 기본 검증 | | **사용자 정의
 
 ______________________________________________________________________
 
-**문서 버전**: 1.1 **마지막 업데이트**: 2025-10-30 **담당자**: archmagece@users.noreply.github.com
+## 관련 문서
+
+- **상위 문서**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
+- **기술 명세**: [SPEC.md](../../SPEC.md) - 기술 구현 (어떻게)
+- **상세 기능**: [product-spec.md](product-spec.md) - 전체 기능 목록
+- **대상 사용자**: [target-users.md](target-users.md) - 페르소나 및 여정
+- **비전**: [vision-roadmap.md](vision-roadmap.md) - 장기 비전 및 로드맵
+
+______________________________________________________________________
+
+**문서 버전**: 1.2
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

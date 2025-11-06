@@ -1,21 +1,29 @@
 ______________________________________________________________________
 
-## type: Product Specification audience: Developer topics: [features, requirements, architecture, workflow, automation] llm_priority: high last_updated: 2025-01-04
+## type: Product Specification audience: Developer topics: [features, requirements, architecture, workflow, automation] llm_priority: high last_updated: 2025-01-06
 
 # SBKube 기능 명세서
+
+> **주의**: 이 문서는 [PRODUCT.md](../../PRODUCT.md) Section 6 (주요 기능)의 상세 버전입니다.
+> 핵심 기능 요약은 PRODUCT.md를 우선 참조하세요.
 
 ## TL;DR
 
 - **Purpose**: Detailed functional specifications for SBKube's deployment automation system
+- **Current Version**: v0.7.0 (개발 중), v0.6.0 (안정)
 - **Key Points**:
   - Core workflow: prepare→build→template→deploy pipeline
   - Multi-source integration: Helm charts, Git repos, HTTP URLs, Kustomize
   - Strong validation: Pydantic models for config validation
   - State management: SQLAlchemy-based deployment tracking
   - Extensible hooks system for deployment customization
+  - LLM-friendly output: `--format llm/json/yaml` options
 - **Quick Reference**: Section 1 covers workflow automation, Section 2-5 detail each component
-- **Related**: [PRODUCT.md](../../PRODUCT.md), [ARCHITECTURE.md](../10-modules/sbkube/ARCHITECTURE.md),
-  [config-schema.md](../03-configuration/config-schema.md)
+- **Related**:
+  - **상위 문서**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
+  - **기술 명세**: [SPEC.md](../../SPEC.md) - 기술 구현 (어떻게)
+  - **아키텍처**: [ARCHITECTURE.md](../10-modules/sbkube/ARCHITECTURE.md) - 시스템 설계
+  - **설정 스키마**: [config-schema.md](../03-configuration/config-schema.md) - 설정 상세
 
 ## 기능 개요
 
@@ -854,8 +862,16 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 
 ______________________________________________________________________
 
-**문서 버전**: 1.0 **마지막 업데이트**: 2025-10-20 **관련 문서**:
+## 관련 문서
 
-- [제품 정의서](product-definition.md)
-- [아키텍처 문서](../10-modules/sbkube/ARCHITECTURE.md)
-- [명령어 참조](../02-features/commands.md)
+- **상위 문서**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
+- **기술 명세**: [SPEC.md](../../SPEC.md) - 기술 구현 (어떻게)
+- **제품 정의**: [product-definition.md](product-definition.md) - 완전한 제품 정의
+- **아키텍처**: [../10-modules/sbkube/ARCHITECTURE.md](../10-modules/sbkube/ARCHITECTURE.md) - 시스템 설계
+- **명령어 참조**: [../02-features/commands.md](../02-features/commands.md) - 전체 명령어
+
+______________________________________________________________________
+
+**문서 버전**: 1.1
+**마지막 업데이트**: 2025-01-06
+**담당자**: archmagece@users.noreply.github.com

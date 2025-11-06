@@ -1,552 +1,1108 @@
 ______________________________________________________________________
 
-## type: Technical Specification audience: Developer topics: [architecture, requirements, implementation] llm_priority: medium last_updated: 2025-01-04
+## type: Technical Specification audience: Developer, DevOps Engineer topics: [architecture, implementation, api, workflow, technical] llm_priority: high last_updated: 2025-01-06
 
 # SBKube 기술 명세서 (Technical Specification)
 
-## 1. 프로젝트 개요
+> **어떻게 만들 것인가**: SBKube의 아키텍처, 워크플로우, API, 데이터 구조, 구현 상세 기술 사양
 
-### 1.1 프로젝트 정보
+______________________________________________________________________
 
-- **프로젝트명**: SBKube
-- **버전**: 0.7.0
-- **라이선스**: MIT
-- **개발자**: archmagece <archmagece@users.noreply.github.com>
-- **저장소**: https://github.com/ScriptonBasestar/kube-app-manaer
+## 📌 목차
 
-### 1.2 프로젝트 목적
+1. [문서 개요](#1-문서-개요)
+2. [시스템 아키텍처](#2-시스템-아키텍처)
+3. [워크플로우 상세](#3-워크플로우-상세)
+4. [데이터 모델 및 스키마](#4-데이터-모델-및-스키마)
+5. [API 및 명령어 명세](#5-api-및-명령어-명세)
+6. [상태 관리 시스템](#6-상태-관리-시스템)
+7. [Hooks 시스템 구현](#7-hooks-시스템-구현)
+8. [검증 시스템](#8-검증-시스템)
+9. [기술 스택 및 의존성](#9-기술-스택-및-의존성)
+10. [에러 처리 및 예외](#10-에러-처리-및-예외)
+11. [성능 및 확장성](#11-성능-및-확장성)
+12. [보안 고려사항](#12-보안-고려사항)
 
-SBKube는 Kubernetes 애플리케이션의 코드화를 위한 CLI 도구입니다. yaml설정에 기반해 helm, yaml 을 순차적으로 설치합니다.
+______________________________________________________________________
 
-### 1.3 주요 사용 사례
+## 1. 문서 개요
 
-k3s 홈서버, 호스팅k3s서버 애플리케이션 관리
+### 1.1 문서 목적
 
-### 1.4 핵심 가치
+본 문서는 SBKube의 **기술적 구현 방법**을 정의합니다. 개발자가 기능을 구현하거나 시스템을 이해하기 위한 청사진 역할을 합니다.
 
-- **일관성**: 다양한 소스를 통합한 단일 배포 인터페이스
-- **자동화**: 수동 작업 최소화를 통한 배포 효율성 향상
-- **확장성**: 다양한 애플리케이션 타입 및 배포 방법 지원
-- **안정성**: 차후 고려 예정
+### 1.2 독자
 
-## 2. 핵심 기능 및 특징
+- **주 독자**: 개발자, DevOps 엔지니어
+- **보조 독자**: QA 엔지니어, 아키텍트
 
-### 2.1 다단계 워크플로우
+### 1.3 관련 문서
+
+| 문서 | 목적 | 링크 |
+|------|------|------|
+| **PRODUCT.md** | 제품 정의 (무엇을, 왜) | [PRODUCT.md](PRODUCT.md) |
+| **ARCHITECTURE.md** | 상세 아키텍처 설계 | [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
+| **API_CONTRACT.md** | API 계약 및 인터페이스 | [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md) |
+| **config-schema.md** | 설정 파일 스키마 상세 | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) |
+
+### 1.4 버전 정보
+
+- **문서 버전**: 2.0
+- **대상 SBKube 버전**: v0.7.0 (개발 중, 안정 버전: v0.6.0)
+- **마지막 업데이트**: 2025-01-06
+- **문서 상태**: v0.7.0 기능 포함 (일부 Unreleased)
+
+______________________________________________________________________
+
+## 2. 시스템 아키텍처
+
+### 2.1 고수준 아키텍처
 
 ```
-prepare → build → template → deploy
+┌─────────────────────────────────────────────────────────────┐
+│                      SBKube CLI                             │
+│               (Click Framework)                             │
+└───────────────────────┬─────────────────────────────────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        ▼               ▼               ▼
+┌───────────────┐ ┌──────────────┐ ┌──────────────┐
+│   Commands    │ │    Models    │ │    State     │
+│    Layer      │ │    Layer     │ │  Management  │
+├───────────────┤ ├──────────────┤ ├──────────────┤
+│ • prepare     │ │ • ConfigModel│ │ • SQLAlchemy │
+│ • build       │ │ • SourcesModel│ │ • Tracker   │
+│ • template    │ │ • Pydantic   │ │ • History    │
+│ • deploy      │ │   Validators │ │ • Rollback   │
+│ • apply       │ │              │ │              │
+│ • status      │ │              │ │              │
+└───────┬───────┘ └──────┬───────┘ └──────┬───────┘
+        │                │                │
+        └────────────────┼────────────────┘
+                         ▼
+              ┌──────────────────┐
+              │  Utils & Helpers │
+              ├──────────────────┤
+              │ • helm_util      │
+              │ • logger         │
+              │ • file_loader    │
+              │ • output_formatter│
+              └─────────┬────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        ▼               ▼               ▼
+┌──────────────┐ ┌─────────────┐ ┌──────────────┐
+│   Helm CLI   │ │   kubectl   │ │   Git CLI    │
+│   (v3.x)     │ │             │ │              │
+└──────────────┘ └─────────────┘ └──────────────┘
+        │               │               │
+        └───────────────┼───────────────┘
+                        ▼
+               ┌────────────────┐
+               │  Kubernetes    │
+               │   Cluster      │
+               └────────────────┘
 ```
 
-**통합 실행**: `sbkube apply` 명령어로 4단계를 자동으로 실행할 수 있습니다.
-
-#### 2.1.0 Apply (통합 워크플로우)
-
-- 4단계를 자동으로 순차 실행
-- 환경별 프로파일 지원 (development/staging/production)
-- 실패 지점부터 재시작 가능 (`--resume`, `--continue-from`)
-- 단계별 실행 제어 (`--from-step`, `--to-step`, `--only`)
-- 실시간 진행 상황 표시
-
-#### 2.1.1 Prepare (소스 준비)
-
-- 외부 Helm 저장소에서 차트 다운로드
-- Git 리포지토리 클론 및 소스 복사
-- OCI 차트 풀링
-
-#### 2.1.2 Build (앱 빌드)
-
-- 다운로드된 소스를 배포 가능한 형태로 변환
-- 로컬 파일 및 설정 복사
-- 의존성 해결 및 패키지화
-
-#### 2.1.3 Template (템플릿 렌더링)
-
-- Helm 차트를 YAML 매니페스트로 렌더링
-- 환경별 설정 값 적용
-- 최종 배포 매니페스트 생성
-
-#### 2.1.4 Deploy (배포 실행)
-
-- Kubernetes 클러스터에 리소스 배포
-- Helm 릴리스 설치/업그레이드
-- 사용자 정의 스크립트 실행
-
-### 2.2 강력한 설정 관리
-
-- **Pydantic 기반 타입 검증**: 런타임 설정 검증 및 IDE 지원
-- **JSON 스키마 지원**: 자동 스키마 생성 및 검증
-- **계층적 설정 구조**: 전역 설정과 앱별 설정 분리
-- **환경별 설정**: 개발/스테이징/프로덕션 환경 구분
-
-### 2.3 상태 관리 시스템
-
-- **SQLAlchemy 기반 데이터베이스**: 배포 상태 추적
-- **히스토리 관리**: 시간순 배포 기록 보존
-- **롤백 지원**: 이전 상태로 안전한 되돌리기
-- **상태 쿼리**: 현재 배포 상태 및 히스토리 조회
-
-### 2.4 사용자 친화적 인터페이스
-
-- **Rich 라이브러리**: 색상별 로깅 및 테이블 형태 출력
-- **상세 로깅**: --verbose 옵션을 통한 디버깅 정보 제공
-- **진행 상태 표시**: 작업 진행도 및 결과 시각화
-- **에러 메시지**: 명확한 오류 정보 및 해결 방법 제시
-
-## 3. 아키텍처 설계
-
-### 3.1 시스템 구조
+### 2.2 모듈 구조
 
 ```
 sbkube/
-├── cli.py                    # 메인 CLI 엔트리포인트
+├── cli.py                    # CLI 엔트리포인트
 ├── commands/                 # 명령어 구현
-│   ├── apply.py             # 통합 워크플로우 실행
+│   ├── __init__.py
+│   ├── apply.py             # 통합 워크플로우
 │   ├── prepare.py           # 소스 준비
 │   ├── build.py             # 앱 빌드
 │   ├── template.py          # 템플릿 렌더링
 │   ├── deploy.py            # 배포 실행
-│   ├── upgrade.py           # 릴리스 업그레이드
-│   ├── delete.py            # 리소스 삭제
-│   ├── validate.py          # 설정 검증
-│   ├── version.py           # 버전 정보
-│   └── state.py             # 상태 관리
+│   ├── status.py            # 상태 조회
+│   ├── history.py           # 히스토리 조회
+│   ├── rollback.py          # 롤백
+│   └── validate.py          # 설정 검증
 ├── models/                  # 데이터 모델
-│   ├── config_model.py      # 앱 설정 모델
-│   ├── sources_model.py     # 소스 설정 모델
-│   ├── deployment_state.py  # 배포 상태 모델
-│   └── validators.py        # 검증 로직
-├── state/                   # 상태 관리 시스템
-│   ├── database.py          # SQLAlchemy 데이터베이스
-│   ├── tracker.py           # 상태 추적
+│   ├── __init__.py
+│   ├── config_model.py      # config.yaml 모델
+│   ├── sources_model.py     # sources.yaml 모델
+│   └── deployment_state.py  # 배포 상태 모델
+├── state/                   # 상태 관리
+│   ├── __init__.py
+│   ├── database.py          # SQLAlchemy 설정
+│   ├── tracker.py           # 배포 추적
 │   └── rollback.py          # 롤백 관리
-└── utils/                   # 유틸리티
-    ├── base_command.py      # 명령어 기본 클래스
-    ├── logger.py            # Rich 기반 로깅
-    ├── cli_check.py         # CLI 도구 검증
-    ├── common.py            # 공통 함수
-    ├── helm_util.py         # Helm 유틸리티
-    └── file_loader.py       # 파일 로딩
+├── utils/                   # 유틸리티
+│   ├── __init__.py
+│   ├── base_command.py      # 명령어 베이스 클래스
+│   ├── logger.py            # Rich 로깅
+│   ├── helm_util.py         # Helm 연동
+│   ├── file_loader.py       # 파일 로딩
+│   └── output_formatter.py  # LLM 친화적 출력
+└── validators/              # 검증 시스템
+    ├── __init__.py
+    ├── config_validator.py  # 설정 검증
+    └── dependency_validator.py  # 의존성 검증
 ```
 
-### 3.2 핵심 아키텍처 패턴
+### 2.3 핵심 아키텍처 패턴
 
-#### 3.2.1 BaseCommand 패턴
+#### 2.3.1 Command Pattern (명령 패턴)
 
-모든 명령어는 `BaseCommand` 클래스를 상속하여 일관된 동작을 제공합니다:
-
-- 공통 설정 로딩
-- 표준화된 에러 처리
-- 확장 가능한 구조
-
-#### 3.2.2 Pydantic 모델 시스템
-
-강력한 타입 검증과 데이터 모델링:
-
-- 런타임 타입 검증
-- JSON 스키마 자동 생성
-- IDE 지원 및 자동완성
-
-#### 3.2.3 Rich Console 시스템
-
-사용자 친화적 콘솔 출력:
-
-- 색상별 로깅 레벨
-- 테이블 형태 정보 표시
-- 진행 상태 시각화
-
-### 3.3 데이터 흐름
-
-```
-설정 파일 → Pydantic 모델 → 검증 → 명령어 실행 → 상태 저장
-```
-
-## 4. 워크플로우 및 명령어 체계
-
-### 4.1 전역 옵션
-
-```bash
-sbkube [전역옵션] <명령어> [명령어옵션]
-```
-
-- `--kubeconfig <경로>`: Kubernetes 설정 파일 경로
-- `--context <이름>`: 사용할 Kubernetes 컨텍스트
-- `--namespace <네임스페이스>`: 작업 수행할 기본 네임스페이스
-- `-v, --verbose`: 상세 로깅 활성화
-
-### 4.2 명령어 체계
-
-#### 4.2.1 prepare - 소스 준비
-
-```bash
-sbkube prepare [옵션]
-```
-
-- 외부 소스 다운로드 및 준비
-- Helm 저장소, Git 리포지토리, OCI 차트 지원
-- 생성 디렉토리: `charts/`, `repos/`
-
-#### 4.2.2 build - 앱 빌드
-
-```bash
-sbkube build [옵션]
-```
-
-- 준비된 소스를 배포 가능한 형태로 변환
-- 로컬 파일 복사 및 의존성 해결
-- 생성 디렉토리: `build/`
-
-#### 4.2.3 template - 템플릿 렌더링
-
-```bash
-sbkube template [옵션]
-```
-
-- Helm 차트 및 YAML 파일 렌더링
-- 환경별 설정 값 적용
-- 생성 디렉토리: `rendered/`
-
-#### 4.2.4 deploy - 배포 실행
-
-```bash
-sbkube deploy [옵션]
-```
-
-- Kubernetes 클러스터에 배포
-- Helm 릴리스 설치 및 YAML 적용
-- Dry-run 지원
-
-#### 4.2.5 upgrade - 릴리스 업그레이드
-
-```bash
-sbkube upgrade [옵션]
-```
-
-- 기존 Helm 릴리스 업그레이드
-- 존재하지 않을 경우 새로 설치
-
-#### 4.2.6 delete - 리소스 삭제
-
-```bash
-sbkube delete [옵션]
-```
-
-- 배포된 리소스 제거
-- Helm 릴리스 삭제 및 YAML 리소스 제거
-
-#### 4.2.7 validate - 설정 검증
-
-```bash
-sbkube validate [TARGET_FILE] [옵션]
-```
-
-- 설정 파일 유효성 검증 (config.yaml, sources.yaml)
-- JSON 스키마 및 Pydantic 모델 검증
-- 앱 그룹 의존성 검증 (config 파일만)
-- 지원 옵션:
-  - `--app-dir <디렉토리>`: 앱 설정 디렉토리
-  - `--config-file <파일>`: 설정 파일 이름 (기본: config.yaml)
-  - `--schema-type <타입>`: 파일 종류 (config 또는 sources)
-
-#### 4.2.8 state - 상태 관리
-
-```bash
-sbkube state <하위명령어> [옵션]
-```
-
-- `list`: 배포 상태 목록 조회
-- `rollback`: 특정 배포로 롤백
-- `history`: 배포 히스토리 조회
-
-#### 4.2.9 version - 버전 정보
-
-```bash
-sbkube version
-```
-
-- 현재 CLI 버전 표시
-
-### 4.3 일반적인 워크플로우
-
-#### 기본 배포 워크플로우
-
-```bash
-sbkube prepare
-sbkube build
-sbkube template --output-dir ./manifests
-sbkube deploy
-```
-
-#### 부분 배포 워크플로우
-
-```bash
-sbkube prepare --app database
-sbkube build --app database
-sbkube deploy --app database
-```
-
-#### 검증 및 Dry-run 워크플로우
-
-```bash
-sbkube validate
-sbkube deploy --dry-run
-sbkube deploy
-```
-
-## 5. 설정 파일 구조
-
-### 5.1 config.yaml 스키마
-
-```yaml
-namespace: <기본 네임스페이스>
-deps: []
-
-apps:
-  - name: <앱 이름>
-    type: <앱 타입>
-    enabled: true
-    namespace: <앱별 네임스페이스>
-    release_name: <Helm 릴리스 이름>
-    specs:
-      # 앱 타입별 설정
-```
-
-### 5.2 sources.yaml 스키마
-
-```yaml
-helm_repos:
-  - name: <저장소 이름>
-    url: <저장소 URL>
-
-git_repos:
-  - name: <저장소 이름>
-    url: <Git URL>
-    ref: <브랜치/태그>
-```
-
-### 5.3 앱 타입별 설정
-
-#### 5.3.1 pull-helm
-
-```yaml
-specs:
-  repo: <Helm 저장소 이름>
-  chart: <차트 이름>
-  version: <차트 버전>
-  dest: <저장 경로>
-```
-
-#### 5.3.2 install-helm
-
-```yaml
-specs:
-  path: <차트 경로>
-  values:
-    - <값 파일 경로>
-```
-
-#### 5.3.3 install-yaml
-
-```yaml
-specs:
-  actions:
-    - type: apply
-      path: <YAML 파일 경로>
-```
-
-#### 5.3.4 copy-app
-
-```yaml
-specs:
-  paths:
-    - src: <소스 경로>
-      dest: <대상 경로>
-```
-
-#### 5.3.5 exec
-
-```yaml
-specs:
-  commands:
-    - <실행할 명령어>
-```
-
-## 6. 지원하는 애플리케이션 타입
-
-### 6.1 소스 준비 타입
-
-- **pull-helm**: Helm 저장소에서 차트 다운로드
-- **pull-helm-oci**: OCI 레지스트리에서 차트 다운로드
-- **pull-git**: Git 리포지토리 클론
-- **copy-app**: 로컬 파일 복사
-
-### 6.2 배포 타입
-
-- **install-helm**: Helm 차트 설치
-- **install-yaml**: YAML 매니페스트 적용
-- **install-action**: 사용자 정의 스크립트 실행
-- **exec**: 임의 명령어 실행
-
-### 6.3 타입별 지원 명령어
-
-| 앱 타입 | prepare | build | template | deploy | upgrade | delete |
-|---------|---------|-------|----------|--------|---------|---------| | pull-helm | ✓ | ✓ | - | - | - | - | |
-pull-helm-oci | ✓ | ✓ | - | - | - | - | | pull-git | ✓ | ✓ | - | - | - | - | | copy-app | - | ✓ | - | - | - | - | |
-install-helm | - | - | ✓ | ✓ | ✓ | ✓ | | install-yaml | - | - | ✓ | ✓ | - | ✓ | | install-action | - | - | - | ✓ | - | ✓
-| | exec | - | - | - | ✓ | - | - |
-
-## 7. 사용 사례 및 예제
-
-### 7.1 완전한 워크플로우 예제
-
-#### 설정 파일 (config.yaml)
-
-```yaml
-namespace: complete-example
-
-apps:
-  # 소스 준비
-  - name: grafana-chart-pull
-    type: pull-helm
-    specs:
-      repo: grafana
-      chart: grafana
-      version: "6.50.0"
-      dest: grafana
-
-  # 로컬 리소스 복사
-  - name: config-copy
-    type: copy-app
-    specs:
-      paths:
-        - src: local-configs
-          dest: configs
-
-  # 애플리케이션 배포
-  - name: redis-deployment
-    type: install-helm
-    specs:
-      path: redis
-      values:
-        - redis-values.yaml
-
-  # 모니터링 설정
-  - name: monitoring-setup
-    type: install-yaml
-    specs:
-      actions:
-        - type: apply
-          path: manifests/monitoring.yaml
-
-  # 배포 후 확인
-  - name: post-install-check
-    type: exec
-    specs:
-      commands:
-        - echo "Checking deployment status..."
-        - kubectl get pods -n complete-example
-```
-
-#### 소스 설정 (sources.yaml)
-
-```yaml
-helm_repos:
-  - name: grafana
-    url: https://grafana.github.io/helm-charts
-
-git_repos:
-  - name: example-app
-    url: https://github.com/example/app.git
-    ref: main
-```
-
-### 7.2 실행 예제
-
-```bash
-# 전체 워크플로우
-sbkube prepare --app-dir config
-sbkube build --app-dir config
-sbkube template --app-dir config --output-dir rendered/
-sbkube deploy --app-dir config --namespace complete-example
-
-# 특정 앱만 처리
-sbkube prepare --app redis-chart-pull
-sbkube build --app redis-chart-pull
-sbkube deploy --app redis-deployment
-
-# 상태 확인
-sbkube state list
-sbkube state history --cluster production
-```
-
-## 8. 기술 스택 및 의존성
-
-### 8.1 기본 요구사항
-
-- **Python**: 3.12+
-- **Kubernetes**: kubectl 설치 필수
-- **Helm**: v3.x 설치 필수
-
-### 8.2 주요 의존성
+모든 명령어는 `BaseCommand` 또는 `EnhancedBaseCommand`를 상속:
 
 ```python
-dependencies = [
-    "click>=8.1",          # CLI 프레임워크
-    "pyyaml",              # YAML 파일 처리
-    "gitpython",           # Git 리포지토리 조작
-    "jinja2",              # 템플릿 엔진
-    "rich",                # 콘솔 출력 개선
-    "pytest>=8.3.5",      # 테스트 프레임워크
-    "toml>=0.10.2",        # TOML 파일 처리
-    "jsonschema>=4.23.0",  # JSON 스키마 검증
-    "pydantic>=2.7.1",     # 데이터 모델링
-    "sqlalchemy>=2.0.0",   # 데이터베이스 ORM
-]
+# sbkube/utils/base_command.py
+class BaseCommand:
+    def __init__(self, app_dir: str, base_dir: str, **kwargs):
+        self.app_dir = app_dir
+        self.base_dir = base_dir
+        self.logger = get_logger()
+
+    def execute(self):
+        raise NotImplementedError
+
+class EnhancedBaseCommand(BaseCommand):
+    def __init__(self, *args, format: str = "human", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.formatter = OutputFormatter(format=format)
 ```
 
-### 8.3 개발 도구
+#### 2.3.2 Strategy Pattern (전략 패턴)
 
-- **Code Quality**: ruff, black, isort, mypy
-- **Testing**: pytest, pytest-cov, testcontainers
-- **Security**: bandit
-- **Pre-commit**: pre-commit hooks
+앱 타입별로 다른 처리 전략 적용:
 
-### 8.4 배포 및 패키징
-
-- **Build System**: hatchling
-- **Distribution**: PyPI (pip install sbkube)
-- **Entry Point**: sbkube 명령어
-
-## 9. 확장성 및 향후 계획
-
-### 9.1 현재 확장 가능한 설계
-
-- **새로운 앱 타입 추가**: 모델 및 핸들러 확장
-- **새로운 명령어 추가**: BaseCommand 패턴 활용
-- **커스텀 검증 로직**: validators 모듈 확장
-
-### 9.2 단기 계획
-
-- **성능 최적화**: 병렬 처리 및 캐싱 개선
-- **에러 처리 강화**: 더 상세한 오류 정보 제공
-- **테스트 커버리지 향상**: E2E 테스트 확장
-
-### 9.3 중장기 계획
-
-- **플러그인 시스템**: 외부 플러그인을 통한 기능 확장
-- **웹 UI**: 상태 관리를 위한 웹 대시보드
-- **고급 상태 관리**: 분산 잠금, 클러스터 간 동기화
-- **멀티 클러스터 지원**: 여러 클러스터 동시 관리
-
-### 9.4 확장 로드맵
-
+```python
+# 앱 타입별 핸들러
+APP_HANDLERS = {
+    "helm": HelmHandler,
+    "yaml": YAMLHandler,
+    "git": GitHandler,
+    "kustomize": KustomizeHandler,
+    "action": ActionHandler,
+}
 ```
-v0.2.x: 플러그인 시스템 도입
-v0.3.x: 웹 UI 베타 버전
-v0.4.x: 멀티 클러스터 지원
-v0.5.x: 고급 상태 관리
-v1.0.x: 안정 버전 릴리스
+
+#### 2.3.3 Repository Pattern (저장소 패턴)
+
+상태 관리 데이터 접근 추상화:
+
+```python
+# sbkube/state/tracker.py
+class DeploymentTracker:
+    def __init__(self, db_path: str):
+        self.db = Database(db_path)
+
+    def save_deployment(self, deployment: DeploymentState):
+        # SQLAlchemy ORM 사용
+
+    def get_history(self, filters: dict):
+        # 히스토리 조회
 ```
 
 ______________________________________________________________________
 
-*이 문서는 SBKube v0.1.10 기준으로 작성되었으며, 향후 업데이트에 따라 변경될 수 있습니다.*
+## 3. 워크플로우 상세
+
+### 3.1 통합 워크플로우 (`apply`)
+
+**명령어**: `sbkube apply [옵션]`
+
+**실행 흐름**:
+```
+1. 설정 파일 로딩 (config.yaml, sources.yaml)
+   ↓
+2. Pydantic 검증
+   ↓
+3. 전역 pre-apply hooks 실행
+   ↓
+4. prepare 단계 실행
+   ↓
+5. build 단계 실행
+   ↓
+6. template 단계 실행
+   ↓
+7. deploy 단계 실행
+   ↓
+8. 전역 post-apply hooks 실행
+   ↓
+9. 상태 DB 저장
+```
+
+**시퀀스 다이어그램**:
+```
+User         ApplyCmd      PrepareCmd   BuildCmd   TemplateCmd  DeployCmd   StateDB
+ │              │              │           │            │           │          │
+ ├─ apply ─────>│              │           │            │           │          │
+ │              ├─ validate ──>│           │            │           │          │
+ │              │<─ OK ────────┤           │            │           │          │
+ │              ├─ execute ───>│           │            │           │          │
+ │              │              ├─ download charts       │           │          │
+ │              │              ├─────────────────────────────────────────────>│
+ │              │              │           │            │           │          │
+ │              ├──────────────┼─ execute─>│            │           │          │
+ │              │              │           ├─ customize charts      │          │
+ │              │              │           ├───────────────────────────────────>│
+ │              │              │           │            │           │          │
+ │              ├──────────────┼───────────┼─ execute──>│           │          │
+ │              │              │           │            ├─ render   │          │
+ │              │              │           │            ├─────────────────────>│
+ │              │              │           │            │           │          │
+ │              ├──────────────┼───────────┼────────────┼─ execute─>│          │
+ │              │              │           │            │           ├─ kubectl │
+ │              │              │           │            │           ├─────────>│
+ │              │              │           │            │           │<─ OK ────┤
+ │              ├──────────────────────────────────────────────────────────────>│
+ │<─ Done ──────┤              │           │            │           │          │
+```
+
+### 3.2 prepare - 소스 준비
+
+**목적**: 외부 소스 다운로드 및 로컬화
+
+**지원 앱 타입**:
+- `helm`: Helm 차트 (remote repository)
+- `git`: Git 리포지토리
+- `http`: HTTP(S) URL 파일 다운로드
+
+**구현 로직** (helm 타입):
+```python
+def prepare_helm_app(app: AppConfig, sources: SourcesConfig):
+    """
+    Helm 차트 다운로드 로직
+
+    1. chart 필드 파싱 (repo/chart 형식)
+    2. sources.yaml의 helm_repos에서 repository URL 조회
+    3. helm repo add 실행
+    4. helm pull 실행
+    5. .sbkube/charts/<app-name>/ 에 저장
+    """
+    repo_name, chart_name = parse_chart_field(app.chart)
+    repo_url = sources.helm_repos.get(repo_name)
+
+    # helm repo add
+    run_command(f"helm repo add {repo_name} {repo_url}")
+
+    # helm pull
+    version_flag = f"--version {app.version}" if app.version else ""
+    run_command(f"helm pull {repo_name}/{chart_name} {version_flag} --untar -d .sbkube/charts/{app.name}")
+```
+
+**출력 디렉토리**:
+```
+.sbkube/
+└── charts/
+    ├── grafana/        # helm 타입 앱
+    │   └── grafana/    # 실제 차트 디렉토리
+    └── nginx/
+        └── nginx/
+```
+
+### 3.3 build - 앱 빌드
+
+**목적**: 배포 가능한 형태로 변환
+
+**지원 앱 타입**:
+- `helm`: Helm 차트 커스터마이징 (overrides, removes 적용)
+
+**구현 로직** (차트 커스터마이징):
+```python
+def build_helm_app(app: AppConfig):
+    """
+    Helm 차트 커스터마이징
+
+    1. .sbkube/charts/<app-name> → .sbkube/build/<app-name> 복사
+    2. overrides 파일 덮어쓰기
+    3. removes 패턴 파일 삭제
+    """
+    src = f".sbkube/charts/{app.name}"
+    dest = f".sbkube/build/{app.name}"
+
+    # 복사
+    shutil.copytree(src, dest)
+
+    # overrides 적용
+    for override_path in app.overrides or []:
+        dest_path = os.path.join(dest, os.path.basename(override_path))
+        shutil.copy(override_path, dest_path)
+
+    # removes 적용
+    for remove_pattern in app.removes or []:
+        for file in glob.glob(os.path.join(dest, remove_pattern)):
+            os.remove(file)
+```
+
+**출력 디렉토리**:
+```
+.sbkube/
+└── build/
+    ├── grafana/        # 커스터마이징된 차트
+    │   └── grafana/
+    └── nginx/
+        └── nginx/
+```
+
+### 3.4 template - 템플릿 렌더링
+
+**목적**: 환경별 설정 적용 및 YAML 생성
+
+**지원 앱 타입**:
+- `helm`: Helm 차트 렌더링
+- `yaml`: YAML 파일 템플릿화 (Jinja2, 향후 지원)
+
+**구현 로직**:
+```python
+def template_helm_app(app: AppConfig, namespace: str):
+    """
+    Helm 차트 템플릿 렌더링
+
+    1. helm template 명령어 실행
+    2. values 파일 적용
+    3. .sbkube/rendered/<app-name>.yaml 생성
+    """
+    chart_path = f".sbkube/build/{app.name}"
+    release_name = app.release_name or app.name
+
+    # values 파일 옵션 생성
+    values_flags = " ".join([f"-f {v}" for v in app.values or []])
+
+    # helm template 실행
+    cmd = f"helm template {release_name} {chart_path} {values_flags} -n {namespace}"
+    output = run_command(cmd, capture_output=True)
+
+    # 파일 저장
+    with open(f".sbkube/rendered/{app.name}.yaml", "w") as f:
+        f.write(output)
+```
+
+**출력 디렉토리**:
+```
+.sbkube/
+└── rendered/
+    ├── grafana.yaml    # 렌더링된 매니페스트
+    └── nginx.yaml
+```
+
+### 3.5 deploy - 배포 실행
+
+**목적**: Kubernetes 클러스터에 배포
+
+**지원 앱 타입**:
+- `helm`: Helm 릴리스 설치/업그레이드
+- `yaml`: kubectl apply 실행
+- `action`: kubectl 액션 (apply, create, delete)
+- `exec`: 임의 명령어 실행
+
+**구현 로직** (helm 타입):
+```python
+def deploy_helm_app(app: AppConfig, namespace: str, dry_run: bool = False):
+    """
+    Helm 릴리스 배포
+
+    1. helm install 또는 helm upgrade 실행
+    2. --dry-run 지원
+    3. 배포 상태 DB 저장
+    """
+    chart_path = f".sbkube/build/{app.name}"
+    release_name = app.release_name or app.name
+    values_flags = " ".join([f"-f {v}" for v in app.values or []])
+
+    # 릴리스 존재 여부 확인
+    exists = check_release_exists(release_name, namespace)
+
+    # install vs upgrade
+    action = "upgrade --install" if exists else "install"
+    dry_run_flag = "--dry-run" if dry_run else ""
+
+    cmd = f"helm {action} {release_name} {chart_path} {values_flags} -n {namespace} {dry_run_flag}"
+    run_command(cmd)
+
+    # 상태 저장
+    if not dry_run:
+        tracker.save_deployment(
+            app_name=app.name,
+            namespace=namespace,
+            status="deployed",
+            timestamp=datetime.now()
+        )
+```
+
+______________________________________________________________________
+
+## 4. 데이터 모델 및 스키마
+
+### 4.1 config.yaml 스키마 (Pydantic)
+
+**모델 정의**:
+```python
+# sbkube/models/config_model.py
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Optional, Dict
+
+class HooksConfig(BaseModel):
+    """Hooks 설정"""
+    pre_deploy: Optional[List[str]] = None
+    post_deploy: Optional[List[str]] = None
+    on_deploy_failure: Optional[List[str]] = None
+
+class AppConfig(BaseModel):
+    """앱 설정"""
+    type: str = Field(..., description="앱 타입 (helm, yaml, action, exec, git, http, kustomize)")
+    enabled: bool = Field(default=True, description="활성화 여부")
+    depends_on: Optional[List[str]] = Field(default=None, description="앱 의존성")
+    deps: Optional[List[str]] = Field(default=None, description="앱 그룹 의존성")
+
+    # helm 타입 필드
+    chart: Optional[str] = Field(default=None, description="차트 경로 (repo/chart 또는 ./path)")
+    version: Optional[str] = Field(default=None, description="차트 버전")
+    values: Optional[List[str]] = Field(default=None, description="values 파일 목록")
+    overrides: Optional[List[str]] = Field(default=None, description="덮어쓸 파일 목록")
+    removes: Optional[List[str]] = Field(default=None, description="제거할 파일 패턴")
+    namespace: Optional[str] = Field(default=None, description="네임스페이스 오버라이드")
+    release_name: Optional[str] = Field(default=None, description="Helm 릴리스 이름")
+
+    # hooks
+    hooks: Optional[HooksConfig] = None
+
+    @field_validator("type")
+    def validate_type(cls, v):
+        valid_types = ["helm", "yaml", "action", "exec", "git", "http", "kustomize"]
+        if v not in valid_types:
+            raise ValueError(f"Invalid type '{v}'. Must be one of {valid_types}")
+        return v
+
+class Config(BaseModel):
+    """config.yaml 전체 모델"""
+    namespace: str = Field(..., description="기본 네임스페이스")
+    deps: Optional[List[str]] = Field(default=None, description="앱 그룹 의존성")
+    apps: Dict[str, AppConfig] = Field(..., description="앱 정의 (dict 형식)")
+    hooks: Optional[HooksConfig] = None  # 전역 hooks
+```
+
+**YAML 예시**:
+```yaml
+namespace: production
+deps: ["a000_infra"]
+
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: "18.0.0"
+    values: ["values/production.yaml"]
+    hooks:
+      pre_deploy: ["./backup-db.sh"]
+      post_deploy: ["./notify-slack.sh"]
+
+  nginx:
+    type: helm
+    chart: ./charts/nginx-custom
+    overrides: ["templates/deployment.yaml"]
+    removes: ["templates/ingress.yaml"]
+```
+
+### 4.2 sources.yaml 스키마
+
+**모델 정의**:
+```python
+# sbkube/models/sources_model.py
+class SourcesConfig(BaseModel):
+    """sources.yaml 전체 모델"""
+    kubeconfig: str = Field(..., description="Kubeconfig 파일 경로")
+    kubeconfig_context: str = Field(..., description="Kubectl context 이름")
+    cluster: Optional[str] = Field(default=None, description="클러스터 이름 (문서화 목적)")
+
+    helm_repos: Dict[str, str] = Field(default_factory=dict, description="Helm 저장소 (이름: URL)")
+    git: Optional[Dict[str, GitRepoConfig]] = Field(default=None, description="Git 리포지토리")
+```
+
+**YAML 예시**:
+```yaml
+kubeconfig: ~/.kube/config
+kubeconfig_context: production-cluster
+cluster: production-k3s
+
+helm_repos:
+  bitnami: https://charts.bitnami.com/bitnami
+  grafana: https://grafana.github.io/helm-charts
+
+git:
+  my-manifests:
+    url: https://github.com/example/k8s-manifests.git
+    ref: v1.0.0
+```
+
+### 4.3 배포 상태 DB 스키마
+
+**SQLAlchemy 모델**:
+```python
+# sbkube/state/database.py
+from sqlalchemy import Column, Integer, String, DateTime, JSON
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+class DeploymentHistory(Base):
+    __tablename__ = 'deployment_history'
+
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, nullable=False)
+    cluster_context = Column(String(255), nullable=False)
+    namespace = Column(String(255), nullable=False)
+    app_name = Column(String(255), nullable=False)
+    release_name = Column(String(255), nullable=True)
+    status = Column(String(50), nullable=False)  # deployed, failed, rolled_back
+    metadata = Column(JSON, nullable=True)  # 추가 메타데이터 (버전, 해시 등)
+```
+
+**데이터베이스 위치**: `.sbkube/deployments.db` (SQLite)
+
+______________________________________________________________________
+
+## 5. API 및 명령어 명세
+
+### 5.1 CLI 명령어 계약
+
+#### 5.1.1 전역 옵션
+
+```bash
+sbkube [전역옵션] <명령어> [명령어옵션]
+
+전역 옵션:
+  --kubeconfig <경로>     # Kubernetes 설정 파일 (기본: ~/.kube/config)
+  --context <이름>        # Kubernetes 컨텍스트 (sources.yaml 우선)
+  --namespace <이름>      # 기본 네임스페이스 (config.yaml 우선)
+  --format <형식>         # 출력 형식: human, llm, json, yaml (기본: human)
+  -v, --verbose          # 상세 로깅
+  --help                 # 도움말
+```
+
+#### 5.1.2 apply - 통합 워크플로우
+
+```bash
+sbkube apply [옵션]
+
+옵션:
+  --app-dir <경로>        # 설정 디렉토리 (기본: ./config)
+  --base-dir <경로>       # 작업 디렉토리 (기본: .)
+  --app <이름>            # 특정 앱만 처리
+  --from-step <단계>      # 시작 단계 (prepare, build, template, deploy)
+  --to-step <단계>        # 종료 단계
+  --only <단계>           # 특정 단계만 실행
+  --dry-run              # 시뮬레이션 모드
+  --resume               # 실패 지점부터 재시작
+
+예제:
+  sbkube apply --app-dir config/production
+  sbkube apply --from-step template --namespace staging
+  sbkube apply --only deploy --dry-run
+```
+
+#### 5.1.3 status - 배포 상태 조회
+
+```bash
+sbkube status [옵션]
+
+옵션:
+  --namespace <이름>      # 네임스페이스 필터
+  --app-group <경로>      # 앱 그룹 디렉토리 (config.yaml 위치)
+
+출력:
+  - 클러스터 정보 (context, server)
+  - 노드 상태
+  - Helm 릴리스 목록 (네임스페이스 또는 앱 그룹별)
+  - 배포 상태 (최근 배포 기록)
+
+예제:
+  sbkube status --namespace production
+  sbkube status --app-group a101_data_rdb
+  sbkube --format llm status --namespace staging
+```
+
+#### 5.1.4 history - 배포 히스토리 조회
+
+```bash
+sbkube history [옵션]
+
+옵션:
+  --namespace <이름>      # 네임스페이스 필터
+  --app <이름>            # 앱 이름 필터
+  --limit <N>             # 최근 N개 (기본: 10)
+
+출력:
+  배포 히스토리 테이블 (timestamp, app, namespace, status)
+
+예제:
+  sbkube history --namespace production --limit 20
+  sbkube history --app redis
+```
+
+#### 5.1.5 validate - 설정 검증
+
+```bash
+sbkube validate [TARGET_FILE] [옵션]
+
+옵션:
+  --app-dir <경로>        # 설정 디렉토리 (기본: ./config)
+  --config-file <파일>    # 설정 파일 이름 (기본: config.yaml)
+  --schema-type <타입>    # 파일 종류: config, sources
+
+검증 항목:
+  1. YAML 구문 검증
+  2. Pydantic 모델 검증
+  3. 앱 이름 중복 검사
+  4. 순환 의존성 검사
+  5. 앱 그룹 의존성 배포 상태 검증
+
+예제:
+  sbkube validate config.yaml
+  sbkube validate --schema-type sources
+```
+
+### 5.2 Python API (프로그래밍 방식)
+
+**명령어 직접 호출**:
+```python
+from sbkube.commands.apply import ApplyCommand
+
+# Apply 명령어 실행
+cmd = ApplyCommand(
+    app_dir="config/production",
+    base_dir=".",
+    format="llm",
+    dry_run=False
+)
+cmd.execute()
+```
+
+**설정 파일 로딩**:
+```python
+from sbkube.utils.file_loader import load_config
+
+config = load_config("config/production/config.yaml")
+print(config.namespace)  # 'production'
+print(config.apps["redis"].chart)  # 'bitnami/redis'
+```
+
+______________________________________________________________________
+
+## 6. 상태 관리 시스템
+
+### 6.1 배포 상태 추적
+
+**저장 정보**:
+- 배포 시각 (timestamp)
+- 클러스터 정보 (context, namespace)
+- 앱 정보 (app_name, release_name)
+- 배포 결과 (status: deployed, failed, rolled_back)
+- 메타데이터 (JSON 필드: 차트 버전, 설정 해시 등)
+
+**구현**:
+```python
+# sbkube/state/tracker.py
+class DeploymentTracker:
+    def __init__(self, db_path: str = ".sbkube/deployments.db"):
+        self.db = Database(db_path)
+
+    def save_deployment(self, **kwargs):
+        """배포 기록 저장"""
+        deployment = DeploymentHistory(
+            timestamp=datetime.now(),
+            cluster_context=kwargs["context"],
+            namespace=kwargs["namespace"],
+            app_name=kwargs["app_name"],
+            release_name=kwargs.get("release_name"),
+            status=kwargs["status"],
+            metadata=kwargs.get("metadata", {})
+        )
+        self.db.session.add(deployment)
+        self.db.session.commit()
+
+    def get_history(self, filters: dict = None, limit: int = 10):
+        """히스토리 조회"""
+        query = self.db.session.query(DeploymentHistory)
+
+        if filters:
+            if "namespace" in filters:
+                query = query.filter_by(namespace=filters["namespace"])
+            if "app_name" in filters:
+                query = query.filter_by(app_name=filters["app_name"])
+
+        return query.order_by(DeploymentHistory.timestamp.desc()).limit(limit).all()
+```
+
+### 6.2 앱 그룹 의존성 검증
+
+**목적**: `deps` 필드에 선언된 의존 앱 그룹이 배포되었는지 확인
+
+**네임스페이스 자동 감지** (v0.6.0+):
+```python
+# sbkube/validators/dependency_validator.py
+def validate_app_group_dependencies(config: Config, tracker: DeploymentTracker):
+    """
+    앱 그룹 의존성 검증
+
+    1. config.deps 필드 확인
+    2. 각 의존 앱 그룹의 배포 히스토리 조회
+    3. 네임스페이스 자동 감지 (히스토리 DB에서)
+    4. 배포 여부 확인
+    """
+    if not config.deps:
+        return []
+
+    warnings = []
+    for dep_group in config.deps:
+        # 의존 앱 그룹의 배포 기록 조회 (네임스페이스 무관)
+        history = tracker.get_history(filters={"app_name": f"{dep_group}/*"}, limit=1)
+
+        if not history:
+            warnings.append(f"Dependency '{dep_group}' is not deployed")
+        else:
+            detected_namespace = history[0].namespace
+            logger.info(f"Dependency '{dep_group}' found in namespace '{detected_namespace}'")
+
+    return warnings
+```
+
+### 6.3 롤백 지원
+
+**롤백 프로세스**:
+```python
+# sbkube/state/rollback.py
+def rollback_deployment(deployment_id: int, tracker: DeploymentTracker):
+    """
+    배포 롤백
+
+    1. 이전 배포 상태 조회 (deployment_id)
+    2. Helm 릴리스 롤백 실행
+    3. 새로운 배포 기록 생성 (status: rolled_back)
+    """
+    # 1. 이전 배포 조회
+    prev_deployment = tracker.get_deployment_by_id(deployment_id)
+
+    # 2. Helm 롤백
+    cmd = f"helm rollback {prev_deployment.release_name} -n {prev_deployment.namespace}"
+    run_command(cmd)
+
+    # 3. 롤백 기록 저장
+    tracker.save_deployment(
+        context=prev_deployment.cluster_context,
+        namespace=prev_deployment.namespace,
+        app_name=prev_deployment.app_name,
+        release_name=prev_deployment.release_name,
+        status="rolled_back",
+        metadata={"original_deployment_id": deployment_id}
+    )
+```
+
+______________________________________________________________________
+
+## 7. Hooks 시스템 구현
+
+### 7.1 Hooks 실행 타이밍
+
+**명령어 수준 Hooks** (전역):
+```yaml
+# config.yaml
+hooks:
+  deploy:
+    pre: ["echo 'Starting deployment'"]
+    post: ["./notify-slack.sh 'Deployment completed'"]
+    on_failure: ["./rollback.sh"]
+```
+
+**앱 수준 Hooks**:
+```yaml
+# config.yaml
+apps:
+  database:
+    type: helm
+    chart: bitnami/postgresql
+    hooks:
+      pre_deploy: ["./backup-db.sh"]
+      post_deploy: ["kubectl wait --for=condition=ready pod -l app=postgresql"]
+      on_deploy_failure: ["./restore-backup.sh"]
+```
+
+### 7.2 실행 순서
+
+**deploy 명령어 실행 시**:
+```
+1. 전역 hooks.deploy.pre 실행
+2. 앱 A:
+   2.1. 앱 A hooks.pre_deploy 실행
+   2.2. 앱 A 배포
+   2.3. 성공 → 앱 A hooks.post_deploy 실행
+       실패 → 앱 A hooks.on_deploy_failure 실행
+3. 앱 B:
+   3.1. 앱 B hooks.pre_deploy 실행
+   3.2. 앱 B 배포
+   3.3. 성공/실패 hooks 실행
+4. 모두 성공 → 전역 hooks.deploy.post 실행
+   하나라도 실패 → 전역 hooks.deploy.on_failure 실행
+```
+
+### 7.3 환경변수 주입
+
+**자동 주입 변수** (앱별 Hooks):
+```python
+# sbkube/commands/deploy.py
+def execute_app_hooks(app: AppConfig, hook_type: str, namespace: str):
+    """
+    앱 Hooks 실행
+
+    환경변수 주입:
+    - SBKUBE_APP_NAME: 앱 이름
+    - SBKUBE_NAMESPACE: 배포 네임스페이스
+    - SBKUBE_RELEASE_NAME: Helm 릴리스 이름
+    """
+    env_vars = os.environ.copy()
+    env_vars.update({
+        "SBKUBE_APP_NAME": app.name,
+        "SBKUBE_NAMESPACE": namespace,
+        "SBKUBE_RELEASE_NAME": app.release_name or app.name,
+    })
+
+    hooks = app.hooks.get(hook_type, []) if app.hooks else []
+    for cmd in hooks:
+        subprocess.run(cmd, shell=True, env=env_vars, check=True)
+```
+
+### 7.4 에러 처리
+
+- Hook 실패 시 배포 중단
+- 명확한 오류 메시지 (종료 코드, stderr 출력)
+- Dry-run 모드에서는 Hook 명령어만 표시 (실제 실행 X)
+
+______________________________________________________________________
+
+## 8. 검증 시스템
+
+### 8.1 설정 파일 검증 (validate 명령어)
+
+**검증 레이어**:
+```
+1. YAML 파싱 검증 (PyYAML)
+   ↓
+2. Pydantic 모델 검증 (타입, 필수 필드)
+   ↓
+3. 논리 검증 (앱 이름 중복, 순환 의존성)
+   ↓
+4. 앱 그룹 의존성 검증 (deps 필드)
+   ↓
+5. 리소스 존재 여부 검증 (선택, --strict 플래그)
+```
+
+**구현**:
+```python
+# sbkube/commands/validate.py
+class ValidateCommand(EnhancedBaseCommand):
+    def execute(self):
+        # 1. YAML 파싱
+        try:
+            with open(self.config_file) as f:
+                data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            raise ValidationError(f"YAML parsing error: {e}")
+
+        # 2. Pydantic 검증
+        try:
+            config = Config(**data)
+        except ValidationError as e:
+            raise ValidationError(f"Schema validation error: {e}")
+
+        # 3. 논리 검증
+        validate_app_name_uniqueness(config)
+        validate_circular_dependencies(config)
+
+        # 4. 앱 그룹 의존성 검증
+        warnings = validate_app_group_dependencies(config, tracker)
+        for warning in warnings:
+            logger.warning(warning)
+
+        logger.success("✅ Validation passed")
+```
+
+### 8.2 배포 전 검증 (pre-deployment)
+
+**자동 실행**: deploy 명령어 실행 시
+
+**검증 항목**:
+- Kubernetes 클러스터 연결 확인
+- 대상 네임스페이스 존재 여부
+- 의존성 도구 설치 확인 (helm, kubectl, git)
+
+### 8.3 배포 후 검증 (post-deployment)
+
+**선택적 실행**: `--verify` 플래그 (향후 지원)
+
+**검증 항목**:
+- Pod 상태 확인 (Running)
+- Service 엔드포인트 확인
+- Helm 릴리스 상태 (deployed)
+
+______________________________________________________________________
+
+## 9. 기술 스택 및 의존성
+
+### 9.1 핵심 의존성
+
+**Python 패키지** (`pyproject.toml`):
+```toml
+[project]
+dependencies = [
+    "click>=8.1",          # CLI 프레임워크
+    "pyyaml>=6.0",         # YAML 파일 처리
+    "pydantic>=2.7.1",     # 데이터 검증
+    "sqlalchemy>=2.0.0",   # ORM (상태 관리)
+    "rich>=13.0",          # 콘솔 출력
+    "gitpython>=3.1",      # Git 연동
+    "jinja2>=3.1",         # 템플릿 엔진
+    "jsonschema>=4.23.0",  # JSON 스키마 검증
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-cov>=4.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10",
+]
+```
+
+### 9.2 외부 도구 의존성
+
+| 도구 | 버전 | 용도 | 필수 여부 |
+|------|------|------|----------|
+| **Helm** | v3.x | 차트 관리 및 배포 | ✅ 필수 |
+| **kubectl** | v1.27+ | Kubernetes API 통신 | ✅ 필수 |
+| **Git** | v2.x | Git 리포지토리 클론 | ⚠️ Git 타입 사용 시 |
+
+### 9.3 런타임 요구사항
+
+- **Python**: 3.12+ (엄격한 요구사항)
+- **OS**: Linux, macOS, Windows WSL2
+- **Kubernetes**: v1.24+ (k3s 권장)
+
+### 9.4 빌드 및 배포
+
+**빌드 시스템**: hatchling
+
+**배포 플랫폼**:
+- PyPI: `pip install sbkube`
+- GitHub Releases: Binary 배포 (향후 계획)
+
+______________________________________________________________________
+
+## 10. 에러 처리 및 예외
+
+### 10.1 에러 타입 계층
+
+```python
+# sbkube/exceptions.py
+class SBKubeError(Exception):
+    """Base exception"""
+
+class ConfigurationError(SBKubeError):
+    """설정 오류"""
+
+class ValidationError(SBKubeError):
+    """검증 오류"""
+
+class DeploymentError(SBKubeError):
+    """배포 오류"""
+
+class CommandExecutionError(SBKubeError):
+    """명령어 실행 오류"""
+```
+
+### 10.2 에러 메시지 형식
+
+**예시**:
+```
+❌ ValidationError: config.yaml
+  apps.redis.chart: field required
+  apps.backend.type: invalid app type 'helmm' (did you mean 'helm'?)
+
+Suggestions:
+  - Check config.yaml syntax
+  - Refer to docs/03-configuration/config-schema.md
+```
+
+### 10.3 복구 전략
+
+- **네트워크 오류**: 자동 재시도 (최대 3회)
+- **Pydantic 검증 오류**: 명확한 필드 위치 표시 + 수정 제안
+- **Helm 배포 실패**: 롤백 옵션 제시
+
+______________________________________________________________________
+
+## 11. 성능 및 확장성
+
+### 11.1 성능 목표
+
+- **앱 100개 기준**: 전체 워크플로우 10분 이내
+- **설정 파일 검증**: 1초 이내
+- **상태 조회 쿼리**: 100ms 이내
+
+### 11.2 병렬 처리
+
+**현재**: 순차 실행 (앱 의존성 고려)
+
+**향후 계획** (v0.8.x):
+- DAG 기반 병렬 실행
+- 독립적인 앱 동시 배포
+
+### 11.3 캐싱 전략
+
+- **Helm 차트**: 다운로드 캐시 (`.sbkube/charts/`)
+- **Git 리포지토리**: 로컬 클론 재사용
+
+______________________________________________________________________
+
+## 12. 보안 고려사항
+
+### 12.1 인증 및 권한
+
+- **Kubernetes 인증**: kubeconfig 파일 의존 (표준 메커니즘)
+- **Helm 저장소**: HTTPS 강제 (HTTP는 경고)
+- **Git 리포지토리**: SSH 키 또는 토큰 인증
+
+### 12.2 민감 정보 관리
+
+- **Secrets**: Kubernetes Secrets 사용 (SBKube는 직접 관리 X)
+- **설정 파일**: `.gitignore`에 values 파일 추가 권장
+- **로그**: 민감 정보 마스킹 (비밀번호, 토큰 등)
+
+### 12.3 RBAC 권한
+
+**최소 권한 원칙**:
+- 대상 네임스페이스에 대한 생성/수정/삭제 권한
+- Helm 릴리스 설치 권한
+- RBAC 리소스 관리 권한 (필요 시)
+
+______________________________________________________________________
+
+## 📚 관련 문서
+
+### 기술 문서
+
+- **[ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)** - 상세 아키텍처 설계
+- **[API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md)** - API 계약 및 인터페이스
+- **[config-schema.md](docs/03-configuration/config-schema.md)** - 설정 파일 스키마 상세
+- **[DEPENDENCIES.md](docs/10-modules/sbkube/DEPENDENCIES.md)** - 의존성 및 라이선스
+
+### 제품 문서
+
+- **[PRODUCT.md](PRODUCT.md)** - 제품 정의 (무엇을, 왜, 누구를 위해)
+- **[product-spec.md](docs/00-product/product-spec.md)** - 기능 명세 및 사용자 시나리오
+
+### 개발 가이드
+
+- **[개발자 가이드](docs/04-development/README.md)** - 개발 환경 구성 및 기여 방법
+- **[코딩 표준](docs/04-development/coding-standards.md)** - Python 코드 스타일 가이드
+- **[테스팅](docs/04-development/testing.md)** - 테스트 작성 및 실행
+
+______________________________________________________________________
+
+**🎯 문서 유형**: 기술 명세서 (Technical Specification) **독자**: 개발자, QA, DevOps 엔지니어 **초점**: 기능의 기술적 구현 방법
+
+**💡 제품 정의 및 사용자 가치는 [PRODUCT.md](PRODUCT.md)를 참조하세요**

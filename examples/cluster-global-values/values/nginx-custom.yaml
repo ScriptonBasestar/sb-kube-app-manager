@@ -1,0 +1,18 @@
+# App-specific values for nginx (override cluster defaults)
+
+# Override cluster storage class for this specific app
+global:
+  storageClass: ceph-block  # Override cluster default (nfs-client)
+
+# Nginx-specific configuration
+replicaCount: 3
+
+service:
+  type: LoadBalancer
+  ports:
+    http: 80
+    https: 443
+
+ingress:
+  enabled: true
+  hostname: nginx.prod.example.com  # Uses global.domain from cluster-values.yaml

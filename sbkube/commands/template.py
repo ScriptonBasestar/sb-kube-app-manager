@@ -28,6 +28,7 @@ def template_helm_app(
     app_config_dir: Path,
     rendered_dir: Path,
     output: OutputManager,
+    cluster_global_values: dict | None = None,
 ) -> bool:
     """Helm 앱을 YAML로 렌더링 (helm template).
 
@@ -40,6 +41,7 @@ def template_helm_app(
         app_config_dir: 앱 설정 디렉토리
         rendered_dir: 렌더링 결과 디렉토리
         output: OutputManager instance
+        cluster_global_values: 클러스터 전역 values (선택, v0.7.0+)
 
     Returns:
         성공 여부
@@ -91,6 +93,21 @@ def template_helm_app(
     if app.namespace:
         helm_cmd.extend(["--namespace", app.namespace])
 
+    # 클러스터 전역 values 추가 (v0.7.0+, 최하위 우선순위)
+    import tempfile
+    temp_cluster_values_file = None
+    if cluster_global_values:
+        import yaml
+        output.print("  Applying cluster global values...", level="info")
+        # 임시 파일에 cluster global values 저장
+        temp_cluster_values_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False, encoding="utf-8"
+        )
+        yaml.dump(cluster_global_values, temp_cluster_values_file, default_flow_style=False)
+        temp_cluster_values_file.close()
+        helm_cmd.extend(["--values", temp_cluster_values_file.name])
+        output.print(f"    ✓ cluster global values ({len(cluster_global_values)} keys)", level="info")
+
     # values 파일 추가
     if app.values:
         output.print(f"  Applying {len(app.values)} values files...", level="info")
@@ -137,6 +154,14 @@ def template_helm_app(
 
         output.print(f"[grey]{traceback.format_exc()}[/grey]", level="error")
         return False
+    finally:
+        # 임시 파일 정리
+        if temp_cluster_values_file:
+            import os
+            try:
+                os.unlink(temp_cluster_values_file.name)
+            except Exception:
+                pass  # 정리 실패해도 무시
 
 
 def template_yaml_app(
@@ -396,6 +421,24 @@ def cmd(
             overall_success = False
             continue
 
+        # sources.yaml 로드 (cluster global values용, v0.7.0+)
+        cluster_global_values = None
+        sources_file_path = APP_CONFIG_DIR / "sources.yaml"
+        if sources_file_path.exists():
+            try:
+                from sbkube.models.sources_model import SourceScheme
+
+                sources_data = load_config_file(sources_file_path)
+                sources = SourceScheme(**sources_data)
+                cluster_global_values = sources.get_merged_global_values(sources_dir=APP_CONFIG_DIR)
+                if cluster_global_values:
+                    output.print(
+                        f"[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]",
+                        level="info"
+                    )
+            except Exception as e:
+                output.print_warning(f"Failed to load cluster global values: {e}")
+
         # Hook executor 초기화
         hook_executor = HookExecutor(
             base_dir=BASE_DIR,
@@ -484,6 +527,7 @@ def cmd(
                         APP_CONFIG_DIR,
                         RENDERED_DIR,
                         output,
+                        cluster_global_values=cluster_global_values,
                     )
                 elif isinstance(app, YamlApp):
                     success = template_yaml_app(

@@ -4,9 +4,12 @@ This module provides improved Pydantic models for sbkube sources configuration
 with comprehensive validation and error handling.
 """
 
+import os
+from pathlib import Path
 from textwrap import dedent
 from typing import Any
 
+import yaml
 from pydantic import field_validator, model_validator
 
 from .base_model import ConfigBaseModel, InheritableConfigModel
@@ -147,6 +150,10 @@ class SourceScheme(InheritableConfigModel):
 
     # App directory control (optional, v0.5.0+)
     app_dirs: list[str] | None = None  # Explicit list of app directories to deploy
+
+    # Cluster-level global values (optional, v0.7.0+)
+    cluster_values_file: str | None = None  # Path to cluster-level values YAML file
+    global_values: dict[str, Any] | None = None  # Inline global values (merged with cluster_values_file)
 
     # Repository configuration (optional)
     helm_repos: dict[str, HelmRepoScheme] = {}
@@ -420,3 +427,87 @@ class SourceScheme(InheritableConfigModel):
                     )
 
         return errors
+
+    @field_validator("cluster_values_file")
+    @classmethod
+    def validate_cluster_values_file(cls, v: str | None) -> str | None:
+        """Validate cluster_values_file path if specified."""
+        if v is None:
+            return None
+
+        v = v.strip()
+        if not v:
+            msg = "cluster_values_file cannot be empty string"
+            raise ValueError(msg)
+
+        # Expand user home directory
+        expanded_path = os.path.expanduser(v)
+
+        # Check if file exists
+        if not os.path.exists(expanded_path):
+            msg = f"cluster_values_file not found: {v}"
+            raise ValueError(msg)
+
+        if not os.path.isfile(expanded_path):
+            msg = f"cluster_values_file is not a file: {v}"
+            raise ValueError(msg)
+
+        return v
+
+    def get_merged_global_values(self, sources_dir: str | Path | None = None) -> dict[str, Any]:
+        """Merge cluster-level values with priority.
+
+        Priority (low to high):
+        1. cluster_values_file (lowest)
+        2. global_values (highest)
+
+        Args:
+            sources_dir: Directory containing sources.yaml (for resolving relative paths)
+
+        Returns:
+            Merged global values dictionary
+
+        Example:
+            >>> sources = SourceScheme(
+            ...     kubeconfig="~/.kube/config",
+            ...     kubeconfig_context="prod",
+            ...     cluster_values_file="cluster-values.yaml",
+            ...     global_values={"global": {"environment": "production"}}
+            ... )
+            >>> values = sources.get_merged_global_values()
+            >>> values["global"]["environment"]
+            'production'
+
+        """
+        from sbkube.utils.dict_merge import deep_merge
+
+        merged = {}
+
+        # 1. Load from cluster_values_file (lowest priority)
+        if self.cluster_values_file:
+            file_path = self.cluster_values_file
+
+            # Expand user home directory
+            file_path = os.path.expanduser(file_path)
+
+            # Handle relative paths
+            if not os.path.isabs(file_path) and sources_dir:
+                file_path = os.path.join(sources_dir, file_path)
+
+            try:
+                with open(file_path, encoding="utf-8") as f:
+                    file_values = yaml.safe_load(f)
+                    if file_values and isinstance(file_values, dict):
+                        merged = deep_merge(merged, file_values)
+            except FileNotFoundError as e:
+                msg = f"cluster_values_file not found: {self.cluster_values_file}"
+                raise ValueError(msg) from e
+            except yaml.YAMLError as e:
+                msg = f"Invalid YAML in cluster_values_file: {self.cluster_values_file}"
+                raise ValueError(msg) from e
+
+        # 2. Merge inline global_values (higher priority)
+        if self.global_values:
+            merged = deep_merge(merged, self.global_values)
+
+        return merged

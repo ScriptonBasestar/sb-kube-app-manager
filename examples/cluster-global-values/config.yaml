@@ -1,0 +1,15 @@
+# App configuration (uses cluster global values from sources.yaml)
+
+namespace: default
+
+apps:
+  nginx:
+    type: helm
+    chart: bitnami/nginx
+    values:
+      - values/nginx-custom.yaml
+
+  redis:
+    type: helm
+    chart: bitnami/redis
+    # No app-specific values file - uses only cluster global values

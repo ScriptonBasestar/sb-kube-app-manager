@@ -1,0 +1,30 @@
+# Cluster-level Helm values (applied to all apps)
+# Priority: Lowest (overridden by app-specific values)
+
+global:
+  # Storage configuration
+  storageClass: nfs-client
+
+  # Networking
+  domain: prod.example.com
+
+  # Image registry
+  imageRegistry: harbor.example.com
+  imagePullSecrets:
+    - name: harbor-registry-secret
+
+  # Monitoring
+  monitoring:
+    enabled: true
+    retention: 30d
+    prometheus:
+      endpoint: http://prometheus.monitoring.svc:9090
+
+  # Backup
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retention: 7
+    s3:
+      bucket: prod-backups
+      region: us-east-1

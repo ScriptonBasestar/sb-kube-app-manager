@@ -1,0 +1,17 @@
+# Cluster configuration with global values (v0.7.0+)
+
+cluster: production-k3s
+kubeconfig: ~/.kube/config
+kubeconfig_context: default
+
+# Method 1: Reference external cluster-level values file
+cluster_values_file: cluster-values.yaml
+
+# Method 2: Inline global values (override cluster_values_file)
+global_values:
+  global:
+    environment: production
+    deployment_timestamp: "2025-01-06T10:00:00Z"
+
+helm_repos:
+  bitnami: https://charts.bitnami.com/bitnami

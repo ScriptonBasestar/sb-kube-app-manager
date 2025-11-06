@@ -59,7 +59,7 @@ def cmd(
     dry_run: bool,
     skip_install: bool,
     config_file_name: str | None,
-):
+) -> None:
     """config.yaml/toml에 정의된 Helm 애플리케이션을 업그레이드하거나 새로 설치합니다 (helm 타입 대상)."""
     console.print(
         f"[bold blue]✨ `upgrade` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]",
@@ -82,7 +82,7 @@ def cmd(
         console.print(
             f"[red]❌ 앱 설정 디렉토리가 존재하지 않습니다: {APP_CONFIG_DIR}[/red]",
         )
-        raise click.Abort()
+        raise click.Abort
 
     config_file_path = None
     if config_file_name:
@@ -92,7 +92,7 @@ def cmd(
             console.print(
                 f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]",
             )
-            raise click.Abort()
+            raise click.Abort
     else:
         # 1차 시도: APP_CONFIG_DIR에서 찾기
         for ext in [".yaml", ".yml", ".toml"]:
@@ -113,7 +113,7 @@ def cmd(
             console.print(
                 f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml] 또는 {BASE_DIR}/config.[yaml|yml|toml][/red]",
             )
-            raise click.Abort()
+            raise click.Abort
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
 
     # SBKubeConfig 모델로 로드
@@ -124,10 +124,10 @@ def cmd(
         console.print("[red]❌ 설정 파일 검증 실패:[/red]")
         for error in e.errors():
             console.print(f"  - {error['loc']}: {error['msg']}")
-        raise click.Abort()
+        raise click.Abort
     except Exception as e:
         console.print(f"[red]❌ 설정 파일 로드 실패: {e}[/red]")
-        raise click.Abort()
+        raise click.Abort
 
     global_namespace_from_config = config.namespace
 
@@ -142,7 +142,7 @@ def cmd(
             console.print(
                 f"[red]❌ 업그레이드 대상 앱 '{target_app_name}'을(를) 설정 파일에서 찾을 수 없습니다.[/red]",
             )
-            raise click.Abort()
+            raise click.Abort
         app_config = config.apps[target_app_name]
         if app_config.type == "helm":
             apps_to_process.append((target_app_name, app_config))

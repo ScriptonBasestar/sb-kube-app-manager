@@ -13,9 +13,9 @@ from sbkube.utils.diagnostic_system import (
 
 
 class KubernetesConnectivityCheck(DiagnosticCheck):
-    """Kubernetes 연결성 검사"""
+    """Kubernetes 연결성 검사."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("k8s_connectivity", "Kubernetes 클러스터 연결")
 
     async def run(self) -> DiagnosticResult:
@@ -80,9 +80,9 @@ class KubernetesConnectivityCheck(DiagnosticCheck):
 
 
 class HelmInstallationCheck(DiagnosticCheck):
-    """Helm 설치 상태 검사"""
+    """Helm 설치 상태 검사."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("helm_installation", "Helm 설치 상태")
 
     async def run(self) -> DiagnosticResult:
@@ -137,9 +137,9 @@ class HelmInstallationCheck(DiagnosticCheck):
 
 
 class ConfigValidityCheck(DiagnosticCheck):
-    """설정 파일 유효성 검사"""
+    """설정 파일 유효성 검사."""
 
-    def __init__(self, config_dir: str = "config"):
+    def __init__(self, config_dir: str = "config") -> None:
         super().__init__("config_validity", "설정 파일 유효성")
         self.config_dir = Path(config_dir)
 
@@ -255,9 +255,9 @@ class ConfigValidityCheck(DiagnosticCheck):
 
 
 class NetworkAccessCheck(DiagnosticCheck):
-    """네트워크 접근성 검사"""
+    """네트워크 접근성 검사."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("network_access", "네트워크 접근성")
 
     async def run(self) -> DiagnosticResult:
@@ -305,9 +305,9 @@ class NetworkAccessCheck(DiagnosticCheck):
 
 
 class PermissionsCheck(DiagnosticCheck):
-    """권한 검사"""
+    """권한 검사."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("permissions", "Kubernetes 권한")
 
     async def run(self) -> DiagnosticResult:
@@ -368,9 +368,9 @@ class PermissionsCheck(DiagnosticCheck):
 
 
 class ResourceAvailabilityCheck(DiagnosticCheck):
-    """리소스 가용성 검사"""
+    """리소스 가용성 검사."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("resource_availability", "클러스터 리소스")
 
     async def run(self) -> DiagnosticResult:

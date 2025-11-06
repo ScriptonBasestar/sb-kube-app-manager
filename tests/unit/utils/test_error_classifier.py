@@ -6,7 +6,7 @@ from sbkube.utils.error_classifier import ErrorClassifier
 class TestErrorClassifier:
     """Test ErrorClassifier functionality."""
 
-    def test_classify_postgresql_auth_error(self):
+    def test_classify_postgresql_auth_error(self) -> None:
         """PostgreSQL 인증 에러를 올바르게 분류하는지 테스트."""
         error_message = """
         sqlalchemy.exc.OperationalError:
@@ -22,7 +22,7 @@ class TestErrorClassifier:
         assert result["phase"] == "deploy"
         assert result["is_classified"] is True
 
-    def test_classify_helm_release_error(self):
+    def test_classify_helm_release_error(self) -> None:
         """Helm 릴리스 에러를 올바르게 분류하는지 테스트."""
         error_message = "Error: INSTALLATION FAILED: release airflow failed"
 
@@ -32,7 +32,7 @@ class TestErrorClassifier:
         assert result["severity"] == "high"
         assert result["is_classified"] is True
 
-    def test_classify_kubernetes_connection_error(self):
+    def test_classify_kubernetes_connection_error(self) -> None:
         """Kubernetes 연결 에러를 올바르게 분류하는지 테스트."""
         error_message = "Unable to connect to the server: dial tcp 127.0.0.1:6443: connection refused"
 
@@ -42,7 +42,7 @@ class TestErrorClassifier:
         assert result["severity"] == "critical"
         assert result["is_classified"] is True
 
-    def test_classify_unknown_error(self):
+    def test_classify_unknown_error(self) -> None:
         """알 수 없는 에러 처리 테스트."""
         error_message = "Some completely unknown error that doesn't match any pattern"
 
@@ -51,7 +51,7 @@ class TestErrorClassifier:
         assert result["category"] == "UnknownError"
         assert result["is_classified"] is False
 
-    def test_extract_db_details_postgresql(self):
+    def test_extract_db_details_postgresql(self) -> None:
         """PostgreSQL 에러에서 상세 정보 추출 테스트."""
         error_message = """
         connection to server at "postgresql.data.svc.cluster.local" (10.43.8.117),
@@ -66,7 +66,7 @@ class TestErrorClassifier:
         assert details["host"] == "postgresql.data.svc.cluster.local"
         assert details["port"] == "5432"
 
-    def test_extract_db_details_mysql(self):
+    def test_extract_db_details_mysql(self) -> None:
         """MySQL 에러에서 상세 정보 추출 테스트."""
         error_message = "Access denied for user 'root'@'mysql.default.svc.cluster.local' (using password: YES)"
 
@@ -75,7 +75,7 @@ class TestErrorClassifier:
         assert details["db_type"] == "mysql"
         assert details["user"] == "root"
 
-    def test_extract_helm_details(self):
+    def test_extract_helm_details(self) -> None:
         """Helm 에러에서 상세 정보 추출 테스트."""
         error_message = "Error: release airflow in namespace airflow failed with chart apache/airflow"
 
@@ -85,7 +85,7 @@ class TestErrorClassifier:
         assert details["namespace"] == "airflow"
         assert details["chart"] == "apache/airflow"
 
-    def test_database_connection_error_classification(self):
+    def test_database_connection_error_classification(self) -> None:
         """데이터베이스 연결 에러 분류 테스트."""
         error_message = (
             "connection to server at localhost, port 5432 failed: connection refused"
@@ -96,7 +96,7 @@ class TestErrorClassifier:
         assert result["category"] == "DatabaseConnectionError"
         assert result["severity"] == "high"
 
-    def test_namespace_not_found_error(self):
+    def test_namespace_not_found_error(self) -> None:
         """네임스페이스 없음 에러 분류 테스트."""
         error_message = 'Error from server (NotFound): namespaces "airflow" not found'
 

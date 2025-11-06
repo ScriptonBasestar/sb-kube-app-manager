@@ -55,8 +55,7 @@ def resolve_app_dirs(
 
     # 1. 명시적 --app-dir 옵션
     if app_config_dir_name:
-        app_config_dirs = [base_dir / app_config_dir_name]
-        return app_config_dirs
+        return [base_dir / app_config_dir_name]
 
     # 2. sources.yaml의 app_dirs 사용
     if sources_config and sources_config.app_dirs is not None:

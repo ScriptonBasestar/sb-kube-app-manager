@@ -1,5 +1,4 @@
-"""Unit tests for OutputManager.
-"""
+"""Unit tests for OutputManager."""
 
 from io import StringIO
 from unittest.mock import patch
@@ -10,7 +9,7 @@ from sbkube.utils.output_manager import OutputManager
 class TestOutputManager:
     """Tests for OutputManager class."""
 
-    def test_init_human_mode(self):
+    def test_init_human_mode(self) -> None:
         """Test OutputManager initialization in human mode."""
         manager = OutputManager(format_type="human")
         assert manager.format_type == "human"
@@ -18,7 +17,7 @@ class TestOutputManager:
         assert manager.events == []
         assert not manager._finalized
 
-    def test_init_llm_mode(self):
+    def test_init_llm_mode(self) -> None:
         """Test OutputManager initialization in LLM mode."""
         manager = OutputManager(format_type="llm")
         assert manager.format_type == "llm"
@@ -26,7 +25,7 @@ class TestOutputManager:
         assert manager.events == []
         assert not manager._finalized
 
-    def test_strip_markup(self):
+    def test_strip_markup(self) -> None:
         """Test Rich markup removal."""
         # Test simple markup
         assert OutputManager._strip_markup("[bold]Hello[/bold]") == "Hello"
@@ -64,7 +63,7 @@ class TestOutputManager:
         )
 
     @patch("sys.stdout", new_callable=StringIO)
-    def test_print_human_mode(self, mock_stdout):
+    def test_print_human_mode(self, mock_stdout) -> None:
         """Test print() in human mode."""
         manager = OutputManager(format_type="human")
         manager.print("Test message", level="info")
@@ -72,7 +71,7 @@ class TestOutputManager:
         # In human mode, events should be empty (not collected)
         assert len(manager.events) == 0
 
-    def test_print_llm_mode(self):
+    def test_print_llm_mode(self) -> None:
         """Test print() in LLM mode."""
         manager = OutputManager(format_type="llm")
         manager.print("Test message", level="info", extra="data")
@@ -84,7 +83,7 @@ class TestOutputManager:
         assert manager.events[0]["message"] == "Test message"
         assert manager.events[0]["extra"] == "data"
 
-    def test_print_section_human_mode(self):
+    def test_print_section_human_mode(self) -> None:
         """Test print_section() in human mode."""
         manager = OutputManager(format_type="human")
         manager.print_section("Test Section", meta="info")
@@ -92,7 +91,7 @@ class TestOutputManager:
         # Events should be empty in human mode
         assert len(manager.events) == 0
 
-    def test_print_section_llm_mode(self):
+    def test_print_section_llm_mode(self) -> None:
         """Test print_section() in LLM mode."""
         manager = OutputManager(format_type="llm")
         manager.print_section("Test Section", meta="info")
@@ -103,14 +102,14 @@ class TestOutputManager:
         assert manager.events[0]["title"] == "Test Section"
         assert manager.events[0]["meta"] == "info"
 
-    def test_print_error_human_mode(self):
+    def test_print_error_human_mode(self) -> None:
         """Test print_error() in human mode."""
         manager = OutputManager(format_type="human")
         manager.print_error("Error occurred", error="Details")
 
         assert len(manager.events) == 0
 
-    def test_print_error_llm_mode(self):
+    def test_print_error_llm_mode(self) -> None:
         """Test print_error() in LLM mode."""
         manager = OutputManager(format_type="llm")
         manager.print_error("Error occurred", error="Details", code=500)
@@ -122,7 +121,7 @@ class TestOutputManager:
         assert manager.events[0]["error"] == "Details"
         assert manager.events[0]["code"] == 500
 
-    def test_print_warning(self):
+    def test_print_warning(self) -> None:
         """Test print_warning() in LLM mode."""
         manager = OutputManager(format_type="llm")
         manager.print_warning("Warning message", severity="high")
@@ -133,7 +132,7 @@ class TestOutputManager:
         assert manager.events[0]["message"] == "Warning message"
         assert manager.events[0]["severity"] == "high"
 
-    def test_print_success(self):
+    def test_print_success(self) -> None:
         """Test print_success() in LLM mode."""
         manager = OutputManager(format_type="llm")
         manager.print_success("Operation successful", operation="deploy")
@@ -144,7 +143,7 @@ class TestOutputManager:
         assert manager.events[0]["message"] == "Operation successful"
         assert manager.events[0]["operation"] == "deploy"
 
-    def test_print_list(self):
+    def test_print_list(self) -> None:
         """Test print_list() in LLM mode."""
         manager = OutputManager(format_type="llm")
         items = ["Item 1", "[bold]Item 2[/bold]", "[red]Item 3[/red]"]
@@ -155,7 +154,7 @@ class TestOutputManager:
         assert manager.events[0]["title"] == "Test List"
         assert manager.events[0]["items"] == ["Item 1", "Item 2", "Item 3"]
 
-    def test_finalize_human_mode(self):
+    def test_finalize_human_mode(self) -> None:
         """Test finalize() in human mode (should not output anything)."""
         manager = OutputManager(format_type="human")
         manager.print("Test", level="info")
@@ -173,7 +172,7 @@ class TestOutputManager:
 
     @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
     @patch("sbkube.utils.output_formatter.OutputFormatter.format_deployment_result")
-    def test_finalize_llm_mode(self, mock_format_result, mock_print_output):
+    def test_finalize_llm_mode(self, mock_format_result, mock_print_output) -> None:
         """Test finalize() in LLM mode."""
         manager = OutputManager(format_type="llm")
         manager.print("Event 1", level="info")
@@ -198,7 +197,7 @@ class TestOutputManager:
 
     @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
     @patch("sbkube.utils.output_formatter.OutputFormatter.format_deployment_result")
-    def test_finalize_llm_mode_defaults(self, mock_format_result, mock_print_output):
+    def test_finalize_llm_mode_defaults(self, mock_format_result, mock_print_output) -> None:
         """Test finalize() default inference when status/summary are omitted."""
         manager = OutputManager(format_type="llm")
         manager.print("Event 1", level="info")
@@ -218,7 +217,7 @@ class TestOutputManager:
     @patch("sbkube.utils.output_formatter.OutputFormatter.format_deployment_result")
     def test_finalize_llm_mode_defaults_with_errors(
         self, mock_format_result, mock_print_output
-    ):
+    ) -> None:
         """Test finalize() infers failed status when errors are collected."""
         manager = OutputManager(format_type="llm")
         manager.print_error("Something went wrong")
@@ -231,7 +230,7 @@ class TestOutputManager:
         assert kwargs["summary"]["errors"] == 1
         assert mock_print_output.called
 
-    def test_finalize_idempotent(self):
+    def test_finalize_idempotent(self) -> None:
         """Test that finalize() can be called multiple times safely."""
         manager = OutputManager(format_type="llm")
         manager.print("Test", level="info")
@@ -241,7 +240,7 @@ class TestOutputManager:
 
         assert manager._finalized
 
-    def test_get_console(self):
+    def test_get_console(self) -> None:
         """Test get_console() returns Rich Console."""
         manager = OutputManager(format_type="human")
         console = manager.get_console()
@@ -249,7 +248,7 @@ class TestOutputManager:
         assert console is not None
         assert hasattr(console, "print")
 
-    def test_event_collection_multiple_events(self):
+    def test_event_collection_multiple_events(self) -> None:
         """Test that multiple events are collected correctly in LLM mode."""
         manager = OutputManager(format_type="llm")
 
@@ -268,7 +267,7 @@ class TestOutputManager:
         assert manager.events[4]["type"] == "success"
         assert manager.events[5]["type"] == "list"
 
-    def test_add_deployment(self):
+    def test_add_deployment(self) -> None:
         """Test add_deployment() method."""
         manager = OutputManager(format_type="llm")
 
@@ -293,7 +292,7 @@ class TestOutputManager:
         assert manager.deployments[1]["version"] == "1.2.3"
 
     @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
-    def test_finalize_with_deployments(self, mock_print_output):
+    def test_finalize_with_deployments(self, mock_print_output) -> None:
         """Test finalize() correctly passes deployments to formatter."""
         manager = OutputManager(format_type="llm")
 
@@ -323,7 +322,7 @@ class TestOutputManager:
         assert "app1" in result
         assert "app2" in result
 
-    def test_error_message_accumulation(self):
+    def test_error_message_accumulation(self) -> None:
         """Test that error messages are accumulated correctly."""
         manager = OutputManager(format_type="llm")
 
@@ -339,7 +338,7 @@ class TestOutputManager:
         assert "Error 3" in manager.error_messages  # Markup stripped
         assert "[red]" not in manager.error_messages[2]
 
-    def test_error_message_deduplication(self):
+    def test_error_message_deduplication(self) -> None:
         """Test that duplicate error messages are not accumulated."""
         manager = OutputManager(format_type="llm")
 
@@ -352,7 +351,7 @@ class TestOutputManager:
         assert manager.error_messages[0] == "Duplicate error"
 
     @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
-    def test_finalize_with_auto_collected_errors(self, mock_print_output):
+    def test_finalize_with_auto_collected_errors(self, mock_print_output) -> None:
         """Test finalize() uses auto-collected errors when errors=None."""
         manager = OutputManager(format_type="llm")
 
@@ -379,7 +378,7 @@ class TestOutputManager:
         assert "Config file missing" in result
 
     @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
-    def test_finalize_with_explicit_errors_overrides(self, mock_print_output):
+    def test_finalize_with_explicit_errors_overrides(self, mock_print_output) -> None:
         """Test that explicit errors parameter overrides auto-collected."""
         manager = OutputManager(format_type="llm")
 

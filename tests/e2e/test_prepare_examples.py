@@ -14,7 +14,7 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 class TestPrepareExamples:
     """Test prepare command with various example configurations."""
 
-    def test_prepare_pull_helm_oci(self, runner, examples_dir, tmp_path):
+    def test_prepare_pull_helm_oci(self, runner, examples_dir, tmp_path) -> None:
         """Test prepare with OCI Helm chart pulling.
 
         This test verifies that prepare correctly pulls Helm charts

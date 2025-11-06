@@ -12,7 +12,7 @@ from sbkube.exceptions import (
 )
 
 
-def test_config_file_not_found_error_formatting():
+def test_config_file_not_found_error_formatting() -> None:
     """ConfigFileNotFoundError should show comprehensive suggestions."""
     error = ConfigFileNotFoundError(
         file_path="config.yaml", searched_paths=["./config.yaml", "../config.yaml"]
@@ -30,7 +30,7 @@ def test_config_file_not_found_error_formatting():
     assert "⚡ 빠른 해결:" in formatted
 
 
-def test_kubernetes_connection_error_formatting():
+def test_kubernetes_connection_error_formatting() -> None:
     """KubernetesConnectionError should show comprehensive suggestions."""
     error = KubernetesConnectionError(
         context="minikube", kubeconfig="/home/user/.kube/config"
@@ -45,7 +45,7 @@ def test_kubernetes_connection_error_formatting():
     assert "📖 자세한 내용:" in formatted
 
 
-def test_helm_chart_not_found_error_formatting():
+def test_helm_chart_not_found_error_formatting() -> None:
     """HelmChartNotFoundError should show comprehensive suggestions."""
     error = HelmChartNotFoundError(chart_name="grafana", repo="grafana")
 
@@ -58,7 +58,7 @@ def test_helm_chart_not_found_error_formatting():
     assert "sbkube validate" in formatted
 
 
-def test_git_repository_error_formatting():
+def test_git_repository_error_formatting() -> None:
     """GitRepositoryError should show comprehensive suggestions."""
     error = GitRepositoryError(
         repository_url="https://github.com/user/repo.git", operation="clone"
@@ -72,7 +72,7 @@ def test_git_repository_error_formatting():
     assert "인증 정보 확인" in formatted
 
 
-def test_kubernetes_resource_error_formatting():
+def test_kubernetes_resource_error_formatting() -> None:
     """KubernetesResourceError can be used to test namespace issues."""
     error = KubernetesResourceError(
         resource_type="namespace", resource_name="production", operation="get"
@@ -84,7 +84,7 @@ def test_kubernetes_resource_error_formatting():
     assert "production" in formatted
 
 
-def test_validation_error_formatting():
+def test_validation_error_formatting() -> None:
     """ValidationError should show comprehensive suggestions."""
     error = ValidationError(
         message="Invalid configuration",
@@ -99,7 +99,7 @@ def test_validation_error_formatting():
     assert "docs/03-configuration/config-schema.md" in formatted
 
 
-def test_deployment_error_formatting():
+def test_deployment_error_formatting() -> None:
     """DeploymentError should show comprehensive suggestions."""
     error = DeploymentError(
         message="Failed to deploy my-app to namespace default",
@@ -112,7 +112,7 @@ def test_deployment_error_formatting():
     assert "Failed to deploy" in formatted
 
 
-def test_error_without_guide_uses_fallback():
+def test_error_without_guide_uses_fallback() -> None:
     """Errors without ERROR_GUIDE entry should use fallback suggestions."""
     # Create a custom error that's not in ERROR_GUIDE
     from sbkube.exceptions import SbkubeError

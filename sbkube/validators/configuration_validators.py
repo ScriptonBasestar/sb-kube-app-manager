@@ -1,4 +1,4 @@
-"""설정 파일 상세 검증기 모듈
+"""설정 파일 상세 검증기 모듈.
 
 config.yaml과 sources.yaml 파일의 구조적/논리적 상세 검증을 수행합니다.
 기존 JSON 스키마 검증을 넘어서 실제 배포 가능성까지 검증합니다.
@@ -20,9 +20,9 @@ from sbkube.utils.validation_system import (
 
 
 class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
-    """YAML 구조 및 필수 필드 검증기"""
+    """YAML 구조 및 필수 필드 검증기."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="config_structure",
             description="설정 파일 구조 및 필수 필드 검증",
@@ -30,7 +30,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
         )
 
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """설정 파일 구조 및 필수 필드를 검증합니다"""
+        """설정 파일 구조 및 필수 필드를 검증합니다."""
         base_path = Path(context.base_dir)
         config_path = base_path / context.config_dir
 
@@ -82,7 +82,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
         )
 
     async def _validate_config_structure(self, config_file: Path) -> list[str]:
-        """config.yaml 구조 검증"""
+        """config.yaml 구조 검증."""
         issues = []
 
         try:
@@ -129,7 +129,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
         return issues
 
     def _validate_app_structure(self, app: Any, index: int) -> list[str]:
-        """개별 앱 구조 검증"""
+        """개별 앱 구조 검증."""
         issues = []
         app_prefix = f"apps[{index}]"
 
@@ -177,7 +177,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
         return issues
 
     async def _validate_sources_structure(self, sources_file: Path) -> list[str]:
-        """sources.yaml 구조 검증"""
+        """sources.yaml 구조 검증."""
         issues = []
 
         try:
@@ -218,7 +218,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
     def _validate_git_source_structure(
         self, repo_name: str, repo_config: Any
     ) -> list[str]:
-        """Git 소스 구조 검증"""
+        """Git 소스 구조 검증."""
         issues = []
         prefix = f"git.{repo_name}"
 
@@ -237,9 +237,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
             if not isinstance(url, str):
                 issues.append(f"{prefix}: url은 문자열이어야 합니다")
             elif not (
-                url.startswith("http://")
-                or url.startswith("https://")
-                or url.startswith("git@")
+                url.startswith(("http://", "https://", "git@"))
             ):
                 issues.append(f"{prefix}: url '{url}'는 올바른 Git URL 형식이 아닙니다")
 
@@ -248,7 +246,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
     def _validate_helm_source_structure(
         self, repo_name: str, repo_config: Any
     ) -> list[str]:
-        """Helm 소스 구조 검증"""
+        """Helm 소스 구조 검증."""
         issues = []
         prefix = f"helm.{repo_name}"
 
@@ -266,7 +264,7 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
             url = repo_config["url"]
             if not isinstance(url, str):
                 issues.append(f"{prefix}: url은 문자열이어야 합니다")
-            elif not (url.startswith("http://") or url.startswith("https://")):
+            elif not (url.startswith(("http://", "https://"))):
                 issues.append(
                     f"{prefix}: url '{url}'는 올바른 HTTP/HTTPS URL이어야 합니다"
                 )
@@ -275,9 +273,9 @@ class ConfigStructureValidator(ValidationCheck, ValidatorMixin):
 
 
 class ConfigContentValidator(ValidationCheck, ValidatorMixin):
-    """설정값 유효성 및 참조 무결성 검증기"""
+    """설정값 유효성 및 참조 무결성 검증기."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="config_content",
             description="설정값 유효성 및 참조 무결성 검증",
@@ -285,7 +283,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
         )
 
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """설정값 유효성 및 참조 무결성을 검증합니다"""
+        """설정값 유효성 및 참조 무결성을 검증합니다."""
         base_path = Path(context.base_dir)
         config_path = base_path / context.config_dir
 
@@ -336,7 +334,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_config_content(
         self, config: dict[str, Any], base_path: Path
     ) -> list[str]:
-        """config.yaml 내용 검증"""
+        """config.yaml 내용 검증."""
         issues = []
 
         if not isinstance(config, dict):
@@ -365,7 +363,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_app_content(
         self, app: dict[str, Any], index: int, base_path: Path
     ) -> list[str]:
-        """개별 앱 내용 검증"""
+        """개별 앱 내용 검증."""
         issues = []
         app_prefix = f"apps[{index}] ({app.get('name', 'unnamed')})"
 
@@ -396,7 +394,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_install_helm_content(
         self, app_prefix: str, specs: dict[str, Any], base_path: Path
     ) -> list[str]:
-        """Helm 앱 내용 검증"""
+        """Helm 앱 내용 검증."""
         issues = []
 
         # path 필드 검증
@@ -429,7 +427,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_pull_helm_content(
         self, app_prefix: str, specs: dict[str, Any]
     ) -> list[str]:
-        """Helm 앱 내용 검증"""
+        """Helm 앱 내용 검증."""
         issues = []
 
         # 필수 필드 검증
@@ -449,7 +447,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_pull_git_content(
         self, app_prefix: str, specs: dict[str, Any]
     ) -> list[str]:
-        """pull-git 앱 내용 검증"""
+        """pull-git 앱 내용 검증."""
         issues = []
 
         # 필수 필드 검증
@@ -475,7 +473,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_copy_app_content(
         self, app_prefix: str, specs: dict[str, Any], base_path: Path
     ) -> list[str]:
-        """copy-app 앱 내용 검증"""
+        """copy-app 앱 내용 검증."""
         issues = []
 
         # paths 검증
@@ -505,7 +503,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_install_yaml_content(
         self, app_prefix: str, specs: dict[str, Any], base_path: Path
     ) -> list[str]:
-        """Yaml 앱 내용 검증"""
+        """Yaml 앱 내용 검증."""
         issues = []
 
         # actions 검증
@@ -535,7 +533,7 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
     async def _validate_exec_content(
         self, app_prefix: str, specs: dict[str, Any]
     ) -> list[str]:
-        """Exec 앱 내용 검증"""
+        """Exec 앱 내용 검증."""
         issues = []
 
         # commands 검증
@@ -558,9 +556,9 @@ class ConfigContentValidator(ValidationCheck, ValidatorMixin):
 
 
 class SourcesIntegrityValidator(ValidationCheck):
-    """sources.yaml과 config.yaml 간 참조 검증기"""
+    """sources.yaml과 config.yaml 간 참조 검증기."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="sources_integrity",
             description="sources.yaml과 config.yaml 간 참조 무결성 검증",
@@ -568,7 +566,7 @@ class SourcesIntegrityValidator(ValidationCheck):
         )
 
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """sources.yaml과 config.yaml 간 참조 무결성을 검증합니다"""
+        """sources.yaml과 config.yaml 간 참조 무결성을 검증합니다."""
         base_path = Path(context.base_dir)
         config_path = base_path / context.config_dir
 
@@ -630,7 +628,7 @@ class SourcesIntegrityValidator(ValidationCheck):
     async def _validate_cross_references(
         self, config: dict[str, Any], sources: dict[str, Any]
     ) -> list[str]:
-        """config.yaml과 sources.yaml 간 교차 참조 검증"""
+        """config.yaml과 sources.yaml 간 교차 참조 검증."""
         issues = []
 
         if not isinstance(config, dict) or not isinstance(sources, dict):
@@ -696,9 +694,9 @@ class SourcesIntegrityValidator(ValidationCheck):
 
 
 class CrossReferenceValidator(ValidationCheck):
-    """앱 간 의존성 및 충돌 검증기"""
+    """앱 간 의존성 및 충돌 검증기."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="cross_reference",
             description="앱 간 의존성 및 충돌 검증",
@@ -706,7 +704,7 @@ class CrossReferenceValidator(ValidationCheck):
         )
 
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """앱 간 의존성 및 충돌을 검증합니다"""
+        """앱 간 의존성 및 충돌을 검증합니다."""
         base_path = Path(context.base_dir)
         config_path = base_path / context.config_dir
         config_file = config_path / "config.yaml"
@@ -761,7 +759,7 @@ class CrossReferenceValidator(ValidationCheck):
         )
 
     async def _validate_app_dependencies(self, config: dict[str, Any]) -> list[str]:
-        """앱 간 의존성 및 충돌 검증"""
+        """앱 간 의존성 및 충돌 검증."""
         issues = []
 
         if not isinstance(config, dict) or "apps" not in config:
@@ -826,7 +824,7 @@ class CrossReferenceValidator(ValidationCheck):
     def _validate_execution_order(
         self, app_info: dict[str, dict[str, Any]]
     ) -> list[str]:
-        """실행 순서 의존성 검증"""
+        """실행 순서 의존성 검증."""
         issues = []
 
         # 타입별 실행 순서 규칙

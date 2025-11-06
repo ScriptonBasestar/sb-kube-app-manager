@@ -15,7 +15,7 @@ from sbkube.models.config_model import HookApp
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-def test_deploy_hook_app_basic(mock_hook_executor_class):
+def test_deploy_hook_app_basic(mock_hook_executor_class) -> None:
     """기본 HookApp 배포 테스트."""
     # Mock HookExecutor
     mock_executor = MagicMock()
@@ -57,7 +57,7 @@ def test_deploy_hook_app_basic(mock_hook_executor_class):
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-def test_deploy_hook_app_with_multiple_tasks(mock_hook_executor_class):
+def test_deploy_hook_app_with_multiple_tasks(mock_hook_executor_class) -> None:
     """여러 태스크를 가진 HookApp 배포 테스트."""
     mock_executor = MagicMock()
     mock_executor.execute_hook_tasks.return_value = True
@@ -99,7 +99,7 @@ def test_deploy_hook_app_with_multiple_tasks(mock_hook_executor_class):
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-def test_deploy_hook_app_with_custom_namespace(mock_hook_executor_class):
+def test_deploy_hook_app_with_custom_namespace(mock_hook_executor_class) -> None:
     """커스텀 네임스페이스를 가진 HookApp 배포 테스트."""
     mock_executor = MagicMock()
     mock_executor.execute_hook_tasks.return_value = True
@@ -128,7 +128,7 @@ def test_deploy_hook_app_with_custom_namespace(mock_hook_executor_class):
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-def test_deploy_hook_app_namespace_fallback(mock_hook_executor_class):
+def test_deploy_hook_app_namespace_fallback(mock_hook_executor_class) -> None:
     """앱에 namespace가 없을 때 명령어 인자 사용 테스트."""
     mock_executor = MagicMock()
     mock_executor.execute_hook_tasks.return_value = True
@@ -155,7 +155,7 @@ def test_deploy_hook_app_namespace_fallback(mock_hook_executor_class):
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-def test_deploy_hook_app_with_kubeconfig(mock_hook_executor_class):
+def test_deploy_hook_app_with_kubeconfig(mock_hook_executor_class) -> None:
     """kubeconfig와 context가 있는 경우 테스트."""
     mock_executor = MagicMock()
     mock_executor.execute_hook_tasks.return_value = True
@@ -184,7 +184,7 @@ def test_deploy_hook_app_with_kubeconfig(mock_hook_executor_class):
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-def test_deploy_hook_app_dry_run(mock_hook_executor_class):
+def test_deploy_hook_app_dry_run(mock_hook_executor_class) -> None:
     """Dry-run 모드 테스트."""
     mock_executor = MagicMock()
     mock_executor.execute_hook_tasks.return_value = True
@@ -216,7 +216,7 @@ def test_deploy_hook_app_dry_run(mock_hook_executor_class):
 
 @patch("sbkube.commands.deploy.HookExecutor")
 @patch("sbkube.commands.deploy.console")
-def test_deploy_hook_app_empty_tasks(mock_console, mock_hook_executor_class):
+def test_deploy_hook_app_empty_tasks(mock_console, mock_hook_executor_class) -> None:
     """빈 태스크 리스트 테스트 (경고 후 성공)."""
     mock_executor = MagicMock()
     mock_hook_executor_class.return_value = mock_executor
@@ -245,7 +245,7 @@ def test_deploy_hook_app_empty_tasks(mock_console, mock_hook_executor_class):
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-def test_deploy_hook_app_execution_failure(mock_hook_executor_class):
+def test_deploy_hook_app_execution_failure(mock_hook_executor_class) -> None:
     """태스크 실행 실패 테스트."""
     mock_executor = MagicMock()
     mock_executor.execute_hook_tasks.return_value = False  # 실패
@@ -270,7 +270,7 @@ def test_deploy_hook_app_execution_failure(mock_hook_executor_class):
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-def test_deploy_hook_app_context_passed(mock_hook_executor_class):
+def test_deploy_hook_app_context_passed(mock_hook_executor_class) -> None:
     """Hook context가 올바르게 전달되는지 테스트."""
     mock_executor = MagicMock()
     mock_executor.execute_hook_tasks.return_value = True
@@ -305,7 +305,7 @@ def test_deploy_hook_app_context_passed(mock_hook_executor_class):
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-def test_deploy_hook_app_with_phase3_features(mock_hook_executor_class):
+def test_deploy_hook_app_with_phase3_features(mock_hook_executor_class) -> None:
     """Phase 3 기능(validation, dependency, rollback)을 가진 HookApp 테스트."""
     mock_executor = MagicMock()
     mock_executor.execute_hook_tasks.return_value = True

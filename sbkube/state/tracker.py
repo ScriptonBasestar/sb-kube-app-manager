@@ -36,7 +36,7 @@ class DeploymentTracker:
     before and after operations, enabling rollback capabilities.
     """
 
-    def __init__(self, db_path: str | Path | None = None):
+    def __init__(self, db_path: str | Path | None = None) -> None:
         """Initialize deployment tracker.
 
         Args:
@@ -55,7 +55,7 @@ class DeploymentTracker:
         return self._tracking_enabled
 
     @tracking_enabled.setter
-    def tracking_enabled(self, value: bool):
+    def tracking_enabled(self, value: bool) -> None:
         """Enable or disable tracking."""
         self._tracking_enabled = value
         if not value:
@@ -214,7 +214,7 @@ class DeploymentTracker:
         chart: str,
         chart_version: str | None = None,
         values: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """Track a Helm release deployment.
 
         Args:
@@ -269,7 +269,7 @@ class DeploymentTracker:
         action: ResourceAction,
         source_file: str | None = None,
         previous_state: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """Track a Kubernetes resource deployment.
 
         Args:

@@ -19,7 +19,7 @@ def output_manager():
 class TestChartCustomization:
     """차트 커스터마이징 통합 테스트."""
 
-    def test_overrides_and_removes_combined(self, tmp_path, output_manager):
+    def test_overrides_and_removes_combined(self, tmp_path, output_manager) -> None:
         """overrides와 removes를 동시에 사용하는 시나리오."""
         # 테스트 차트 생성
         chart_dir = tmp_path / "charts" / "grafana" / "grafana"
@@ -88,7 +88,7 @@ class TestChartCustomization:
         assert (build_dir / "grafana" / "templates" / "service.yaml").exists()
         assert (build_dir / "grafana" / "templates" / "ingress.yaml").exists()
 
-    def test_override_entire_templates_directory(self, tmp_path, output_manager):
+    def test_override_entire_templates_directory(self, tmp_path, output_manager) -> None:
         """Templates 디렉토리 전체를 교체하는 시나리오."""
         # 원본 차트
         chart_dir = tmp_path / "charts" / "myapp" / "myapp"
@@ -149,7 +149,7 @@ class TestChartCustomization:
         assert (build_dir / "myapp" / "templates" / "deployment.yaml").exists()
         assert (build_dir / "myapp" / "templates" / "configmap.yaml").exists()
 
-    def test_remove_specific_files(self, tmp_path, output_manager):
+    def test_remove_specific_files(self, tmp_path, output_manager) -> None:
         """특정 파일들을 명시적으로 삭제."""
         # 테스트 차트
         chart_dir = tmp_path / "charts" / "app" / "app"
@@ -206,7 +206,7 @@ class TestChartCustomization:
         assert (build_dir / "app" / "templates" / "deployment.yaml").exists()
         assert (build_dir / "app" / "templates" / "HELPERS.tpl").exists()
 
-    def test_security_hardening_scenario(self, tmp_path, output_manager):
+    def test_security_hardening_scenario(self, tmp_path, output_manager) -> None:
         """보안 강화 시나리오: 기본 차트에 보안 설정 추가."""
         # 기본 차트 (보안 설정 없음)
         chart_dir = tmp_path / "charts" / "webapp" / "webapp"
@@ -285,7 +285,7 @@ spec:
         assert "readOnlyRootFilesystem: true" in deployment_content
         assert "nginx:1.21-alpine" in deployment_content
 
-    def test_multi_tenant_scenario(self, tmp_path, output_manager):
+    def test_multi_tenant_scenario(self, tmp_path, output_manager) -> None:
         """멀티 테넌트 시나리오: 테넌트별 설정 파일 교체."""
         # 기본 차트
         chart_dir = tmp_path / "charts" / "saas-app" / "saas-app"
@@ -366,7 +366,7 @@ data:
         assert "features: all-enabled" in configmap_content
         assert "sla: 99.99" in configmap_content
 
-    def test_cleanup_unnecessary_files(self, tmp_path, output_manager):
+    def test_cleanup_unnecessary_files(self, tmp_path, output_manager) -> None:
         """불필요한 파일 제거 시나리오."""
         # 차트에 많은 불필요한 파일들이 있는 경우
         chart_dir = tmp_path / "charts" / "bloated-chart" / "bloated-chart"
@@ -441,7 +441,7 @@ data:
         assert (build_dir / "bloated-chart" / "templates" / "deployment.yaml").exists()
         assert (build_dir / "bloated-chart" / "templates" / "service.yaml").exists()
 
-    def test_no_customization(self, tmp_path, output_manager):
+    def test_no_customization(self, tmp_path, output_manager) -> None:
         """커스터마이징 없이 빌드 (순수 복사)."""
         # 차트 생성
         chart_dir = tmp_path / "charts" / "vanilla" / "vanilla"

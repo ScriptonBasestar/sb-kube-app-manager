@@ -33,7 +33,7 @@ class ProgressState(Enum):
 
 @dataclass
 class StepProgress:
-    """단계별 진행률 정보"""
+    """단계별 진행률 정보."""
 
     name: str
     display_name: str
@@ -48,50 +48,50 @@ class StepProgress:
 
     @property
     def progress_percentage(self) -> float:
-        """진행률 퍼센트 (0-100)"""
+        """진행률 퍼센트 (0-100)."""
         if self.total_work == 0:
             return 100.0
         return min((self.completed_work / self.total_work) * 100, 100.0)
 
     @property
     def is_active(self) -> bool:
-        """현재 활성 상태인지 확인"""
+        """현재 활성 상태인지 확인."""
         return self.state == ProgressState.RUNNING
 
-    def start(self):
-        """단계 시작"""
+    def start(self) -> None:
+        """단계 시작."""
         self.state = ProgressState.RUNNING
         self.started_at = datetime.now()
 
-    def update_progress(self, completed: int, current_task: str = None):
-        """진행률 업데이트"""
+    def update_progress(self, completed: int, current_task: str | None = None) -> None:
+        """진행률 업데이트."""
         self.completed_work = min(completed, self.total_work)
         if current_task:
             self.current_task = current_task
 
-    def complete(self):
-        """단계 완료"""
+    def complete(self) -> None:
+        """단계 완료."""
         self.state = ProgressState.COMPLETED
         self.completed_work = self.total_work
         if self.started_at:
             self.actual_duration = (datetime.now() - self.started_at).total_seconds()
 
-    def fail(self):
-        """단계 실패"""
+    def fail(self) -> None:
+        """단계 실패."""
         self.state = ProgressState.FAILED
         if self.started_at:
             self.actual_duration = (datetime.now() - self.started_at).total_seconds()
 
-    def skip(self):
-        """단계 건너뛰기"""
+    def skip(self) -> None:
+        """단계 건너뛰기."""
         self.state = ProgressState.SKIPPED
         self.completed_work = self.total_work
 
 
 class ProgressManager:
-    """진행률 관리자"""
+    """진행률 관리자."""
 
-    def __init__(self, console: Console = None, show_progress: bool = True):
+    def __init__(self, console: Console = None, show_progress: bool = True) -> None:
         self.console = console or Console()
         self.show_progress = show_progress
         self.steps: dict[str, StepProgress] = {}
@@ -137,10 +137,10 @@ class ProgressManager:
         self,
         step_name: str,
         display_name: str,
-        estimated_duration: float = None,
-        sub_tasks: list[str] = None,
+        estimated_duration: float | None = None,
+        sub_tasks: list[str] | None = None,
     ) -> StepProgress:
-        """단계 추가"""
+        """단계 추가."""
         step = StepProgress(
             name=step_name,
             display_name=display_name,
@@ -154,8 +154,8 @@ class ProgressManager:
 
         return step
 
-    def start_overall_progress(self, profile: str = None, namespace: str = None):
-        """전체 진행률 표시 시작"""
+    def start_overall_progress(self, profile: str | None = None, namespace: str | None = None) -> None:
+        """전체 진행률 표시 시작."""
         if not self.show_progress:
             return
 
@@ -179,8 +179,8 @@ class ProgressManager:
 
         logger.info("🚀 SBKube 배포 진행 중...")
 
-    def stop_overall_progress(self):
-        """전체 진행률 표시 종료"""
+    def stop_overall_progress(self) -> None:
+        """전체 진행률 표시 종료."""
         if not self.show_progress:
             return
 
@@ -194,10 +194,11 @@ class ProgressManager:
 
     @contextmanager
     def track_step(self, step_name: str):
-        """단계 진행률 추적 컨텍스트"""
+        """단계 진행률 추적 컨텍스트."""
         step = self.steps.get(step_name)
         if not step:
-            raise ValueError(f"Unknown step: {step_name}")
+            msg = f"Unknown step: {step_name}"
+            raise ValueError(msg)
 
         step.start()
 
@@ -233,7 +234,7 @@ class ProgressManager:
             self.step_progress.remove_task(step_task)
 
     def get_overall_progress(self) -> dict[str, Any]:
-        """전체 진행률 정보 반환"""
+        """전체 진행률 정보 반환."""
         if not self.start_time:
             return {}
 
@@ -261,8 +262,8 @@ class ProgressManager:
             "current_step": self._get_current_step(),
         }
 
-    def _setup_layout(self, profile: str = None, namespace: str = None):
-        """레이아웃 구성"""
+    def _setup_layout(self, profile: str | None = None, namespace: str | None = None) -> None:
+        """레이아웃 구성."""
         if not self.show_progress:
             return
 
@@ -282,16 +283,16 @@ class ProgressManager:
             Layout(self.step_progress, name="current"),
         )
 
-    def _background_update(self):
-        """백그라운드 업데이트"""
+    def _background_update(self) -> None:
+        """백그라운드 업데이트."""
         while not self.stop_event.wait(0.25):  # 250ms마다 업데이트
             try:
                 self._update_time_estimates()
             except Exception as e:
                 logger.warning(f"진행률 업데이트 오류: {e}")
 
-    def _estimate_total_duration(self):
-        """전체 소요 시간 추정"""
+    def _estimate_total_duration(self) -> None:
+        """전체 소요 시간 추정."""
         total_estimate = 0
 
         for step in self.steps.values():
@@ -314,8 +315,8 @@ class ProgressManager:
 
         self.estimated_total_duration = total_estimate
 
-    def _update_time_estimates(self):
-        """시간 추정값 업데이트"""
+    def _update_time_estimates(self) -> None:
+        """시간 추정값 업데이트."""
         if not self.start_time:
             return
 
@@ -330,14 +331,14 @@ class ProgressManager:
             # 메인 프로그레스 바의 시간 정보 업데이트는 Rich가 자동으로 처리
 
     def _get_current_step(self) -> str | None:
-        """현재 실행 중인 단계 반환"""
+        """현재 실행 중인 단계 반환."""
         for step in self.steps.values():
             if step.state == ProgressState.RUNNING:
                 return step.name
         return None
 
-    def save_historical_data(self):
-        """완료된 단계들의 실행 시간을 히스토리에 저장"""
+    def save_historical_data(self) -> None:
+        """완료된 단계들의 실행 시간을 히스토리에 저장."""
         for step in self.steps.values():
             if step.state == ProgressState.COMPLETED and step.actual_duration:
                 if step.name not in self.historical_durations:
@@ -350,7 +351,7 @@ class ProgressManager:
 
 
 class StepProgressTracker:
-    """단계별 진행률 추적기 (Rich Progress 지원)"""
+    """단계별 진행률 추적기 (Rich Progress 지원)."""
 
     def __init__(
         self,
@@ -358,14 +359,14 @@ class StepProgressTracker:
         step: StepProgress,
         overall_task_id,
         step_task_id,
-    ):
+    ) -> None:
         self.manager = manager
         self.step = step
         self.overall_task_id = overall_task_id
         self.step_task_id = step_task_id
 
-    def update(self, percentage: float, current_task: str = "처리 중..."):
-        """진행률 업데이트"""
+    def update(self, percentage: float, current_task: str = "처리 중...") -> None:
+        """진행률 업데이트."""
         percentage = max(0, min(100, percentage))
 
         self.step.update_progress(int(percentage), current_task)
@@ -377,25 +378,25 @@ class StepProgressTracker:
             self.step_task_id, completed=percentage, current_task=current_task
         )
 
-    def set_sub_task(self, task_name: str):
-        """현재 하위 작업 설정"""
+    def set_sub_task(self, task_name: str) -> None:
+        """현재 하위 작업 설정."""
         self.step.current_task = task_name
         self.manager.step_progress.update(self.step_task_id, current_task=task_name)
 
 
 class SimpleStepTracker:
-    """간단한 단계 추적기 (진행률 표시 없음)"""
+    """간단한 단계 추적기 (진행률 표시 없음)."""
 
-    def __init__(self, step: StepProgress):
+    def __init__(self, step: StepProgress) -> None:
         self.step = step
 
-    def update(self, percentage: float, current_task: str = "처리 중..."):
-        """진행률 업데이트 (로그만)"""
+    def update(self, percentage: float, current_task: str = "처리 중...") -> None:
+        """진행률 업데이트 (로그만)."""
         self.step.update_progress(int(percentage), current_task)
         if percentage % 25 == 0:  # 25% 단위로만 로그
             logger.verbose(f"{self.step.display_name}: {percentage}% - {current_task}")
 
-    def set_sub_task(self, task_name: str):
-        """현재 하위 작업 설정"""
+    def set_sub_task(self, task_name: str) -> None:
+        """현재 하위 작업 설정."""
         self.step.current_task = task_name
         logger.verbose(f"{self.step.display_name}: {task_name}")

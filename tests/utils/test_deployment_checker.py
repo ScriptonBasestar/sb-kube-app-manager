@@ -13,7 +13,7 @@ class TestGetCurrentCluster:
     """Tests for get_current_cluster() function."""
 
     @patch("subprocess.run")
-    def test_get_current_cluster_success(self, mock_run):
+    def test_get_current_cluster_success(self, mock_run) -> None:
         """Test successful kubectl context retrieval."""
         mock_run.return_value = MagicMock(
             returncode=0,
@@ -26,7 +26,7 @@ class TestGetCurrentCluster:
         mock_run.assert_called_once()
 
     @patch("subprocess.run")
-    def test_get_current_cluster_failure(self, mock_run):
+    def test_get_current_cluster_failure(self, mock_run) -> None:
         """Test kubectl command failure."""
         mock_run.return_value = MagicMock(
             returncode=1,
@@ -38,7 +38,7 @@ class TestGetCurrentCluster:
         assert result == "unknown"
 
     @patch("subprocess.run", side_effect=FileNotFoundError)
-    def test_get_current_cluster_no_kubectl(self, mock_run):
+    def test_get_current_cluster_no_kubectl(self, mock_run) -> None:
         """Test when kubectl is not installed."""
         result = get_current_cluster()
 
@@ -71,7 +71,7 @@ class TestDeploymentChecker:
         checker.db = mock_db
         return checker
 
-    def test_init(self, base_dir):
+    def test_init(self, base_dir) -> None:
         """Test DeploymentChecker initialization."""
         checker = DeploymentChecker(
             base_dir=base_dir,
@@ -83,7 +83,7 @@ class TestDeploymentChecker:
         assert checker.cluster == "my-cluster"
         assert checker.namespace == "my-namespace"
 
-    def test_init_default_cluster(self, base_dir):
+    def test_init_default_cluster(self, base_dir) -> None:
         """Test initialization with default cluster."""
         with patch(
             "sbkube.utils.deployment_checker.get_current_cluster",
@@ -93,7 +93,7 @@ class TestDeploymentChecker:
 
             assert checker.cluster == "default-cluster"
 
-    def test_check_app_group_deployed_success(self, checker, mock_db, base_dir):
+    def test_check_app_group_deployed_success(self, checker, mock_db, base_dir) -> None:
         """Test checking successfully deployed app-group."""
         # Mock deployment detail
         mock_deployment = MagicMock()
@@ -113,7 +113,7 @@ class TestDeploymentChecker:
         assert "test-namespace" in msg
         mock_db.get_latest_deployment_any_namespace.assert_called_once()
 
-    def test_check_app_group_deployed_never_deployed(self, checker, mock_db):
+    def test_check_app_group_deployed_never_deployed(self, checker, mock_db) -> None:
         """Test checking app-group that was never deployed."""
         mock_db.get_latest_deployment_any_namespace.return_value = None
 
@@ -122,7 +122,7 @@ class TestDeploymentChecker:
         assert is_deployed is False
         assert msg == "never deployed"
 
-    def test_check_app_group_deployed_failed_status(self, checker, mock_db):
+    def test_check_app_group_deployed_failed_status(self, checker, mock_db) -> None:
         """Test checking app-group with failed deployment."""
         mock_deployment = MagicMock()
         mock_deployment.status = DeploymentStatus.FAILED
@@ -133,7 +133,7 @@ class TestDeploymentChecker:
         assert is_deployed is False
         assert "failed" in msg.lower()
 
-    def test_check_app_group_deployed_database_error(self, checker, mock_db):
+    def test_check_app_group_deployed_database_error(self, checker, mock_db) -> None:
         """Test handling database errors."""
         mock_db.get_latest_deployment_any_namespace.side_effect = Exception(
             "DB connection failed"
@@ -144,14 +144,14 @@ class TestDeploymentChecker:
         assert is_deployed is False
         assert "database error" in msg
 
-    def test_check_app_group_deployed_with_namespace_override(self, checker, mock_db):
+    def test_check_app_group_deployed_with_namespace_override(self, checker, mock_db) -> None:
         """Test checking with namespace override."""
         mock_deployment = MagicMock()
         mock_deployment.status = DeploymentStatus.SUCCESS
         mock_deployment.timestamp = "2025-10-30T10:00:00"
         mock_db.get_latest_deployment.return_value = mock_deployment
 
-        is_deployed, msg = checker.check_app_group_deployed(
+        is_deployed, _msg = checker.check_app_group_deployed(
             "a000_infra", namespace="custom-namespace"
         )
 
@@ -160,7 +160,7 @@ class TestDeploymentChecker:
         call_args = mock_db.get_latest_deployment.call_args
         assert call_args[1]["namespace"] == "custom-namespace"
 
-    def test_check_dependencies_all_deployed(self, checker, mock_db):
+    def test_check_dependencies_all_deployed(self, checker, mock_db) -> None:
         """Test checking dependencies when all are deployed."""
         mock_deployment = MagicMock()
         mock_deployment.status = DeploymentStatus.SUCCESS
@@ -177,7 +177,7 @@ class TestDeploymentChecker:
         assert result["details"]["a000_infra"][0] is True
         assert result["details"]["a100_data"][0] is True
 
-    def test_check_dependencies_some_missing(self, checker, mock_db):
+    def test_check_dependencies_some_missing(self, checker, mock_db) -> None:
         """Test checking dependencies when some are missing."""
 
         def mock_get_deployment(cluster, app_config_dir):
@@ -200,7 +200,7 @@ class TestDeploymentChecker:
         assert result["details"]["a000_infra"][0] is True
         assert result["details"]["a100_data"][0] is False
 
-    def test_check_dependencies_empty_list(self, checker, mock_db):
+    def test_check_dependencies_empty_list(self, checker, mock_db) -> None:
         """Test checking empty dependency list."""
         result = checker.check_dependencies([])
 
@@ -208,7 +208,7 @@ class TestDeploymentChecker:
         assert result["missing"] == []
         assert result["details"] == {}
 
-    def test_get_deployment_info_success(self, checker, mock_db):
+    def test_get_deployment_info_success(self, checker, mock_db) -> None:
         """Test getting deployment info."""
         mock_deployment = MagicMock()
         mock_deployment.cluster = "test-cluster"
@@ -225,7 +225,7 @@ class TestDeploymentChecker:
         assert info["namespace"] == "test-namespace"
         assert info["status"] == "success"
 
-    def test_get_deployment_info_not_found(self, checker, mock_db):
+    def test_get_deployment_info_not_found(self, checker, mock_db) -> None:
         """Test getting deployment info when not found."""
         mock_db.get_latest_deployment.return_value = None
 
@@ -233,7 +233,7 @@ class TestDeploymentChecker:
 
         assert info is None
 
-    def test_get_deployment_info_database_error(self, checker, mock_db):
+    def test_get_deployment_info_database_error(self, checker, mock_db) -> None:
         """Test handling database errors in get_deployment_info."""
         mock_db.get_latest_deployment.side_effect = Exception("DB error")
 
@@ -241,7 +241,7 @@ class TestDeploymentChecker:
 
         assert info is None
 
-    def test_check_app_group_deployed_namespace_auto_detect(self, checker, mock_db):
+    def test_check_app_group_deployed_namespace_auto_detect(self, checker, mock_db) -> None:
         """Test automatic namespace detection when namespace not provided."""
         # Mock deployment in different namespace
         mock_deployment = MagicMock()
@@ -260,7 +260,7 @@ class TestDeploymentChecker:
 
     def test_check_app_group_deployed_with_namespace_specific_query(
         self, checker, mock_db
-    ):
+    ) -> None:
         """Test that providing namespace uses namespace-specific query."""
         mock_deployment = MagicMock()
         mock_deployment.status = DeploymentStatus.SUCCESS
@@ -268,7 +268,7 @@ class TestDeploymentChecker:
         mock_db.get_latest_deployment.return_value = mock_deployment
 
         # Check with specific namespace
-        is_deployed, msg = checker.check_app_group_deployed(
+        is_deployed, _msg = checker.check_app_group_deployed(
             "a101_data_rdb", namespace="postgresql"
         )
 
@@ -277,7 +277,7 @@ class TestDeploymentChecker:
         mock_db.get_latest_deployment.assert_called_once()
         mock_db.get_latest_deployment_any_namespace.assert_not_called()
 
-    def test_check_dependencies_different_namespaces(self, checker, mock_db):
+    def test_check_dependencies_different_namespaces(self, checker, mock_db) -> None:
         """Test checking dependencies deployed in different namespaces."""
 
         def mock_get_any_namespace(cluster, app_config_dir):

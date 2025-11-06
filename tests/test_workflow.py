@@ -12,7 +12,7 @@ from sbkube.models.config_model import HelmApp, SBKubeConfig
 class TestWorkflowV3:
     """v0.3.0 워크플로우 통합 테스트."""
 
-    def test_full_workflow_with_overrides(self, tmp_path):
+    def test_full_workflow_with_overrides(self, tmp_path) -> None:
         """전체 워크플로우 테스트: prepare → build → (deploy 제외).
 
         overrides가 올바르게 적용되는지 검증합니다.
@@ -95,7 +95,7 @@ class TestWorkflowV3:
         assert "replicaCount: 1" in original_values
         assert (mock_chart_dir / "README.md").exists()
 
-    def test_config_v3_dependency_resolution(self, tmp_path):
+    def test_config_v3_dependency_resolution(self, tmp_path) -> None:
         """의존성 해결 테스트.
 
         depends_on 필드가 올바르게 처리되는지 검증합니다.
@@ -137,7 +137,7 @@ class TestWorkflowV3:
             "app should be last (depends on database, cache)"
         )
 
-    def test_local_chart_workflow(self, tmp_path):
+    def test_local_chart_workflow(self, tmp_path) -> None:
         """로컬 차트 워크플로우 테스트.
 
         로컬 차트도 overrides/removes가 올바르게 적용되는지 검증합니다.
@@ -191,7 +191,7 @@ class TestWorkflowV3:
         assert "enabled: true" in original_values
         assert (local_chart_dir / "LICENSE").exists()
 
-    def test_http_app_workflow(self, tmp_path):
+    def test_http_app_workflow(self, tmp_path) -> None:
         """HttpApp 워크플로우 테스트.
 
         HTTP 다운로드 → build 단계를 검증합니다.

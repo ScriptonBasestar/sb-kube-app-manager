@@ -13,7 +13,7 @@ from sbkube.utils.cluster_config import (
 )
 
 
-def test_resolve_cluster_config_cli_override():
+def test_resolve_cluster_config_cli_override() -> None:
     """CLI options should override sources.yaml."""
     # Create a temporary kubeconfig file for CLI
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml") as f:
@@ -40,7 +40,7 @@ def test_resolve_cluster_config_cli_override():
         Path(cli_kubeconfig).unlink()
 
 
-def test_resolve_cluster_config_from_sources():
+def test_resolve_cluster_config_from_sources() -> None:
     """Should use sources.yaml when CLI options are not provided."""
     # Create a temporary kubeconfig file
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml") as f:
@@ -66,7 +66,7 @@ def test_resolve_cluster_config_from_sources():
         Path(kubeconfig_path).unlink()
 
 
-def test_resolve_cluster_config_no_sources():
+def test_resolve_cluster_config_no_sources() -> None:
     """Should raise error when sources.yaml is missing."""
     with pytest.raises(ClusterConfigError) as exc_info:
         resolve_cluster_config(
@@ -78,7 +78,7 @@ def test_resolve_cluster_config_no_sources():
     assert "sources.yaml file is required" in str(exc_info.value)
 
 
-def test_resolve_cluster_config_incomplete_sources():
+def test_resolve_cluster_config_incomplete_sources() -> None:
     """Should raise error when sources.yaml is incomplete."""
     # Missing kubeconfig_context
     with pytest.raises(Exception):  # Pydantic validation error
@@ -88,7 +88,7 @@ def test_resolve_cluster_config_incomplete_sources():
         )
 
 
-def test_resolve_cluster_config_cli_partial():
+def test_resolve_cluster_config_cli_partial() -> None:
     """Should raise error when only one of --kubeconfig or --context is provided."""
     sources = SourceScheme(
         kubeconfig="~/.kube/config",
@@ -114,7 +114,7 @@ def test_resolve_cluster_config_cli_partial():
     assert "Both --kubeconfig and --context must be specified" in str(exc_info.value)
 
 
-def test_apply_cluster_config_to_helm_command():
+def test_apply_cluster_config_to_helm_command() -> None:
     """Should add kubeconfig and context to helm commands."""
     cmd = ["helm", "upgrade", "my-release", "my-chart"]
 
@@ -130,7 +130,7 @@ def test_apply_cluster_config_to_helm_command():
     assert "my-context" in result
 
 
-def test_apply_cluster_config_to_kubectl_command():
+def test_apply_cluster_config_to_kubectl_command() -> None:
     """Should add kubeconfig and context to kubectl commands."""
     cmd = ["kubectl", "apply", "-f", "manifest.yaml"]
 
@@ -146,7 +146,7 @@ def test_apply_cluster_config_to_kubectl_command():
     assert "my-context" in result
 
 
-def test_apply_cluster_config_no_config():
+def test_apply_cluster_config_no_config() -> None:
     """Should return unchanged command when no config is provided."""
     cmd = ["helm", "version"]
 
@@ -159,7 +159,7 @@ def test_apply_cluster_config_no_config():
     assert result == cmd
 
 
-def test_sources_model_validation():
+def test_sources_model_validation() -> None:
     """Test SourceScheme validation."""
     # Valid sources
     sources = SourceScheme(

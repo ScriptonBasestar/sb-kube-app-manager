@@ -31,7 +31,7 @@ class EnhancedBaseCommand:
         validate_on_load: bool = True,
         use_inheritance: bool = True,
         output_format: str = "human",
-    ):
+    ) -> None:
         """Initialize enhanced base command.
 
         Args:
@@ -95,7 +95,7 @@ class EnhancedBaseCommand:
         self.output_format = OutputFormat(output_format.lower())
         self.formatter = OutputFormatter(format_type=self.output_format)
 
-    def _init_hook_executor(self, dry_run: bool = False):
+    def _init_hook_executor(self, dry_run: bool = False) -> None:
         """Initialize hook executor after configuration is loaded."""
         if not self.hook_executor:
             self.hook_executor = HookExecutor(
@@ -104,7 +104,7 @@ class EnhancedBaseCommand:
                 dry_run=dry_run,
             )
 
-    def execute_pre_hook(self):
+    def execute_pre_hook(self) -> None:
         """Execute common preprocessing before each command."""
         try:
             # Load configurations with validation
@@ -126,11 +126,11 @@ class EnhancedBaseCommand:
                 logger.error("Validation errors:")
                 for error in self.validation_errors:
                     logger.error(f"  - {error}")
-            raise click.Abort()
+            raise click.Abort
 
         except Exception as e:
             logger.error(f"Failed to load configuration: {e}")
-            raise click.Abort()
+            raise click.Abort
 
     def needs_sources(self) -> bool:
         """Check if this command needs sources configuration.
@@ -150,7 +150,7 @@ class EnhancedBaseCommand:
             config_path = self.APP_CONFIG_DIR / self.config_file_name
             if not config_path.exists() or not config_path.is_file():
                 logger.error(f"Specified config file not found: {config_path}")
-                raise click.Abort()
+                raise click.Abort
             return config_path
         # Auto-detect
         for ext in [".yaml", ".yml", ".toml"]:
@@ -161,7 +161,7 @@ class EnhancedBaseCommand:
         logger.error(
             f"App config file not found: {self.APP_CONFIG_DIR}/config.[yaml|yml|toml]",
         )
-        raise click.Abort()
+        raise click.Abort
 
     def load_config(self) -> SBKubeConfig:
         """Load and validate configuration file."""
@@ -192,7 +192,8 @@ class EnhancedBaseCommand:
         except ConfigValidationError:
             raise  # Re-raise validation errors
         except Exception as e:
-            raise ConfigValidationError(f"Failed to load config: {e}")
+            msg = f"Failed to load config: {e}"
+            raise ConfigValidationError(msg)
 
     def load_sources(self) -> SourceScheme:
         """Load and validate sources configuration."""
@@ -212,7 +213,8 @@ class EnhancedBaseCommand:
         except ConfigValidationError:
             raise  # Re-raise validation errors
         except Exception as e:
-            raise ConfigValidationError(f"Failed to load sources: {e}")
+            msg = f"Failed to load sources: {e}"
+            raise ConfigValidationError(msg)
 
     def get_environment(self) -> str | None:
         """Determine environment name from config or CLI.
@@ -221,7 +223,7 @@ class EnhancedBaseCommand:
         # Could be extended to support --profile CLI option
         return None
 
-    def validate_references(self):
+    def validate_references(self) -> None:
         """Validate references between app config and sources."""
         if not self.app_group or not self.sources:
             return
@@ -234,8 +236,9 @@ class EnhancedBaseCommand:
         if errors:
             self.validation_errors.extend(errors)
             if self.validate_on_load:
+                msg = f"Found {len(errors)} reference validation errors"
                 raise ConfigValidationError(
-                    f"Found {len(errors)} reference validation errors",
+                    msg,
                 )
 
     def parse_apps(
@@ -255,7 +258,7 @@ class EnhancedBaseCommand:
         """
         if not self.app_group:
             logger.error("Configuration not loaded")
-            raise click.Abort()
+            raise click.Abort
 
         parsed_apps = []
 
@@ -292,12 +295,13 @@ class EnhancedBaseCommand:
         # Check if specific app was not found
         if app_name and not parsed_apps:
             logger.error(f"Specified app '{app_name}' not found")
-            raise click.Abort()
+            raise click.Abort
 
         # Raise validation errors if any
         if self.validation_errors and self.validate_on_load:
+            msg = f"Found {len(self.validation_errors)} validation errors"
             raise ConfigValidationError(
-                f"Found {len(self.validation_errors)} validation errors",
+                msg,
             )
 
         self.app_info_list = parsed_apps
@@ -305,7 +309,7 @@ class EnhancedBaseCommand:
 
     def get_namespace(self, app_info) -> str | None:
         """Determine namespace for the app.
-        Priority: CLI > App config > Global config
+        Priority: CLI > App config > Global config.
         """
         if self.cli_namespace:
             return self.cli_namespace
@@ -342,16 +346,16 @@ class EnhancedBaseCommand:
 
         return None
 
-    def ensure_directory(self, path: Path, description: str = "directory"):
+    def ensure_directory(self, path: Path, description: str = "directory") -> None:
         """Ensure directory exists, create if necessary."""
         try:
             path.mkdir(parents=True, exist_ok=True)
             logger.verbose(f"{description} ready: {path}")
         except OSError as e:
             logger.error(f"Failed to create {description}: {e}")
-            raise click.Abort()
+            raise click.Abort
 
-    def clean_directory(self, path: Path, description: str = "directory"):
+    def clean_directory(self, path: Path, description: str = "directory") -> None:
         """Clean directory (remove and recreate)."""
         import shutil
 
@@ -363,7 +367,7 @@ class EnhancedBaseCommand:
             logger.verbose(f"{description} ready: {path}")
         except OSError as e:
             logger.error(f"Failed to clean/create {description}: {e}")
-            raise click.Abort()
+            raise click.Abort
 
     def create_app_spec(self, app_info):
         """Create spec object for app type with validation."""
@@ -377,7 +381,7 @@ class EnhancedBaseCommand:
         self,
         cmd: list,
         error_msg: str,
-        success_msg: str = None,
+        success_msg: str | None = None,
         timeout: int = 300,
     ):
         """Execute command with logging (using common function)."""
@@ -397,7 +401,7 @@ class EnhancedBaseCommand:
 
         return check_required_cli_tools(self.app_info_list)
 
-    def process_apps_with_stats(self, process_func, operation_name: str = "processing"):
+    def process_apps_with_stats(self, process_func, operation_name: str = "processing") -> None:
         """Process app list and output statistics.
 
         Args:
@@ -446,7 +450,7 @@ class EnhancedBaseCommand:
         self,
         output_path: str | Path,
         format: str = "yaml",
-    ):
+    ) -> None:
         """Export validated configuration to file.
 
         Args:
@@ -456,7 +460,7 @@ class EnhancedBaseCommand:
         """
         if not self.app_group:
             logger.error("No configuration loaded to export")
-            raise click.Abort()
+            raise click.Abort
 
         try:
             self.config_manager.export_merged_config(
@@ -467,7 +471,7 @@ class EnhancedBaseCommand:
             logger.success(f"Exported validated config to: {output_path}")
         except Exception as e:
             logger.error(f"Failed to export config: {e}")
-            raise click.Abort()
+            raise click.Abort
 
     def execute_command_hook(
         self,

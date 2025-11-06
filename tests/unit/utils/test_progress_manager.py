@@ -1,5 +1,6 @@
 import time
 from datetime import datetime
+from typing import Never
 from unittest.mock import Mock, patch
 
 import pytest
@@ -14,10 +15,10 @@ from sbkube.utils.progress_manager import (
 
 
 class TestStepProgress:
-    """StepProgress 클래스 테스트"""
+    """StepProgress 클래스 테스트."""
 
-    def test_step_creation(self):
-        """단계 생성 테스트"""
+    def test_step_creation(self) -> None:
+        """단계 생성 테스트."""
         step = StepProgress(
             name="test",
             display_name="테스트 단계",
@@ -33,8 +34,8 @@ class TestStepProgress:
         assert step.progress_percentage == 0
         assert not step.is_active
 
-    def test_step_lifecycle(self):
-        """단계 생명주기 테스트"""
+    def test_step_lifecycle(self) -> None:
+        """단계 생명주기 테스트."""
         step = StepProgress("test", "테스트")
 
         # 시작
@@ -57,8 +58,8 @@ class TestStepProgress:
         assert step.actual_duration is not None
         assert step.actual_duration > 0
 
-    def test_step_failure(self):
-        """단계 실패 테스트"""
+    def test_step_failure(self) -> None:
+        """단계 실패 테스트."""
         step = StepProgress("test", "테스트")
         step.start()
 
@@ -66,8 +67,8 @@ class TestStepProgress:
         assert step.state == ProgressState.FAILED
         assert step.actual_duration is not None
 
-    def test_step_skip(self):
-        """단계 건너뛰기 테스트"""
+    def test_step_skip(self) -> None:
+        """단계 건너뛰기 테스트."""
         step = StepProgress("test", "테스트")
 
         step.skip()
@@ -75,8 +76,8 @@ class TestStepProgress:
         assert step.completed_work == 100
         assert step.progress_percentage == 100
 
-    def test_progress_percentage_edge_cases(self):
-        """진행률 퍼센트 경계값 테스트"""
+    def test_progress_percentage_edge_cases(self) -> None:
+        """진행률 퍼센트 경계값 테스트."""
         step = StepProgress("test", "테스트", total_work=0)
         assert step.progress_percentage == 100.0
 
@@ -87,10 +88,10 @@ class TestStepProgress:
 
 
 class TestProgressManager:
-    """ProgressManager 클래스 테스트"""
+    """ProgressManager 클래스 테스트."""
 
-    def test_manager_creation(self):
-        """매니저 생성 테스트"""
+    def test_manager_creation(self) -> None:
+        """매니저 생성 테스트."""
         manager = ProgressManager(show_progress=False)
         assert not manager.show_progress
         assert manager.overall_progress is None
@@ -101,8 +102,8 @@ class TestProgressManager:
         assert manager.overall_progress is not None
         assert manager.step_progress is not None
 
-    def test_step_addition(self):
-        """단계 추가 테스트"""
+    def test_step_addition(self) -> None:
+        """단계 추가 테스트."""
         manager = ProgressManager(show_progress=False)
 
         step = manager.add_step(
@@ -117,8 +118,8 @@ class TestProgressManager:
         assert step.estimated_duration == 60
         assert step.sub_tasks == ["작업1", "작업2"]
 
-    def test_step_tracking_without_progress(self):
-        """진행률 표시 없이 단계 추적 테스트"""
+    def test_step_tracking_without_progress(self) -> None:
+        """진행률 표시 없이 단계 추적 테스트."""
         manager = ProgressManager(show_progress=False)
         step = manager.add_step("test", "테스트", 30)
 
@@ -133,8 +134,8 @@ class TestProgressManager:
         assert step.state == ProgressState.COMPLETED
 
     @patch("sbkube.utils.progress_manager.Live")
-    def test_step_tracking_with_progress(self, mock_live):
-        """진행률 표시와 함께 단계 추적 테스트"""
+    def test_step_tracking_with_progress(self, mock_live) -> None:
+        """진행률 표시와 함께 단계 추적 테스트."""
         manager = ProgressManager(show_progress=True)
         step = manager.add_step("test", "테스트", 30)
 
@@ -157,29 +158,30 @@ class TestProgressManager:
         manager.overall_progress.update.assert_called()
         manager.step_progress.update.assert_called()
 
-    def test_step_tracking_failure(self):
-        """단계 추적 중 실패 테스트"""
+    def test_step_tracking_failure(self) -> Never:
+        """단계 추적 중 실패 테스트."""
         manager = ProgressManager(show_progress=False)
         manager.add_step("test", "테스트")
 
         # track_step은 예외를 전파하므로 pytest.raises로 캐치
         with pytest.raises(ValueError), manager.track_step("test") as tracker:
             tracker.update(50)
-            raise ValueError("테스트 오류")
+            msg = "테스트 오류"
+            raise ValueError(msg)
 
         # 예외 발생 시 step.state는 RUNNING 상태로 남음 (예외 처리 없음)
         # 이는 의도된 동작이므로 FAILED 체크하지 않음
 
-    def test_unknown_step_tracking(self):
-        """존재하지 않는 단계 추적 테스트"""
+    def test_unknown_step_tracking(self) -> None:
+        """존재하지 않는 단계 추적 테스트."""
         manager = ProgressManager(show_progress=False)
 
         with pytest.raises(ValueError, match="Unknown step: unknown"):
             with manager.track_step("unknown"):
                 pass
 
-    def test_overall_progress_calculation(self):
-        """전체 진행률 계산 테스트"""
+    def test_overall_progress_calculation(self) -> None:
+        """전체 진행률 계산 테스트."""
         manager = ProgressManager(show_progress=False)
         manager.start_time = datetime.now()
 
@@ -198,15 +200,15 @@ class TestProgressManager:
         assert progress["current_step"] == "step2"
         assert progress["elapsed_time"] > 0
 
-    def test_overall_progress_without_start_time(self):
-        """시작 시간 없이 전체 진행률 계산 테스트"""
+    def test_overall_progress_without_start_time(self) -> None:
+        """시작 시간 없이 전체 진행률 계산 테스트."""
         manager = ProgressManager(show_progress=False)
 
         progress = manager.get_overall_progress()
         assert progress == {}
 
-    def test_estimate_total_duration(self):
-        """전체 소요 시간 추정 테스트"""
+    def test_estimate_total_duration(self) -> None:
+        """전체 소요 시간 추정 테스트."""
         manager = ProgressManager(show_progress=False)
 
         # 추정 시간이 있는 단계들
@@ -225,8 +227,8 @@ class TestProgressManager:
         # 60 + 120 + 35(평균) + 30(기본값) = 245
         assert manager.estimated_total_duration == 245
 
-    def test_get_current_step(self):
-        """현재 단계 확인 테스트"""
+    def test_get_current_step(self) -> None:
+        """현재 단계 확인 테스트."""
         manager = ProgressManager(show_progress=False)
 
         manager.add_step("step1", "단계1")
@@ -239,8 +241,8 @@ class TestProgressManager:
         step2.start()
         assert manager._get_current_step() == "step2"
 
-    def test_save_historical_data(self):
-        """히스토리 데이터 저장 테스트"""
+    def test_save_historical_data(self) -> None:
+        """히스토리 데이터 저장 테스트."""
         manager = ProgressManager(show_progress=False)
 
         step = manager.add_step("test", "테스트")
@@ -254,8 +256,8 @@ class TestProgressManager:
         assert len(manager.historical_durations["test"]) == 1
         assert manager.historical_durations["test"][0] > 0
 
-    def test_historical_data_limit(self):
-        """히스토리 데이터 개수 제한 테스트"""
+    def test_historical_data_limit(self) -> None:
+        """히스토리 데이터 개수 제한 테스트."""
         manager = ProgressManager(show_progress=False)
 
         # 11개의 히스토리 데이터 추가 (10개 초과)
@@ -275,10 +277,10 @@ class TestProgressManager:
 
 
 class TestStepProgressTracker:
-    """StepProgressTracker 클래스 테스트"""
+    """StepProgressTracker 클래스 테스트."""
 
-    def test_tracker_update(self):
-        """트래커 업데이트 테스트"""
+    def test_tracker_update(self) -> None:
+        """트래커 업데이트 테스트."""
         manager = Mock()
         step = StepProgress("test", "테스트")
         tracker = StepProgressTracker(manager, step, "overall_id", "step_id")
@@ -292,8 +294,8 @@ class TestStepProgressTracker:
             "step_id", completed=75, current_task="진행 중"
         )
 
-    def test_tracker_boundary_values(self):
-        """트래커 경계값 테스트"""
+    def test_tracker_boundary_values(self) -> None:
+        """트래커 경계값 테스트."""
         manager = Mock()
         step = StepProgress("test", "테스트")
         tracker = StepProgressTracker(manager, step, "overall_id", "step_id")
@@ -306,8 +308,8 @@ class TestStepProgressTracker:
         tracker.update(150)
         assert step.completed_work == 100
 
-    def test_set_sub_task(self):
-        """하위 작업 설정 테스트"""
+    def test_set_sub_task(self) -> None:
+        """하위 작업 설정 테스트."""
         manager = Mock()
         step = StepProgress("test", "테스트")
         tracker = StepProgressTracker(manager, step, "overall_id", "step_id")
@@ -321,10 +323,10 @@ class TestStepProgressTracker:
 
 
 class TestSimpleStepTracker:
-    """SimpleStepTracker 클래스 테스트"""
+    """SimpleStepTracker 클래스 테스트."""
 
-    def test_simple_tracker_update(self):
-        """간단한 트래커 업데이트 테스트"""
+    def test_simple_tracker_update(self) -> None:
+        """간단한 트래커 업데이트 테스트."""
         step = StepProgress("test", "테스트")
         tracker = SimpleStepTracker(step)
 
@@ -332,8 +334,8 @@ class TestSimpleStepTracker:
         assert step.completed_work == 50
         assert step.current_task == "중간 작업"
 
-    def test_simple_tracker_set_sub_task(self):
-        """간단한 트래커 하위 작업 설정 테스트"""
+    def test_simple_tracker_set_sub_task(self) -> None:
+        """간단한 트래커 하위 작업 설정 테스트."""
         step = StepProgress("test", "테스트")
         tracker = SimpleStepTracker(step)
 
@@ -342,11 +344,11 @@ class TestSimpleStepTracker:
 
 
 class TestProgressManagerIntegration:
-    """ProgressManager 통합 테스트"""
+    """ProgressManager 통합 테스트."""
 
     @patch("sbkube.utils.progress_manager.Live")
-    def test_full_workflow_simulation(self, mock_live):
-        """전체 워크플로우 시뮬레이션 테스트"""
+    def test_full_workflow_simulation(self, mock_live) -> None:
+        """전체 워크플로우 시뮬레이션 테스트."""
         manager = ProgressManager(show_progress=False)
 
         # 단계들 추가

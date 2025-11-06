@@ -24,7 +24,7 @@ class ClusterCache:
     with TTL-based expiration.
     """
 
-    def __init__(self, cache_dir: Path, context: str, cluster: str):
+    def __init__(self, cache_dir: Path, context: str, cluster: str) -> None:
         """Initialize cluster cache manager.
 
         Args:

@@ -35,7 +35,7 @@ class ConfigManager:
         self,
         base_dir: str | Path,
         schema_dir: str | Path | None = None,
-    ):
+    ) -> None:
         """Initialize configuration manager.
 
         Args:
@@ -164,15 +164,15 @@ class ConfigManager:
         # Load child configuration
         child_path = self.base_dir / config_path
         if not child_path.exists():
-            raise FileOperationError(f"Configuration file not found: {child_path}")
+            msg = f"Configuration file not found: {child_path}"
+            raise FileOperationError(msg)
 
         with open(child_path) as f:
             child_data = yaml.safe_load(f) or {}
 
         # Merge configurations
-        merged = self._deep_merge(parent_data, child_data)
+        return self._deep_merge(parent_data, child_data)
 
-        return merged
 
     def _deep_merge(
         self,
@@ -230,7 +230,7 @@ class ConfigManager:
 
         return config
 
-    def set_defaults(self, defaults: dict[str, Any]):
+    def set_defaults(self, defaults: dict[str, Any]) -> None:
         """Set default values for configurations.
 
         Args:
@@ -312,7 +312,7 @@ class ConfigManager:
                 configs[str(app_dir)] = config
 
             except Exception as e:
-                logger.error(f"Failed to load config from {app_dir}: {e}")
+                logger.exception(f"Failed to load config from {app_dir}: {e}")
                 if validate:
                     raise
 
@@ -323,7 +323,7 @@ class ConfigManager:
         app_config: SBKubeConfig,
         output_path: str | Path,
         format: str = "yaml",
-    ):
+    ) -> None:
         """Export merged configuration to file.
 
         Args:
@@ -344,11 +344,12 @@ class ConfigManager:
             with open(output_path, "w") as f:
                 json.dump(data, f, indent=2)
         else:
-            raise ValueError(f"Unsupported format: {format}")
+            msg = f"Unsupported format: {format}"
+            raise ValueError(msg)
 
         logger.info(f"Exported configuration to {output_path}")
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear all configuration caches."""
         self._sources_cache.clear()
         self._app_configs_cache.clear()

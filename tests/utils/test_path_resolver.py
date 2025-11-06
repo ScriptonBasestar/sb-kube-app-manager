@@ -9,7 +9,7 @@ from sbkube.utils.path_resolver import expand_repo_variables, validate_variable_
 class TestValidateVariableSyntax:
     """Tests for validate_variable_syntax function."""
 
-    def test_valid_variable_syntax(self):
+    def test_valid_variable_syntax(self) -> None:
         """Valid variable syntax should pass without error."""
         # Should not raise
         validate_variable_syntax("${repos.olm}/deploy/crds.yaml")
@@ -17,28 +17,28 @@ class TestValidateVariableSyntax:
         validate_variable_syntax("${repos.app_name}/path")
         validate_variable_syntax("${repos.app-123}/file.yaml")
 
-    def test_multiple_variables(self):
+    def test_multiple_variables(self) -> None:
         """Multiple variables in one path should be validated."""
         # Should not raise
         validate_variable_syntax("${repos.app1}/file1-${repos.app2}/file2.yaml")
 
-    def test_no_variables(self):
+    def test_no_variables(self) -> None:
         """Paths without variables should pass."""
         # Should not raise
         validate_variable_syntax("simple/path/file.yaml")
         validate_variable_syntax("/absolute/path.yaml")
 
-    def test_invalid_empty_app_name(self):
+    def test_invalid_empty_app_name(self) -> None:
         """Empty app name should raise error."""
         with pytest.raises(SbkubeError, match="Empty app name"):
             validate_variable_syntax("${repos.}/file.yaml")
 
-    def test_invalid_syntax_unclosed_brace(self):
+    def test_invalid_syntax_unclosed_brace(self) -> None:
         """Unclosed brace should raise error."""
         with pytest.raises(SbkubeError, match="Invalid variable syntax"):
             validate_variable_syntax("${repos.app/file.yaml")
 
-    def test_invalid_syntax_special_chars(self):
+    def test_invalid_syntax_special_chars(self) -> None:
         """Special characters in app name should raise error."""
         with pytest.raises(SbkubeError, match="Invalid variable syntax"):
             validate_variable_syntax("${repos.app@name}/file.yaml")
@@ -76,7 +76,7 @@ class TestExpandRepoVariables:
             },
         }
 
-    def test_expand_single_variable(self, repos_dir, apps_config):
+    def test_expand_single_variable(self, repos_dir, apps_config) -> None:
         """Expand single variable in path."""
         path = "${repos.olm}/deploy/crds.yaml"
         result = expand_repo_variables(path, repos_dir, apps_config)
@@ -84,7 +84,7 @@ class TestExpandRepoVariables:
         expected = str(repos_dir / "olm" / "deploy/crds.yaml")
         assert result == expected
 
-    def test_expand_multiple_variables(self, repos_dir, apps_config):
+    def test_expand_multiple_variables(self, repos_dir, apps_config) -> None:
         """Expand multiple variables in path."""
         path = "${repos.olm}/file1-${repos.cert-manager}/file2.yaml"
         result = expand_repo_variables(path, repos_dir, apps_config)
@@ -92,27 +92,27 @@ class TestExpandRepoVariables:
         expected = f"{repos_dir}/olm/file1-{repos_dir}/cert-manager/file2.yaml"
         assert result == expected
 
-    def test_no_variables(self, repos_dir, apps_config):
+    def test_no_variables(self, repos_dir, apps_config) -> None:
         """Path without variables should remain unchanged."""
         path = "simple/path/file.yaml"
         result = expand_repo_variables(path, repos_dir, apps_config)
         assert result == path
 
-    def test_error_nonexistent_app(self, repos_dir, apps_config):
+    def test_error_nonexistent_app(self, repos_dir, apps_config) -> None:
         """Reference to non-existent app should raise error."""
         path = "${repos.nonexistent}/file.yaml"
 
         with pytest.raises(SbkubeError, match="references non-existent app"):
             expand_repo_variables(path, repos_dir, apps_config)
 
-    def test_error_non_git_type(self, repos_dir, apps_config):
+    def test_error_non_git_type(self, repos_dir, apps_config) -> None:
         """Reference to non-git app should raise error."""
         path = "${repos.my-app}/file.yaml"
 
         with pytest.raises(SbkubeError, match="can only reference git-type apps"):
             expand_repo_variables(path, repos_dir, apps_config)
 
-    def test_error_invalid_syntax(self, repos_dir, apps_config):
+    def test_error_invalid_syntax(self, repos_dir, apps_config) -> None:
         """Invalid variable syntax should raise error."""
         path = "${repos.}/file.yaml"
 
@@ -120,7 +120,7 @@ class TestExpandRepoVariables:
         with pytest.raises(SbkubeError):
             expand_repo_variables(path, repos_dir, apps_config)
 
-    def test_preserve_path_structure(self, repos_dir, apps_config):
+    def test_preserve_path_structure(self, repos_dir, apps_config) -> None:
         """Path structure after variable should be preserved."""
         path = "${repos.olm}/deploy/upstream/quickstart/crds.yaml"
         result = expand_repo_variables(path, repos_dir, apps_config)
@@ -128,7 +128,7 @@ class TestExpandRepoVariables:
         expected = str(repos_dir / "olm" / "deploy/upstream/quickstart/crds.yaml")
         assert result == expected
 
-    def test_absolute_path_prefix(self, repos_dir, apps_config):
+    def test_absolute_path_prefix(self, repos_dir, apps_config) -> None:
         """Absolute-like prefix should work."""
         path = "/${repos.olm}/file.yaml"
         result = expand_repo_variables(path, repos_dir, apps_config)
@@ -140,7 +140,7 @@ class TestExpandRepoVariables:
 class TestIntegrationScenarios:
     """Integration test scenarios for real use cases."""
 
-    def test_olm_operator_scenario(self, tmp_path):
+    def test_olm_operator_scenario(self, tmp_path) -> None:
         """Real-world OLM operator deployment scenario."""
         # Setup
         repos_dir = tmp_path / ".sbkube" / "repos"

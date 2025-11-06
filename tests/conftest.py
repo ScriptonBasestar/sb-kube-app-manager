@@ -46,9 +46,8 @@ def build_dir(app_dir):
     """테스트용 빌드 결과물 디렉토리 fixture."""
     # build 디렉토리는 app_dir 내부에 생성됨
     # sbkube build --base-dir . --app-dir config  -> ./config/build/
-    build_path = app_dir / "build"
+    return app_dir / "build"
     # build_path.mkdir(parents=True, exist_ok=True) # build 명령어가 직접 생성하도록 둠
-    return build_path
 
 
 @pytest.fixture
@@ -187,7 +186,7 @@ def create_sample_local_copy_source_dir(base_dir):
 
 
 @pytest.fixture(autouse=True)
-def setup_test_environment(base_dir, app_dir, charts_dir, repos_dir, monkeypatch):
+def setup_test_environment(base_dir, app_dir, charts_dir, repos_dir, monkeypatch) -> None:
     """각 테스트 실행 전후로 환경을 설정하고 정리합니다."""
     monkeypatch.setattr(Path, "cwd", lambda: base_dir)
     monkeypatch.setattr(

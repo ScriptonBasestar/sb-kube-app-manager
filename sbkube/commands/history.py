@@ -6,8 +6,7 @@ import difflib
 import hashlib
 import json
 from collections import Counter
-from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from rich.table import Table
@@ -19,6 +18,9 @@ from sbkube.models.deployment_state import (
 )
 from sbkube.state.database import DeploymentDatabase
 from sbkube.utils.output_manager import OutputManager
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 try:
     import yaml
@@ -99,7 +101,7 @@ def cmd(
     except Exception as exc:  # pragma: no cover - initialization errors
         output.print_error("Failed to initialize deployment database", error=str(exc))
         _finalize_history_failure(output, [str(exc)])
-        raise click.Abort()
+        raise click.Abort
 
     try:
         if values_diff_ids:
@@ -127,7 +129,7 @@ def cmd(
     except Exception as exc:
         output.print_error("Failed to retrieve deployment history", error=str(exc))
         _finalize_history_failure(output, [str(exc)])
-        raise click.Abort()
+        raise click.Abort
 
 
 def _handle_list(
@@ -192,7 +194,7 @@ def _handle_detail(
         message = f"Deployment not found: {deployment_id}"
         output.print_error(message, deployment_id=deployment_id)
         _finalize_history_failure(output, [message])
-        raise click.Abort()
+        raise click.Abort
 
     detail = _serialize_detail(deployment)
 
@@ -230,14 +232,14 @@ def _handle_diff(
     except ValueError as err:
         output.print_error(str(err))
         _finalize_history_failure(output, [str(err)])
-        raise click.Abort()
+        raise click.Abort
 
     diff_result = db.get_deployment_diff(id1, id2)
     if not diff_result:
         message = f"One or both deployments not found: {id1}, {id2}"
         output.print_error(message)
         _finalize_history_failure(output, [message])
-        raise click.Abort()
+        raise click.Abort
 
     diff_payload = _serialize_diff(diff_result)
 
@@ -272,14 +274,14 @@ def _handle_values_diff(
     except ValueError as err:
         output.print_error(str(err))
         _finalize_history_failure(output, [str(err)])
-        raise click.Abort()
+        raise click.Abort
 
     diff_result = db.get_deployment_values_diff(id1, id2)
     if not diff_result:
         message = f"One or both deployments not found: {id1}, {id2}"
         output.print_error(message)
         _finalize_history_failure(output, [message])
-        raise click.Abort()
+        raise click.Abort
 
     values_payload = _serialize_values_diff(diff_result)
 
@@ -674,8 +676,9 @@ def _parse_pair(value: str, option_name: str) -> tuple[str, str]:
         first, second = value.split(",", 1)
         return first.strip(), second.strip()
     except ValueError as err:
+        msg = f"Invalid {option_name} format. Use: {option_name} ID1,ID2"
         raise ValueError(
-            f"Invalid {option_name} format. Use: {option_name} ID1,ID2"
+            msg
         ) from err
 
 

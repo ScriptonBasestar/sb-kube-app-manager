@@ -1,4 +1,4 @@
-"""SBKube 검증기 모듈
+"""SBKube 검증기 모듈.
 
 이 모듈은 다양한 검증기들을 포함하고 있습니다:
 - configuration_validators: 설정 파일 검증

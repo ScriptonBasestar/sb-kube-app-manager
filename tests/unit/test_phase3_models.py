@@ -22,7 +22,7 @@ from sbkube.models.config_model import (
 # ============================================================================
 
 
-def test_validation_rule_basic():
+def test_validation_rule_basic() -> None:
     """ValidationRule 기본 생성 테스트."""
     validation = ValidationRule(
         kind="ClusterIssuer",
@@ -36,7 +36,7 @@ def test_validation_rule_basic():
     assert validation.timeout == 120
 
 
-def test_validation_rule_with_conditions():
+def test_validation_rule_with_conditions() -> None:
     """ValidationRule conditions 테스트."""
     validation = ValidationRule(
         kind="Pod",
@@ -51,7 +51,7 @@ def test_validation_rule_with_conditions():
     assert validation.conditions[0]["type"] == "Ready"
 
 
-def test_validation_rule_defaults():
+def test_validation_rule_defaults() -> None:
     """ValidationRule 기본값 테스트."""
     validation = ValidationRule()
     assert validation.kind is None
@@ -67,14 +67,14 @@ def test_validation_rule_defaults():
 # ============================================================================
 
 
-def test_dependency_config_depends_on():
+def test_dependency_config_depends_on() -> None:
     """DependencyConfig depends_on 테스트."""
     dependency = DependencyConfig(depends_on=["deploy-secrets", "verify-database"])
     assert len(dependency.depends_on) == 2
     assert "deploy-secrets" in dependency.depends_on
 
 
-def test_dependency_config_wait_for():
+def test_dependency_config_wait_for() -> None:
     """DependencyConfig wait_for 테스트."""
     dependency = DependencyConfig(
         wait_for=[
@@ -91,7 +91,7 @@ def test_dependency_config_wait_for():
     assert dependency.wait_for[0]["timeout"] == 180
 
 
-def test_dependency_config_combined():
+def test_dependency_config_combined() -> None:
     """DependencyConfig depends_on + wait_for 테스트."""
     dependency = DependencyConfig(
         depends_on=["task-a", "task-b"],
@@ -101,7 +101,7 @@ def test_dependency_config_combined():
     assert len(dependency.wait_for) == 1
 
 
-def test_dependency_config_defaults():
+def test_dependency_config_defaults() -> None:
     """DependencyConfig 기본값 테스트."""
     dependency = DependencyConfig()
     assert dependency.depends_on == []
@@ -113,7 +113,7 @@ def test_dependency_config_defaults():
 # ============================================================================
 
 
-def test_rollback_policy_enabled():
+def test_rollback_policy_enabled() -> None:
     """RollbackPolicy enabled=True 테스트."""
     rollback = RollbackPolicy(
         enabled=True,
@@ -127,7 +127,7 @@ def test_rollback_policy_enabled():
     assert len(rollback.commands) == 1
 
 
-def test_rollback_policy_manual():
+def test_rollback_policy_manual() -> None:
     """RollbackPolicy on_failure=manual 테스트."""
     rollback = RollbackPolicy(
         enabled=True,
@@ -137,7 +137,7 @@ def test_rollback_policy_manual():
     assert rollback.on_failure == "manual"
 
 
-def test_rollback_policy_invalid_on_failure():
+def test_rollback_policy_invalid_on_failure() -> None:
     """RollbackPolicy 잘못된 on_failure 값 테스트."""
     with pytest.raises(ConfigValidationError) as exc_info:
         RollbackPolicy(
@@ -147,7 +147,7 @@ def test_rollback_policy_invalid_on_failure():
     assert "on_failure" in str(exc_info.value).lower()
 
 
-def test_rollback_policy_defaults():
+def test_rollback_policy_defaults() -> None:
     """RollbackPolicy 기본값 테스트."""
     rollback = RollbackPolicy()
     assert rollback.enabled is False
@@ -161,7 +161,7 @@ def test_rollback_policy_defaults():
 # ============================================================================
 
 
-def test_manifests_task_with_phase3_fields():
+def test_manifests_task_with_phase3_fields() -> None:
     """ManifestsHookTask에 Phase 3 필드 통합 테스트."""
     data = {
         "type": "manifests",
@@ -187,7 +187,7 @@ def test_manifests_task_with_phase3_fields():
     assert task.rollback["enabled"] is True
 
 
-def test_inline_task_with_phase3_fields():
+def test_inline_task_with_phase3_fields() -> None:
     """InlineHookTask에 Phase 3 필드 통합 테스트."""
     data = {
         "type": "inline",
@@ -212,7 +212,7 @@ def test_inline_task_with_phase3_fields():
     assert task.dependency["depends_on"] == ["deploy-issuers"]
 
 
-def test_command_task_with_phase3_fields():
+def test_command_task_with_phase3_fields() -> None:
     """CommandHookTask에 Phase 3 필드 통합 테스트."""
     data = {
         "type": "command",
@@ -239,7 +239,7 @@ def test_command_task_with_phase3_fields():
 # ============================================================================
 
 
-def test_app_hooks_with_phase3_tasks():
+def test_app_hooks_with_phase3_tasks() -> None:
     """AppHooks에 Phase 3 tasks 통합 시나리오."""
     data = {
         "post_deploy_tasks": [
@@ -287,7 +287,7 @@ def test_app_hooks_with_phase3_tasks():
     assert task3.on_failure == "warn"
 
 
-def test_backward_compatibility_phase2_tasks():
+def test_backward_compatibility_phase2_tasks() -> None:
     """Phase 2 tasks (Phase 3 필드 없이) 호환성 테스트."""
     data = {
         "post_deploy_tasks": [
@@ -325,7 +325,7 @@ def test_backward_compatibility_phase2_tasks():
 # ============================================================================
 
 
-def test_cert_manager_full_scenario_with_phase3():
+def test_cert_manager_full_scenario_with_phase3() -> None:
     """cert-manager + ClusterIssuers + Certificate with Phase 3 features."""
     data = {
         "post_deploy_tasks": [

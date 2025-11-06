@@ -1,6 +1,6 @@
-"""Tests for resource constraint and edge case scenarios.
-"""
+"""Tests for resource constraint and edge case scenarios."""
 
+import contextlib
 import os
 import tempfile
 from pathlib import Path
@@ -13,7 +13,7 @@ from sbkube.exceptions import SbkubeError
 class TestResourceConstraints:
     """Test resource constraint scenarios."""
 
-    def test_memory_usage_large_manifests(self):
+    def test_memory_usage_large_manifests(self) -> None:
         """Test memory usage with large Kubernetes manifests."""
         # Create a large manifest
         large_manifest = {
@@ -33,7 +33,7 @@ class TestResourceConstraints:
         estimated_size = len(str(large_manifest))
         assert estimated_size > 10_000_000  # > 10MB
 
-    def test_file_handle_limits(self):
+    def test_file_handle_limits(self) -> None:
         """Test behavior with many open files."""
         temp_files = []
         try:
@@ -50,12 +50,10 @@ class TestResourceConstraints:
         finally:
             # Cleanup
             for temp_file in temp_files:
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(temp_file.name)
-                except OSError:
-                    pass
 
-    def test_memory_pressure_detection(self):
+    def test_memory_pressure_detection(self) -> None:
         """Test detection of memory pressure."""
         # Simulate low memory condition without psutil dependency
         simulated_memory = {
@@ -73,7 +71,7 @@ class TestResourceConstraints:
 class TestEdgeCaseHandling:
     """Test edge case handling."""
 
-    def test_empty_configuration_files(self):
+    def test_empty_configuration_files(self) -> None:
         """Test handling of empty configuration files."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("")  # Empty file
@@ -89,12 +87,13 @@ class TestEdgeCaseHandling:
             # Should provide meaningful error for empty config
             if not content.strip():
                 with pytest.raises(SbkubeError):
-                    raise SbkubeError("Configuration file is empty")
+                    msg = "Configuration file is empty"
+                    raise SbkubeError(msg)
 
         finally:
             os.unlink(empty_config_path)
 
-    def test_malformed_yaml_configuration(self):
+    def test_malformed_yaml_configuration(self) -> None:
         """Test handling of malformed YAML configuration."""
         malformed_yaml = """
         namespace: test
@@ -124,7 +123,7 @@ class TestEdgeCaseHandling:
         finally:
             os.unlink(malformed_config_path)
 
-    def test_unicode_and_special_characters(self):
+    def test_unicode_and_special_characters(self) -> None:
         """Test handling of Unicode and special characters."""
         unicode_config = {
             "namespace": "test-특수문자",
@@ -151,7 +150,7 @@ class TestEdgeCaseHandling:
         assert unicode_config["apps"][0]["name"] == "app-한글이름"
         assert unicode_config["apps"][0]["specs"]["values"]["emoji"] == "🚀📦"
 
-    def test_very_long_paths(self):
+    def test_very_long_paths(self) -> None:
         """Test handling of very long file paths."""
         # Create a very long path
         long_path_components = ["very"] * 50 + ["long"] * 50 + ["path"] * 10
@@ -170,7 +169,7 @@ class TestEdgeCaseHandling:
 class TestErrorRecoveryScenarios:
     """Test error recovery scenarios."""
 
-    def test_partial_deployment_rollback(self):
+    def test_partial_deployment_rollback(self) -> None:
         """Test rollback after partial deployment failure."""
         deployed_resources = [
             {"name": "configmap-1", "type": "ConfigMap", "status": "created"},
@@ -188,7 +187,7 @@ class TestErrorRecoveryScenarios:
         assert "delete ConfigMap/configmap-1" in rollback_actions
         assert "delete Deployment/deployment-1" in rollback_actions
 
-    def test_interrupted_operation_recovery(self):
+    def test_interrupted_operation_recovery(self) -> None:
         """Test recovery from interrupted operations."""
         # Simulate operation state
         operation_state = {

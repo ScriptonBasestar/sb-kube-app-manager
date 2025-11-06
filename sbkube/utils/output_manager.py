@@ -26,7 +26,7 @@ class OutputManager:
         output.finalize(status="success", summary={"deployed": 3})
     """
 
-    def __init__(self, format_type: str = "human"):
+    def __init__(self, format_type: str = "human") -> None:
         """OutputManager 초기화.
 
         Args:

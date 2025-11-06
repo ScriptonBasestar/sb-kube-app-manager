@@ -9,7 +9,7 @@ from sbkube.utils.error_suggestions import (
 )
 
 
-def test_error_guide_contains_all_expected_errors():
+def test_error_guide_contains_all_expected_errors() -> None:
     """ERROR_GUIDE should contain all documented error types."""
     expected_errors = [
         "ConfigFileNotFoundError",
@@ -28,7 +28,7 @@ def test_error_guide_contains_all_expected_errors():
         assert error_type in ERROR_GUIDE, f"{error_type} not found in ERROR_GUIDE"
 
 
-def test_get_error_suggestions_returns_valid_guide():
+def test_get_error_suggestions_returns_valid_guide() -> None:
     """get_error_suggestions should return valid guide for known errors."""
     guide = get_error_suggestions("ConfigFileNotFoundError")
 
@@ -41,13 +41,13 @@ def test_get_error_suggestions_returns_valid_guide():
     assert "auto_recoverable" in guide
 
 
-def test_get_error_suggestions_returns_none_for_unknown():
+def test_get_error_suggestions_returns_none_for_unknown() -> None:
     """get_error_suggestions should return None for unknown errors."""
     guide = get_error_suggestions("UnknownError")
     assert guide is None
 
 
-def test_format_suggestions_returns_formatted_string():
+def test_format_suggestions_returns_formatted_string() -> None:
     """format_suggestions should return formatted string with all sections."""
     result = format_suggestions("ConfigFileNotFoundError")
 
@@ -60,49 +60,49 @@ def test_format_suggestions_returns_formatted_string():
     assert "⚡ 빠른 해결:" in result  # Quick fix section
 
 
-def test_format_suggestions_returns_empty_for_unknown():
+def test_format_suggestions_returns_empty_for_unknown() -> None:
     """format_suggestions should return empty string for unknown errors."""
     result = format_suggestions("UnknownError")
     assert result == ""
 
 
-def test_get_quick_fix_command_returns_command():
+def test_get_quick_fix_command_returns_command() -> None:
     """get_quick_fix_command should return quick fix command for recoverable errors."""
     command = get_quick_fix_command("ConfigFileNotFoundError")
     assert command == "sbkube init"
 
 
-def test_get_quick_fix_command_returns_none_for_non_recoverable():
+def test_get_quick_fix_command_returns_none_for_non_recoverable() -> None:
     """get_quick_fix_command should return None for non-recoverable errors."""
     command = get_quick_fix_command("HelmNotFoundError")
     assert command is None
 
 
-def test_get_quick_fix_command_returns_none_for_unknown():
+def test_get_quick_fix_command_returns_none_for_unknown() -> None:
     """get_quick_fix_command should return None for unknown errors."""
     command = get_quick_fix_command("UnknownError")
     assert command is None
 
 
-def test_is_auto_recoverable_true_for_recoverable():
+def test_is_auto_recoverable_true_for_recoverable() -> None:
     """is_auto_recoverable should return True for auto-recoverable errors."""
     assert is_auto_recoverable("ConfigFileNotFoundError") is True
     assert is_auto_recoverable("KubernetesConnectionError") is True
     assert is_auto_recoverable("HelmChartNotFoundError") is True
 
 
-def test_is_auto_recoverable_false_for_non_recoverable():
+def test_is_auto_recoverable_false_for_non_recoverable() -> None:
     """is_auto_recoverable should return False for non-recoverable errors."""
     assert is_auto_recoverable("HelmNotFoundError") is False
     assert is_auto_recoverable("PermissionDeniedError") is False
 
 
-def test_is_auto_recoverable_false_for_unknown():
+def test_is_auto_recoverable_false_for_unknown() -> None:
     """is_auto_recoverable should return False for unknown errors."""
     assert is_auto_recoverable("UnknownError") is False
 
 
-def test_all_guides_have_required_fields():
+def test_all_guides_have_required_fields() -> None:
     """All error guides should have required fields."""
     required_fields = [
         "title",
@@ -136,7 +136,7 @@ def test_all_guides_have_required_fields():
         )
 
 
-def test_suggestions_are_actionable():
+def test_suggestions_are_actionable() -> None:
     """All suggestions should be actionable (contain → or specific instructions)."""
     for error_type, guide in ERROR_GUIDE.items():
         for suggestion in guide["suggestions"]:
@@ -147,7 +147,7 @@ def test_suggestions_are_actionable():
             ), f"{error_type} has non-actionable suggestion: {suggestion}"
 
 
-def test_commands_have_descriptions():
+def test_commands_have_descriptions() -> None:
     """All commands should have descriptions."""
     for error_type, guide in ERROR_GUIDE.items():
         for cmd, desc in guide["commands"].items():
@@ -159,7 +159,7 @@ def test_commands_have_descriptions():
             )
 
 
-def test_doc_links_are_valid_paths():
+def test_doc_links_are_valid_paths() -> None:
     """All doc links should be valid relative paths."""
     for error_type, guide in ERROR_GUIDE.items():
         doc_link = guide["doc_link"]

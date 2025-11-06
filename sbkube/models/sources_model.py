@@ -21,7 +21,7 @@ class GitRepoScheme(ConfigBaseModel):
     password: str | None = None
     ssh_key: str | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.url}#{self.branch}"
 
     @field_validator("url")
@@ -30,8 +30,9 @@ class GitRepoScheme(ConfigBaseModel):
         """Validate Git URL format."""
         allowed_prefixes = ["http://", "https://", "git://", "ssh://", "git@"]
         if not any(v.startswith(prefix) for prefix in allowed_prefixes):
+            msg = f"Git URL must start with one of: {', '.join(allowed_prefixes)}"
             raise ValueError(
-                f"Git URL must start with one of: {', '.join(allowed_prefixes)}",
+                msg,
             )
         return v
 
@@ -40,7 +41,8 @@ class GitRepoScheme(ConfigBaseModel):
     def validate_branch(cls, v: str) -> str:
         """Validate branch name is not empty."""
         if not v or not v.strip():
-            raise ValueError("branch name cannot be empty")
+            msg = "branch name cannot be empty"
+            raise ValueError(msg)
         return v.strip()
 
     @model_validator(mode="after")
@@ -48,9 +50,12 @@ class GitRepoScheme(ConfigBaseModel):
         """Validate that only one authentication method is specified."""
         auth_methods = [self.username and self.password, self.ssh_key]
         if sum(bool(method) for method in auth_methods) > 1:
-            raise ValueError(
+            msg = (
                 "Only one authentication method can be specified: "
-                "either username/password or ssh_key",
+                "either username/password or ssh_key"
+            )
+            raise ValueError(
+                msg,
             )
         return self
 
@@ -79,14 +84,18 @@ class HelmRepoScheme(ConfigBaseModel):
         tls_files_set = sum(1 for f in tls_files if f is not None)
 
         if tls_files_set > 0 and tls_files_set < 3:
-            raise ValueError(
+            msg = (
                 "When using TLS, all three files must be specified: "
-                "ca_file, cert_file, and key_file",
+                "ca_file, cert_file, and key_file"
+            )
+            raise ValueError(
+                msg,
             )
 
         if self.insecure_skip_tls_verify and tls_files_set > 0:
+            msg = "Cannot use insecure_skip_tls_verify with TLS certificate files"
             raise ValueError(
-                "Cannot use insecure_skip_tls_verify with TLS certificate files",
+                msg,
             )
 
         return self
@@ -149,7 +158,7 @@ class SourceScheme(InheritableConfigModel):
     https_proxy: str | None = None
     no_proxy: list[str] | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return dedent(
             f"""
             cluster: {self.cluster}
@@ -225,7 +234,8 @@ class SourceScheme(InheritableConfigModel):
     def validate_cluster_name(cls, v: str | None) -> str | None:
         """Validate cluster name is not empty if specified."""
         if v is not None and (not v or not v.strip()):
-            raise ValueError("cluster name cannot be empty")
+            msg = "cluster name cannot be empty"
+            raise ValueError(msg)
         return v.strip() if v else None
 
     @field_validator("kubeconfig")
@@ -233,9 +243,12 @@ class SourceScheme(InheritableConfigModel):
     def validate_kubeconfig_not_empty(cls, v: str) -> str:
         """Validate kubeconfig is not empty."""
         if not v or not v.strip():
-            raise ValueError(
+            msg = (
                 "kubeconfig is required. "
-                "Specify the path to your kubeconfig file in sources.yaml",
+                "Specify the path to your kubeconfig file in sources.yaml"
+            )
+            raise ValueError(
+                msg,
             )
         return v.strip()
 
@@ -244,9 +257,12 @@ class SourceScheme(InheritableConfigModel):
     def validate_context_not_empty(cls, v: str) -> str:
         """Validate context is not empty."""
         if not v or not v.strip():
-            raise ValueError(
+            msg = (
                 "kubeconfig_context is required. "
-                "Specify the kubectl context name in sources.yaml",
+                "Specify the kubectl context name in sources.yaml"
+            )
+            raise ValueError(
+                msg,
             )
         return v.strip()
 
@@ -258,42 +274,51 @@ class SourceScheme(InheritableConfigModel):
             return None
 
         if not isinstance(v, list):
-            raise ValueError("app_dirs must be a list of directory names")
+            msg = "app_dirs must be a list of directory names"
+            raise ValueError(msg)
 
         if len(v) == 0:
+            msg = "app_dirs cannot be empty. Remove the field or provide directory names"
             raise ValueError(
-                "app_dirs cannot be empty. Remove the field or provide directory names"
+                msg
             )
 
         # Validate each directory name
         validated = []
         for dir_name in v:
             if not isinstance(dir_name, str):
+                msg = f"app_dirs must contain strings, got: {type(dir_name).__name__}"
                 raise ValueError(
-                    f"app_dirs must contain strings, got: {type(dir_name).__name__}"
+                    msg
                 )
 
             dir_name = dir_name.strip()
             if not dir_name:
-                raise ValueError("app_dirs cannot contain empty directory names")
+                msg = "app_dirs cannot contain empty directory names"
+                raise ValueError(msg)
 
             # Check for invalid characters or paths
             if "/" in dir_name or "\\" in dir_name:
-                raise ValueError(
+                msg = (
                     f"app_dirs must contain directory names only, not paths: '{dir_name}'. "
                     "Use simple names like 'redis', 'postgres', etc."
                 )
+                raise ValueError(
+                    msg
+                )
 
             if dir_name.startswith("."):
+                msg = f"app_dirs cannot contain hidden directories: '{dir_name}'"
                 raise ValueError(
-                    f"app_dirs cannot contain hidden directories: '{dir_name}'"
+                    msg
                 )
 
             validated.append(dir_name)
 
         # Check for duplicates
         if len(validated) != len(set(validated)):
-            raise ValueError("app_dirs cannot contain duplicate directory names")
+            msg = "app_dirs cannot contain duplicate directory names"
+            raise ValueError(msg)
 
         return validated
 

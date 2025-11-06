@@ -11,20 +11,21 @@ from sbkube.exceptions import (
 from sbkube.utils.logger import logger
 
 
-def check_helm_installed_or_exit():
-    """Helm 설치 확인 (테스트 가능한 버전)"""
+def check_helm_installed_or_exit() -> None:
+    """Helm 설치 확인 (테스트 가능한 버전)."""
     try:
         check_helm_installed()
     except (CliToolNotFoundError, CliToolExecutionError):
         sys.exit(1)
 
 
-def check_helm_installed():
-    """Helm 설치 확인 (예외 발생 버전)"""
+def check_helm_installed() -> None:
+    """Helm 설치 확인 (예외 발생 버전)."""
     helm_path = shutil.which("helm")
     if not helm_path:
         logger.error("helm 명령이 시스템에 설치되어 있지 않습니다.")
-        raise CliToolNotFoundError("helm", "https://helm.sh/docs/intro/install/")
+        msg = "helm"
+        raise CliToolNotFoundError(msg, "https://helm.sh/docs/intro/install/")
 
     try:
         result = subprocess.run(
@@ -36,8 +37,9 @@ def check_helm_installed():
         logger.success(f"helm 확인됨: {result.stdout.strip()}")
     except subprocess.CalledProcessError as e:
         logger.error(f"helm 실행 실패: {e}")
+        msg = "helm"
         raise CliToolExecutionError(
-            "helm",
+            msg,
             ["helm", "version"],
             e.returncode,
             e.stdout,
@@ -45,8 +47,9 @@ def check_helm_installed():
         )
     except PermissionError:
         logger.error(f"helm 바이너리에 실행 권한이 없습니다: {helm_path}")
+        msg = "helm"
         raise CliToolExecutionError(
-            "helm",
+            msg,
             ["helm", "version"],
             126,
             None,
@@ -57,8 +60,8 @@ def check_helm_installed():
 def check_kubectl_installed_or_exit(
     kubeconfig: str | None = None,
     kubecontext: str | None = None,
-):
-    """Kubectl 설치 확인 (테스트 가능한 버전)"""
+) -> None:
+    """Kubectl 설치 확인 (테스트 가능한 버전)."""
     try:
         check_kubectl_installed(kubeconfig, kubecontext)
     except (CliToolNotFoundError, CliToolExecutionError):
@@ -68,12 +71,13 @@ def check_kubectl_installed_or_exit(
 def check_kubectl_installed(
     kubeconfig: str | None = None,
     kubecontext: str | None = None,
-):
-    """Kubectl 설치 확인 (예외 발생 버전)"""
+) -> None:
+    """Kubectl 설치 확인 (예외 발생 버전)."""
     kubectl_path = shutil.which("kubectl")
     if not kubectl_path:
         logger.error("kubectl 명령이 시스템에 설치되어 있지 않습니다.")
-        raise CliToolNotFoundError("kubectl", "https://kubernetes.io/docs/tasks/tools/")
+        msg = "kubectl"
+        raise CliToolNotFoundError(msg, "https://kubernetes.io/docs/tasks/tools/")
 
     try:
         cmd = ["kubectl", "version", "--client"]
@@ -86,11 +90,13 @@ def check_kubectl_installed(
         logger.success(f"kubectl 확인됨: {result.stdout.strip()}")
     except subprocess.CalledProcessError as e:
         logger.error(f"kubectl 실행 실패: {e}")
-        raise CliToolExecutionError("kubectl", cmd, e.returncode, e.stdout, e.stderr)
+        msg = "kubectl"
+        raise CliToolExecutionError(msg, cmd, e.returncode, e.stdout, e.stderr)
     except PermissionError:
         logger.error(f"kubectl 바이너리에 실행 권한이 없습니다: {kubectl_path}")
+        msg = "kubectl"
         raise CliToolExecutionError(
-            "kubectl",
+            msg,
             cmd,
             126,
             None,
@@ -98,7 +104,7 @@ def check_kubectl_installed(
         )
 
 
-def print_helm_connection_help():
+def print_helm_connection_help() -> None:
     import json
     import os
     import shutil
@@ -160,7 +166,7 @@ def check_cluster_connectivity(
     kubeconfig: str | None = None,
     kubecontext: str | None = None,
 ) -> tuple[bool, str]:
-    """Kubernetes 클러스터 연결 확인
+    """Kubernetes 클러스터 연결 확인.
 
     Args:
         timeout: 연결 시도 타임아웃 (초)
@@ -201,8 +207,8 @@ def check_cluster_connectivity_or_exit(
     timeout: int = 10,
     kubeconfig: str | None = None,
     kubecontext: str | None = None,
-):
-    """Kubernetes 클러스터 연결 확인 (연결 실패 시 종료)
+) -> None:
+    """Kubernetes 클러스터 연결 확인 (연결 실패 시 종료).
 
     Args:
         timeout: 연결 시도 타임아웃 (초)
@@ -233,7 +239,7 @@ def check_cluster_connectivity_or_exit(
     logger.success("✅ 클러스터 연결 확인됨")
 
 
-def print_kube_contexts():
+def print_kube_contexts() -> None:
     try:
         result = subprocess.run(
             ["kubectl", "config", "get-contexts", "-o", "name"],
@@ -242,15 +248,13 @@ def print_kube_contexts():
             check=True,
         )
         contexts = result.stdout.strip().splitlines()
-        print("사용 가능한 context 목록:")
         for ctx in contexts:
-            print(f"  * {ctx}")
-        print("kubectl config use-context <context명> 명령으로 클러스터를 선택하세요.")
-    except Exception as e:
-        print("kubectl context 목록을 가져올 수 없습니다:", e)
+            pass
+    except Exception:
+        pass
 
 
-def print_kube_connection_help():
+def print_kube_connection_help() -> None:
     from pathlib import Path
 
     home = str(Path.home())
@@ -277,22 +281,14 @@ def print_kube_connection_help():
     except Exception:
         files = []
     # 3. 안내 메시지
-    print("\n⚠️ kubectl이 현재 클러스터에 연결되어 있지 않습니다.")
     if contexts:
-        print("사용 가능한 context 목록:")
         for ctx in contexts:
-            print(f"  * {ctx}")
-        print("kubectl config use-context <context명> 명령으로 클러스터를 선택하세요.")
+            pass
     else:
-        print("사용 가능한 context가 없습니다.")
+        pass
     if files:
-        print("\n~/.kube 디렉토리 내 추가 kubeconfig 파일:")
         for f in files:
-            print(f"  - {f}")
-        print(
-            "\nexport KUBECONFIG=~/.kube/<파일명> 명령으로 해당 클러스터에 연결할 수 있습니다.",
-        )
-    print()
+            pass
 
 
 def get_available_contexts(

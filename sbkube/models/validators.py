@@ -24,13 +24,18 @@ class ValidatorMixin:
     def validate_kubernetes_name(cls, v: str, field_name: str = "name") -> str:
         """Validate Kubernetes resource naming convention."""
         if not v:
-            raise ValueError(f"{field_name} cannot be empty")
+            msg = f"{field_name} cannot be empty"
+            raise ValueError(msg)
         if len(v) > 253:
-            raise ValueError(f"{field_name} must be less than 253 characters")
+            msg = f"{field_name} must be less than 253 characters"
+            raise ValueError(msg)
         if not KUBE_NAME_PATTERN.match(v):
-            raise ValueError(
+            msg = (
                 f"{field_name} '{v}' must consist of lowercase alphanumeric "
-                "characters or '-', and must start and end with an alphanumeric character",
+                "characters or '-', and must start and end with an alphanumeric character"
+            )
+            raise ValueError(
+                msg,
             )
         return v
 
@@ -40,11 +45,15 @@ class ValidatorMixin:
         if v is None:
             return v
         if len(v) > 63:
-            raise ValueError("namespace must be less than 63 characters")
+            msg = "namespace must be less than 63 characters"
+            raise ValueError(msg)
         if not KUBE_NAMESPACE_PATTERN.match(v):
-            raise ValueError(
+            msg = (
                 f"namespace '{v}' must consist of lowercase alphanumeric "
-                "characters or '-', and must start and end with an alphanumeric character",
+                "characters or '-', and must start and end with an alphanumeric character"
+            )
+            raise ValueError(
+                msg,
             )
         return v
 
@@ -52,32 +61,37 @@ class ValidatorMixin:
     def validate_path_exists(cls, v: str, must_exist: bool = False) -> str:
         """Validate file/directory path."""
         if not v:
-            raise ValueError("path cannot be empty")
+            msg = "path cannot be empty"
+            raise ValueError(msg)
 
         path = Path(v)
         if must_exist and not path.exists():
-            raise ValueError(f"path '{v}' does not exist")
+            msg = f"path '{v}' does not exist"
+            raise ValueError(msg)
 
         # Check for path traversal attempts
         try:
             path.resolve()
         except (RuntimeError, ValueError):
+            msg = f"invalid path '{v}' - contains invalid characters or traversal attempts"
             raise ValueError(
-                f"invalid path '{v}' - contains invalid characters or traversal attempts",
+                msg,
             )
 
         return v
 
     @classmethod
-    def validate_url(cls, v: str, allowed_schemes: list[str] = None) -> str:
+    def validate_url(cls, v: str, allowed_schemes: list[str] | None = None) -> str:
         """Validate URL format and scheme."""
         if not v:
-            raise ValueError("URL cannot be empty")
+            msg = "URL cannot be empty"
+            raise ValueError(msg)
 
         if allowed_schemes:
             if not any(v.startswith(f"{scheme}://") for scheme in allowed_schemes):
+                msg = f"URL must start with one of: {', '.join(f'{s}://' for s in allowed_schemes)}"
                 raise ValueError(
-                    f"URL must start with one of: {', '.join(f'{s}://' for s in allowed_schemes)}",
+                    msg,
                 )
 
         return v
@@ -89,9 +103,12 @@ class ValidatorMixin:
             return v
 
         if not HELM_VERSION_PATTERN.match(v):
-            raise ValueError(
+            msg = (
                 f"Invalid Helm version format '{v}'. "
-                "Expected format: MAJOR.MINOR.PATCH[-PRERELEASE]",
+                "Expected format: MAJOR.MINOR.PATCH[-PRERELEASE]"
+            )
+            raise ValueError(
+                msg,
             )
         return v
 
@@ -102,9 +119,12 @@ class ValidatorMixin:
             return v
 
         if not SEMVER_PATTERN.match(v):
-            raise ValueError(
+            msg = (
                 f"Invalid semantic version format '{v}'. "
-                "Expected format: [v]MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]",
+                "Expected format: [v]MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]"
+            )
+            raise ValueError(
+                msg,
             )
         return v
 
@@ -116,14 +136,16 @@ class ValidatorMixin:
     ) -> list[Any]:
         """Validate that a list is not empty."""
         if not v:
-            raise ValueError(f"{field_name} cannot be empty")
+            msg = f"{field_name} cannot be empty"
+            raise ValueError(msg)
         return v
 
     @classmethod
     def validate_unique_list(cls, v: list[Any], field_name: str = "list") -> list[Any]:
         """Validate that all items in a list are unique."""
         if len(v) != len(set(v)):
-            raise ValueError(f"{field_name} must contain unique values")
+            msg = f"{field_name} must contain unique values"
+            raise ValueError(msg)
         return v
 
 
@@ -141,7 +163,8 @@ def validate_spec_fields(app_type: str, specs: dict[str, Any]) -> dict[str, Any]
     }
 
     if app_type not in required_fields:
-        raise ValueError(f"Unknown app type: {app_type}")
+        msg = f"Unknown app type: {app_type}"
+        raise ValueError(msg)
 
     missing_fields = []
     for field in required_fields.get(app_type, []):
@@ -149,8 +172,9 @@ def validate_spec_fields(app_type: str, specs: dict[str, Any]) -> dict[str, Any]
             missing_fields.append(field)
 
     if missing_fields:
+        msg = f"Missing required fields for app type '{app_type}': {', '.join(missing_fields)}"
         raise ValueError(
-            f"Missing required fields for app type '{app_type}': {', '.join(missing_fields)}",
+            msg,
         )
 
     return specs

@@ -12,7 +12,7 @@ def cli_runner():
     return CliRunner()
 
 
-def test_help_command_categorization(cli_runner):
+def test_help_command_categorization(cli_runner) -> None:
     """Test that commands are properly categorized in help output."""
     result = cli_runner.invoke(main, ["--help"])
 
@@ -26,7 +26,7 @@ def test_help_command_categorization(cli_runner):
     assert "🛠️ 유틸리티" in result.output
 
 
-def test_help_core_workflow_commands(cli_runner):
+def test_help_core_workflow_commands(cli_runner) -> None:
     """Test that core workflow commands are listed."""
     result = cli_runner.invoke(main, ["--help"])
 
@@ -39,7 +39,7 @@ def test_help_core_workflow_commands(cli_runner):
     assert "deploy" in result.output
 
 
-def test_help_integrated_command(cli_runner):
+def test_help_integrated_command(cli_runner) -> None:
     """Test that integrated command (apply) is listed."""
     result = cli_runner.invoke(main, ["--help"])
 
@@ -47,7 +47,7 @@ def test_help_integrated_command(cli_runner):
     assert "apply" in result.output
 
 
-def test_help_state_management_commands(cli_runner):
+def test_help_state_management_commands(cli_runner) -> None:
     """Test that state management commands are listed."""
     result = cli_runner.invoke(main, ["--help"])
 
@@ -59,7 +59,7 @@ def test_help_state_management_commands(cli_runner):
     assert "rollback" in result.output
 
 
-def test_help_lifecycle_commands(cli_runner):
+def test_help_lifecycle_commands(cli_runner) -> None:
     """Test that lifecycle commands (upgrade/delete) are listed."""
     result = cli_runner.invoke(main, ["--help"])
 
@@ -70,7 +70,7 @@ def test_help_lifecycle_commands(cli_runner):
     assert "delete" in result.output
 
 
-def test_help_utility_commands(cli_runner):
+def test_help_utility_commands(cli_runner) -> None:
     """Test that utility commands are listed."""
     result = cli_runner.invoke(main, ["--help"])
 
@@ -83,7 +83,7 @@ def test_help_utility_commands(cli_runner):
     assert "version" in result.output
 
 
-def test_help_no_uncategorized_section(cli_runner):
+def test_help_no_uncategorized_section(cli_runner) -> None:
     """Test that there are no uncategorized commands."""
     result = cli_runner.invoke(main, ["--help"])
 
@@ -93,7 +93,7 @@ def test_help_no_uncategorized_section(cli_runner):
     assert "기타:" not in result.output
 
 
-def test_help_command_completeness(cli_runner):
+def test_help_command_completeness(cli_runner) -> None:
     """Test that all expected commands are present in help output."""
     result = cli_runner.invoke(main, ["--help"])
 
@@ -121,7 +121,7 @@ def test_help_command_completeness(cli_runner):
         assert cmd in result.output, f"Command '{cmd}' not found in help output"
 
 
-def test_help_options_present(cli_runner):
+def test_help_options_present(cli_runner) -> None:
     """Test that global options are present in help output."""
     result = cli_runner.invoke(main, ["--help"])
 

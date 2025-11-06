@@ -88,7 +88,7 @@ class SbkubeGroup(click.Group):
                 uncategorized.append((cmd_name, help_text))
 
         # 카테고리 순서대로 출력
-        for category in self.COMMAND_CATEGORIES.keys():
+        for category in self.COMMAND_CATEGORIES:
             if category in categorized:
                 emoji = self.CATEGORY_LABELS.get(category, "")
                 with formatter.section(f"{emoji} {category}"):

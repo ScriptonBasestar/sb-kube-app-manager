@@ -15,7 +15,7 @@ from sbkube.utils.hook_executor import HookExecutor
 
 @patch("sbkube.utils.hook_executor.run_command")
 @patch("sbkube.utils.hook_executor.apply_cluster_config_to_command")
-def test_validate_task_result_simple(mock_apply_config, mock_run_command):
+def test_validate_task_result_simple(mock_apply_config, mock_run_command) -> None:
     """간단한 validation (kind만 지정) 테스트."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
     mock_run_command.return_value = (
@@ -40,7 +40,7 @@ def test_validate_task_result_simple(mock_apply_config, mock_run_command):
 
 @patch("sbkube.utils.hook_executor.run_command")
 @patch("sbkube.utils.hook_executor.apply_cluster_config_to_command")
-def test_validate_task_result_wait_for_ready(mock_apply_config, mock_run_command):
+def test_validate_task_result_wait_for_ready(mock_apply_config, mock_run_command) -> None:
     """wait_for_ready=True 검증 테스트."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
     mock_run_command.return_value = (0, "condition met", "")
@@ -72,7 +72,7 @@ def test_validate_task_result_wait_for_ready(mock_apply_config, mock_run_command
 
 @patch("sbkube.utils.hook_executor.run_command")
 @patch("sbkube.utils.hook_executor.apply_cluster_config_to_command")
-def test_validate_task_result_with_conditions(mock_apply_config, mock_run_command):
+def test_validate_task_result_with_conditions(mock_apply_config, mock_run_command) -> None:
     """조건부 validation 테스트."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
     mock_run_command.return_value = (0, "condition met", "")
@@ -97,7 +97,7 @@ def test_validate_task_result_with_conditions(mock_apply_config, mock_run_comman
 
 @patch("sbkube.utils.hook_executor.run_command")
 @patch("sbkube.utils.hook_executor.apply_cluster_config_to_command")
-def test_validate_task_result_failure(mock_apply_config, mock_run_command):
+def test_validate_task_result_failure(mock_apply_config, mock_run_command) -> None:
     """Validation 실패 테스트."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
     mock_run_command.return_value = (
@@ -121,7 +121,7 @@ def test_validate_task_result_failure(mock_apply_config, mock_run_command):
     assert result is False
 
 
-def test_validate_task_result_no_validation():
+def test_validate_task_result_no_validation() -> None:
     """Validation 필드가 없는 경우 테스트."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -136,7 +136,7 @@ def test_validate_task_result_no_validation():
 # ============================================================================
 
 
-def test_check_task_dependencies_depends_on_success():
+def test_check_task_dependencies_depends_on_success() -> None:
     """depends_on 성공 테스트."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -153,7 +153,7 @@ def test_check_task_dependencies_depends_on_success():
     assert result is True
 
 
-def test_check_task_dependencies_depends_on_failure():
+def test_check_task_dependencies_depends_on_failure() -> None:
     """depends_on 실패 테스트 (의존 task 미완료)."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -172,7 +172,7 @@ def test_check_task_dependencies_depends_on_failure():
 
 @patch("sbkube.utils.hook_executor.run_command")
 @patch("sbkube.utils.hook_executor.apply_cluster_config_to_command")
-def test_check_task_dependencies_wait_for(mock_apply_config, mock_run_command):
+def test_check_task_dependencies_wait_for(mock_apply_config, mock_run_command) -> None:
     """wait_for 성공 테스트."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
     mock_run_command.return_value = (0, "condition met", "")
@@ -208,7 +208,7 @@ def test_check_task_dependencies_wait_for(mock_apply_config, mock_run_command):
 
 @patch("sbkube.utils.hook_executor.run_command")
 @patch("sbkube.utils.hook_executor.apply_cluster_config_to_command")
-def test_check_task_dependencies_wait_for_failure(mock_apply_config, mock_run_command):
+def test_check_task_dependencies_wait_for_failure(mock_apply_config, mock_run_command) -> None:
     """wait_for 실패 테스트 (timeout)."""
     mock_apply_config.side_effect = lambda cmd, *args: cmd
     mock_run_command.return_value = (1, "", "Error: timed out")
@@ -226,7 +226,7 @@ def test_check_task_dependencies_wait_for_failure(mock_apply_config, mock_run_co
     assert result is False
 
 
-def test_check_task_dependencies_no_dependency():
+def test_check_task_dependencies_no_dependency() -> None:
     """Dependency 필드가 없는 경우 테스트."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -242,7 +242,7 @@ def test_check_task_dependencies_no_dependency():
 
 
 @patch("sbkube.utils.hook_executor.HookExecutor._deploy_manifests")
-def test_execute_rollback_manifests(mock_deploy_manifests):
+def test_execute_rollback_manifests(mock_deploy_manifests) -> None:
     """Rollback manifests 실행 테스트."""
     mock_deploy_manifests.return_value = True
 
@@ -263,7 +263,7 @@ def test_execute_rollback_manifests(mock_deploy_manifests):
 
 
 @patch("sbkube.utils.hook_executor.HookExecutor._execute_single_command")
-def test_execute_rollback_commands(mock_execute_command):
+def test_execute_rollback_commands(mock_execute_command) -> None:
     """Rollback commands 실행 테스트."""
     mock_execute_command.return_value = True
 
@@ -283,7 +283,7 @@ def test_execute_rollback_commands(mock_execute_command):
     assert mock_execute_command.called
 
 
-def test_execute_rollback_manual():
+def test_execute_rollback_manual() -> None:
     """Rollback on_failure=manual 테스트 (실행 안 함)."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -300,7 +300,7 @@ def test_execute_rollback_manual():
     assert result is True  # manual이므로 자동 실행 안 함
 
 
-def test_execute_rollback_never():
+def test_execute_rollback_never() -> None:
     """Rollback on_failure=never 테스트."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -317,7 +317,7 @@ def test_execute_rollback_never():
     assert result is True
 
 
-def test_execute_rollback_disabled():
+def test_execute_rollback_disabled() -> None:
     """Rollback enabled=False 테스트."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -333,7 +333,7 @@ def test_execute_rollback_disabled():
     assert result is True  # enabled=False이므로 실행 안 함
 
 
-def test_execute_rollback_no_rollback():
+def test_execute_rollback_no_rollback() -> None:
     """Rollback 필드가 없는 경우 테스트."""
     executor = HookExecutor(base_dir=Path("/test"), dry_run=False)
 
@@ -354,7 +354,7 @@ def test_execute_rollback_no_rollback():
 @patch("sbkube.utils.hook_executor.HookExecutor._execute_rollback")
 def test_execute_hook_tasks_with_phase3(
     mock_rollback, mock_check_deps, mock_validate, mock_execute_task
-):
+) -> None:
     """Phase 3 기능 통합 테스트 (전체 워크플로우)."""
     # 모든 단계 성공
     mock_check_deps.return_value = True
@@ -393,7 +393,7 @@ def test_execute_hook_tasks_with_phase3(
 @patch("sbkube.utils.hook_executor.HookExecutor._execute_rollback")
 def test_execute_hook_tasks_dependency_failure(
     mock_rollback, mock_check_deps, mock_validate, mock_execute_task
-):
+) -> None:
     """Dependency 실패 시 rollback 실행 테스트."""
     # Dependency 체크 실패
     mock_check_deps.side_effect = [True, False]  # task-b의 dependency 실패
@@ -425,7 +425,7 @@ def test_execute_hook_tasks_dependency_failure(
 @patch("sbkube.utils.hook_executor.HookExecutor._execute_rollback")
 def test_execute_hook_tasks_validation_failure(
     mock_rollback, mock_check_deps, mock_validate, mock_execute_task
-):
+) -> None:
     """Validation 실패 시 rollback 실행 테스트."""
     mock_check_deps.return_value = True
     mock_execute_task.return_value = True

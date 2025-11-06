@@ -62,7 +62,7 @@ class TestYamlGitDependencies:
 
         return project
 
-    def test_config_with_repo_variables(self, project_dir):
+    def test_config_with_repo_variables(self, project_dir) -> None:
         """Test config.yaml with ${repos.app-name} variables."""
         app_dir = project_dir / "app_olm"
 
@@ -107,7 +107,7 @@ class TestYamlGitDependencies:
         assert "${repos.olm}" in olm_operator.manifests[0]
         assert "${repos.olm}" in olm_operator.manifests[1]
 
-    def test_variable_expansion_with_real_paths(self, project_dir):
+    def test_variable_expansion_with_real_paths(self, project_dir) -> None:
         """Test variable expansion resolves to real file paths."""
         from sbkube.utils.path_resolver import expand_repo_variables
 
@@ -134,7 +134,7 @@ class TestYamlGitDependencies:
         content = Path(expanded).read_text()
         assert "CustomResourceDefinition" in content
 
-    def test_backward_compatibility_relative_paths(self, project_dir):
+    def test_backward_compatibility_relative_paths(self, project_dir) -> None:
         """Test that old relative path syntax still works."""
         app_dir = project_dir / "app_olm"
 
@@ -172,7 +172,7 @@ class TestYamlGitDependencies:
 class TestErrorHandling:
     """Test error handling for invalid configurations."""
 
-    def test_invalid_variable_syntax_detected(self):
+    def test_invalid_variable_syntax_detected(self) -> None:
         """Invalid variable syntax should be caught at validation."""
         from pydantic import ValidationError
 
@@ -192,7 +192,7 @@ class TestErrorHandling:
         with pytest.raises((ValidationError, SbkubeError)):
             SBKubeConfig(**config_data)
 
-    def test_nonexistent_app_reference(self):
+    def test_nonexistent_app_reference(self) -> None:
         """Reference to non-existent git app should fail at expansion time."""
         from sbkube.exceptions import SbkubeError
         from sbkube.utils.path_resolver import expand_repo_variables
@@ -210,7 +210,7 @@ class TestErrorHandling:
         with pytest.raises(SbkubeError, match="non-existent app"):
             expand_repo_variables(manifest_path, repos_dir, apps_config)
 
-    def test_non_git_app_reference(self):
+    def test_non_git_app_reference(self) -> None:
         """Reference to non-git type app should fail."""
         from sbkube.exceptions import SbkubeError
         from sbkube.utils.path_resolver import expand_repo_variables

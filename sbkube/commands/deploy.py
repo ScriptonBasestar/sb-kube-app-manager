@@ -120,7 +120,7 @@ def deploy_helm_app(
     # Progress tracking setup
     current_step = 0
 
-    def _update_progress(description: str):
+    def _update_progress(description: str) -> None:
         nonlocal current_step
         current_step += 1
         if progress_tracker:
@@ -464,7 +464,7 @@ def deploy_action_app(
         action_namespace = action.namespace or namespace
 
         # 경로 해석 (URL 또는 로컬 파일)
-        if action_path.startswith("http://") or action_path.startswith("https://"):
+        if action_path.startswith(("http://", "https://")):
             file_path = action_path
         else:
             file_path = str(app_config_dir / action_path)
@@ -754,7 +754,7 @@ def cmd(
     config_file_name: str,
     app_name: str | None,
     dry_run: bool,
-):
+) -> None:
     """SBKube deploy 명령어.
 
     애플리케이션을 Kubernetes 클러스터에 배포합니다:
@@ -786,7 +786,7 @@ def cmd(
             BASE_DIR, app_config_dir_name, config_file_name
         )
     except ValueError:
-        raise click.Abort()
+        raise click.Abort
 
     # 각 앱 그룹 처리
     overall_success = True
@@ -1108,7 +1108,7 @@ def cmd(
             next_steps=["Check error messages above and fix configuration"],
             errors=None,  # OutputManager will use accumulated errors
         )
-        raise click.Abort()
+        raise click.Abort
     output.finalize(
         status="success",
         summary={"app_groups_processed": len(app_config_dirs), "status": "success"},

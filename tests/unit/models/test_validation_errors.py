@@ -1,5 +1,4 @@
-"""Tests for validation errors and edge cases.
-"""
+"""Tests for validation errors and edge cases."""
 
 import pytest
 
@@ -9,7 +8,7 @@ from sbkube.models.validators import ValidatorMixin, validate_spec_fields
 class TestValidators:
     """Test custom validators."""
 
-    def test_kubernetes_name_validation(self):
+    def test_kubernetes_name_validation(self) -> None:
         """Test Kubernetes naming convention validation."""
         # Valid names
         assert ValidatorMixin.validate_kubernetes_name("my-app", "name") == "my-app"
@@ -29,7 +28,7 @@ class TestValidators:
         with pytest.raises(ValueError, match="must start and end with"):
             ValidatorMixin.validate_kubernetes_name("app-", "name")
 
-    def test_namespace_validation(self):
+    def test_namespace_validation(self) -> None:
         """Test namespace validation."""
         # Valid namespaces
         assert ValidatorMixin.validate_namespace("default") == "default"
@@ -40,7 +39,7 @@ class TestValidators:
         with pytest.raises(ValueError, match="must be less than 63"):
             ValidatorMixin.validate_namespace("a" * 64)
 
-    def test_helm_version_validation(self):
+    def test_helm_version_validation(self) -> None:
         """Test Helm version format validation."""
         # Valid versions
         assert ValidatorMixin.validate_helm_version("1.2.3") == "1.2.3"
@@ -54,7 +53,7 @@ class TestValidators:
         with pytest.raises(ValueError, match="Invalid Helm version"):
             ValidatorMixin.validate_helm_version("1.2")
 
-    def test_url_validation(self):
+    def test_url_validation(self) -> None:
         """Test URL validation."""
         # Valid URLs
         assert (
@@ -73,7 +72,7 @@ class TestValidators:
         with pytest.raises(ValueError, match="URL must start with"):
             ValidatorMixin.validate_url("ftp://example.com", ["http", "https"])
 
-    def test_spec_fields_validation(self):
+    def test_spec_fields_validation(self) -> None:
         """Test spec fields validation."""
         # Valid specs
         specs = validate_spec_fields("helm", {"repo": "grafana", "chart": "grafana"})

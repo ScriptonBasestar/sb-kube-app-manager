@@ -95,23 +95,29 @@ def resolve_cluster_config(
 
         # kubeconfig 파일 존재 확인
         if not Path(kubeconfig).exists():
-            raise ClusterConfigError(
+            msg = (
                 f"Kubeconfig file not found: {kubeconfig}\n"
-                "Please check the --kubeconfig option.",
+                "Please check the --kubeconfig option."
+            )
+            raise ClusterConfigError(
+                msg,
             )
 
         return kubeconfig, context
 
     # CLI 부분 지정 에러
     if cli_kubeconfig or cli_context:
-        raise ClusterConfigError(
+        msg = (
             "Both --kubeconfig and --context must be specified together.\n"
-            f"Given: --kubeconfig={cli_kubeconfig}, --context={cli_context}",
+            f"Given: --kubeconfig={cli_kubeconfig}, --context={cli_context}"
+        )
+        raise ClusterConfigError(
+            msg,
         )
 
     # sources.yaml 필수 검증
     if not sources:
-        raise ClusterConfigError(
+        msg = (
             "❌ sources.yaml file is required but not found.\n\n"
             "SBKube requires explicit cluster configuration to prevent accidental deployments.\n\n"
             "📝 Please create sources.yaml with cluster settings:\n"
@@ -119,7 +125,10 @@ def resolve_cluster_config(
             "  kubeconfig: ~/.kube/config\n"
             "  kubeconfig_context: my-context\n\n"
             "💡 Or use CLI options:\n"
-            "  sbkube deploy --kubeconfig <path> --context <name>",
+            "  sbkube deploy --kubeconfig <path> --context <name>"
+        )
+        raise ClusterConfigError(
+            msg,
         )
 
     # sources.yaml에서 kubeconfig/context 필수 확인
@@ -130,7 +139,7 @@ def resolve_cluster_config(
         if not sources.kubeconfig_context:
             missing_fields.append("kubeconfig_context")
 
-        raise ClusterConfigError(
+        msg = (
             f"❌ Cluster configuration is incomplete in sources.yaml.\n\n"
             f"Missing required fields: {', '.join(missing_fields)}\n\n"
             f"Current values:\n"
@@ -139,7 +148,10 @@ def resolve_cluster_config(
             f"📝 Please update sources.yaml:\n"
             f"  cluster: production\n"
             f"  kubeconfig: ~/.kube/prod-config\n"
-            f"  kubeconfig_context: prod-cluster",
+            f"  kubeconfig_context: prod-cluster"
+        )
+        raise ClusterConfigError(
+            msg,
         )
 
     # kubeconfig 경로 확장
@@ -148,13 +160,16 @@ def resolve_cluster_config(
 
     # kubeconfig 파일 존재 확인
     if not Path(kubeconfig).exists():
-        raise ClusterConfigError(
+        msg = (
             f"❌ Kubeconfig file not found: {kubeconfig}\n"
             f"   (from sources.yaml: {sources.kubeconfig})\n\n"
             "Please check:\n"
             "  1. File path is correct in sources.yaml\n"
             "  2. File exists and is accessible\n"
-            f"  3. Run: ls -la {kubeconfig}",
+            f"  3. Run: ls -la {kubeconfig}"
+        )
+        raise ClusterConfigError(
+            msg,
         )
 
     # 성공 - 설정 정보 표시

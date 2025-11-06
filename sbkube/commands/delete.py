@@ -61,7 +61,7 @@ def cmd(
     skip_not_found: bool,
     dry_run: bool,
     config_file_name: str | None,
-):
+) -> None:
     """config.yaml/toml에 정의된 애플리케이션을 삭제합니다 (Helm 릴리스, Kubectl 리소스 등)."""
     if dry_run:
         console.print(
@@ -81,7 +81,7 @@ def cmd(
         console.print(
             f"[red]❌ 앱 설정 디렉토리가 존재하지 않습니다: {APP_CONFIG_DIR}[/red]",
         )
-        raise click.Abort()
+        raise click.Abort
 
     # Load sources.yaml and resolve cluster configuration
     sources_file_name = ctx.obj.get("sources_file", "sources.yaml")
@@ -97,7 +97,7 @@ def cmd(
             sources = SourceScheme(**sources_data)
         except Exception as e:
             console.print(f"[red]❌ Invalid sources file: {e}[/red]")
-            raise click.Abort()
+            raise click.Abort
 
     # Resolve cluster configuration (kubeconfig + context)
     kubeconfig = None
@@ -111,7 +111,7 @@ def cmd(
             )
         except Exception as e:
             console.print(f"[red]❌ Cluster configuration error: {e}[/red]")
-            raise click.Abort()
+            raise click.Abort
 
     config_file_path = None
     if config_file_name:
@@ -120,7 +120,7 @@ def cmd(
             console.print(
                 f"[red]❌ 지정된 설정 파일을 찾을 수 없습니다: {config_file_path}[/red]",
             )
-            raise click.Abort()
+            raise click.Abort
     else:
         # 1차 시도: APP_CONFIG_DIR에서 찾기
         for ext in [".yaml", ".yml", ".toml"]:
@@ -141,7 +141,7 @@ def cmd(
             console.print(
                 f"[red]❌ 앱 목록 설정 파일을 찾을 수 없습니다: {APP_CONFIG_DIR}/config.[yaml|yml|toml] 또는 {BASE_DIR}/config.[yaml|yml|toml][/red]",
             )
-            raise click.Abort()
+            raise click.Abort
     console.print(f"[green]ℹ️ 앱 목록 설정 파일 사용: {config_file_path}[/green]")
 
     # SBKubeConfig 모델로 로드
@@ -152,10 +152,10 @@ def cmd(
         console.print("[red]❌ 설정 파일 검증 실패:[/red]")
         for error in e.errors():
             console.print(f"  - {error['loc']}: {error['msg']}")
-        raise click.Abort()
+        raise click.Abort
     except Exception as e:
         console.print(f"[red]❌ 설정 파일 로드 실패: {e}[/red]")
-        raise click.Abort()
+        raise click.Abort
 
     global_namespace_from_config = config.namespace
 
@@ -170,7 +170,7 @@ def cmd(
             console.print(
                 f"[red]❌ 삭제 대상 앱 '{target_app_name}'을(를) 설정 파일에서 찾을 수 없습니다.[/red]",
             )
-            raise click.Abort()
+            raise click.Abort
         apps_to_process.append((target_app_name, config.apps[target_app_name]))
     else:
         apps_to_process = list(config.apps.items())

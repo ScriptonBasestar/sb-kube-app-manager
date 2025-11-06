@@ -10,7 +10,7 @@ from sbkube.utils.logger import logger
 
 
 class InitCommand(BaseCommand):
-    """프로젝트 초기화 명령어"""
+    """프로젝트 초기화 명령어."""
 
     def __init__(
         self,
@@ -18,15 +18,15 @@ class InitCommand(BaseCommand):
         template_name: str = "basic",
         project_name: str | None = None,
         interactive: bool = True,
-    ):
+    ) -> None:
         self.base_dir = Path(base_dir).resolve()
         self.template_name = template_name
         self.project_name = project_name
         self.interactive = interactive
         self.template_vars = {}
 
-    def execute(self):
-        """프로젝트 초기화 실행"""
+    def execute(self) -> None:
+        """프로젝트 초기화 실행."""
         logger.info("🚀 새 프로젝트 초기화를 시작합니다...")
 
         # 1. 프로젝트 정보 수집
@@ -50,15 +50,15 @@ class InitCommand(BaseCommand):
         logger.success("✅ 프로젝트 초기화가 완료되었습니다!")
         self._show_next_steps()
 
-    def _collect_project_info(self):
-        """프로젝트 정보 수집"""
+    def _collect_project_info(self) -> None:
+        """프로젝트 정보 수집."""
         if self.interactive:
             self._interactive_input()
         else:
             self._set_default_values()
 
-    def _interactive_input(self):
-        """대화형 입력"""
+    def _interactive_input(self) -> None:
+        """대화형 입력."""
         logger.info("📝 프로젝트 정보를 입력해주세요:")
 
         # 기본 정보
@@ -102,8 +102,8 @@ class InitCommand(BaseCommand):
         if click.confirm("Prometheus 모니터링을 설정하시겠습니까?", default=False):
             self.template_vars["use_prometheus"] = True
 
-    def _collect_kubeconfig_info(self):
-        """Kubeconfig 및 context 정보 수집 (대화형)"""
+    def _collect_kubeconfig_info(self) -> None:
+        """Kubeconfig 및 context 정보 수집 (대화형)."""
         from sbkube.utils.cli_check import get_available_contexts
 
         logger.info("\n🔧 Kubernetes 클러스터 설정:")
@@ -177,8 +177,8 @@ class InitCommand(BaseCommand):
             }
         )
 
-    def _set_default_values(self):
-        """기본값 설정"""
+    def _set_default_values(self) -> None:
+        """기본값 설정."""
         from sbkube.utils.cli_check import get_available_contexts
 
         # 기본 kubeconfig 및 context 감지 시도
@@ -207,16 +207,17 @@ class InitCommand(BaseCommand):
             }
         )
 
-    def _validate_template(self):
-        """템플릿 존재 확인"""
+    def _validate_template(self) -> None:
+        """템플릿 존재 확인."""
         template_dir = self._get_template_dir()
         if not template_dir.exists():
+            msg = f"템플릿 '{self.template_name}'을 찾을 수 없습니다: {template_dir}"
             raise ValueError(
-                f"템플릿 '{self.template_name}'을 찾을 수 없습니다: {template_dir}"
+                msg
             )
 
-    def _create_directory_structure(self):
-        """디렉토리 구조 생성"""
+    def _create_directory_structure(self) -> None:
+        """디렉토리 구조 생성."""
         directories = [
             "config",
             "values",
@@ -232,8 +233,8 @@ class InitCommand(BaseCommand):
             dir_path.mkdir(parents=True, exist_ok=True)
             logger.verbose(f"디렉토리 생성: {dir_path}")
 
-    def _render_templates(self):
-        """템플릿 렌더링 및 파일 생성"""
+    def _render_templates(self) -> None:
+        """템플릿 렌더링 및 파일 생성."""
         template_dir = self._get_template_dir()
         env = Environment(loader=FileSystemLoader(template_dir), autoescape=True)
 
@@ -255,8 +256,8 @@ class InitCommand(BaseCommand):
 
     def _render_single_template(
         self, env: Environment, template_file: str, output_file: str
-    ):
-        """단일 템플릿 렌더링"""
+    ) -> None:
+        """단일 템플릿 렌더링."""
         try:
             template = env.get_template(template_file)
             content = template.render(**self.template_vars)
@@ -273,8 +274,8 @@ class InitCommand(BaseCommand):
             logger.error(f"❌ 템플릿 렌더링 실패 ({template_file}): {e}")
             raise
 
-    def _create_environment_configs(self, env: Environment):
-        """환경별 설정 파일 생성"""
+    def _create_environment_configs(self, env: Environment) -> None:
+        """환경별 설정 파일 생성."""
         base_template = env.get_template("config.yaml.j2")
 
         for environment in self.template_vars.get("environments", []):
@@ -295,8 +296,8 @@ class InitCommand(BaseCommand):
 
             logger.info(f"✅ 환경 설정 생성됨: {output_file}")
 
-    def _create_readme(self):
-        """README 파일 생성"""
+    def _create_readme(self) -> None:
+        """README 파일 생성."""
         env_section = ""
         if self.template_vars.get("create_environments"):
             env_section = "- `config/config-*.yaml` - 환경별 설정"
@@ -354,7 +355,7 @@ sbkube validate
 
         logger.info("✅ README.md 생성됨")
 
-    def _update_gitignore(self):
+    def _update_gitignore(self) -> None:
         """Add .sbkube/ to .gitignore file.
 
         Creates .gitignore if it doesn't exist, or appends to existing file.
@@ -392,15 +393,15 @@ sbkube validate
             logger.info("💡 Please manually add '.sbkube/' to your .gitignore file")
 
     def _get_template_dir(self) -> Path:
-        """템플릿 디렉토리 경로 반환"""
+        """템플릿 디렉토리 경로 반환."""
         # 패키지 내 템플릿 디렉토리
         import sbkube
 
         package_dir = Path(sbkube.__file__).parent
         return package_dir / "templates" / self.template_name
 
-    def _show_next_steps(self):
-        """다음 단계 안내"""
+    def _show_next_steps(self) -> None:
+        """다음 단계 안내."""
         logger.info("\n🎉 프로젝트가 성공적으로 초기화되었습니다!")
         logger.info("\n💡 다음 단계:")
         logger.info("   1. 설정 파일을 검토하고 필요에 따라 수정하세요")
@@ -437,8 +438,8 @@ sbkube validate
 )
 @click.option("--force", is_flag=True, help="기존 파일이 있어도 덮어쓰기")
 @click.pass_context
-def cmd(ctx, template, name, non_interactive, force):
-    """새 프로젝트를 초기화합니다.
+def cmd(ctx, template, name, non_interactive, force) -> None:
+    r"""새 프로젝트를 초기화합니다.
 
     기본 설정 파일들과 디렉토리 구조를 자동으로 생성하여
     새 프로젝트를 빠르게 시작할 수 있도록 도와줍니다.

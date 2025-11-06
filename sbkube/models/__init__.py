@@ -1,4 +1,4 @@
-"""SBKube Models"""
+"""SBKube Models."""
 
 from .config_model import (
     ActionApp,

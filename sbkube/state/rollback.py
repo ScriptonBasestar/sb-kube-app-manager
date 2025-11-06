@@ -30,7 +30,7 @@ class RollbackManager:
     using tracked deployment information.
     """
 
-    def __init__(self, db_path: Path | None = None):
+    def __init__(self, db_path: Path | None = None) -> None:
         """Initialize rollback manager.
 
         Args:
@@ -55,8 +55,9 @@ class RollbackManager:
         # Get current deployment details
         current_deployment = self.db.get_deployment(rollback_request.deployment_id)
         if not current_deployment:
+            msg = f"Deployment not found: {rollback_request.deployment_id}"
             raise RollbackError(
-                f"Deployment not found: {rollback_request.deployment_id}",
+                msg,
             )
 
         # Get target deployment if specified
@@ -66,8 +67,9 @@ class RollbackManager:
                 rollback_request.target_deployment_id,
             )
             if not target_deployment:
+                msg = f"Target deployment not found: {rollback_request.target_deployment_id}"
                 raise RollbackError(
-                    f"Target deployment not found: {rollback_request.target_deployment_id}",
+                    msg,
                 )
 
         # Validate rollback is possible
@@ -92,7 +94,7 @@ class RollbackManager:
         current_deployment: DeploymentDetail,
         target_deployment: DeploymentDetail | None,
         request: RollbackRequest,
-    ):
+    ) -> None:
         """Validate that rollback can be performed.
 
         Args:
@@ -108,23 +110,27 @@ class RollbackManager:
         if current_deployment.status not in [
             DeploymentStatus.SUCCESS,
             DeploymentStatus.PARTIALLY_FAILED,
-        ]:
-            if not request.force:
-                raise RollbackError(
-                    f"Cannot rollback deployment with status: {current_deployment.status}. "
-                    "Use --force to override.",
-                )
+        ] and not request.force:
+            msg = (
+                f"Cannot rollback deployment with status: {current_deployment.status}. "
+                "Use --force to override."
+            )
+            raise RollbackError(
+                msg,
+            )
 
         # Check if target deployment exists and is valid
         if target_deployment:
             if target_deployment.cluster != current_deployment.cluster:
+                msg = "Cannot rollback to deployment from different cluster"
                 raise RollbackError(
-                    "Cannot rollback to deployment from different cluster",
+                    msg,
                 )
 
             if target_deployment.timestamp >= current_deployment.timestamp:
+                msg = "Target deployment is newer than current deployment"
                 raise RollbackError(
-                    "Target deployment is newer than current deployment",
+                    msg,
                 )
 
     def _simulate_rollback(
@@ -256,7 +262,8 @@ class RollbackManager:
                 results["success"] = False
 
                 if not request.force:
-                    raise RollbackError(f"Rollback failed for app {app['name']}: {e}")
+                    msg = f"Rollback failed for app {app['name']}: {e}"
+                    raise RollbackError(msg)
 
         return results
 
@@ -351,7 +358,7 @@ class RollbackManager:
                         )
 
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         f"Failed to rollback resource {resource.kind}/{resource.name}: {e}",
                     )
                     result["success"] = False
@@ -375,7 +382,7 @@ class RollbackManager:
         release_name: str,
         namespace: str,
         current_revision: int,
-    ):
+    ) -> None:
         """Rollback a Helm release to previous revision.
 
         Args:
@@ -396,7 +403,8 @@ class RollbackManager:
             subprocess.run(cmd, check=True, capture_output=True, text=True)
             logger.success(f"Helm release rolled back: {release_name}")
         except subprocess.CalledProcessError as e:
-            raise RollbackError(f"Helm rollback failed: {e.stderr}")
+            msg = f"Helm rollback failed: {e.stderr}"
+            raise RollbackError(msg)
 
     def _delete_resource(
         self,
@@ -404,7 +412,7 @@ class RollbackManager:
         kind: str,
         name: str,
         namespace: str | None = None,
-    ):
+    ) -> None:
         """Delete a Kubernetes resource.
 
         Args:
@@ -428,9 +436,10 @@ class RollbackManager:
             if "NotFound" in e.stderr:
                 logger.warning(f"Resource not found: {kind}/{name}")
             else:
-                raise RollbackError(f"Failed to delete resource: {e.stderr}")
+                msg = f"Failed to delete resource: {e.stderr}"
+                raise RollbackError(msg)
 
-    def _restore_resource(self, resource_state: dict[str, Any]):
+    def _restore_resource(self, resource_state: dict[str, Any]) -> None:
         """Restore a resource to its previous state.
 
         Args:
@@ -458,7 +467,8 @@ class RollbackManager:
             logger.success(f"Resource restored: {kind}/{name}")
 
         except subprocess.CalledProcessError as e:
-            raise RollbackError(f"Failed to restore resource: {e.stderr}")
+            msg = f"Failed to restore resource: {e.stderr}"
+            raise RollbackError(msg)
         finally:
             # Clean up temporary file
             Path(temp_file).unlink(missing_ok=True)

@@ -114,7 +114,7 @@ def build_sbkube_annotations(
 
 
 def build_helm_set_labels(labels: dict[str, str]) -> list[str]:
-    """Convert labels dict to Helm --set arguments.
+    r"""Convert labels dict to Helm --set arguments.
 
     This builds --set-string arguments for injecting labels into Helm charts
     using the commonLabels pattern.
@@ -146,7 +146,7 @@ def build_helm_set_labels(labels: dict[str, str]) -> list[str]:
 
 
 def build_helm_set_annotations(annotations: dict[str, str]) -> list[str]:
-    """Convert annotations dict to Helm --set arguments.
+    r"""Convert annotations dict to Helm --set arguments.
 
     This builds --set-string arguments for injecting annotations into Helm charts
     using the commonAnnotations pattern.

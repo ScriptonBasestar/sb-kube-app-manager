@@ -16,7 +16,7 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 class TestDeployExamples:
     """Test deploy command with various example configurations."""
 
-    def test_deploy_install_yaml_dry_run(self, runner, examples_dir, tmp_path):
+    def test_deploy_install_yaml_dry_run(self, runner, examples_dir, tmp_path) -> None:
         """Test deploy with YAML manifest installation (dry-run).
 
         This test verifies that deploy correctly handles YAML manifests
@@ -49,7 +49,7 @@ class TestDeployExamples:
         # Verify output
         assert "deploy" in result.output.lower() or "배포" in result.output
 
-    def test_deploy_install_action_dry_run(self, runner, examples_dir, tmp_path):
+    def test_deploy_install_action_dry_run(self, runner, examples_dir, tmp_path) -> None:
         """Test deploy with custom action installation (dry-run).
 
         This test verifies that deploy correctly handles custom actions
@@ -82,7 +82,7 @@ class TestDeployExamples:
         # Verify output
         assert "deploy" in result.output.lower() or "배포" in result.output
 
-    def test_deploy_exec_dry_run(self, runner, examples_dir, tmp_path):
+    def test_deploy_exec_dry_run(self, runner, examples_dir, tmp_path) -> None:
         """Test deploy with exec command (dry-run).
 
         This test verifies that deploy correctly handles exec commands

@@ -20,7 +20,7 @@ from sbkube.utils.logger import logger
 
 
 class ValidationMode(Enum):
-    """검증 모드"""
+    """검증 모드."""
 
     BASIC = "basic"
     COMPREHENSIVE = "comprehensive"
@@ -30,7 +30,7 @@ class ValidationMode(Enum):
 
 
 class ValidationSeverity(Enum):
-    """검증 심각도"""
+    """검증 심각도."""
 
     CRITICAL = "critical"
     HIGH = "high"
@@ -41,7 +41,7 @@ class ValidationSeverity(Enum):
 
 @dataclass
 class ValidationContext:
-    """검증 컨텍스트"""
+    """검증 컨텍스트."""
 
     config_dir: str = "config"
     base_dir: str = "."
@@ -53,7 +53,7 @@ class ValidationContext:
 
 @dataclass
 class ValidationResult:
-    """검증 결과 (DiagnosticResult 확장)"""
+    """검증 결과 (DiagnosticResult 확장)."""
 
     check_name: str
     category: str  # configuration, environment, dependencies, pre-deployment
@@ -70,12 +70,12 @@ class ValidationResult:
 
     @property
     def is_fixable(self) -> bool:
-        """자동 수정 가능 여부"""
+        """자동 수정 가능 여부."""
         return self.fix_command is not None
 
     @property
     def icon(self) -> str:
-        """상태 아이콘"""
+        """상태 아이콘."""
         icons = {
             DiagnosticLevel.SUCCESS: "🟢",
             DiagnosticLevel.WARNING: "🟡",
@@ -86,7 +86,7 @@ class ValidationResult:
 
     @property
     def severity_icon(self) -> str:
-        """심각도 아이콘"""
+        """심각도 아이콘."""
         icons = {
             ValidationSeverity.CRITICAL: "🚨",
             ValidationSeverity.HIGH: "⚠️",
@@ -97,7 +97,7 @@ class ValidationResult:
         return icons[self.severity]
 
     def to_dict(self) -> dict[str, Any]:
-        """딕셔너리로 변환"""
+        """딕셔너리로 변환."""
         return {
             "check_name": self.check_name,
             "category": self.category,
@@ -120,7 +120,7 @@ class ValidationResult:
         category: str = "general",
         severity: ValidationSeverity = ValidationSeverity.MEDIUM,
     ) -> "ValidationResult":
-        """DiagnosticResult에서 변환"""
+        """DiagnosticResult에서 변환."""
         return cls(
             check_name=diagnostic_result.check_name,
             category=category,
@@ -135,18 +135,18 @@ class ValidationResult:
 
 
 class ValidationCheck(DiagnosticCheck):
-    """검증 체크 기본 클래스 (DiagnosticCheck 확장)"""
+    """검증 체크 기본 클래스 (DiagnosticCheck 확장)."""
 
-    def __init__(self, name: str, description: str, category: str = "general"):
+    def __init__(self, name: str, description: str, category: str = "general") -> None:
         super().__init__(name, description)
         self.category = category
 
     @abstractmethod
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """검증 실행 (확장된 컨텍스트 사용)"""
+        """검증 실행 (확장된 컨텍스트 사용)."""
 
     async def run(self) -> DiagnosticResult:
-        """기존 DiagnosticCheck 인터페이스 호환성"""
+        """기존 DiagnosticCheck 인터페이스 호환성."""
         # 기본 컨텍스트로 실행
         context = ValidationContext()
         validation_result = await self.run_validation(context)
@@ -168,14 +168,14 @@ class ValidationCheck(DiagnosticCheck):
         message: str,
         severity: ValidationSeverity = ValidationSeverity.MEDIUM,
         details: str = "",
-        recommendation: str = None,
-        fix_command: str = None,
-        fix_description: str = None,
+        recommendation: str | None = None,
+        fix_command: str | None = None,
+        fix_description: str | None = None,
         risk_level: str = "low",
-        affected_components: list[str] = None,
-        metadata: dict[str, Any] = None,
+        affected_components: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ValidationResult:
-        """검증 결과 생성"""
+        """검증 결과 생성."""
         return ValidationResult(
             check_name=self.name,
             category=self.category,
@@ -193,9 +193,9 @@ class ValidationCheck(DiagnosticCheck):
 
 
 class ValidationReport:
-    """검증 보고서"""
+    """검증 보고서."""
 
-    def __init__(self, validation_mode: ValidationMode, context: ValidationContext):
+    def __init__(self, validation_mode: ValidationMode, context: ValidationContext) -> None:
         self.validation_mode = validation_mode
         self.context = context
         self.results: list[ValidationResult] = []
@@ -203,16 +203,16 @@ class ValidationReport:
         self.end_time: datetime | None = None
         self.metadata: dict[str, Any] = {}
 
-    def add_result(self, result: ValidationResult):
-        """검증 결과 추가"""
+    def add_result(self, result: ValidationResult) -> None:
+        """검증 결과 추가."""
         self.results.append(result)
 
-    def add_results(self, results: list[ValidationResult]):
-        """여러 검증 결과 추가"""
+    def add_results(self, results: list[ValidationResult]) -> None:
+        """여러 검증 결과 추가."""
         self.results.extend(results)
 
     def get_summary(self) -> dict[str, Any]:
-        """검증 요약 정보"""
+        """검증 요약 정보."""
         summary = {
             "validation_mode": self.validation_mode.value,
             "total_checks": len(self.results),
@@ -262,25 +262,25 @@ class ValidationReport:
         return summary
 
     def get_results_by_category(self, category: str) -> list[ValidationResult]:
-        """카테고리별 결과 반환"""
+        """카테고리별 결과 반환."""
         return [r for r in self.results if r.category == category]
 
     def get_results_by_level(self, level: DiagnosticLevel) -> list[ValidationResult]:
-        """레벨별 결과 반환"""
+        """레벨별 결과 반환."""
         return [r for r in self.results if r.level == level]
 
     def get_results_by_severity(
         self, severity: ValidationSeverity
     ) -> list[ValidationResult]:
-        """심각도별 결과 반환"""
+        """심각도별 결과 반환."""
         return [r for r in self.results if r.severity == severity]
 
     def get_fixable_results(self) -> list[ValidationResult]:
-        """자동 수정 가능한 결과 반환"""
+        """자동 수정 가능한 결과 반환."""
         return [r for r in self.results if r.is_fixable]
 
     def get_critical_results(self) -> list[ValidationResult]:
-        """심각한 문제 결과 반환"""
+        """심각한 문제 결과 반환."""
         return [
             r
             for r in self.results
@@ -289,12 +289,12 @@ class ValidationReport:
         ]
 
     def is_deployment_ready(self) -> bool:
-        """배포 준비 상태 확인"""
+        """배포 준비 상태 확인."""
         summary = self.get_summary()
         return summary["deployment_ready"]
 
     def to_dict(self) -> dict[str, Any]:
-        """딕셔너리로 변환"""
+        """딕셔너리로 변환."""
         return {
             "validation_mode": self.validation_mode.value,
             "context": {
@@ -312,20 +312,20 @@ class ValidationReport:
 
 
 class ValidationEngine(DiagnosticEngine):
-    """검증 엔진 (DiagnosticEngine 확장)"""
+    """검증 엔진 (DiagnosticEngine 확장)."""
 
     def __init__(
         self,
         console: Console = None,
         validation_mode: ValidationMode = ValidationMode.BASIC,
-    ):
+    ) -> None:
         super().__init__(console)
         self.validation_mode = validation_mode
         self.validators: list[ValidationCheck] = []
         self.current_report: ValidationReport | None = None
 
-    def register_validator(self, validator: ValidationCheck):
-        """검증기 등록 (DiagnosticCheck 호환성 유지)"""
+    def register_validator(self, validator: ValidationCheck) -> None:
+        """검증기 등록 (DiagnosticCheck 호환성 유지)."""
         self.validators.append(validator)
         # 부모 클래스의 checks에도 추가 (호환성)
         super().register_check(validator)
@@ -333,7 +333,7 @@ class ValidationEngine(DiagnosticEngine):
     async def run_validation_suite(
         self, context: ValidationContext, show_progress: bool = True
     ) -> ValidationReport:
-        """검증 스위트 실행"""
+        """검증 스위트 실행."""
         # 새 보고서 생성
         self.current_report = ValidationReport(self.validation_mode, context)
         self.current_report.start_time = datetime.now()
@@ -404,7 +404,7 @@ class ValidationEngine(DiagnosticEngine):
     def _validation_to_diagnostic_result(
         self, validation_result: ValidationResult
     ) -> DiagnosticResult:
-        """ValidationResult를 DiagnosticResult로 변환"""
+        """ValidationResult를 DiagnosticResult로 변환."""
         return DiagnosticResult(
             check_name=validation_result.check_name,
             level=validation_result.level,
@@ -415,8 +415,8 @@ class ValidationEngine(DiagnosticEngine):
             metadata=validation_result.metadata,
         )
 
-    def display_validation_results(self, detailed: bool = False):
-        """검증 결과 표시"""
+    def display_validation_results(self, detailed: bool = False) -> None:
+        """검증 결과 표시."""
         if not self.current_report:
             self.console.print("❌ 검증 결과가 없습니다.")
             return
@@ -444,8 +444,8 @@ class ValidationEngine(DiagnosticEngine):
         if summary["fixable_count"] > 0:
             self._display_validation_fix_suggestions()
 
-    def _display_validation_header(self, summary: dict[str, Any]):
-        """검증 헤더 표시"""
+    def _display_validation_header(self, summary: dict[str, Any]) -> None:
+        """검증 헤더 표시."""
         mode_descriptions = {
             ValidationMode.BASIC.value: "기본 검증",
             ValidationMode.COMPREHENSIVE.value: "종합 검증",
@@ -461,8 +461,8 @@ class ValidationEngine(DiagnosticEngine):
         if summary["duration_seconds"] > 0:
             self.console.print(f"실행 시간: {summary['duration_seconds']:.2f}초")
 
-    def _display_validation_summary(self, summary: dict[str, Any]):
-        """검증 요약 표시"""
+    def _display_validation_summary(self, summary: dict[str, Any]) -> None:
+        """검증 요약 표시."""
         table = Table(show_header=False, box=None)
         table.add_column("상태", style="bold")
         table.add_column("개수", justify="right")
@@ -485,8 +485,8 @@ class ValidationEngine(DiagnosticEngine):
         if summary["fixable_count"] > 0:
             self.console.print(f"💡 자동 수정 가능: {summary['fixable_count']}개")
 
-    def _display_detailed_validation_results(self):
-        """상세 검증 결과 표시"""
+    def _display_detailed_validation_results(self) -> None:
+        """상세 검증 결과 표시."""
         categories = {r.category for r in self.current_report.results}
 
         for category in sorted(categories):
@@ -528,8 +528,8 @@ class ValidationEngine(DiagnosticEngine):
                 if result.recommendation:
                     self.console.print(f"     💡 권장사항: {result.recommendation}")
 
-    def _display_deployment_readiness(self, summary: dict[str, Any]):
-        """배포 준비 상태 표시"""
+    def _display_deployment_readiness(self, summary: dict[str, Any]) -> None:
+        """배포 준비 상태 표시."""
         if summary["deployment_ready"]:
             self.console.print("\n✅ 배포 준비 완료")
         else:
@@ -539,8 +539,8 @@ class ValidationEngine(DiagnosticEngine):
             if critical_results:
                 self.console.print(f"   해결 필요한 문제: {len(critical_results)}개")
 
-    def _display_validation_fix_suggestions(self):
-        """검증 자동 수정 제안 표시"""
+    def _display_validation_fix_suggestions(self) -> None:
+        """검증 자동 수정 제안 표시."""
         fixable_results = self.current_report.get_fixable_results()
 
         self.console.print("\n🔧 자동 수정 가능한 문제:")
@@ -554,7 +554,7 @@ class ValidationEngine(DiagnosticEngine):
         )
 
     def save_report(self, file_path: str | Path, format: str = "json") -> bool:
-        """보고서 저장"""
+        """보고서 저장."""
         if not self.current_report:
             logger.error("저장할 검증 보고서가 없습니다.")
             return False
@@ -580,5 +580,5 @@ class ValidationEngine(DiagnosticEngine):
             return False
 
     def get_validation_report(self) -> ValidationReport | None:
-        """현재 검증 보고서 반환"""
+        """현재 검증 보고서 반환."""
         return self.current_report

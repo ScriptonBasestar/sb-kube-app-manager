@@ -89,8 +89,8 @@ def cmd(
     deps: bool,
     health_check: bool,
     app_group: str | None,
-):
-    """Display application and cluster status.
+) -> None:
+    r"""Display application and cluster status.
 
     This command shows the current state of deployed applications and cluster
     resources. Data is cached locally with a 5-minute TTL for faster queries.
@@ -427,7 +427,7 @@ def _display_grouped_status(
         if not group_data:
             output.print_error(f"App-group not found: {app_group}")
             output.print("\n[dim]Available app-groups:[/dim]")
-            for ag in grouped_data.get("managed_app_groups", {}).keys():
+            for ag in grouped_data.get("managed_app_groups", {}):
                 output.print(f"  - {ag}")
             return
 
@@ -700,7 +700,7 @@ def _detect_circular_dependencies(dep_map: dict[str, list[str]]) -> list[list[st
         if node in rec_stack:
             # Found a cycle
             cycle_start = path.index(node)
-            cycle = path[cycle_start:] + [node]
+            cycle = [*path[cycle_start:], node]
             circular.append(cycle)
             return
 

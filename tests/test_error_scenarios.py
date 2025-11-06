@@ -16,7 +16,7 @@ from sbkube.models.config_model import HelmApp, SBKubeConfig
 class TestConfigValidationErrors:
     """설정 파일 검증 에러 테스트."""
 
-    def test_config_missing_namespace(self):
+    def test_config_missing_namespace(self) -> None:
         """Namespace 필드 누락."""
         with pytest.raises((ConfigValidationError, Exception)):
             SBKubeConfig(
@@ -29,7 +29,7 @@ class TestConfigValidationErrors:
                 }
             )
 
-    def test_config_invalid_app_type(self):
+    def test_config_invalid_app_type(self) -> None:
         """잘못된 앱 타입."""
         config_data = {
             "namespace": "test",
@@ -44,7 +44,7 @@ class TestConfigValidationErrors:
         with pytest.raises((ConfigValidationError, Exception)):
             SBKubeConfig(**config_data)
 
-    def test_helm_app_missing_chart(self):
+    def test_helm_app_missing_chart(self) -> None:
         """Helm 앱에서 chart 필드 누락."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
@@ -52,7 +52,7 @@ class TestConfigValidationErrors:
                 version="1.0.0",
             )
 
-    def test_helm_app_empty_chart(self):
+    def test_helm_app_empty_chart(self) -> None:
         """Helm 앱에서 chart가 빈 문자열."""
         with pytest.raises((ValueError, Exception)):
             HelmApp(
@@ -60,7 +60,7 @@ class TestConfigValidationErrors:
                 version="1.0.0",
             )
 
-    def test_helm_app_invalid_overrides(self):
+    def test_helm_app_invalid_overrides(self) -> None:
         """overrides가 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
@@ -72,7 +72,7 @@ class TestConfigValidationErrors:
 class TestYAMLParsingErrors:
     """YAML 파싱 에러 테스트."""
 
-    def test_invalid_yaml_syntax(self, tmp_path):
+    def test_invalid_yaml_syntax(self, tmp_path) -> None:
         """잘못된 YAML 문법."""
         config_file = tmp_path / "invalid.yaml"
         config_file.write_text("invalid: yaml: ::: syntax")
@@ -80,7 +80,7 @@ class TestYAMLParsingErrors:
         with pytest.raises(yaml.YAMLError), open(config_file) as f:
             yaml.safe_load(f)
 
-    def test_yaml_missing_required_keys(self, tmp_path):
+    def test_yaml_missing_required_keys(self, tmp_path) -> None:
         """필수 키 누락."""
         config_file = tmp_path / "config.yaml"
         config_file.write_text("""
@@ -101,20 +101,20 @@ apps:
 class TestFileSystemErrors:
     """파일 시스템 관련 에러 테스트."""
 
-    def test_config_file_not_found(self, tmp_path):
+    def test_config_file_not_found(self, tmp_path) -> None:
         """존재하지 않는 파일."""
         non_existent = tmp_path / "non_existent.yaml"
 
         with pytest.raises(FileNotFoundError), open(non_existent) as f:
             yaml.safe_load(f)
 
-    def test_directory_not_found(self, tmp_path):
+    def test_directory_not_found(self, tmp_path) -> None:
         """존재하지 않는 디렉토리."""
         non_existent_dir = tmp_path / "non_existent_dir" / "file.yaml"
 
         assert not non_existent_dir.parent.exists()
 
-    def test_permission_denied_simulation(self, tmp_path):
+    def test_permission_denied_simulation(self, tmp_path) -> None:
         """권한 없는 파일 (시뮬레이션)."""
         restricted_file = tmp_path / "restricted.yaml"
         restricted_file.write_text("test: data")
@@ -133,7 +133,7 @@ class TestFileSystemErrors:
 class TestModelValidationErrors:
     """Pydantic 모델 검증 에러 테스트."""
 
-    def test_helm_app_with_invalid_version_type(self):
+    def test_helm_app_with_invalid_version_type(self) -> None:
         """version이 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
@@ -141,7 +141,7 @@ class TestModelValidationErrors:
                 version=123,  # str이어야 함
             )
 
-    def test_helm_app_with_invalid_values_type(self):
+    def test_helm_app_with_invalid_values_type(self) -> None:
         """values가 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
@@ -149,7 +149,7 @@ class TestModelValidationErrors:
                 values="should-be-list",  # list여야 함
             )
 
-    def test_helm_app_with_invalid_set_values_type(self):
+    def test_helm_app_with_invalid_set_values_type(self) -> None:
         """set_values가 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             HelmApp(
@@ -157,7 +157,7 @@ class TestModelValidationErrors:
                 set_values="should-be-dict",  # dict여야 함
             )
 
-    def test_config_with_invalid_apps_type(self):
+    def test_config_with_invalid_apps_type(self) -> None:
         """apps가 잘못된 타입."""
         with pytest.raises((ConfigValidationError, Exception)):
             SBKubeConfig(
@@ -169,7 +169,7 @@ class TestModelValidationErrors:
 class TestRuntimeErrors:
     """런타임 에러 시나리오."""
 
-    def test_chart_parsing_invalid_format(self):
+    def test_chart_parsing_invalid_format(self) -> None:
         """차트 파싱 실패."""
         from sbkube.commands.prepare import parse_helm_chart
 
@@ -182,7 +182,7 @@ class TestRuntimeErrors:
         repo, chart = parse_helm_chart("./local-chart")
         # 로컬 차트는 repo가 None일 수 있음
 
-    def test_empty_config_apps(self):
+    def test_empty_config_apps(self) -> None:
         """apps가 빈 dict."""
         config = SBKubeConfig(
             namespace="test",
@@ -192,7 +192,7 @@ class TestRuntimeErrors:
         assert config.apps == {}
         assert len(config.apps) == 0
 
-    def test_disabled_app(self):
+    def test_disabled_app(self) -> None:
         """비활성화된 앱."""
         config = SBKubeConfig(
             namespace="test",
@@ -208,7 +208,7 @@ class TestRuntimeErrors:
 
 
 # 에러 카운트 통계
-def test_error_test_count():
+def test_error_test_count() -> None:
     """추가된 에러 테스트 개수 확인."""
     # 모든 테스트 클래스 수집
     test_classes = [
@@ -224,5 +224,4 @@ def test_error_test_count():
         methods = [m for m in dir(cls) if m.startswith("test_")]
         total_tests += len(methods)
 
-    print(f"\n총 에러 케이스 테스트: {total_tests}개")
     assert total_tests >= 15, f"최소 15개 이상의 에러 테스트 필요 (현재: {total_tests})"

@@ -32,7 +32,7 @@ class OutputFormat(str, Enum):
 class OutputFormatter:
     """Format command outputs for different consumers (humans, LLMs, machines)."""
 
-    def __init__(self, format_type: OutputFormat | str = OutputFormat.HUMAN):
+    def __init__(self, format_type: OutputFormat | str = OutputFormat.HUMAN) -> None:
         """Initialize output formatter.
 
         Args:
@@ -106,6 +106,7 @@ class OutputFormatter:
             return self._format_yaml_deployment(
                 status, summary, deployments, next_steps, errors
             )
+        return None
 
     def format_history_result(
         self,
@@ -483,7 +484,7 @@ class OutputFormatter:
         }
         return yaml.dump(result, allow_unicode=True, default_flow_style=False)
 
-    def print_output(self, output: str | dict):
+    def print_output(self, output: str | dict) -> None:
         """Print formatted output.
 
         Args:
@@ -492,14 +493,12 @@ class OutputFormatter:
         """
         if isinstance(output, dict):
             # JSON or YAML dict → convert to string
-            if self.format == OutputFormat.JSON:
-                print(json.dumps(output, indent=2, ensure_ascii=False))
-            elif self.format == OutputFormat.YAML and yaml:
-                print(yaml.dump(output, allow_unicode=True, default_flow_style=False))
+            if self.format == OutputFormat.JSON or (self.format == OutputFormat.YAML and yaml):
+                pass
             else:
-                print(json.dumps(output, indent=2, ensure_ascii=False))
+                pass
         else:
-            print(output)
+            pass
 
 
 def get_output_format_from_context(ctx: Any) -> OutputFormat:

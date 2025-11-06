@@ -42,7 +42,7 @@ class DeploymentChecker:
         base_dir: Path,
         cluster: str | None = None,
         namespace: str | None = None,
-    ):
+    ) -> None:
         """Initialize DeploymentChecker.
 
         Args:

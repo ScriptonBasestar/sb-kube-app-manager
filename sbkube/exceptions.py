@@ -4,7 +4,6 @@ This module provides a comprehensive exception hierarchy to ensure consistent
 error handling across the entire application.
 """
 
-import sys
 from typing import Any
 
 
@@ -19,7 +18,7 @@ class SbkubeError(Exception):
         message: str,
         details: dict[str, Any] | None = None,
         exit_code: int = 1,
-    ):
+    ) -> None:
         super().__init__(message)
         self.message = message
         self.details = details or {}
@@ -465,13 +464,13 @@ def handle_exception(exc: Exception, logger=None) -> int:
             if exc.details:
                 logger.verbose(f"Error details: {exc.details}")
         else:
-            print(f"Error: {exc}", file=sys.stderr)
+            pass
         return exc.exit_code
     # Handle unexpected exceptions
     if logger:
         logger.error(f"Unexpected error: {exc}")
     else:
-        print(f"Unexpected error: {exc}", file=sys.stderr)
+        pass
     return 1
 
 

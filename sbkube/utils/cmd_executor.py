@@ -34,7 +34,8 @@ def run_cmd_with_logging(
     logger.command(" ".join(map(str, cmd)))
 
     if not cmd:
-        raise ValueError("Command cannot be empty")
+        msg = "Command cannot be empty"
+        raise ValueError(msg)
 
     tool_name = cmd[0]
 
@@ -131,7 +132,8 @@ def run_network_cmd_with_retry(
 
     """
     if not cmd:
-        raise ValueError("Command cannot be empty")
+        msg = "Command cannot be empty"
+        raise ValueError(msg)
 
     tool_name = cmd[0]
 

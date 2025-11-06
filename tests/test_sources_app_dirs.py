@@ -11,7 +11,7 @@ from sbkube.exceptions import ConfigValidationError
 from sbkube.models.sources_model import SourceScheme
 
 
-def test_sources_app_dirs_validation():
+def test_sources_app_dirs_validation() -> None:
     """app_dirs 필드 검증 테스트."""
     # 정상 케이스: app_dirs 지정
     sources = SourceScheme(
@@ -34,7 +34,7 @@ def test_sources_app_dirs_validation():
     assert sources.app_dirs == ["redis", "postgres", "nginx"]
 
 
-def test_sources_app_dirs_validation_errors():
+def test_sources_app_dirs_validation_errors() -> None:
     """app_dirs 검증 오류 테스트."""
     # 빈 리스트 (오류)
     with pytest.raises(ConfigValidationError, match="app_dirs cannot be empty"):
@@ -83,7 +83,7 @@ def test_sources_app_dirs_validation_errors():
         )
 
 
-def test_get_app_dirs_explicit_mode(tmp_path):
+def test_get_app_dirs_explicit_mode(tmp_path) -> None:
     """명시적 app_dirs 목록 모드 테스트."""
     # 프로젝트 구조 생성
     (tmp_path / "redis" / "config.yaml").parent.mkdir(parents=True)
@@ -112,7 +112,7 @@ def test_get_app_dirs_explicit_mode(tmp_path):
     assert tmp_path / "nginx" not in app_dirs
 
 
-def test_get_app_dirs_auto_discovery_mode(tmp_path):
+def test_get_app_dirs_auto_discovery_mode(tmp_path) -> None:
     """자동 탐색 모드 테스트 (app_dirs 미지정)."""
     # 프로젝트 구조 생성
     (tmp_path / "redis" / "config.yaml").parent.mkdir(parents=True)
@@ -147,7 +147,7 @@ def test_get_app_dirs_auto_discovery_mode(tmp_path):
     assert tmp_path / "node_modules" not in app_dirs
 
 
-def test_get_app_dirs_missing_directory_error(tmp_path):
+def test_get_app_dirs_missing_directory_error(tmp_path) -> None:
     """명시적 app_dirs에서 존재하지 않는 디렉토리 오류 테스트."""
     # redis만 생성
     (tmp_path / "redis" / "config.yaml").parent.mkdir(parents=True)
@@ -165,7 +165,7 @@ def test_get_app_dirs_missing_directory_error(tmp_path):
         sources.get_app_dirs(tmp_path, "config.yaml")
 
 
-def test_get_app_dirs_missing_config_file_error(tmp_path):
+def test_get_app_dirs_missing_config_file_error(tmp_path) -> None:
     """명시적 app_dirs에서 config.yaml이 없는 경우 오류 테스트."""
     # redis 디렉토리만 생성 (config.yaml 없음)
     (tmp_path / "redis").mkdir(parents=True)
@@ -180,7 +180,7 @@ def test_get_app_dirs_missing_config_file_error(tmp_path):
         sources.get_app_dirs(tmp_path, "config.yaml")
 
 
-def test_get_app_dirs_sorted_output(tmp_path):
+def test_get_app_dirs_sorted_output(tmp_path) -> None:
     """app_dirs 반환 결과가 정렬되는지 테스트."""
     # 프로젝트 구조 생성 (역순)
     for name in ["zulu", "alpha", "bravo"]:

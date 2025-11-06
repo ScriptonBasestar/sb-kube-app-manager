@@ -109,9 +109,9 @@ helm_repos:
     return project_dir, config_dir
 
 
-def test_prepare_with_hooks_dry_run(tmp_project):
+def test_prepare_with_hooks_dry_run(tmp_project) -> None:
     """Prepare 명령어 hooks (dry-run 모드) 테스트."""
-    project_dir, config_dir = tmp_project
+    project_dir, _config_dir = tmp_project
 
     runner = CliRunner()
     result = runner.invoke(
@@ -131,9 +131,9 @@ def test_prepare_with_hooks_dry_run(tmp_project):
     assert "Dry-run mode enabled" in result.output
 
 
-def test_deploy_with_hooks_dry_run(tmp_project):
+def test_deploy_with_hooks_dry_run(tmp_project) -> None:
     """Deploy 명령어 hooks (dry-run 모드) 테스트."""
-    project_dir, config_dir = tmp_project
+    project_dir, _config_dir = tmp_project
 
     runner = CliRunner()
     result = runner.invoke(
@@ -152,9 +152,9 @@ def test_deploy_with_hooks_dry_run(tmp_project):
     assert "Dry-run mode enabled" in result.output or result.exit_code == 0
 
 
-def test_template_with_hooks_dry_run(tmp_project):
+def test_template_with_hooks_dry_run(tmp_project) -> None:
     """Template 명령어 hooks (dry-run 모드) 테스트."""
-    project_dir, config_dir = tmp_project
+    project_dir, _config_dir = tmp_project
 
     runner = CliRunner()
     result = runner.invoke(
@@ -173,9 +173,9 @@ def test_template_with_hooks_dry_run(tmp_project):
     assert "Dry-run mode enabled" in result.output or result.exit_code == 0
 
 
-def test_apply_with_hooks_dry_run(tmp_project):
+def test_apply_with_hooks_dry_run(tmp_project) -> None:
     """Apply 명령어 hooks (dry-run 모드) 테스트."""
-    project_dir, config_dir = tmp_project
+    project_dir, _config_dir = tmp_project
 
     runner = CliRunner()
     result = runner.invoke(
@@ -196,7 +196,7 @@ def test_apply_with_hooks_dry_run(tmp_project):
     assert "Dry-run mode enabled" in result.output or result.exit_code == 0
 
 
-def test_hooks_with_failing_script(tmp_project):
+def test_hooks_with_failing_script(tmp_project) -> None:
     """실패하는 훅 스크립트 테스트."""
     project_dir, config_dir = tmp_project
 
@@ -239,7 +239,7 @@ apps:
     assert result.exit_code != 0
 
 
-def test_hooks_environment_variables(tmp_project):
+def test_hooks_environment_variables(tmp_project) -> None:
     """훅에서 환경 변수 주입 테스트."""
     project_dir, config_dir = tmp_project
 
@@ -291,7 +291,7 @@ apps:
     assert result.exit_code == 0
 
 
-def test_hooks_without_config(tmp_project):
+def test_hooks_without_config(tmp_project) -> None:
     """훅 설정이 없는 경우 테스트."""
     project_dir, config_dir = tmp_project
 
@@ -328,7 +328,7 @@ apps:
     assert result.exit_code == 0
 
 
-def test_app_hook_on_failure(tmp_project):
+def test_app_hook_on_failure(tmp_project) -> None:
     """앱별 on_failure 훅 테스트."""
     project_dir, config_dir = tmp_project
 

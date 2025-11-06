@@ -1,5 +1,4 @@
-"""SBKube v0.3.0 설정 모델 테스트.
-"""
+"""SBKube v0.3.0 설정 모델 테스트."""
 
 import pytest
 
@@ -9,7 +8,7 @@ from sbkube.models.config_model import HelmApp, SBKubeConfig, YamlApp
 class TestHelmApp:
     """HelmApp 모델 테스트."""
 
-    def test_valid_helm_app(self):
+    def test_valid_helm_app(self) -> None:
         """정상적인 Helm 앱 검증."""
         app = HelmApp(
             chart="grafana/grafana",
@@ -19,7 +18,7 @@ class TestHelmApp:
         assert app.get_repo_name() == "grafana"
         assert app.get_chart_name() == "grafana"
 
-    def test_local_chart(self):
+    def test_local_chart(self) -> None:
         """로컬 차트 형식 검증."""
         # 로컬 차트는 유효함
         app1 = HelmApp(chart="./charts/grafana")
@@ -35,7 +34,7 @@ class TestHelmApp:
 class TestYamlApp:
     """YamlApp 모델 테스트."""
 
-    def test_valid_yaml_app(self):
+    def test_valid_yaml_app(self) -> None:
         """정상적인 YAML 앱 검증."""
         app = YamlApp(
             manifests=["deployment.yaml", "service.yaml"],
@@ -44,7 +43,7 @@ class TestYamlApp:
         assert len(app.manifests) == 2
         assert app.namespace == "production"
 
-    def test_empty_manifests_list(self):
+    def test_empty_manifests_list(self) -> None:
         """빈 manifests 리스트 검증."""
         from sbkube.exceptions import ConfigValidationError
 
@@ -55,7 +54,7 @@ class TestYamlApp:
 class TestSBKubeConfig:
     """SBKubeConfig 메인 설정 모델 테스트."""
 
-    def test_valid_config(self):
+    def test_valid_config(self) -> None:
         """정상적인 설정 검증."""
         config = SBKubeConfig(
             namespace="production",
@@ -74,7 +73,7 @@ class TestSBKubeConfig:
         assert config.namespace == "production"
         assert len(config.apps) == 2
 
-    def test_namespace_inheritance(self):
+    def test_namespace_inheritance(self) -> None:
         """네임스페이스 상속 검증."""
         config = SBKubeConfig(
             namespace="production",
@@ -89,7 +88,7 @@ class TestSBKubeConfig:
         grafana_app = config.apps["grafana"]
         assert grafana_app.namespace == "production"
 
-    def test_namespace_override(self):
+    def test_namespace_override(self) -> None:
         """네임스페이스 오버라이드 검증."""
         config = SBKubeConfig(
             namespace="production",
@@ -104,7 +103,7 @@ class TestSBKubeConfig:
         grafana_app = config.apps["grafana"]
         assert grafana_app.namespace == "monitoring"
 
-    def test_deployment_order_simple(self):
+    def test_deployment_order_simple(self) -> None:
         """간단한 배포 순서 검증 (의존성 없음)."""
         config = SBKubeConfig(
             namespace="test",
@@ -117,7 +116,7 @@ class TestSBKubeConfig:
         assert len(order) == 2
         assert set(order) == {"grafana", "postgres"}
 
-    def test_deployment_order_with_dependencies(self):
+    def test_deployment_order_with_dependencies(self) -> None:
         """의존성이 있는 배포 순서 검증."""
         config = SBKubeConfig(
             namespace="test",
@@ -140,7 +139,7 @@ class TestSBKubeConfig:
         assert grafana_idx < backend_idx
         assert postgres_idx < backend_idx
 
-    def test_circular_dependency_detection(self):
+    def test_circular_dependency_detection(self) -> None:
         """순환 의존성 검출 검증."""
         from sbkube.exceptions import ConfigValidationError
 
@@ -162,7 +161,7 @@ class TestSBKubeConfig:
                 },
             )
 
-    def test_nonexistent_dependency(self):
+    def test_nonexistent_dependency(self) -> None:
         """존재하지 않는 앱에 대한 의존성 검증."""
         from sbkube.exceptions import ConfigValidationError
 
@@ -179,7 +178,7 @@ class TestSBKubeConfig:
                 },
             )
 
-    def test_disabled_apps(self):
+    def test_disabled_apps(self) -> None:
         """비활성화된 앱 처리 검증."""
         config = SBKubeConfig(
             namespace="test",
@@ -201,7 +200,7 @@ class TestSBKubeConfig:
         assert "grafana" in enabled_apps
         assert "postgres" not in enabled_apps
 
-    def test_get_apps_by_type(self):
+    def test_get_apps_by_type(self) -> None:
         """타입별 앱 조회 검증."""
         config = SBKubeConfig(
             namespace="test",
@@ -219,7 +218,7 @@ class TestSBKubeConfig:
         assert len(yaml_apps) == 1
         assert "backend" in yaml_apps
 
-    def test_deps_field_parsing(self):
+    def test_deps_field_parsing(self) -> None:
         """Deps 필드 파싱 검증 (v0.4.10+)."""
         config = SBKubeConfig(
             namespace="harbor",
@@ -236,7 +235,7 @@ class TestSBKubeConfig:
         assert "a101_data_rdb" in config.deps
         assert "a100_data_memory" in config.deps
 
-    def test_deps_field_optional(self):
+    def test_deps_field_optional(self) -> None:
         """Deps 필드가 없어도 정상 동작 (후방 호환성)."""
         config = SBKubeConfig(
             namespace="production",
@@ -249,7 +248,7 @@ class TestSBKubeConfig:
         )
         assert config.deps == []  # 기본값 빈 리스트
 
-    def test_deps_field_empty_list(self):
+    def test_deps_field_empty_list(self) -> None:
         """deps가 빈 리스트인 경우."""
         config = SBKubeConfig(
             namespace="production",

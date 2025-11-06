@@ -1,4 +1,4 @@
-"""검증 보고서 생성 및 출력 시스템
+"""검증 보고서 생성 및 출력 시스템.
 
 검증 결과를 다양한 형식(Console, JSON, HTML)으로 생성하고 출력하는 시스템입니다.
 검증 히스토리 관리 및 트렌드 분석 기능을 포함합니다.
@@ -22,9 +22,9 @@ from sbkube.utils.validation_system import ValidationReport, ValidationResult
 
 
 class ValidationReportManager:
-    """검증 보고서 관리자"""
+    """검증 보고서 관리자."""
 
-    def __init__(self, base_dir: str = "."):
+    def __init__(self, base_dir: str = ".") -> None:
         self.base_dir = Path(base_dir)
         self.sbkube_dir = self.base_dir / ".sbkube"
         self.history_file = self.sbkube_dir / "validation_history.json"
@@ -40,7 +40,7 @@ class ValidationReportManager:
         output_file: str | None = None,
         show_details: bool = True,
     ) -> str | None:
-        """검증 보고서 생성"""
+        """검증 보고서 생성."""
         try:
             if output_format.lower() == "console":
                 generator = ConsoleReportGenerator(self.console)
@@ -62,14 +62,15 @@ class ValidationReportManager:
                         f.write(content)
                     return output_file
                 return content
-            raise ValueError(f"지원하지 않는 출력 형식: {output_format}")
+            msg = f"지원하지 않는 출력 형식: {output_format}"
+            raise ValueError(msg)
 
         except Exception as e:
             logger.error(f"보고서 생성 실패: {e}")
             raise
 
     def save_to_history(self, report: ValidationReport) -> str:
-        """검증 히스토리에 저장"""
+        """검증 히스토리에 저장."""
         try:
             # 히스토리 로드
             history = self._load_history()
@@ -112,7 +113,7 @@ class ValidationReportManager:
             return ""
 
     def get_validation_trends(self, days: int = 30) -> dict[str, Any]:
-        """검증 트렌드 분석"""
+        """검증 트렌드 분석."""
         try:
             history = self._load_history()
             validations = history.get("validations", [])
@@ -172,7 +173,7 @@ class ValidationReportManager:
             }
 
     def _load_history(self) -> dict[str, Any]:
-        """히스토리 파일 로드"""
+        """히스토리 파일 로드."""
         if self.history_file.exists():
             try:
                 with open(self.history_file, encoding="utf-8") as f:
@@ -186,8 +187,8 @@ class ValidationReportManager:
             "validations": [],
         }
 
-    def _save_history(self, history: dict[str, Any]):
-        """히스토리 파일 저장"""
+    def _save_history(self, history: dict[str, Any]) -> None:
+        """히스토리 파일 저장."""
         try:
             with open(self.history_file, "w", encoding="utf-8") as f:
                 json.dump(history, f, indent=2, ensure_ascii=False)
@@ -198,7 +199,7 @@ class ValidationReportManager:
     def _analyze_common_issues(
         self, validations: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        """일반적인 문제 패턴 분석"""
+        """일반적인 문제 패턴 분석."""
         issue_patterns = {}
 
         for validation in validations:
@@ -227,7 +228,7 @@ class ValidationReportManager:
         ]
 
     def _get_issue_description(self, pattern: str) -> str:
-        """문제 패턴 설명 생성"""
+        """문제 패턴 설명 생성."""
         descriptions = {
             "configuration_errors": "설정 파일 오류",
             "environment_errors": "Kubernetes 환경 문제",
@@ -237,7 +238,7 @@ class ValidationReportManager:
         return descriptions.get(pattern, pattern)
 
     def _generate_trend_analysis(self, validations: list[dict[str, Any]]) -> str:
-        """트렌드 분석 텍스트 생성"""
+        """트렌드 분석 텍스트 생성."""
         if len(validations) < 5:
             return "데이터가 부족하여 트렌드 분석이 어렵습니다."
 
@@ -263,13 +264,13 @@ class ValidationReportManager:
 
 
 class ConsoleReportGenerator:
-    """콘솔 보고서 생성기"""
+    """콘솔 보고서 생성기."""
 
-    def __init__(self, console: Console):
+    def __init__(self, console: Console) -> None:
         self.console = console
 
-    def generate_report(self, report: ValidationReport, show_details: bool = True):
-        """콘솔 보고서 생성"""
+    def generate_report(self, report: ValidationReport, show_details: bool = True) -> None:
+        """콘솔 보고서 생성."""
         summary = report.get_summary()
 
         # 헤더
@@ -288,8 +289,8 @@ class ConsoleReportGenerator:
         # 권장사항
         self._display_recommendations(report)
 
-    def _display_header(self, summary: dict[str, Any]):
-        """헤더 표시"""
+    def _display_header(self, summary: dict[str, Any]) -> None:
+        """헤더 표시."""
         mode_descriptions = {
             "basic": "기본 검증",
             "comprehensive": "종합 검증",
@@ -310,8 +311,8 @@ class ConsoleReportGenerator:
             self.console.print(f"검증 시간: {summary['duration_seconds']:.2f}초")
         self.console.print()
 
-    def _display_summary_stats(self, summary: dict[str, Any]):
-        """요약 통계 표시"""
+    def _display_summary_stats(self, summary: dict[str, Any]) -> None:
+        """요약 통계 표시."""
         table = Table(show_header=False, box=None, padding=(0, 2))
         table.add_column("상태", style="bold")
         table.add_column("개수", justify="right")
@@ -343,8 +344,8 @@ class ConsoleReportGenerator:
         self.console.print(table)
         self.console.print()
 
-    def _display_detailed_results(self, report: ValidationReport):
-        """상세 검증 결과 표시"""
+    def _display_detailed_results(self, report: ValidationReport) -> None:
+        """상세 검증 결과 표시."""
         categories = {r.category for r in report.results}
 
         for category in sorted(categories):
@@ -390,8 +391,8 @@ class ConsoleReportGenerator:
 
     def _display_deployment_readiness(
         self, summary: dict[str, Any], report: ValidationReport
-    ):
-        """배포 준비 상태 표시"""
+    ) -> None:
+        """배포 준비 상태 표시."""
         is_ready = summary.get("deployment_ready", False)
 
         if is_ready:
@@ -414,8 +415,8 @@ class ConsoleReportGenerator:
                 )
             )
 
-    def _display_recommendations(self, report: ValidationReport):
-        """권장사항 표시"""
+    def _display_recommendations(self, report: ValidationReport) -> None:
+        """권장사항 표시."""
         fixable_results = report.get_fixable_results()
 
         if fixable_results:
@@ -431,10 +432,10 @@ class ConsoleReportGenerator:
 
 
 class JSONReportGenerator:
-    """JSON 보고서 생성기"""
+    """JSON 보고서 생성기."""
 
     def generate_report(self, report: ValidationReport) -> str:
-        """JSON 보고서 생성"""
+        """JSON 보고서 생성."""
         try:
             report_data = {
                 "metadata": {
@@ -453,15 +454,14 @@ class JSONReportGenerator:
 
 
 class HTMLReportGenerator:
-    """HTML 보고서 생성기"""
+    """HTML 보고서 생성기."""
 
     def generate_report(self, report: ValidationReport) -> str:
-        """HTML 보고서 생성"""
+        """HTML 보고서 생성."""
         try:
             summary = report.get_summary()
 
-            html_content = self._generate_html_template(report, summary)
-            return html_content
+            return self._generate_html_template(report, summary)
 
         except Exception as e:
             logger.error(f"HTML 보고서 생성 실패: {e}")
@@ -470,7 +470,7 @@ class HTMLReportGenerator:
     def _generate_html_template(
         self, report: ValidationReport, summary: dict[str, Any]
     ) -> str:
-        """HTML 템플릿 생성"""
+        """HTML 템플릿 생성."""
         mode_descriptions = {
             "basic": "기본 검증",
             "comprehensive": "종합 검증",
@@ -491,7 +491,7 @@ class HTMLReportGenerator:
             categories[category].append(result)
 
         # HTML 생성
-        html = f"""
+        return f"""
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -555,12 +555,11 @@ class HTMLReportGenerator:
 </body>
 </html>
 """
-        return html
 
     def _generate_category_sections(
         self, categories: dict[str, list[ValidationResult]]
     ) -> str:
-        """카테고리별 섹션 생성"""
+        """카테고리별 섹션 생성."""
         category_names = {
             "configuration": "📁 설정 파일",
             "environment": "🏗️ Kubernetes 환경",
@@ -619,7 +618,7 @@ class HTMLReportGenerator:
         return "".join(sections)
 
     def _generate_recommendations_section(self, report: ValidationReport) -> str:
-        """권장사항 섹션 생성"""
+        """권장사항 섹션 생성."""
         fixable_results = report.get_fixable_results()
 
         if not fixable_results:
@@ -642,7 +641,7 @@ class HTMLReportGenerator:
         return section
 
     def _get_css_styles(self) -> str:
-        """CSS 스타일 반환"""
+        """CSS 스타일 반환."""
         return """
         * {
             margin: 0;
@@ -824,7 +823,7 @@ class HTMLReportGenerator:
         """
 
     def _get_javascript(self) -> str:
-        """JavaScript 코드 반환"""
+        """JavaScript 코드 반환."""
         return """
         // 페이지 로드 시 애니메이션
         document.addEventListener('DOMContentLoaded', function() {

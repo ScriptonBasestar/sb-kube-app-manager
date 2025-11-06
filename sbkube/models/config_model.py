@@ -1,4 +1,4 @@
-"""SBKube Configuration Models
+"""SBKube Configuration Models.
 
 설정 구조:
 - apps: dict (key = app name)
@@ -681,7 +681,8 @@ class HelmApp(ConfigBaseModel):
         - "/path" (absolute local)
         """
         if not v or not v.strip():
-            raise ValueError("chart cannot be empty")
+            msg = "chart cannot be empty"
+            raise ValueError(msg)
         return v.strip()
 
     def is_remote_chart(self) -> bool:
@@ -820,17 +821,21 @@ class ActionSpec(ConfigBaseModel):
         from sbkube.utils.path_resolver import validate_variable_syntax
 
         if not v or not v.strip():
-            raise ValueError("Action path cannot be empty")
+            msg = "Action path cannot be empty"
+            raise ValueError(msg)
 
         # Validate variable syntax if present
         validate_variable_syntax(v)
 
         # Check for common mistakes
-        if v.startswith("kubectl ") or v.startswith("helm "):
-            raise ValueError(
+        if v.startswith(("kubectl ", "helm ")):
+            msg = (
                 "Action 'path' should be a file path, not a command. "
                 "For executing commands, use 'type: exec' instead of 'type: action'. "
                 f"Invalid path: '{v}'"
+            )
+            raise ValueError(
+                msg
             )
 
         return v.strip()
@@ -873,9 +878,12 @@ class ActionApp(ConfigBaseModel):
     def validate_actions(cls, v: list[ActionSpec]) -> list[ActionSpec]:
         """액션 목록이 비어있지 않은지 확인."""
         if not v:
-            raise ValueError(
+            msg = (
                 "ActionApp must have at least one action. "
                 "Add actions with 'type' (apply/delete) and 'path' fields."
+            )
+            raise ValueError(
+                msg
             )
         return v
 
@@ -946,7 +954,8 @@ class GitApp(ConfigBaseModel):
     def validate_repo(cls, v: str) -> str:
         """Git repo URL 검증."""
         if not v or not v.strip():
-            raise ValueError("repo cannot be empty")
+            msg = "repo cannot be empty"
+            raise ValueError(msg)
         return v.strip()
 
 
@@ -1013,9 +1022,11 @@ class HttpApp(ConfigBaseModel):
     def validate_http_url(cls, v: str) -> str:
         """HTTP URL 검증."""
         if not v or not v.strip():
-            raise ValueError("url cannot be empty")
+            msg = "url cannot be empty"
+            raise ValueError(msg)
         if not v.startswith(("http://", "https://")):
-            raise ValueError("url must start with http:// or https://")
+            msg = "url must start with http:// or https://"
+            raise ValueError(msg)
         return v.strip()
 
 
@@ -1136,7 +1147,7 @@ class SBKubeConfig(ConfigBaseModel):
 
         앱에 namespace가 없으면 전역 namespace 사용.
         """
-        for app_name, app in self.apps.items():
+        for app in self.apps.values():
             # 네임스페이스 상속 (HelmApp, YamlApp 등에만 적용)
             if hasattr(app, "namespace") and app.namespace is None:
                 app.namespace = self.namespace
@@ -1150,7 +1161,7 @@ class SBKubeConfig(ConfigBaseModel):
     def validate_dependencies(self) -> "SBKubeConfig":
         """의존성 검증:
         1. 존재하지 않는 앱에 대한 의존성 체크
-        2. 순환 의존성 체크
+        2. 순환 의존성 체크.
         """
         app_names = set(self.apps.keys())
 
@@ -1159,8 +1170,9 @@ class SBKubeConfig(ConfigBaseModel):
             if hasattr(app, "depends_on"):
                 for dep in app.depends_on:
                     if dep not in app_names:
+                        msg = f"App '{app_name}' depends on non-existent app '{dep}'"
                         raise ValueError(
-                            f"App '{app_name}' depends on non-existent app '{dep}'"
+                            msg
                         )
 
         # 2. 순환 의존성 체크 (DFS 기반)
@@ -1183,12 +1195,12 @@ class SBKubeConfig(ConfigBaseModel):
             rec_stack.remove(node)
             return False
 
-        for app_name in self.apps.keys():
-            if app_name not in visited:
-                if has_cycle(app_name):
-                    raise ValueError(
-                        f"Circular dependency detected involving app '{app_name}'"
-                    )
+        for app_name in self.apps:
+            if app_name not in visited and has_cycle(app_name):
+                msg = f"Circular dependency detected involving app '{app_name}'"
+                raise ValueError(
+                    msg
+                )
 
         return self
 
@@ -1231,7 +1243,8 @@ class SBKubeConfig(ConfigBaseModel):
                     queue.append(neighbor)
 
         if len(result) != len(enabled_apps):
-            raise ValueError("Circular dependency detected (this should not happen)")
+            msg = "Circular dependency detected (this should not happen)"
+            raise ValueError(msg)
 
         return result
 

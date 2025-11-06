@@ -13,7 +13,7 @@ from sbkube.utils.cluster_status import ClusterStatusCollector
 class TestClusterCache:
     """Test cases for ClusterCache."""
 
-    def test_cache_save_and_load(self, tmp_path):
+    def test_cache_save_and_load(self, tmp_path) -> None:
         """Test saving and loading cache data."""
         cache_dir = tmp_path / ".sbkube" / "cluster_status"
         cache = ClusterCache(cache_dir, context="default", cluster="test-cluster")
@@ -41,7 +41,7 @@ class TestClusterCache:
         assert loaded_data["cluster_info"] == test_data["cluster_info"]
         assert loaded_data["nodes"] == test_data["nodes"]
 
-    def test_cache_ttl_validation(self, tmp_path):
+    def test_cache_ttl_validation(self, tmp_path) -> None:
         """Test TTL-based cache validation."""
         cache_dir = tmp_path / ".sbkube" / "cluster_status"
         cache = ClusterCache(cache_dir, context="default", cluster="test-cluster")
@@ -70,7 +70,7 @@ class TestClusterCache:
         # Should be invalid now
         assert not cache.is_valid()
 
-    def test_cache_with_unknown_cluster(self, tmp_path):
+    def test_cache_with_unknown_cluster(self, tmp_path) -> None:
         """Test cache handling when cluster name is None."""
         cache_dir = tmp_path / ".sbkube" / "cluster_status"
         cache = ClusterCache(cache_dir, context="default", cluster=None)
@@ -79,7 +79,7 @@ class TestClusterCache:
         assert "unknown" in cache.cache_file.name
         assert cache.cache_file.name == "default_unknown.yaml"
 
-    def test_cache_age_and_remaining_ttl(self, tmp_path):
+    def test_cache_age_and_remaining_ttl(self, tmp_path) -> None:
         """Test cache age and remaining TTL calculations."""
         cache_dir = tmp_path / ".sbkube" / "cluster_status"
         cache = ClusterCache(cache_dir, context="default", cluster="test-cluster")
@@ -103,7 +103,7 @@ class TestClusterCache:
         assert remaining is not None
         assert 295 < remaining <= 300
 
-    def test_cache_delete(self, tmp_path):
+    def test_cache_delete(self, tmp_path) -> None:
         """Test cache file deletion."""
         cache_dir = tmp_path / ".sbkube" / "cluster_status"
         cache = ClusterCache(cache_dir, context="default", cluster="test-cluster")
@@ -127,7 +127,7 @@ class TestClusterStatusCollector:
     """Test cases for ClusterStatusCollector."""
 
     @patch("subprocess.run")
-    def test_collect_cluster_info(self, mock_run):
+    def test_collect_cluster_info(self, mock_run) -> None:
         """Test cluster info collection."""
         # Mock kubectl cluster-info
         mock_run.return_value = MagicMock(
@@ -157,7 +157,7 @@ class TestClusterStatusCollector:
             assert info["version"] == "v1.27.3"
 
     @patch("subprocess.run")
-    def test_collect_nodes(self, mock_run):
+    def test_collect_nodes(self, mock_run) -> None:
         """Test node collection."""
         # Mock kubectl get nodes response
         nodes_response = {
@@ -189,7 +189,7 @@ class TestClusterStatusCollector:
             assert nodes[0]["version"] == "v1.27.3"
 
     @patch("subprocess.run")
-    def test_collect_namespaces(self, mock_run):
+    def test_collect_namespaces(self, mock_run) -> None:
         """Test namespace collection."""
         # Mock kubectl get namespaces response
         ns_response = {
@@ -213,7 +213,7 @@ class TestClusterStatusCollector:
             assert "my-app" in namespaces
 
     @patch("subprocess.run")
-    def test_collect_helm_releases(self, mock_run):
+    def test_collect_helm_releases(self, mock_run) -> None:
         """Test Helm release collection."""
         # Mock helm list response
         releases_response = [
@@ -249,7 +249,7 @@ class TestClusterStatusCollector:
             assert releases[1]["name"] == "postgres"
 
     @patch("subprocess.run")
-    def test_collect_all_with_partial_failure(self, mock_run):
+    def test_collect_all_with_partial_failure(self, mock_run) -> None:
         """Test collect_all with partial failures (non-blocking)."""
         collector = ClusterStatusCollector(kubeconfig=None, context=None)
 
@@ -281,7 +281,7 @@ class TestClusterStatusCollector:
 class TestClusterCommand:
     """Integration tests for cluster status command."""
 
-    def test_cache_file_naming(self, tmp_path):
+    def test_cache_file_naming(self, tmp_path) -> None:
         """Test cache file naming convention."""
         cache_dir = tmp_path / ".sbkube" / "cluster_status"
         cache = ClusterCache(cache_dir, context="my-context", cluster="my-cluster")
@@ -289,7 +289,7 @@ class TestClusterCommand:
         expected_filename = "my-context_my-cluster.yaml"
         assert cache.cache_file.name == expected_filename
 
-    def test_yaml_format_readability(self, tmp_path):
+    def test_yaml_format_readability(self, tmp_path) -> None:
         """Test that cache YAML is human-readable."""
         cache_dir = tmp_path / ".sbkube" / "cluster_status"
         cache = ClusterCache(cache_dir, context="default", cluster="test")
@@ -311,7 +311,7 @@ class TestClusterCommand:
         assert "nodes:" in content
         assert "api_server: https://127.0.0.1:6443" in content
 
-    def test_atomic_write(self, tmp_path):
+    def test_atomic_write(self, tmp_path) -> None:
         """Test atomic write (temp file + rename)."""
         cache_dir = tmp_path / ".sbkube" / "cluster_status"
         cache = ClusterCache(cache_dir, context="default", cluster="test")

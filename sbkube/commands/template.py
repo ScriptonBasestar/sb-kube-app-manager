@@ -320,7 +320,7 @@ def cmd(
     output_dir_name: str,
     app_name: str | None,
     dry_run: bool,
-):
+) -> None:
     """SBKube template 명령어.
 
     빌드된 차트를 YAML로 렌더링:
@@ -350,7 +350,7 @@ def cmd(
             BASE_DIR, app_config_dir_name, config_file_name
         )
     except ValueError:
-        raise click.Abort()
+        raise click.Abort
 
     # rendered 디렉토리 결정
     if output_dir_name:
@@ -577,16 +577,15 @@ def cmd(
             failed = True
 
         # 실패 시 on_failure 훅 실행
-        if failed:
-            if config.hooks and "template" in config.hooks:
-                template_hooks = config.hooks["template"].model_dump()
-                output.print(
-                    "[yellow]🪝 Executing global on-failure hooks...[/yellow]",
-                    level="warning",
-                )
-                hook_executor.execute_command_hooks(
-                    template_hooks, "on_failure", "template"
-                )
+        if failed and config.hooks and "template" in config.hooks:
+            template_hooks = config.hooks["template"].model_dump()
+            output.print(
+                "[yellow]🪝 Executing global on-failure hooks...[/yellow]",
+                level="warning",
+            )
+            hook_executor.execute_command_hooks(
+                template_hooks, "on_failure", "template"
+            )
 
         # 이 앱 그룹 결과 출력
         output.print_success(
@@ -620,7 +619,7 @@ def cmd(
             ],
             errors=["Some app groups failed to template"],
         )
-        raise click.Abort()
+        raise click.Abort
     output.print(
         "\n[bold green]🎉 All app groups templated successfully![/bold green]",
         level="success",

@@ -29,7 +29,7 @@ def load_json_schema(path: Path) -> dict:
 
 
 class ValidateCommand:
-    """Validate 명령 구현"""
+    """Validate 명령 구현."""
 
     def __init__(
         self,
@@ -37,7 +37,7 @@ class ValidateCommand:
         schema_type: str | None,
         base_dir: str,
         custom_schema_path: str | None,
-    ):
+    ) -> None:
         self.base_dir = Path(base_dir)
         self.target_file = target_file
         self.schema_type = schema_type
@@ -90,8 +90,8 @@ class ValidateCommand:
 
         return False
 
-    def execute(self):
-        """Validate 명령 실행"""
+    def execute(self) -> None:
+        """Validate 명령 실행."""
         logger.heading(f"Validate 시작 - 파일: {self.target_file}")
         target_path = Path(self.target_file)
         filename = target_path.name
@@ -107,7 +107,7 @@ class ValidateCommand:
                 logger.error(
                     f"파일 타입을 파일명({filename})으로 유추할 수 없습니다. --schema-type 옵션을 사용하세요.",
                 )
-                raise click.Abort()
+                raise click.Abort
         else:
             file_type = self.schema_type
 
@@ -133,7 +133,7 @@ class ValidateCommand:
             logger.success("설정 파일 로드 성공")
         except Exception as e:
             logger.error(f"설정 파일 ({target_path}) 로딩 실패: {e}")
-            raise click.Abort()
+            raise click.Abort
 
         # JSON 스키마 검증 (있을 경우만)
         if schema_path:
@@ -142,7 +142,7 @@ class ValidateCommand:
                 schema_def = load_json_schema(schema_path)
                 logger.success("JSON 스키마 로드 성공")
             except Exception:
-                raise click.Abort()
+                raise click.Abort
 
             try:
                 logger.info("JSON 스키마 기반 유효성 검사 중...")
@@ -160,10 +160,10 @@ class ValidateCommand:
                     logger.error(
                         f"Schema Path: {'.'.join(str(p) for p in e.schema_path)}"
                     )
-                raise click.Abort()
+                raise click.Abort
             except Exception as e:
                 logger.error(f"JSON 스키마 검증 중 오류: {e}")
-                raise click.Abort()
+                raise click.Abort
 
         # 데이터 모델 검증 (Pydantic 모델 사용)
         if file_type == "config":
@@ -178,7 +178,7 @@ class ValidateCommand:
                 for error in e.errors():
                     loc = " -> ".join(str(x) for x in error["loc"])
                     logger.error(f"  - {loc}: {error['msg']}")
-                raise click.Abort()
+                raise click.Abort
 
             # Validate app-group dependencies (deps field)
             deps_valid = self.validate_dependencies(config)
@@ -194,7 +194,7 @@ class ValidateCommand:
                 for error in e.errors():
                     loc = " -> ".join(str(x) for x in error["loc"])
                     logger.error(f"  - {loc}: {error['msg']}")
-                raise click.Abort()
+                raise click.Abort
         logger.success(f"'{filename}' 파일 유효성 검사 완료")
 
 
@@ -254,7 +254,7 @@ def cmd(
     custom_schema_path: str | None,
     verbose: bool,
     debug: bool,
-):
+) -> None:
     """config.yaml/toml 또는 sources.yaml/toml 파일을 JSON 스키마 및 데이터 모델로 검증합니다.
 
     Examples:
@@ -307,7 +307,7 @@ def cmd(
             BASE_DIR, app_config_dir_name, config_file_name
         )
     except ValueError:
-        raise click.Abort()
+        raise click.Abort
 
     # 각 앱 그룹 검증
     overall_success = True
@@ -375,7 +375,7 @@ def cmd(
 
     if not overall_success:
         console.print("\n[bold red]❌ Some app groups failed validation[/bold red]")
-        raise click.Abort()
+        raise click.Abort
     console.print(
         "\n[bold green]🎉 All app groups validated successfully![/bold green]"
     )

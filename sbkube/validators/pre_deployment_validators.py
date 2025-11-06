@@ -1,4 +1,4 @@
-"""배포 전 종합 안전성 검증기 모듈
+"""배포 전 종합 안전성 검증기 모듈.
 
 실제 배포 전 모든 구성 요소의 안전성과 배포 가능성을 종합적으로 검증합니다.
 롤백 계획 및 위험도 평가를 포함하여 안전한 배포를 보장합니다.
@@ -23,9 +23,9 @@ from sbkube.utils.validation_system import (
 
 
 class DeploymentSimulator(ValidationCheck):
-    """배포 시뮬레이션 및 드라이런 실행 검증기"""
+    """배포 시뮬레이션 및 드라이런 실행 검증기."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="deployment_simulator",
             description="배포 시뮬레이션 및 드라이런 실행",
@@ -33,7 +33,7 @@ class DeploymentSimulator(ValidationCheck):
         )
 
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """배포 시뮬레이션을 실행합니다"""
+        """배포 시뮬레이션을 실행합니다."""
         issues = []
         warnings = []
         simulation_results = []
@@ -117,7 +117,7 @@ class DeploymentSimulator(ValidationCheck):
     async def _get_deployment_apps(
         self, context: ValidationContext
     ) -> list[tuple[str, dict[str, Any]]]:
-        """배포할 앱들 추출"""
+        """배포할 앱들 추출."""
         apps = []
 
         try:
@@ -145,7 +145,7 @@ class DeploymentSimulator(ValidationCheck):
     async def _simulate_namespace_creation(
         self, context: ValidationContext
     ) -> list[str]:
-        """네임스페이스 생성 시뮬레이션"""
+        """네임스페이스 생성 시뮬레이션."""
         issues = []
 
         try:
@@ -200,7 +200,7 @@ class DeploymentSimulator(ValidationCheck):
     async def _simulate_app_deployment(
         self, app_name: str, app_config: dict[str, Any], context: ValidationContext
     ) -> dict[str, Any]:
-        """개별 앱 배포 시뮬레이션"""
+        """개별 앱 배포 시뮬레이션."""
         result = {
             "app_name": app_name,
             "app_type": app_config.get("type"),
@@ -230,8 +230,8 @@ class DeploymentSimulator(ValidationCheck):
         specs: dict[str, Any],
         context: ValidationContext,
         result: dict[str, Any],
-    ):
-        """Helm 앱 배포 시뮬레이션"""
+    ) -> None:
+        """Helm 앱 배포 시뮬레이션."""
         base_path = Path(context.base_dir)
 
         # 차트 경로 확인
@@ -293,8 +293,8 @@ class DeploymentSimulator(ValidationCheck):
         specs: dict[str, Any],
         context: ValidationContext,
         result: dict[str, Any],
-    ):
-        """YAML 앱 배포 시뮬레이션"""
+    ) -> None:
+        """YAML 앱 배포 시뮬레이션."""
         base_path = Path(context.base_dir)
         actions = specs.get("actions", [])
 
@@ -344,7 +344,7 @@ class DeploymentSimulator(ValidationCheck):
     async def _analyze_rendered_resources(
         self, yaml_content: str
     ) -> list[dict[str, Any]]:
-        """렌더링된 YAML에서 리소스 분석"""
+        """렌더링된 YAML에서 리소스 분석."""
         resources = []
 
         try:
@@ -379,7 +379,7 @@ class DeploymentSimulator(ValidationCheck):
     async def _test_kubectl_dry_run(
         self, yaml_content: str, namespace: str
     ) -> list[str]:
-        """Kubectl apply --dry-run 테스트"""
+        """Kubectl apply --dry-run 테스트."""
         issues = []
 
         try:
@@ -420,7 +420,7 @@ class DeploymentSimulator(ValidationCheck):
         return issues
 
     async def _get_namespace(self, context: ValidationContext) -> str:
-        """네임스페이스 추출"""
+        """네임스페이스 추출."""
         try:
             base_path = Path(context.base_dir)
             config_path = base_path / context.config_dir / "config.yaml"
@@ -437,9 +437,9 @@ class DeploymentSimulator(ValidationCheck):
 
 
 class RiskAssessmentValidator(ValidationCheck):
-    """배포 위험도 평가 및 분석 검증기"""
+    """배포 위험도 평가 및 분석 검증기."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="risk_assessment",
             description="배포 위험도 평가 및 분석",
@@ -447,7 +447,7 @@ class RiskAssessmentValidator(ValidationCheck):
         )
 
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """배포 위험도를 평가합니다"""
+        """배포 위험도를 평가합니다."""
         risk_factors = []
         risk_score = 0
         risk_level = "LOW"
@@ -522,7 +522,7 @@ class RiskAssessmentValidator(ValidationCheck):
     async def _assess_resource_impact(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """리소스 영향도 평가"""
+        """리소스 영향도 평가."""
         factors = []
         score = 0
 
@@ -583,7 +583,7 @@ class RiskAssessmentValidator(ValidationCheck):
     async def _assess_network_impact(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """네트워크 정책 위험도 평가"""
+        """네트워크 정책 위험도 평가."""
         factors = []
         score = 0
 
@@ -640,7 +640,7 @@ class RiskAssessmentValidator(ValidationCheck):
     async def _assess_persistence_impact(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """데이터 지속성 위험도 평가"""
+        """데이터 지속성 위험도 평가."""
         factors = []
         score = 0
 
@@ -693,7 +693,7 @@ class RiskAssessmentValidator(ValidationCheck):
     async def _assess_security_impact(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """보안 위험도 평가"""
+        """보안 위험도 평가."""
         factors = []
         score = 0
 
@@ -749,7 +749,7 @@ class RiskAssessmentValidator(ValidationCheck):
         return {"factors": factors, "score": score}
 
     def _has_privileged_settings(self, values_data: dict[str, Any]) -> bool:
-        """Values 파일에서 높은 권한 설정 탐지"""
+        """Values 파일에서 높은 권한 설정 탐지."""
         if not isinstance(values_data, dict):
             return False
 
@@ -763,14 +763,13 @@ class RiskAssessmentValidator(ValidationCheck):
             "hostIPC",
         ]
 
-        def check_nested_dict(data):
+        def check_nested_dict(data) -> bool:
             if isinstance(data, dict):
                 for key, value in data.items():
                     if any(
                         pattern in str(key).lower() for pattern in privileged_patterns
-                    ):
-                        if value is True or str(value).lower() == "true":
-                            return True
+                    ) and (value is True or str(value).lower() == "true"):
+                        return True
                     if check_nested_dict(value):
                         return True
             elif isinstance(data, list):
@@ -782,7 +781,7 @@ class RiskAssessmentValidator(ValidationCheck):
         return bool(check_nested_dict(values_data))
 
     def _get_risk_recommendation(self, risk_level: str, risk_factors: list[str]) -> str:
-        """위험도별 권장사항 생성"""
+        """위험도별 권장사항 생성."""
         if risk_level == "CRITICAL":
             return "배포를 중단하고 위험 요소를 해결한 후 다시 시도하세요. 클러스터 관리자와 상의가 필요합니다."
         if risk_level == "HIGH":
@@ -794,7 +793,7 @@ class RiskAssessmentValidator(ValidationCheck):
         return "안전한 배포입니다. 배포를 진행할 수 있습니다."
 
     async def _get_namespace(self, context: ValidationContext) -> str:
-        """네임스페이스 추출"""
+        """네임스페이스 추출."""
         try:
             base_path = Path(context.base_dir)
             config_path = base_path / context.config_dir / "config.yaml"
@@ -811,9 +810,9 @@ class RiskAssessmentValidator(ValidationCheck):
 
 
 class RollbackPlanValidator(ValidationCheck):
-    """롤백 가능성 및 계획 검증기"""
+    """롤백 가능성 및 계획 검증기."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="rollback_plan",
             description="롤백 가능성 및 계획 검증",
@@ -821,7 +820,7 @@ class RollbackPlanValidator(ValidationCheck):
         )
 
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """롤백 가능성 및 계획을 검증합니다"""
+        """롤백 가능성 및 계획을 검증합니다."""
         rollback_issues = []
         rollback_warnings = []
         rollback_plan = {}
@@ -881,7 +880,7 @@ class RollbackPlanValidator(ValidationCheck):
         )
 
     async def _assess_helm_rollback(self, context: ValidationContext) -> dict[str, Any]:
-        """Helm 기반 롤백 평가"""
+        """Helm 기반 롤백 평가."""
         plan = {"helm_releases": [], "helm_rollback_possible": True, "helm_issues": []}
 
         try:
@@ -944,7 +943,7 @@ class RollbackPlanValidator(ValidationCheck):
     async def _assess_backup_capability(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """백업 가능성 평가"""
+        """백업 가능성 평가."""
         plan = {"backup_tools": [], "backup_possible": False, "backup_issues": []}
 
         try:
@@ -984,7 +983,7 @@ class RollbackPlanValidator(ValidationCheck):
     async def _assess_persistence_rollback(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """데이터 영속성 롤백 평가"""
+        """데이터 영속성 롤백 평가."""
         plan = {
             "persistent_volumes": [],
             "data_rollback_risk": "low",
@@ -1028,7 +1027,7 @@ class RollbackPlanValidator(ValidationCheck):
     def _evaluate_overall_rollback(
         self, rollback_plan: dict[str, Any]
     ) -> dict[str, Any]:
-        """종합 롤백 가능성 평가"""
+        """종합 롤백 가능성 평가."""
         critical_issues = []
         warnings = []
 
@@ -1051,7 +1050,7 @@ class RollbackPlanValidator(ValidationCheck):
         return {"critical_issues": critical_issues, "warnings": warnings}
 
     async def _get_namespace(self, context: ValidationContext) -> str:
-        """네임스페이스 추출"""
+        """네임스페이스 추출."""
         try:
             base_path = Path(context.base_dir)
             config_path = base_path / context.config_dir / "config.yaml"
@@ -1068,9 +1067,9 @@ class RollbackPlanValidator(ValidationCheck):
 
 
 class ImpactAnalysisValidator(ValidationCheck):
-    """기존 워크로드에 미치는 영향 분석 검증기"""
+    """기존 워크로드에 미치는 영향 분석 검증기."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="impact_analysis",
             description="기존 워크로드에 미치는 영향 분석",
@@ -1078,7 +1077,7 @@ class ImpactAnalysisValidator(ValidationCheck):
         )
 
     async def run_validation(self, context: ValidationContext) -> ValidationResult:
-        """기존 워크로드에 미치는 영향을 분석합니다"""
+        """기존 워크로드에 미치는 영향을 분석합니다."""
         impact_issues = []
         impact_warnings = []
         impact_analysis = {}
@@ -1144,7 +1143,7 @@ class ImpactAnalysisValidator(ValidationCheck):
     async def _analyze_namespace_impact(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """네임스페이스 충돌 분석"""
+        """네임스페이스 충돌 분석."""
         analysis: dict[str, Any] = {"namespace_conflicts": [], "existing_workloads": 0}
 
         try:
@@ -1189,7 +1188,7 @@ class ImpactAnalysisValidator(ValidationCheck):
     async def _analyze_resource_conflicts(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """리소스 이름 충돌 분석"""
+        """리소스 이름 충돌 분석."""
         analysis: dict[str, Any] = {"resource_conflicts": [], "potential_conflicts": []}
 
         try:
@@ -1231,7 +1230,7 @@ class ImpactAnalysisValidator(ValidationCheck):
     async def _analyze_service_conflicts(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """서비스 및 포트 충돌 분석"""
+        """서비스 및 포트 충돌 분석."""
         analysis: dict[str, Any] = {"service_conflicts": [], "port_conflicts": []}
 
         try:
@@ -1282,7 +1281,7 @@ class ImpactAnalysisValidator(ValidationCheck):
     async def _analyze_resource_usage_impact(
         self, context: ValidationContext
     ) -> dict[str, Any]:
-        """리소스 사용량 영향 분석"""
+        """리소스 사용량 영향 분석."""
         analysis: dict[str, Any] = {"resource_pressure": [], "usage_warnings": []}
 
         try:
@@ -1352,7 +1351,7 @@ class ImpactAnalysisValidator(ValidationCheck):
     async def _get_new_resource_names(
         self, context: ValidationContext
     ) -> dict[str, list[str]]:
-        """배포될 새 리소스 이름들 추출"""
+        """배포될 새 리소스 이름들 추출."""
         resource_names: dict[str, list[str]] = {
             "deployments": [],
             "services": [],
@@ -1386,7 +1385,7 @@ class ImpactAnalysisValidator(ValidationCheck):
     def _evaluate_overall_impact(
         self, impact_analysis: dict[str, Any]
     ) -> dict[str, Any]:
-        """종합 영향도 평가"""
+        """종합 영향도 평가."""
         critical_issues = []
         warnings = []
 
@@ -1413,7 +1412,7 @@ class ImpactAnalysisValidator(ValidationCheck):
         return {"critical_issues": critical_issues, "warnings": warnings}
 
     async def _get_namespace(self, context: ValidationContext) -> str:
-        """네임스페이스 추출"""
+        """네임스페이스 추출."""
         try:
             base_path = Path(context.base_dir)
             config_path = base_path / context.config_dir / "config.yaml"

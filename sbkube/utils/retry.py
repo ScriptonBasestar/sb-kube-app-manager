@@ -32,7 +32,7 @@ class RetryConfig:
         exponential_base: float = 2.0,
         jitter: bool = True,
         retryable_exceptions: list[type[Exception]] | None = None,
-    ):
+    ) -> None:
         """Initialize retry configuration.
 
         Args:
@@ -151,7 +151,7 @@ def retry_operation(config: RetryConfig | None = None):
                         logger.debug(
                             f"Non-retryable exception encountered: {type(exc).__name__}",
                         )
-                        raise exc
+                        raise
 
                     # Don't retry on the last attempt
                     if attempt == config.max_attempts - 1:
@@ -268,7 +268,7 @@ def run_command_with_retry(
     @retry_operation(config)
     def _run_command():
         logger.command(" ".join(cmd))
-        result = subprocess.run(cmd, **subprocess_defaults)
+        result = subprocess.run(cmd, check=False, **subprocess_defaults)
         if result.stdout:
             logger.verbose(f"STDOUT: {result.stdout.strip()}")
         if result.stderr:
@@ -294,7 +294,7 @@ def run_git_command_with_retry(cmd: list[str], **kwargs) -> subprocess.Completed
 class RetryContext:
     """Context manager for retry operations with custom configuration."""
 
-    def __init__(self, config: RetryConfig):
+    def __init__(self, config: RetryConfig) -> None:
         self.config = config
         self.attempt = 0
         self.last_exception = None

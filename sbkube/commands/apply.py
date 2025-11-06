@@ -92,7 +92,7 @@ def cmd(
     skip_build: bool,
     skip_deps_check: bool,
     no_progress: bool,
-):
+) -> None:
     """SBKube apply 명령어.
 
     전체 워크플로우를 한 번에 실행합니다:
@@ -120,7 +120,7 @@ def cmd(
             BASE_DIR, app_config_dir_name, config_file_name, sources_file_name
         )
     except ValueError:
-        raise click.Abort()
+        raise click.Abort
 
     # 각 앱 그룹 처리
     overall_success = True
@@ -248,7 +248,7 @@ def cmd(
             apps_to_apply = []
             visited = set()
 
-            def collect_dependencies(name: str):
+            def collect_dependencies(name: str) -> None:
                 if name in visited:  # noqa: B023
                     return
                 visited.add(name)  # noqa: B023
@@ -517,7 +517,7 @@ def cmd(
             next_steps=["Check error messages above", "Fix issues and retry"],
             # errors는 OutputManager가 자동으로 수집한 것을 사용
         )
-        raise click.Abort()
+        raise click.Abort
     output.print(
         "\n[bold green]🎉 All app groups applied successfully![/bold green]",
         level="success",

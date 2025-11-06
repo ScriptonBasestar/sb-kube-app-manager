@@ -5,13 +5,13 @@ from typing import Any
 
 
 class ExecutionPatternAnalyzer:
-    """실행 패턴 분석기"""
+    """실행 패턴 분석기."""
 
-    def __init__(self, history: list[dict[str, Any]]):
+    def __init__(self, history: list[dict[str, Any]]) -> None:
         self.history = history
 
     def analyze_failure_patterns(self) -> dict[str, Any]:
-        """실패 패턴 분석"""
+        """실패 패턴 분석."""
         failed_executions = [h for h in self.history if h["status"] == "failed"]
 
         if not failed_executions:
@@ -83,7 +83,7 @@ class ExecutionPatternAnalyzer:
         }
 
     def analyze_performance_trends(self) -> dict[str, Any]:
-        """성능 트렌드 분석"""
+        """성능 트렌드 분석."""
         completed_executions = []
 
         for execution in self.history:
@@ -150,7 +150,7 @@ class ExecutionPatternAnalyzer:
         }
 
     def generate_recommendations(self) -> list[dict[str, str]]:
-        """개선 권장사항 생성"""
+        """개선 권장사항 생성."""
         recommendations = []
 
         failure_analysis = self.analyze_failure_patterns()
@@ -198,7 +198,7 @@ class ExecutionPatternAnalyzer:
         return recommendations
 
     def _load_execution_details(self, execution: dict[str, Any]) -> dict[str, Any]:
-        """실행 상세 정보 로드"""
+        """실행 상세 정보 로드."""
         try:
             import json
 

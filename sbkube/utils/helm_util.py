@@ -35,8 +35,9 @@ def get_installed_charts(
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
     except FileNotFoundError as exc:
+        msg = "helm"
         raise CliToolNotFoundError(
-            "helm", "https://helm.sh/docs/intro/install/"
+            msg, "https://helm.sh/docs/intro/install/"
         ) from exc
     except subprocess.CalledProcessError as exc:
         error_output = (exc.stderr or exc.stdout or "").strip()
@@ -44,10 +45,12 @@ def get_installed_charts(
             error_output, _CONNECTION_ERROR_KEYWORDS
         ):
             raise KubernetesConnectionError(reason=error_output) from exc
+        msg = "helm"
         raise CliToolExecutionError(
-            "helm", cmd, exc.returncode, exc.stdout, exc.stderr
+            msg, cmd, exc.returncode, exc.stdout, exc.stderr
         ) from exc
     except OSError as exc:
-        raise CliToolExecutionError("helm", cmd, -1, None, str(exc)) from exc
+        msg = "helm"
+        raise CliToolExecutionError(msg, cmd, -1, None, str(exc)) from exc
 
     return {item["name"]: item for item in json.loads(result.stdout)}

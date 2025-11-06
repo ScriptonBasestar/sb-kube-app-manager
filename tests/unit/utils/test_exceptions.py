@@ -1,5 +1,4 @@
-"""Tests for the standardized exception hierarchy.
-"""
+"""Tests for the standardized exception hierarchy."""
 
 from sbkube.exceptions import (
     CliToolExecutionError,
@@ -22,7 +21,7 @@ from sbkube.exceptions import (
 class TestSbkubeExceptionHierarchy:
     """Test the exception hierarchy structure."""
 
-    def test_base_exception(self):
+    def test_base_exception(self) -> None:
         """Test SbkubeError base exception."""
         exc = SbkubeError("Test error", {"key": "value"}, 42)
         assert str(exc) == "Test error"
@@ -30,7 +29,7 @@ class TestSbkubeExceptionHierarchy:
         assert exc.details == {"key": "value"}
         assert exc.exit_code == 42
 
-    def test_configuration_errors(self):
+    def test_configuration_errors(self) -> None:
         """Test configuration-related exceptions."""
         # Test ConfigFileNotFoundError
         exc = ConfigFileNotFoundError("config.yaml", ["./config.yaml", "./config.yml"])
@@ -45,7 +44,7 @@ class TestSbkubeExceptionHierarchy:
         assert exc.field == "field_name"
         assert exc.value == "invalid_value"
 
-    def test_tool_errors(self):
+    def test_tool_errors(self) -> None:
         """Test CLI tool-related exceptions."""
         # Test CliToolNotFoundError
         exc = CliToolNotFoundError("helm", "https://helm.sh/install")
@@ -62,27 +61,27 @@ class TestSbkubeExceptionHierarchy:
         assert exc.stdout == "stdout"
         assert exc.stderr == "stderr"
 
-    def test_kubernetes_errors(self):
+    def test_kubernetes_errors(self) -> None:
         """Test Kubernetes-related exceptions."""
         exc = KubernetesError("Test kubernetes error")
         assert isinstance(exc, SbkubeError)
 
-    def test_helm_errors(self):
+    def test_helm_errors(self) -> None:
         """Test Helm-related exceptions."""
         exc = HelmError("Test helm error")
         assert isinstance(exc, SbkubeError)
 
-    def test_git_errors(self):
+    def test_git_errors(self) -> None:
         """Test Git-related exceptions."""
         exc = GitError("Test git error")
         assert isinstance(exc, SbkubeError)
 
-    def test_filesystem_errors(self):
+    def test_filesystem_errors(self) -> None:
         """Test file system-related exceptions."""
         exc = FileSystemError("Test filesystem error")
         assert isinstance(exc, SbkubeError)
 
-    def test_security_errors(self):
+    def test_security_errors(self) -> None:
         """Test security-related exceptions."""
         exc = PathTraversalError("/malicious/../../etc/passwd", "/safe/base")
         assert isinstance(exc, SecurityError)
@@ -94,19 +93,19 @@ class TestSbkubeExceptionHierarchy:
 class TestExceptionHandlers:
     """Test exception handling utilities."""
 
-    def test_handle_exception_with_sbkube_error(self):
+    def test_handle_exception_with_sbkube_error(self) -> None:
         """Test handle_exception with SbkubeError."""
         exc = SbkubeError("Test error", exit_code=42)
         exit_code = handle_exception(exc)
         assert exit_code == 42
 
-    def test_handle_exception_with_standard_error(self):
+    def test_handle_exception_with_standard_error(self) -> None:
         """Test handle_exception with standard Exception."""
         exc = ValueError("Test error")
         exit_code = handle_exception(exc)
         assert exit_code == 1
 
-    def test_format_error_with_suggestions_cli_tool_not_found(self):
+    def test_format_error_with_suggestions_cli_tool_not_found(self) -> None:
         """Test error formatting for CliToolNotFoundError."""
         exc = CliToolNotFoundError("helm", "brew install helm")
         formatted = format_error_with_suggestions(exc)
@@ -114,7 +113,7 @@ class TestExceptionHandlers:
         assert "💡 Install helm:" in formatted
         assert "brew install helm" in formatted
 
-    def test_format_error_with_suggestions_config_file_not_found(self):
+    def test_format_error_with_suggestions_config_file_not_found(self) -> None:
         """Test error formatting for ConfigFileNotFoundError."""
         exc = ConfigFileNotFoundError("config.yaml", ["./config.yaml", "./config.yml"])
         formatted = format_error_with_suggestions(exc)
@@ -122,7 +121,7 @@ class TestExceptionHandlers:
         assert "💡 Expected configuration file" in formatted
         assert "./config.yaml" in formatted
 
-    def test_format_error_with_suggestions_generic(self):
+    def test_format_error_with_suggestions_generic(self) -> None:
         """Test error formatting for generic SbkubeError."""
         exc = SbkubeError("Generic error")
         formatted = format_error_with_suggestions(exc)
@@ -132,7 +131,7 @@ class TestExceptionHandlers:
 class TestExceptionIntegration:
     """Integration tests for exception handling."""
 
-    def test_exception_hierarchy_consistency(self):
+    def test_exception_hierarchy_consistency(self) -> None:
         """Test that all custom exceptions inherit from SbkubeError."""
         exceptions_to_test = [
             ConfigurationError("test"),
@@ -153,7 +152,7 @@ class TestExceptionIntegration:
                 f"{type(exc).__name__} should inherit from SbkubeError"
             )
 
-    def test_exception_details_preservation(self):
+    def test_exception_details_preservation(self) -> None:
         """Test that exception details are preserved correctly."""
         details = {"operation": "test", "file": "test.yaml"}
         exc = SbkubeError("Test error", details, 5)

@@ -1,5 +1,4 @@
-"""SBKube v0.3.0 build 명령어 테스트.
-"""
+"""SBKube v0.3.0 build 명령어 테스트."""
 
 import pytest
 
@@ -16,7 +15,7 @@ def output_manager():
 class TestBuildV3:
     """build_v3.py 테스트."""
 
-    def test_helm_app_with_overrides(self, tmp_path, output_manager):
+    def test_helm_app_with_overrides(self, tmp_path, output_manager) -> None:
         """overrides가 있는 Helm 앱 빌드 검증."""
         # 테스트 디렉토리 구조 생성
         charts_dir = tmp_path / "charts" / "grafana" / "grafana"
@@ -58,7 +57,7 @@ class TestBuildV3:
         assert (build_dir / "grafana" / "Chart.yaml").exists()
         assert (build_dir / "grafana" / "values.yaml").read_text() == "replicaCount: 3"
 
-    def test_helm_app_with_removes(self, tmp_path, output_manager):
+    def test_helm_app_with_removes(self, tmp_path, output_manager) -> None:
         """Removes가 있는 Helm 앱 빌드 검증."""
         # 테스트 디렉토리 구조 생성
         charts_dir = tmp_path / "charts" / "grafana" / "grafana"
@@ -95,7 +94,7 @@ class TestBuildV3:
         assert (build_dir / "grafana" / "Chart.yaml").exists()
         assert not (build_dir / "grafana" / "README.md").exists()
 
-    def test_local_chart_build(self, tmp_path, output_manager):
+    def test_local_chart_build(self, tmp_path, output_manager) -> None:
         """로컬 차트 빌드 검증."""
         # 로컬 차트 생성
         local_chart_dir = tmp_path / "my-chart"
@@ -134,7 +133,7 @@ class TestBuildV3:
         assert (build_dir / "my-app" / "Chart.yaml").exists()
         assert (build_dir / "my-app" / "values.yaml").read_text() == "enabled: false"
 
-    def test_helm_app_with_glob_patterns(self, tmp_path, output_manager):
+    def test_helm_app_with_glob_patterns(self, tmp_path, output_manager) -> None:
         """Glob 패턴을 사용한 overrides 테스트."""
         # 테스트 차트 생성
         chart_dir = tmp_path / "charts" / "ingress-nginx" / "ingress-nginx"
@@ -193,7 +192,7 @@ class TestBuildV3:
             build_dir / "ingress" / "files" / "config.txt"
         ).read_text() == "config content"
 
-    def test_helm_app_with_mixed_patterns(self, tmp_path, output_manager):
+    def test_helm_app_with_mixed_patterns(self, tmp_path, output_manager) -> None:
         """Glob 패턴과 명시적 파일을 혼합 사용."""
         # 테스트 차트 생성
         chart_dir = tmp_path / "charts" / "app" / "app"

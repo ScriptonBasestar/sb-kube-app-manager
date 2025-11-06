@@ -15,7 +15,7 @@ def runner():
 class TestStatusBasic:
     """Basic status command tests."""
 
-    def test_status_help(self, runner):
+    def test_status_help(self, runner) -> None:
         """Test status --help displays correctly."""
         result = runner.invoke(main, ["status", "--help"])
         assert result.exit_code == 0
@@ -24,7 +24,7 @@ class TestStatusBasic:
         assert "--deps" in result.output
         assert "--health-check" in result.output
 
-    def test_status_requires_sources_yaml(self, runner, tmp_path):
+    def test_status_requires_sources_yaml(self, runner, tmp_path) -> None:
         """Test status fails without sources.yaml."""
         result = runner.invoke(main, ["status", "--base-dir", str(tmp_path)])
         assert result.exit_code != 0
@@ -34,14 +34,14 @@ class TestStatusBasic:
 class TestStatusByGroup:
     """Tests for --by-group option (Phase 4)."""
 
-    def test_status_by_group_option_exists(self, runner):
+    def test_status_by_group_option_exists(self, runner) -> None:
         """Test --by-group option is available."""
         result = runner.invoke(main, ["status", "--help"])
         assert "--by-group" in result.output
         assert "Group applications by app-group" in result.output
 
     @pytest.mark.integration
-    def test_status_by_group_with_valid_cluster(self, runner, k3s_cluster):
+    def test_status_by_group_with_valid_cluster(self, runner, k3s_cluster) -> None:
         """Test --by-group with actual cluster (requires k3s)."""
         # This test requires actual k3s cluster setup
         # Mark as integration test
@@ -51,14 +51,14 @@ class TestStatusByGroup:
 class TestStatusDeps:
     """Tests for --deps option (Phase 6)."""
 
-    def test_status_deps_option_exists(self, runner):
+    def test_status_deps_option_exists(self, runner) -> None:
         """Test --deps option is available."""
         result = runner.invoke(main, ["status", "--help"])
         assert "--deps" in result.output
         assert "Show dependency tree" in result.output
 
     @pytest.mark.unit
-    def test_status_deps_without_config(self, runner, tmp_path):
+    def test_status_deps_without_config(self, runner, tmp_path) -> None:
         """Test --deps fails gracefully without config.yaml."""
         # Create minimal sources.yaml
         sources_file = tmp_path / "sources.yaml"
@@ -76,14 +76,14 @@ cluster: test-cluster
 class TestStatusHealthCheck:
     """Tests for --health-check option (Phase 7)."""
 
-    def test_status_health_check_option_exists(self, runner):
+    def test_status_health_check_option_exists(self, runner) -> None:
         """Test --health-check option is available."""
         result = runner.invoke(main, ["status", "--help"])
         assert "--health-check" in result.output
         assert "Show detailed health check status" in result.output
 
     @pytest.mark.integration
-    def test_status_health_check_with_pods(self, runner, k3s_cluster_with_pods):
+    def test_status_health_check_with_pods(self, runner, k3s_cluster_with_pods) -> None:
         """Test --health-check displays pod health (requires k3s with pods)."""
         pytest.skip("Requires actual k3s cluster with pods")
 
@@ -91,7 +91,7 @@ class TestStatusHealthCheck:
 class TestStatusManaged:
     """Tests for --managed option (Phase 4)."""
 
-    def test_status_managed_option_exists(self, runner):
+    def test_status_managed_option_exists(self, runner) -> None:
         """Test --managed option is available."""
         result = runner.invoke(main, ["status", "--help"])
         assert "--managed" in result.output
@@ -101,7 +101,7 @@ class TestStatusManaged:
 class TestStatusUnhealthy:
     """Tests for --unhealthy option (Phase 4)."""
 
-    def test_status_unhealthy_option_exists(self, runner):
+    def test_status_unhealthy_option_exists(self, runner) -> None:
         """Test --unhealthy option is available."""
         result = runner.invoke(main, ["status", "--help"])
         assert "--unhealthy" in result.output
@@ -111,7 +111,7 @@ class TestStatusUnhealthy:
 class TestStatusAppGroup:
     """Tests for app-group argument (Phase 4)."""
 
-    def test_status_specific_app_group(self, runner):
+    def test_status_specific_app_group(self, runner) -> None:
         """Test status with specific app-group argument."""
         result = runner.invoke(main, ["status", "--help"])
         assert "app_group" in result.output or "APP_GROUP" in result.output
@@ -120,13 +120,13 @@ class TestStatusAppGroup:
 class TestStatusLLMOutput:
     """Tests for LLM-friendly output format (Phase 3)."""
 
-    def test_status_with_llm_format_help(self, runner):
+    def test_status_with_llm_format_help(self, runner) -> None:
         """Test --format option is available."""
         result = runner.invoke(main, ["--help"])
         assert "--format" in result.output
         assert "llm" in result.output
 
-    def test_status_requires_sources_even_with_llm_format(self, runner, tmp_path):
+    def test_status_requires_sources_even_with_llm_format(self, runner, tmp_path) -> None:
         """Test status with --format llm still requires sources.yaml."""
         result = runner.invoke(
             main, ["--format", "llm", "status", "--base-dir", str(tmp_path)]
@@ -138,14 +138,14 @@ class TestStatusLLMOutput:
 class TestStatusOptionCombinations:
     """Tests for option combinations."""
 
-    def test_status_by_group_and_health_check(self, runner):
+    def test_status_by_group_and_health_check(self, runner) -> None:
         """Test combining --by-group and --health-check."""
         result = runner.invoke(main, ["status", "--help"])
         # Both options should be available
         assert "--by-group" in result.output
         assert "--health-check" in result.output
 
-    def test_status_managed_and_unhealthy(self, runner):
+    def test_status_managed_and_unhealthy(self, runner) -> None:
         """Test combining --managed and --unhealthy."""
         result = runner.invoke(main, ["status", "--help"])
         assert "--managed" in result.output
@@ -157,14 +157,14 @@ class TestStatusOptionCombinations:
 class TestStatusIntegration:
     """Integration tests for status command."""
 
-    def test_status_with_real_cluster(self, runner, k3s_cluster):
+    def test_status_with_real_cluster(self, runner, k3s_cluster) -> None:
         """Test status with real k3s cluster."""
         pytest.skip("Requires actual k3s cluster setup")
 
-    def test_status_cache_functionality(self, runner, k3s_cluster):
+    def test_status_cache_functionality(self, runner, k3s_cluster) -> None:
         """Test status caching mechanism."""
         pytest.skip("Requires actual k3s cluster setup")
 
-    def test_status_watch_mode(self, runner, k3s_cluster):
+    def test_status_watch_mode(self, runner, k3s_cluster) -> None:
         """Test status --watch mode."""
         pytest.skip("Requires actual k3s cluster setup")

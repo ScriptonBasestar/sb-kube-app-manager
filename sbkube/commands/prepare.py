@@ -37,7 +37,8 @@ def parse_helm_chart(chart: str) -> tuple[str, str]:
     """
     parts = chart.split("/")
     if len(parts) != 2:
-        raise ValueError(f"Invalid chart format: {chart}. Expected 'repo/chart'")
+        msg = f"Invalid chart format: {chart}. Expected 'repo/chart'"
+        raise ValueError(msg)
     return parts[0], parts[1]
 
 
@@ -148,7 +149,7 @@ def prepare_oci_chart(
             cmd.extend(["--version", app.version])
 
         cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
-        return_code, stdout, stderr = run_command(cmd)
+        return_code, _stdout, stderr = run_command(cmd)
 
         if return_code != 0:
             output.print_error(f"Failed to pull OCI chart: {stderr}")
@@ -339,7 +340,7 @@ def prepare_helm_app(
             cmd.extend(["--version", app.version])
 
         cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
-        return_code, stdout, stderr = run_command(cmd)
+        return_code, _stdout, stderr = run_command(cmd)
 
         if return_code != 0:
             output.print_error(f"Failed to pull chart: {stderr}")
@@ -412,7 +413,7 @@ def prepare_http_app(
         for key, value in app.headers.items():
             cmd.extend(["-H", f"{key}: {value}"])
 
-        return_code, stdout, stderr = run_command(cmd, timeout=300)
+        return_code, _stdout, stderr = run_command(cmd, timeout=300)
 
         if return_code != 0:
             output.print_error(f"Failed to download: {stderr}")
@@ -521,7 +522,7 @@ def prepare_git_app(
         if branch:
             cmd.extend(["--branch", branch])
 
-        return_code, stdout, stderr = run_command(cmd)
+        return_code, _stdout, stderr = run_command(cmd)
 
         if return_code != 0:
             output.print_error(f"Failed to clone repository: {stderr}")
@@ -584,7 +585,7 @@ def cmd(
     app_name: str | None,
     force: bool,
     dry_run: bool,
-):
+) -> None:
     """SBKube prepare 명령어.
 
     외부 리소스를 준비합니다:
@@ -609,7 +610,7 @@ def cmd(
             BASE_DIR, app_config_dir_name, config_file_name
         )
     except ValueError:
-        raise click.Abort()
+        raise click.Abort
 
     # 각 앱 그룹 처리
     overall_success = True
@@ -836,6 +837,6 @@ def cmd(
     if not overall_success:
         output.print_error("Some app groups failed to prepare")
         output.finalize()
-        raise click.Abort()
+        raise click.Abort
     output.print_success("All app groups prepared successfully!")
     output.finalize()

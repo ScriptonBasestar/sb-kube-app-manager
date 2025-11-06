@@ -21,7 +21,7 @@ from rich.progress import (
 class ProgressTracker:
     """진행 상황 추적 및 표시 클래스."""
 
-    def __init__(self, console: Console | None = None, disable: bool = False):
+    def __init__(self, console: Console | None = None, disable: bool = False) -> None:
         """ProgressTracker 초기화.
 
         Args:
@@ -138,7 +138,7 @@ class ProgressTracker:
 class DeploymentProgressTracker(ProgressTracker):
     """배포 작업 전용 진행 추적기."""
 
-    def __init__(self, console: Console | None = None, disable: bool = False):
+    def __init__(self, console: Console | None = None, disable: bool = False) -> None:
         """DeploymentProgressTracker 초기화.
 
         Args:

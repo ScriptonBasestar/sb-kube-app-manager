@@ -10,7 +10,7 @@ pytestmark = pytest.mark.e2e
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
-def test_hook_app_basic_deployment():
+def test_hook_app_basic_deployment() -> None:
     """기본 HookApp 배포 E2E 테스트."""
     # TODO: 실제 k3s 클러스터에서 테스트
     # 1. examples/hooks-phase4 디렉토리 사용
@@ -19,7 +19,7 @@ def test_hook_app_basic_deployment():
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
-def test_hook_app_dependency_chain():
+def test_hook_app_dependency_chain() -> None:
     """HookApp 의존성 체인 E2E 테스트."""
     # TODO: 실제 k3s 클러스터에서 테스트
     # 1. cert-manager → setup-issuers → create-certificates → verify-deployment
@@ -28,7 +28,7 @@ def test_hook_app_dependency_chain():
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
-def test_hook_app_validation_phase3():
+def test_hook_app_validation_phase3() -> None:
     """HookApp Phase 3 기능 (validation) E2E 테스트."""
     # TODO: 실제 k3s 클러스터에서 테스트
     # 1. ClusterIssuer 배포
@@ -38,7 +38,7 @@ def test_hook_app_validation_phase3():
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
-def test_hook_app_rollback_phase3():
+def test_hook_app_rollback_phase3() -> None:
     """HookApp Phase 3 기능 (rollback) E2E 테스트."""
     # TODO: 실제 k3s 클러스터에서 테스트
     # 1. 의도적으로 실패하는 HookApp 배포
@@ -47,7 +47,7 @@ def test_hook_app_rollback_phase3():
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
-def test_hook_app_skip_in_prepare_build_template():
+def test_hook_app_skip_in_prepare_build_template() -> None:
     """HookApp이 prepare/build/template에서 건너뛰는지 E2E 테스트."""
     # TODO: 실제 명령어 실행 후 출력 확인
     # 1. sbkube prepare → "HookApp does not require prepare" 메시지 확인
@@ -57,7 +57,7 @@ def test_hook_app_skip_in_prepare_build_template():
 
 
 @pytest.mark.skip(reason="Requires Kubernetes cluster and manual setup")
-def test_hook_app_dry_run():
+def test_hook_app_dry_run() -> None:
     """HookApp dry-run 모드 E2E 테스트."""
     # TODO: 실제 k3s 클러스터에서 테스트
     # 1. sbkube deploy --dry-run

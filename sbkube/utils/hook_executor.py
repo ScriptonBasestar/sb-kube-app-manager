@@ -53,7 +53,7 @@ class HookExecutor:
         kubeconfig: str | None = None,
         context: str | None = None,
         namespace: str | None = None,
-    ):
+    ) -> None:
         """HookExecutor 초기화.
 
         Args:
@@ -755,7 +755,7 @@ class HookExecutor:
             console.print(f"[green]✅ Validation passed: {kind} is ready[/green]")
             return True
         # 단순 존재 확인
-        return_code, stdout, stderr = run_command(cmd)
+        return_code, _stdout, stderr = run_command(cmd)
         if return_code != 0:
             console.print(f"[red]❌ Validation failed: {kind} not found[/red]")
             if stderr:
@@ -851,7 +851,7 @@ class HookExecutor:
                     f"    Waiting for {kind} to satisfy condition '{condition}' (timeout: {timeout}s)..."
                 )
 
-                return_code, stdout, stderr = run_command(wait_cmd)
+                return_code, _stdout, stderr = run_command(wait_cmd)
                 if return_code != 0:
                     console.print(
                         f"[red]❌ wait_for failed: {kind} condition '{condition}' not met within {timeout}s[/red]"

@@ -14,7 +14,7 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 class TestK3scodeAIWorkflow:
     """Test k3scode AI application workflow."""
 
-    def test_ai_prepare(self, runner, examples_dir, tmp_path, list_directory_contents):
+    def test_ai_prepare(self, runner, examples_dir, tmp_path, list_directory_contents) -> None:
         """Test k3scode AI prepare phase.
 
         This test verifies that the prepare command correctly downloads
@@ -66,7 +66,7 @@ class TestK3scodeAIWorkflow:
             f"Neither .sbkube/charts nor .sbkube/repos directory created in {project_root}\nContents: {list_directory_contents(project_root)}"
         )
 
-    def test_ai_build(self, runner, examples_dir, tmp_path, list_directory_contents):
+    def test_ai_build(self, runner, examples_dir, tmp_path, list_directory_contents) -> None:
         """Test k3scode AI build phase.
 
         This test runs prepare first (to get dependencies), then builds
@@ -124,7 +124,7 @@ class TestK3scodeDevOpsWorkflow:
 
     def test_devops_prepare(
         self, runner, examples_dir, tmp_path, list_directory_contents
-    ):
+    ) -> None:
         """Test k3scode DevOps prepare phase.
 
         This test verifies that the prepare command correctly handles
@@ -165,7 +165,7 @@ class TestK3scodeDevOpsWorkflow:
 
     def test_devops_build(
         self, runner, examples_dir, tmp_path, list_directory_contents
-    ):
+    ) -> None:
         """Test k3scode DevOps build phase.
 
         This test runs prepare first, then builds the DevOps application.
@@ -219,7 +219,7 @@ class TestK3scodeDevOpsWorkflow:
 class TestK3scodeMemoryWorkflow:
     """Test k3scode Memory application workflow."""
 
-    def test_memory_prepare(self, runner, examples_dir, tmp_path):
+    def test_memory_prepare(self, runner, examples_dir, tmp_path) -> None:
         """Test k3scode Memory prepare phase.
 
         This test verifies prepare for the memory configuration.
@@ -259,7 +259,7 @@ class TestK3scodeMemoryWorkflow:
 class TestK3scodeRDBWorkflow:
     """Test k3scode RDB application workflow."""
 
-    def test_rdb_prepare(self, runner, examples_dir, tmp_path):
+    def test_rdb_prepare(self, runner, examples_dir, tmp_path) -> None:
         """Test k3scode RDB prepare phase.
 
         This test verifies prepare for the RDB configuration.

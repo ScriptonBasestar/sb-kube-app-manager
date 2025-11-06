@@ -47,30 +47,36 @@ def expand_repo_variables(
 
         # 1. 앱이 존재하는지 확인
         if repo_name not in apps_config:
-            raise SbkubeError(
+            msg = (
                 f"Variable ${{repos.{repo_name}}} references non-existent app '{repo_name}'. "
                 f"Available apps: {', '.join(apps_config.keys())}"
+            )
+            raise SbkubeError(
+                msg
             )
 
         # 2. 해당 앱이 git 타입인지 확인
         app_config = apps_config[repo_name]
         app_type = app_config.get("type")
         if app_type != "git":
-            raise SbkubeError(
+            msg = (
                 f"Variable ${{repos.{repo_name}}} can only reference git-type apps, "
                 f"but '{repo_name}' is type '{app_type}'"
+            )
+            raise SbkubeError(
+                msg
             )
 
         # 3. 리포지토리 경로 반환
         return str(repos_dir / repo_name)
 
     try:
-        expanded = re.sub(pattern, replace_var, manifest_path)
-        return expanded
+        return re.sub(pattern, replace_var, manifest_path)
     except SbkubeError:
         raise
     except Exception as e:
-        raise SbkubeError(f"Failed to expand variables in path '{manifest_path}': {e}")
+        msg = f"Failed to expand variables in path '{manifest_path}': {e}"
+        raise SbkubeError(msg)
 
 
 def validate_variable_syntax(path: str) -> None:
@@ -96,9 +102,12 @@ def validate_variable_syntax(path: str) -> None:
     open_braces = path.count("${")
     close_braces = path.count("}")
     if open_braces > close_braces:
-        raise SbkubeError(
+        msg = (
             f"Invalid variable syntax: unclosed brace in path '{path}'. "
             f"Expected format: ${{repos.app-name}}"
+        )
+        raise SbkubeError(
+            msg
         )
 
     # 올바른 형식 검증
@@ -111,11 +120,15 @@ def validate_variable_syntax(path: str) -> None:
 
         # 앱 이름이 비어있는 경우
         if not app_name:
-            raise SbkubeError(f"Empty app name in variable '{match}' in path '{path}'")
+            msg = f"Empty app name in variable '{match}' in path '{path}'"
+            raise SbkubeError(msg)
 
         # 올바른 형식인지 검증
         if not re.fullmatch(pattern, match):
-            raise SbkubeError(
+            msg = (
                 f"Invalid variable syntax: '{match}' in path '{path}'. "
                 f"Expected format: ${{repos.app-name}} (alphanumeric, hyphens, underscores only)"
+            )
+            raise SbkubeError(
+                msg
             )

@@ -57,8 +57,8 @@ def cmd(
     cluster: str | None,
     namespace: str | None,
     limit: int,
-):
-    """Rollback a deployment to a previous state.
+) -> None:
+    r"""Rollback a deployment to a previous state.
 
     This command allows you to roll back applications to a previous deployment
     state, either completely or for specific apps only.
@@ -97,7 +97,7 @@ def cmd(
         if not deployment_id:
             logger.error("deployment_id is required for rollback operation")
             logger.info("Use --list to see available rollback points")
-            raise click.Abort()
+            raise click.Abort
 
         # Create rollback request
         request = RollbackRequest(
@@ -123,10 +123,10 @@ def cmd(
 
     except RollbackError as e:
         logger.error(f"Rollback failed: {e}")
-        raise click.Abort()
+        raise click.Abort
     except Exception as e:
         logger.error(f"Unexpected error during rollback: {e}")
-        raise click.Abort()
+        raise click.Abort
 
 
 def _list_rollback_points(
@@ -140,7 +140,7 @@ def _list_rollback_points(
     """List available rollback points."""
     if not cluster or not namespace:
         logger.error("--cluster and --namespace are required for --list")
-        raise click.Abort()
+        raise click.Abort
 
     app_config_dir = str(Path(base_dir).resolve() / app_dir)
 
@@ -169,7 +169,7 @@ def _list_rollback_points(
         )
 
 
-def _print_rollback_simulation(result):
+def _print_rollback_simulation(result) -> None:
     """Print rollback simulation results."""
     logger.heading("Rollback Simulation")
 
@@ -194,7 +194,7 @@ def _print_rollback_simulation(result):
             )
 
 
-def _print_rollback_result(result):
+def _print_rollback_result(result) -> None:
     """Print rollback execution results."""
     if result["success"]:
         logger.success("Rollback completed successfully")

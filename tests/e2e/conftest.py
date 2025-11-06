@@ -7,12 +7,15 @@ that use actual examples/ directory files.
 import shutil
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import click
 import pytest
 from click.testing import CliRunner
 
 from sbkube.cli import main
+
+if TYPE_CHECKING:
+    import click
 
 
 @pytest.fixture
@@ -37,7 +40,7 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
-def verify_example_exists(example_path: Path, required_files: list[str] | None = None):
+def verify_example_exists(example_path: Path, required_files: list[str] | None = None) -> None:
     """Verify that an example directory exists and contains required files.
 
     Args:
@@ -135,7 +138,7 @@ def verify_charts_downloaded(tmp_path: Path):
 
     """
 
-    def _verify(chart_name: str, base_dir: Path | None = None):
+    def _verify(chart_name: str, base_dir: Path | None = None) -> None:
         """Verify that a Helm chart was downloaded.
 
         Args:
@@ -175,7 +178,7 @@ def verify_build_output(tmp_path: Path):
 
     """
 
-    def _verify(app_name: str, app_dir: Path):
+    def _verify(app_name: str, app_dir: Path) -> None:
         """Verify that build output exists.
 
         Args:
@@ -282,8 +285,8 @@ def helm_version(helm_available) -> str | None:
         return None
 
 
-@pytest.fixture(autouse=True, scope="function")
-def skip_if_helm_unavailable(request, helm_available):
+@pytest.fixture(autouse=True)
+def skip_if_helm_unavailable(request, helm_available) -> None:
     """Auto-skip tests marked with requires_helm if helm is not available.
 
     This fixture runs automatically for all E2E tests and checks if the test
@@ -294,11 +297,10 @@ def skip_if_helm_unavailable(request, helm_available):
         helm_available: Helm availability fixture
 
     """
-    if request.node.get_closest_marker("requires_helm"):
-        if not helm_available:
-            pytest.skip(
-                "Helm is not installed or not in PATH. Install helm to run this test."
-            )
+    if request.node.get_closest_marker("requires_helm") and not helm_available:
+        pytest.skip(
+            "Helm is not installed or not in PATH. Install helm to run this test."
+        )
 
 
 def is_k8s_cluster_reachable():
@@ -316,8 +318,8 @@ def is_k8s_cluster_reachable():
         return False
 
 
-@pytest.fixture(autouse=True, scope="function")
-def skip_if_k8s_unavailable(request, kubectl_available):
+@pytest.fixture(autouse=True)
+def skip_if_k8s_unavailable(request, kubectl_available) -> None:
     """Auto-skip tests marked with requires_k8s if kubectl is not available or cluster is unreachable.
 
     This fixture runs automatically for all E2E tests and checks if the test

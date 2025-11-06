@@ -1,5 +1,4 @@
-"""Tests for output formatter utility.
-"""
+"""Tests for output formatter utility."""
 
 import json
 import os
@@ -16,7 +15,7 @@ from sbkube.utils.output_formatter import (
 class TestOutputFormat:
     """Test OutputFormat enum."""
 
-    def test_enum_values(self):
+    def test_enum_values(self) -> None:
         """Test that all expected format values exist."""
         assert OutputFormat.HUMAN == "human"
         assert OutputFormat.LLM == "llm"
@@ -27,34 +26,34 @@ class TestOutputFormat:
 class TestOutputFormatter:
     """Test OutputFormatter class."""
 
-    def test_init_with_string(self):
+    def test_init_with_string(self) -> None:
         """Test initialization with string format."""
         formatter = OutputFormatter("llm")
         assert formatter.format == OutputFormat.LLM
 
-    def test_init_with_enum(self):
+    def test_init_with_enum(self) -> None:
         """Test initialization with enum format."""
         formatter = OutputFormatter(OutputFormat.JSON)
         assert formatter.format == OutputFormat.JSON
 
-    def test_from_env_or_cli_with_cli_option(self):
+    def test_from_env_or_cli_with_cli_option(self) -> None:
         """Test format selection with CLI option (highest priority)."""
         formatter = OutputFormatter.from_env_or_cli(cli_format="json")
         assert formatter.format == OutputFormat.JSON
 
-    def test_from_env_or_cli_with_env_var(self, monkeypatch):
+    def test_from_env_or_cli_with_env_var(self, monkeypatch) -> None:
         """Test format selection with environment variable."""
         monkeypatch.setenv("SBKUBE_OUTPUT_FORMAT", "llm")
         formatter = OutputFormatter.from_env_or_cli()
         assert formatter.format == OutputFormat.LLM
 
-    def test_from_env_or_cli_cli_overrides_env(self, monkeypatch):
+    def test_from_env_or_cli_cli_overrides_env(self, monkeypatch) -> None:
         """Test that CLI option overrides environment variable."""
         monkeypatch.setenv("SBKUBE_OUTPUT_FORMAT", "json")
         formatter = OutputFormatter.from_env_or_cli(cli_format="yaml")
         assert formatter.format == OutputFormat.YAML
 
-    def test_from_env_or_cli_default(self):
+    def test_from_env_or_cli_default(self) -> None:
         """Test default format when no options provided."""
         # Ensure env var is not set
         if "SBKUBE_OUTPUT_FORMAT" in os.environ:
@@ -62,7 +61,7 @@ class TestOutputFormatter:
         formatter = OutputFormatter.from_env_or_cli()
         assert formatter.format == OutputFormat.HUMAN
 
-    def test_from_env_or_cli_invalid_format(self):
+    def test_from_env_or_cli_invalid_format(self) -> None:
         """Test fallback to human format for invalid format string."""
         formatter = OutputFormatter.from_env_or_cli(cli_format="invalid")
         assert formatter.format == OutputFormat.HUMAN
@@ -108,7 +107,7 @@ class TestFormatDeploymentResult:
             "errors": [],
         }
 
-    def test_format_llm(self, sample_data):
+    def test_format_llm(self, sample_data) -> None:
         """Test LLM format output."""
         formatter = OutputFormatter(OutputFormat.LLM)
         result = formatter.format_deployment_result(
@@ -129,7 +128,7 @@ class TestFormatDeploymentResult:
         assert "kubectl get pods -n default" in result
         assert "ERRORS: none" in result
 
-    def test_format_llm_with_errors(self, sample_data):
+    def test_format_llm_with_errors(self, sample_data) -> None:
         """Test LLM format output with errors."""
         formatter = OutputFormatter(OutputFormat.LLM)
         sample_data["status"] = "failed"
@@ -151,7 +150,7 @@ class TestFormatDeploymentResult:
         assert "- Database connection failed" in result
         assert "- Timeout waiting for pod" in result
 
-    def test_format_json(self, sample_data):
+    def test_format_json(self, sample_data) -> None:
         """Test JSON format output."""
         formatter = OutputFormatter(OutputFormat.JSON)
         result = formatter.format_deployment_result(
@@ -171,7 +170,7 @@ class TestFormatDeploymentResult:
         assert len(parsed["next_steps"]) == 2
         assert parsed["errors"] == []
 
-    def test_format_yaml(self, sample_data):
+    def test_format_yaml(self, sample_data) -> None:
         """Test YAML format output."""
         formatter = OutputFormatter(OutputFormat.YAML)
         result = formatter.format_deployment_result(
@@ -192,7 +191,7 @@ class TestFormatDeploymentResult:
 class TestGetOutputFormatFromContext:
     """Test get_output_format_from_context helper."""
 
-    def test_from_context_params(self):
+    def test_from_context_params(self) -> None:
         """Test extracting format from Click context params."""
 
         class MockContext:
@@ -201,7 +200,7 @@ class TestGetOutputFormatFromContext:
         result = get_output_format_from_context(MockContext())
         assert result == OutputFormat.LLM
 
-    def test_from_context_no_params(self):
+    def test_from_context_no_params(self) -> None:
         """Test default format when context has no params."""
 
         class MockContext:
@@ -210,7 +209,7 @@ class TestGetOutputFormatFromContext:
         result = get_output_format_from_context(MockContext())
         assert result == OutputFormat.HUMAN
 
-    def test_from_env_variable(self, monkeypatch):
+    def test_from_env_variable(self, monkeypatch) -> None:
         """Test extracting format from environment variable."""
         monkeypatch.setenv("SBKUBE_OUTPUT_FORMAT", "json")
 
@@ -224,7 +223,7 @@ class TestGetOutputFormatFromContext:
 class TestPrintOutput:
     """Test print_output method."""
 
-    def test_print_string_output(self, capsys):
+    def test_print_string_output(self, capsys) -> None:
         """Test printing string output."""
         formatter = OutputFormatter(OutputFormat.LLM)
         formatter.print_output("STATUS: success ✅")
@@ -232,7 +231,7 @@ class TestPrintOutput:
         captured = capsys.readouterr()
         assert "STATUS: success ✅" in captured.out
 
-    def test_print_dict_output_json(self, capsys):
+    def test_print_dict_output_json(self, capsys) -> None:
         """Test printing dict as JSON."""
         formatter = OutputFormatter(OutputFormat.JSON)
         data = {"status": "success", "count": 3}

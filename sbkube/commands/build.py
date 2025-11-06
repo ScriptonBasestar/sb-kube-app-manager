@@ -362,7 +362,7 @@ def cmd(
     config_file_name: str,
     app_name: str | None,
     dry_run: bool,
-):
+) -> None:
     """SBKube build 명령어.
 
     빌드 디렉토리 준비 및 커스터마이징:
@@ -393,7 +393,7 @@ def cmd(
             BASE_DIR, app_config_dir_name, config_file_name
         )
     except ValueError:
-        raise click.Abort()
+        raise click.Abort
 
     # 각 앱 그룹 처리
     overall_success = True
@@ -592,7 +592,7 @@ def cmd(
             next_steps=["Check error messages above and fix configuration"],
             errors=["Some apps failed to build"],
         )
-        raise click.Abort()
+        raise click.Abort
     output.print(
         "\n[bold green]🎉 All app groups built successfully![/bold green]",
         level="success",

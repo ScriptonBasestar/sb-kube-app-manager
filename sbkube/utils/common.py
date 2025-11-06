@@ -61,11 +61,11 @@ def common_click_options(func):
 def execute_command_with_logging(
     cmd: list,
     error_msg: str,
-    success_msg: str = None,
-    cwd: Path = None,
+    success_msg: str | None = None,
+    cwd: Path | None = None,
     timeout: int = 300,
 ):
-    """명령어 실행 및 로깅 처리"""
+    """명령어 실행 및 로깅 처리."""
     logger.command(" ".join(cmd))
 
     try:
@@ -136,13 +136,13 @@ def check_required_cli_tools(app_info_list: list):
         try:
             check_helm_installed()
         except (CliToolNotFoundError, CliToolExecutionError):
-            raise click.Abort()
+            raise click.Abort
 
     if needs_kubectl:
         try:
             check_kubectl_installed()
         except (CliToolNotFoundError, CliToolExecutionError):
-            raise click.Abort()
+            raise click.Abort
 
     # Git은 대부분 시스템에 설치되어 있으므로 별도 체크하지 않음
     return {"helm": needs_helm, "kubectl": needs_kubectl, "git": needs_git}

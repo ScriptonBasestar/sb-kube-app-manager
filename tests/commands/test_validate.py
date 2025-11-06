@@ -53,7 +53,7 @@ helm_repos:
 class TestValidateHelp:
     """Test validate --help command."""
 
-    def test_validate_help(self, runner):
+    def test_validate_help(self, runner) -> None:
         """Test validate --help displays correctly."""
         result = runner.invoke(main, ["validate", "--help"])
         assert result.exit_code == 0
@@ -68,7 +68,7 @@ class TestValidateHelp:
 class TestValidateExplicitPath:
     """Test validate with explicit file path (backward compatibility)."""
 
-    def test_validate_explicit_path(self, runner, temp_project):
+    def test_validate_explicit_path(self, runner, temp_project) -> None:
         """Test validate with explicit file path."""
         config_file = temp_project / "examples" / "basic" / "config.yaml"
         result = runner.invoke(main, ["validate", str(config_file)])
@@ -77,7 +77,7 @@ class TestValidateExplicitPath:
         assert result.exit_code == 0
         assert "유효성 검사 완료" in result.output
 
-    def test_validate_explicit_path_sources(self, runner, temp_project):
+    def test_validate_explicit_path_sources(self, runner, temp_project) -> None:
         """Test validate with explicit sources.yaml path."""
         sources_file = temp_project / "sources.yaml"
         result = runner.invoke(main, ["validate", str(sources_file)])
@@ -86,7 +86,7 @@ class TestValidateExplicitPath:
         assert result.exit_code == 0
         assert "유효성 검사 완료" in result.output
 
-    def test_validate_explicit_path_nonexistent(self, runner, temp_project):
+    def test_validate_explicit_path_nonexistent(self, runner, temp_project) -> None:
         """Test validate with non-existent file."""
         nonexistent = temp_project / "nonexistent.yaml"
         result = runner.invoke(main, ["validate", str(nonexistent)])
@@ -98,7 +98,7 @@ class TestValidateExplicitPath:
 class TestValidateAppDir:
     """Test validate with --app-dir option."""
 
-    def test_validate_app_dir(self, runner, temp_project):
+    def test_validate_app_dir(self, runner, temp_project) -> None:
         """Test validate with --app-dir option."""
         result = runner.invoke(
             main,
@@ -117,7 +117,7 @@ class TestValidateAppDir:
         assert "유효성 검사 완료" in result.output
         assert "validated successfully" in result.output
 
-    def test_validate_app_dir_custom_config(self, runner, temp_project):
+    def test_validate_app_dir_custom_config(self, runner, temp_project) -> None:
         """Test validate with --app-dir and --config-file (non-standard filename)."""
         result = runner.invoke(
             main,
@@ -140,7 +140,7 @@ class TestValidateAppDir:
         assert "유효성 검사 완료" in result.output
         assert "validated successfully" in result.output
 
-    def test_validate_app_dir_nonexistent(self, runner, temp_project):
+    def test_validate_app_dir_nonexistent(self, runner, temp_project) -> None:
         """Test validate with non-existent app directory."""
         result = runner.invoke(
             main,
@@ -152,7 +152,7 @@ class TestValidateAppDir:
         assert "App directory not found" in result.output
         assert "💡 Check directory path" in result.output
 
-    def test_validate_app_dir_missing_config(self, runner, temp_project):
+    def test_validate_app_dir_missing_config(self, runner, temp_project) -> None:
         """Test validate with app-dir but missing config file."""
         # Create empty directory
         empty_dir = temp_project / "empty"
@@ -174,7 +174,7 @@ class TestValidateAppDir:
 class TestValidateCurrentDir:
     """Test validate without arguments (current directory fallback)."""
 
-    def test_validate_current_dir(self, runner, temp_project):
+    def test_validate_current_dir(self, runner, temp_project) -> None:
         """Test validate without arguments uses current directory (auto-discovery)."""
         # Create app directories at root level (not under examples/)
         app1_dir = temp_project / "app1"
@@ -196,7 +196,7 @@ apps:
         assert "Found" in result.output or "Using app_dirs" in result.output
         assert "유효성 검사 완료" in result.output
 
-    def test_validate_current_dir_missing_config(self, runner, tmp_path):
+    def test_validate_current_dir_missing_config(self, runner, tmp_path) -> None:
         """Test validate without arguments in directory without config.yaml."""
         # Empty directory
         empty_dir = tmp_path / "empty"
@@ -213,7 +213,7 @@ apps:
 class TestValidatePriorityLogic:
     """Test file resolution priority logic."""
 
-    def test_explicit_path_overrides_app_dir(self, runner, temp_project):
+    def test_explicit_path_overrides_app_dir(self, runner, temp_project) -> None:
         """Test that explicit path takes precedence over --app-dir."""
         config_file = temp_project / "config.yaml"
 
@@ -233,7 +233,7 @@ class TestValidatePriorityLogic:
         assert result.exit_code == 0
         assert "Using explicit file path" in result.output
 
-    def test_app_dir_overrides_current_dir(self, runner, temp_project):
+    def test_app_dir_overrides_current_dir(self, runner, temp_project) -> None:
         """Test that --app-dir takes precedence over current directory."""
         result = runner.invoke(
             main,
@@ -256,7 +256,7 @@ class TestValidatePriorityLogic:
 class TestValidateSchemaType:
     """Test --schema-type option compatibility."""
 
-    def test_validate_with_schema_type(self, runner, temp_project):
+    def test_validate_with_schema_type(self, runner, temp_project) -> None:
         """Test validate with --schema-type option."""
         config_file = temp_project / "config.yaml"
 
@@ -267,7 +267,7 @@ class TestValidateSchemaType:
         # Should succeed
         assert result.exit_code == 0
 
-    def test_validate_sources_with_schema_type(self, runner, temp_project):
+    def test_validate_sources_with_schema_type(self, runner, temp_project) -> None:
         """Test validate sources.yaml with --schema-type."""
         sources_file = temp_project / "sources.yaml"
 
@@ -282,7 +282,7 @@ class TestValidateSchemaType:
 class TestValidateIntegration:
     """Integration tests for validate command."""
 
-    def test_validate_workflow(self, runner, temp_project):
+    def test_validate_workflow(self, runner, temp_project) -> None:
         """Test typical validate workflow."""
         # Step 1: Validate with explicit path
         result1 = runner.invoke(main, ["validate", str(temp_project / "config.yaml")])
@@ -309,7 +309,7 @@ class TestValidateIntegration:
 class TestValidateEdgeCases:
     """Test edge cases and error conditions."""
 
-    def test_validate_empty_config(self, runner, tmp_path):
+    def test_validate_empty_config(self, runner, tmp_path) -> None:
         """Test validation with empty config file."""
         empty_config = tmp_path / "empty.yaml"
         empty_config.write_text("")
@@ -326,7 +326,7 @@ class TestValidateEdgeCases:
             or "schema-type" in result.output
         )
 
-    def test_validate_malformed_yaml(self, runner, tmp_path):
+    def test_validate_malformed_yaml(self, runner, tmp_path) -> None:
         """Test validation with malformed YAML."""
         bad_yaml = tmp_path / "bad.yaml"
         bad_yaml.write_text("namespace: test\napps:\n  - invalid: [unclosed")
@@ -336,7 +336,7 @@ class TestValidateEdgeCases:
         # Should fail with YAML parse error
         assert result.exit_code != 0
 
-    def test_validate_missing_required_fields(self, runner, tmp_path):
+    def test_validate_missing_required_fields(self, runner, tmp_path) -> None:
         """Test validation with missing required fields."""
         incomplete_config = tmp_path / "incomplete.yaml"
         incomplete_config.write_text("""
@@ -352,7 +352,7 @@ apps:
         assert result.exit_code != 0
         assert "chart" in result.output.lower() or "required" in result.output.lower()
 
-    def test_validate_nonexistent_file(self, runner):
+    def test_validate_nonexistent_file(self, runner) -> None:
         """Test validation with nonexistent file."""
         result = runner.invoke(main, ["validate", "/nonexistent/config.yaml"])
 
@@ -363,14 +363,14 @@ apps:
             or "does not exist" in result.output.lower()
         )
 
-    def test_validate_directory_instead_of_file(self, runner, tmp_path):
+    def test_validate_directory_instead_of_file(self, runner, tmp_path) -> None:
         """Test validation when given a directory path."""
         result = runner.invoke(main, ["validate", str(tmp_path)])
 
         # Should fail with appropriate error
         assert result.exit_code != 0
 
-    def test_validate_circular_dependency(self, runner, tmp_path):
+    def test_validate_circular_dependency(self, runner, tmp_path) -> None:
         """Test validation with circular dependency."""
         circular_config = tmp_path / "circular.yaml"
         circular_config.write_text("""namespace: test
@@ -393,7 +393,7 @@ apps:
         assert result.exit_code != 0
         assert "circular" in result.output.lower() or "cycle" in result.output.lower()
 
-    def test_validate_invalid_app_name(self, runner, tmp_path):
+    def test_validate_invalid_app_name(self, runner, tmp_path) -> None:
         """Test validation with invalid Kubernetes app name."""
         invalid_name_config = tmp_path / "invalid_name.yaml"
         invalid_name_config.write_text("""namespace: test
@@ -408,7 +408,7 @@ apps:
         # Should fail with naming validation error
         assert result.exit_code != 0
 
-    def test_validate_nonexistent_dependency(self, runner, tmp_path):
+    def test_validate_nonexistent_dependency(self, runner, tmp_path) -> None:
         """Test validation with dependency on nonexistent app."""
         bad_dep_config = tmp_path / "bad_dep.yaml"
         bad_dep_config.write_text("""namespace: test

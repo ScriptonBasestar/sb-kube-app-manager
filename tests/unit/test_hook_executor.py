@@ -25,7 +25,7 @@ def tmp_workspace(tmp_path):
     return base_dir, config_dir
 
 
-def test_hook_executor_init(tmp_workspace):
+def test_hook_executor_init(tmp_workspace) -> None:
     """HookExecutor 초기화 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -40,7 +40,7 @@ def test_hook_executor_init(tmp_workspace):
     assert executor.dry_run is False
 
 
-def test_hook_executor_dry_run_mode(tmp_workspace):
+def test_hook_executor_dry_run_mode(tmp_workspace) -> None:
     """Dry-run 모드 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -57,7 +57,7 @@ def test_hook_executor_dry_run_mode(tmp_workspace):
     assert result is True  # Dry-run은 항상 성공
 
 
-def test_execute_command_hooks_success(tmp_workspace):
+def test_execute_command_hooks_success(tmp_workspace) -> None:
     """명령어 훅 실행 성공 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -82,7 +82,7 @@ def test_execute_command_hooks_success(tmp_workspace):
     assert result is True
 
 
-def test_execute_command_hooks_failure(tmp_workspace):
+def test_execute_command_hooks_failure(tmp_workspace) -> None:
     """명령어 훅 실행 실패 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -103,7 +103,7 @@ def test_execute_command_hooks_failure(tmp_workspace):
     assert result is False
 
 
-def test_execute_app_hook_with_context(tmp_workspace):
+def test_execute_app_hook_with_context(tmp_workspace) -> None:
     """앱 훅 실행 (컨텍스트 포함) 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -139,7 +139,7 @@ def test_execute_app_hook_with_context(tmp_workspace):
     assert result is True
 
 
-def test_execute_app_hook_environment_variables(tmp_workspace):
+def test_execute_app_hook_environment_variables(tmp_workspace) -> None:
     """앱 훅 환경 변수 주입 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -181,7 +181,7 @@ def test_execute_app_hook_environment_variables(tmp_workspace):
     assert result is True
 
 
-def test_execute_command_hooks_empty_list(tmp_workspace):
+def test_execute_command_hooks_empty_list(tmp_workspace) -> None:
     """빈 훅 리스트 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -202,7 +202,7 @@ def test_execute_command_hooks_empty_list(tmp_workspace):
     assert result is True
 
 
-def test_execute_app_hook_none(tmp_workspace):
+def test_execute_app_hook_none(tmp_workspace) -> None:
     """None 훅 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -223,7 +223,7 @@ def test_execute_app_hook_none(tmp_workspace):
     assert result is True
 
 
-def test_execute_command_hooks_invalid_phase(tmp_workspace):
+def test_execute_command_hooks_invalid_phase(tmp_workspace) -> None:
     """잘못된 훅 단계 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -244,7 +244,7 @@ def test_execute_command_hooks_invalid_phase(tmp_workspace):
     assert result is True
 
 
-def test_execute_app_hook_multiple_hooks(tmp_workspace):
+def test_execute_app_hook_multiple_hooks(tmp_workspace) -> None:
     """여러 훅 순차 실행 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -274,7 +274,7 @@ def test_execute_app_hook_multiple_hooks(tmp_workspace):
     assert result is True
 
 
-def test_execute_app_hook_first_failure_stops(tmp_workspace):
+def test_execute_app_hook_first_failure_stops(tmp_workspace) -> None:
     """첫 번째 훅 실패 시 중단 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -304,7 +304,7 @@ def test_execute_app_hook_first_failure_stops(tmp_workspace):
     assert result is False
 
 
-def test_hook_executor_timeout(tmp_workspace):
+def test_hook_executor_timeout(tmp_workspace) -> None:
     """훅 타임아웃 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -330,7 +330,7 @@ def test_hook_executor_timeout(tmp_workspace):
 # ============================================================================
 
 
-def test_execute_app_hook_with_manifests_shell_only(tmp_workspace):
+def test_execute_app_hook_with_manifests_shell_only(tmp_workspace) -> None:
     """Shell 명령어만 있는 경우 테스트 (기존 동작 유지)."""
     base_dir, config_dir = tmp_workspace
 
@@ -354,7 +354,7 @@ def test_execute_app_hook_with_manifests_shell_only(tmp_workspace):
     assert result is True
 
 
-def test_execute_app_hook_with_manifests_dry_run(tmp_workspace):
+def test_execute_app_hook_with_manifests_dry_run(tmp_workspace) -> None:
     """Manifests hooks dry-run 모드 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -400,7 +400,7 @@ data:
         assert mock_run.called
 
 
-def test_execute_app_hook_with_manifests_file_not_found(tmp_workspace):
+def test_execute_app_hook_with_manifests_file_not_found(tmp_workspace) -> None:
     """Manifest 파일이 없는 경우 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -428,7 +428,7 @@ def test_execute_app_hook_with_manifests_file_not_found(tmp_workspace):
     assert result is False  # 실패해야 함
 
 
-def test_execute_app_hook_with_manifests_success(tmp_workspace):
+def test_execute_app_hook_with_manifests_success(tmp_workspace) -> None:
     """Manifests hooks 성공 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -473,7 +473,7 @@ data:
         assert mock_run.called
 
 
-def test_execute_app_hook_with_manifests_both_shell_and_manifests(tmp_workspace):
+def test_execute_app_hook_with_manifests_both_shell_and_manifests(tmp_workspace) -> None:
     """Shell 명령어와 manifests 모두 있는 경우 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -519,7 +519,7 @@ data:
         assert mock_run.called
 
 
-def test_execute_app_hook_with_manifests_multiple_files(tmp_workspace):
+def test_execute_app_hook_with_manifests_multiple_files(tmp_workspace) -> None:
     """여러 manifest 파일 배포 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -577,7 +577,7 @@ metadata:
 # ============================================================================
 
 
-def test_execute_hook_tasks_manifests_type(tmp_workspace):
+def test_execute_hook_tasks_manifests_type(tmp_workspace) -> None:
     """Manifests 타입 task 실행 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -623,7 +623,7 @@ metadata:
         assert mock_run.called
 
 
-def test_execute_hook_tasks_inline_type(tmp_workspace):
+def test_execute_hook_tasks_inline_type(tmp_workspace) -> None:
     """Inline 타입 task 실행 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -664,7 +664,7 @@ def test_execute_hook_tasks_inline_type(tmp_workspace):
         assert mock_run.called
 
 
-def test_execute_hook_tasks_command_type(tmp_workspace):
+def test_execute_hook_tasks_command_type(tmp_workspace) -> None:
     """Command 타입 task 실행 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -691,7 +691,7 @@ def test_execute_hook_tasks_command_type(tmp_workspace):
     assert result is True
 
 
-def test_execute_hook_tasks_command_with_retry(tmp_workspace):
+def test_execute_hook_tasks_command_with_retry(tmp_workspace) -> None:
     """Command 타입 task retry 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -722,7 +722,7 @@ def test_execute_hook_tasks_command_with_retry(tmp_workspace):
     assert result is True
 
 
-def test_execute_hook_tasks_mixed_types(tmp_workspace):
+def test_execute_hook_tasks_mixed_types(tmp_workspace) -> None:
     """여러 타입 task 혼합 실행 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -786,7 +786,7 @@ metadata:
         assert mock_run.call_count == 2
 
 
-def test_execute_hook_tasks_failure_stops(tmp_workspace):
+def test_execute_hook_tasks_failure_stops(tmp_workspace) -> None:
     """Task 실패 시 중단 테스트."""
     base_dir, config_dir = tmp_workspace
 
@@ -825,7 +825,7 @@ def test_execute_hook_tasks_failure_stops(tmp_workspace):
     assert result is False
 
 
-def test_execute_hook_tasks_empty_list(tmp_workspace):
+def test_execute_hook_tasks_empty_list(tmp_workspace) -> None:
     """빈 task 리스트 테스트."""
     base_dir, config_dir = tmp_workspace
 

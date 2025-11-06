@@ -41,7 +41,7 @@ class DeploymentDatabase:
     high-level methods for deployment state management.
     """
 
-    def __init__(self, db_path: str | Path | None = None):
+    def __init__(self, db_path: str | Path | None = None) -> None:
         """Initialize deployment database.
 
         Args:
@@ -67,7 +67,7 @@ class DeploymentDatabase:
 
         # Enable foreign keys for SQLite
         @event.listens_for(self.engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):
+        def set_sqlite_pragma(dbapi_connection, connection_record) -> None:
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
@@ -82,13 +82,13 @@ class DeploymentDatabase:
         # Initialize database
         self._init_database()
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Initialize database schema."""
         try:
             Base.metadata.create_all(bind=self.engine)
             logger.verbose(f"Database initialized at: {self.db_path}")
         except Exception as e:
-            logger.error(f"Failed to initialize database: {e}")
+            logger.exception(f"Failed to initialize database: {e}")
             raise
 
     @contextmanager
@@ -276,7 +276,7 @@ class DeploymentDatabase:
         deployment_id: str,
         status: DeploymentStatus,
         error_message: str | None = None,
-    ):
+    ) -> None:
         """Update deployment status.
 
         Args:
@@ -301,7 +301,7 @@ class DeploymentDatabase:
         status: DeploymentStatus,
         error_message: str | None = None,
         rollback_info: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """Update app deployment status.
 
         Args:

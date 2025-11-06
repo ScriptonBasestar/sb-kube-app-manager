@@ -23,8 +23,8 @@ console = Console()
 @click.option("--check", help="특정 검사만 실행 (예: k8s_connectivity)")
 @click.option("--config-dir", default=".", help="설정 파일 디렉토리")
 @click.pass_context
-def cmd(ctx, detailed, check, config_dir):
-    """SBKube 시스템 종합 진단
+def cmd(ctx, detailed, check, config_dir) -> None:
+    r"""SBKube 시스템 종합 진단.
 
     Kubernetes 클러스터 연결, Helm 설치, 설정 파일 유효성 등을
     종합적으로 진단하고 문제점을 찾아 해결 방안을 제시합니다.

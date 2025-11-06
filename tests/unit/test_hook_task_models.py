@@ -22,7 +22,7 @@ from sbkube.models.config_model import (
 # ============================================================================
 
 
-def test_manifests_hook_task_valid():
+def test_manifests_hook_task_valid() -> None:
     """ManifestsHookTask 유효한 데이터 테스트."""
     data = {
         "type": "manifests",
@@ -41,7 +41,7 @@ def test_manifests_hook_task_valid():
     assert task.validation is None
 
 
-def test_manifests_hook_task_with_validation():
+def test_manifests_hook_task_with_validation() -> None:
     """ManifestsHookTask validation 포함 테스트."""
     data = {
         "type": "manifests",
@@ -60,7 +60,7 @@ def test_manifests_hook_task_with_validation():
     assert task.validation["wait_for_ready"] is True
 
 
-def test_manifests_hook_task_missing_required():
+def test_manifests_hook_task_missing_required() -> None:
     """ManifestsHookTask 필수 필드 누락 테스트."""
     data = {
         "type": "manifests",
@@ -79,7 +79,7 @@ def test_manifests_hook_task_missing_required():
 # ============================================================================
 
 
-def test_inline_hook_task_valid():
+def test_inline_hook_task_valid() -> None:
     """InlineHookTask 유효한 데이터 테스트."""
     data = {
         "type": "inline",
@@ -108,7 +108,7 @@ def test_inline_hook_task_valid():
     assert task.content["kind"] == "Certificate"
 
 
-def test_inline_hook_task_missing_content():
+def test_inline_hook_task_missing_content() -> None:
     """InlineHookTask content 누락 테스트."""
     data = {
         "type": "inline",
@@ -127,7 +127,7 @@ def test_inline_hook_task_missing_content():
 # ============================================================================
 
 
-def test_command_hook_task_valid():
+def test_command_hook_task_valid() -> None:
     """CommandHookTask 유효한 데이터 테스트."""
     data = {
         "type": "command",
@@ -144,7 +144,7 @@ def test_command_hook_task_valid():
     assert task.on_failure == "fail"  # default
 
 
-def test_command_hook_task_with_retry():
+def test_command_hook_task_with_retry() -> None:
     """CommandHookTask retry 포함 테스트."""
     data = {
         "type": "command",
@@ -165,7 +165,7 @@ def test_command_hook_task_with_retry():
     assert task.on_failure == "warn"
 
 
-def test_command_hook_task_invalid_on_failure():
+def test_command_hook_task_invalid_on_failure() -> None:
     """CommandHookTask 잘못된 on_failure 값 테스트."""
     data = {
         "type": "command",
@@ -185,7 +185,7 @@ def test_command_hook_task_invalid_on_failure():
 # ============================================================================
 
 
-def test_app_hooks_with_tasks():
+def test_app_hooks_with_tasks() -> None:
     """AppHooks에 tasks 포함 테스트."""
     data = {
         "post_deploy_tasks": [
@@ -227,7 +227,7 @@ def test_app_hooks_with_tasks():
     assert hooks.post_deploy_tasks[2].name == "verify"
 
 
-def test_app_hooks_discriminator():
+def test_app_hooks_discriminator() -> None:
     """AppHooks Discriminated Union 타입 구분 테스트."""
     data = {
         "post_deploy_tasks": [
@@ -245,7 +245,7 @@ def test_app_hooks_discriminator():
     assert isinstance(hooks.post_deploy_tasks[0], ManifestsHookTask)
 
 
-def test_app_hooks_invalid_type():
+def test_app_hooks_invalid_type() -> None:
     """AppHooks 잘못된 task type 테스트."""
     data = {
         "post_deploy_tasks": [
@@ -262,7 +262,7 @@ def test_app_hooks_invalid_type():
     assert "type" in str(exc_info.value).lower()
 
 
-def test_app_hooks_backward_compatibility():
+def test_app_hooks_backward_compatibility() -> None:
     """AppHooks Phase 1/Phase 2 병행 사용 테스트."""
     data = {
         # Phase 1 (Shell 명령어)
@@ -291,7 +291,7 @@ def test_app_hooks_backward_compatibility():
 # ============================================================================
 
 
-def test_cert_manager_scenario():
+def test_cert_manager_scenario() -> None:
     """cert-manager + ClusterIssuers 실전 시나리오."""
     data = {
         "post_deploy_tasks": [

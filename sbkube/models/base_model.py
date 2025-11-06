@@ -38,7 +38,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         extra="forbid",  # Prevent unknown fields
     )
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         """Initialize with enhanced error handling."""
         try:
             super().__init__(**data)
@@ -100,10 +100,7 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         if other is None:
             return self.model_copy()
 
-        if isinstance(other, BaseModel):
-            other_dict = other.model_dump()
-        else:
-            other_dict = other
+        other_dict = other.model_dump() if isinstance(other, BaseModel) else other
 
         self_dict = self.model_dump()
 
@@ -168,12 +165,16 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
             jsonschema.validate(instance=data, schema=schema)
 
         except jsonschema.ValidationError as e:
-            raise ConfigValidationError(
+            msg = (
                 f"Schema validation failed: {e.message}\n"
-                f"Failed at path: {'.'.join(str(x) for x in e.path)}",
+                f"Failed at path: {'.'.join(str(x) for x in e.path)}"
+            )
+            raise ConfigValidationError(
+                msg,
             )
         except Exception as e:
-            raise ConfigValidationError(f"Schema validation error: {e!s}")
+            msg = f"Schema validation error: {e!s}"
+            raise ConfigValidationError(msg)
 
     def to_yaml(self, path: Path | None = None) -> str:
         """Convert model to YAML string or save to file.
@@ -207,7 +208,8 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
         """
         path = Path(path)
         if not path.exists():
-            raise ConfigValidationError(f"Configuration file not found: {path}")
+            msg = f"Configuration file not found: {path}"
+            raise ConfigValidationError(msg)
 
         try:
             with open(path) as f:
@@ -219,7 +221,8 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
             return cls(**data)
 
         except yaml.YAMLError as e:
-            raise ConfigValidationError(f"Invalid YAML in {path}: {e!s}")
+            msg = f"Invalid YAML in {path}: {e!s}"
+            raise ConfigValidationError(msg)
 
 
 class InheritableConfigModel(ConfigBaseModel):
@@ -263,10 +266,9 @@ class InheritableConfigModel(ConfigBaseModel):
 
 
 class ConfigLoader:
-    """Utility class for loading configurations with inheritance and validation.
-    """
+    """Utility class for loading configurations with inheritance and validation."""
 
-    def __init__(self, base_dir: Path, schema_dir: Path | None = None):
+    def __init__(self, base_dir: Path, schema_dir: Path | None = None) -> None:
         """Initialize configuration loader.
 
         Args:
@@ -321,6 +323,6 @@ class ConfigLoader:
 
         return config
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the configuration cache."""
         self._cache.clear()

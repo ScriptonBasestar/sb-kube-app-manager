@@ -15,7 +15,7 @@ class StepStatus(Enum):
 
 @dataclass
 class StepExecution:
-    """단계별 실행 정보"""
+    """단계별 실행 정보."""
 
     name: str
     status: StepStatus = StepStatus.PENDING
@@ -26,13 +26,13 @@ class StepExecution:
     output: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def start(self):
-        """단계 시작"""
+    def start(self) -> None:
+        """단계 시작."""
         self.status = StepStatus.IN_PROGRESS
         self.started_at = datetime.utcnow()
 
-    def complete(self, output: str = None):
-        """단계 완료"""
+    def complete(self, output: str | None = None) -> None:
+        """단계 완료."""
         self.status = StepStatus.COMPLETED
         self.completed_at = datetime.utcnow()
         if self.started_at:
@@ -40,21 +40,21 @@ class StepExecution:
         if output:
             self.output = output
 
-    def fail(self, error: str):
-        """단계 실패"""
+    def fail(self, error: str) -> None:
+        """단계 실패."""
         self.status = StepStatus.FAILED
         self.completed_at = datetime.utcnow()
         if self.started_at:
             self.duration = (self.completed_at - self.started_at).total_seconds()
         self.error = error
 
-    def skip(self, reason: str):
-        """단계 건너뛰기"""
+    def skip(self, reason: str) -> None:
+        """단계 건너뛰기."""
         self.status = StepStatus.SKIPPED
         self.metadata["skip_reason"] = reason
 
     def to_dict(self) -> dict[str, Any]:
-        """딕셔너리로 변환"""
+        """딕셔너리로 변환."""
         return {
             "name": self.name,
             "status": self.status.value,
@@ -70,7 +70,7 @@ class StepExecution:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "StepExecution":
-        """딕셔너리에서 생성"""
+        """딕셔너리에서 생성."""
         step = cls(name=data["name"])
         step.status = StepStatus(data["status"])
         step.started_at = (
@@ -90,7 +90,7 @@ class StepExecution:
 
 @dataclass
 class ExecutionState:
-    """전체 실행 상태"""
+    """전체 실행 상태."""
 
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     profile: str | None = None
@@ -103,24 +103,24 @@ class ExecutionState:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def add_step(self, step_name: str) -> StepExecution:
-        """단계 추가"""
+        """단계 추가."""
         step = StepExecution(name=step_name)
         self.steps[step_name] = step
         return step
 
     def get_step(self, step_name: str) -> StepExecution | None:
-        """단계 조회"""
+        """단계 조회."""
         return self.steps.get(step_name)
 
     def get_failed_step(self) -> StepExecution | None:
-        """실패한 단계 조회"""
+        """실패한 단계 조회."""
         for step in self.steps.values():
             if step.status == StepStatus.FAILED:
                 return step
         return None
 
     def get_last_completed_step(self) -> str | None:
-        """마지막 완료된 단계명 반환"""
+        """마지막 완료된 단계명 반환."""
         completed_steps = [
             step.name
             for step in self.steps.values()
@@ -129,25 +129,25 @@ class ExecutionState:
         return completed_steps[-1] if completed_steps else None
 
     def get_next_step(self, step_order: list[str]) -> str | None:
-        """다음 실행해야 할 단계 반환"""
+        """다음 실행해야 할 단계 반환."""
         for step_name in step_order:
             step = self.steps.get(step_name)
             if not step or step.status in [StepStatus.PENDING, StepStatus.FAILED]:
                 return step_name
         return None
 
-    def complete(self):
-        """전체 실행 완료"""
+    def complete(self) -> None:
+        """전체 실행 완료."""
         self.status = StepStatus.COMPLETED
         self.completed_at = datetime.utcnow()
 
-    def fail(self):
-        """전체 실행 실패"""
+    def fail(self) -> None:
+        """전체 실행 실패."""
         self.status = StepStatus.FAILED
         self.completed_at = datetime.utcnow()
 
     def to_dict(self) -> dict[str, Any]:
-        """딕셔너리로 변환"""
+        """딕셔너리로 변환."""
         return {
             "run_id": self.run_id,
             "profile": self.profile,
@@ -164,7 +164,7 @@ class ExecutionState:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ExecutionState":
-        """딕셔너리에서 생성"""
+        """딕셔너리에서 생성."""
         state = cls()
         state.run_id = data["run_id"]
         state.profile = data.get("profile")

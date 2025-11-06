@@ -20,7 +20,7 @@ class TestYamlAppNamespaceHandling:
     @patch("sbkube.commands.deploy.run_command")
     def test_uses_config_namespace_when_app_namespace_is_none(
         self, mock_run_command, tmp_path
-    ):
+    ) -> None:
         """YAML app should use config.namespace when app.namespace is None."""
         # Arrange
         mock_run_command.return_value = (0, "", "")
@@ -66,7 +66,7 @@ stringData:
         assert "test-namespace" in cmd
 
     @patch("sbkube.commands.deploy.run_command")
-    def test_uses_app_namespace_when_explicitly_set(self, mock_run_command, tmp_path):
+    def test_uses_app_namespace_when_explicitly_set(self, mock_run_command, tmp_path) -> None:
         """YAML app should use app.namespace when explicitly set (overrides config)."""
         # Arrange
         mock_run_command.return_value = (0, "", "")
@@ -113,7 +113,7 @@ stringData:
         assert "config-namespace" not in cmd
 
     @patch("sbkube.commands.deploy.run_command")
-    def test_no_namespace_flag_when_both_are_none(self, mock_run_command, tmp_path):
+    def test_no_namespace_flag_when_both_are_none(self, mock_run_command, tmp_path) -> None:
         """YAML app should not add --namespace flag when both app and config namespaces are None."""
         # Arrange
         mock_run_command.return_value = (0, "", "")
@@ -161,7 +161,7 @@ class TestActionAppNamespaceHandling:
     @patch("sbkube.commands.deploy.run_command")
     def test_uses_config_namespace_when_app_namespace_is_none(
         self, mock_run_command, tmp_path
-    ):
+    ) -> None:
         """Action app should use config.namespace when app.namespace is None."""
         # Arrange
         mock_run_command.return_value = (0, "", "")
@@ -203,7 +203,7 @@ metadata:
         assert "action-namespace" in cmd
 
     @patch("sbkube.commands.deploy.run_command")
-    def test_uses_app_namespace_when_explicitly_set(self, mock_run_command, tmp_path):
+    def test_uses_app_namespace_when_explicitly_set(self, mock_run_command, tmp_path) -> None:
         """Action app should use app.namespace when explicitly set."""
         # Arrange
         mock_run_command.return_value = (0, "", "")
@@ -252,7 +252,7 @@ class TestKustomizeAppNamespaceHandling:
     @patch("sbkube.commands.deploy.run_command")
     def test_uses_config_namespace_when_app_namespace_is_none(
         self, mock_run_command, tmp_path
-    ):
+    ) -> None:
         """Kustomize app should use config.namespace when app.namespace is None."""
         # Arrange
         mock_run_command.return_value = (0, "", "")
@@ -295,7 +295,7 @@ resources:
         assert "kustomize-namespace" in cmd
 
     @patch("sbkube.commands.deploy.run_command")
-    def test_uses_app_namespace_when_explicitly_set(self, mock_run_command, tmp_path):
+    def test_uses_app_namespace_when_explicitly_set(self, mock_run_command, tmp_path) -> None:
         """Kustomize app should use app.namespace when explicitly set."""
         # Arrange
         mock_run_command.return_value = (0, "", "")
@@ -343,7 +343,7 @@ class TestNamespaceHandlingConsistency:
     """Test consistency of namespace handling across all app types."""
 
     @patch("sbkube.commands.deploy.run_command")
-    def test_yaml_and_action_apps_behave_identically(self, mock_run_command, tmp_path):
+    def test_yaml_and_action_apps_behave_identically(self, mock_run_command, tmp_path) -> None:
         """YAML and Action apps should behave identically for namespace handling."""
         # Arrange
         mock_run_command.return_value = (0, "", "")
@@ -413,7 +413,7 @@ class TestNamespaceHandlingEdgeCases:
     @patch("sbkube.commands.deploy.run_command")
     def test_empty_string_namespace_is_treated_as_none(
         self, mock_run_command, tmp_path
-    ):
+    ) -> None:
         """Empty string namespace should be treated as None and use config.namespace."""
         # Arrange
         mock_run_command.return_value = (0, "", "")

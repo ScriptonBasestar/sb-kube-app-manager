@@ -543,6 +543,7 @@ def _display_app_group_summary(app_group: str, group_data: dict, output: OutputM
         color = "red"
 
     if output.format_type == "human":
+        console = output.get_console()
         console.print(
             f"{icon} [{color}]{app_group}[/{color}] "
             f"({healthy}/{total} healthy, {failed} failed)"
@@ -579,6 +580,7 @@ def _display_cache_info(
     if not show:
         return
 
+    console = output.get_console()
     console.print(f"\n[dim]Cache file: {cache.cache_file}[/dim]")
     if age_seconds := cache.get_age_seconds():
         console.print(f"[dim]Last updated: {_format_age(age_seconds)} ago[/dim]")
@@ -651,6 +653,7 @@ def _display_dependency_tree(base_path: Path, app_group: str | None, output: Out
 
     # Dependency tree visualization is human-only
     if output.format_type == "human":
+        console = output.get_console()
         # Build and display tree
         tree = Tree("📦 Applications")
         visited = set()
@@ -774,6 +777,7 @@ def _display_health_check_details(data: dict, output: OutputManager) -> None:
     if output.format_type != "human":
         return
 
+    console = output.get_console()
     # Group pods by namespace
     pods_by_ns: dict[str, list[dict]] = {}
     for pod in pods:

@@ -20,12 +20,19 @@ console = Console()
 class ClusterCache:
     """Manages cluster status cache in YAML format.
 
-    Cache files are stored in {base_dir}/.sbkube/cluster_status/ with option-based naming:
-    - Standard view: {context}_{cluster}.yaml
-    - By-group view: {context}_{cluster}_by-group.yaml
-    - Specific group: {context}_{cluster}_group-{app_group}.yaml
+    Cache structure:
+    - Base cache file: {context}_{cluster}.yaml
+      Contains: Full cluster status with helm releases (including labels)
+      Used by: All views (standard, by-group, specific group)
+      Labels enable app-group classification: sbkube.io/app-group
 
-    Each view type has its own cache file with TTL-based expiration.
+    Benefits:
+    - Single source of truth for cluster data
+    - All releases include label information for reliable grouping
+    - Grouping is computed on-demand from cache
+    - Reduces storage overhead and ensures consistency
+
+    TTL: 5 minutes for all cached data
     """
 
     def __init__(
@@ -56,26 +63,23 @@ class ClusterCache:
     def _generate_cache_filename(self) -> Path:
         """Generate cache filename based on options.
 
+        Cache structure:
+        - Base file: Contains all cluster data (helm releases with labels)
+        - Grouped file: Contains app-group classification (only if by_group or app_group)
+
         Returns:
             Path object for cache file
 
         Examples:
-            Standard: {context}_{cluster}.yaml
-            By-group: {context}_{cluster}_by-group.yaml
-            Specific group: {context}_{cluster}_group-{app_group}.yaml
+            Base: {context}_{cluster}.yaml (always)
+            Grouped: {context}_{cluster}_grouped.yaml (only if --by-group)
 
         """
         base_name = f"{self.context}_{self.cluster}"
 
-        if self.app_group:
-            # Specific app-group view
-            filename = f"{base_name}_group-{self.app_group}.yaml"
-        elif self.by_group:
-            # All app-groups grouped view
-            filename = f"{base_name}_by-group.yaml"
-        else:
-            # Standard flat view
-            filename = f"{base_name}.yaml"
+        # Always use base file for caching raw cluster data
+        # Grouped view is calculated from base file
+        filename = f"{base_name}.yaml"
 
         return self.cache_dir / filename
 

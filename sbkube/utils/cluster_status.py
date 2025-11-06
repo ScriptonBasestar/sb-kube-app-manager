@@ -259,8 +259,10 @@ class ClusterStatusCollector:
     def _collect_helm_releases(self) -> list[dict[str, Any]]:
         """Collect Helm release information from all namespaces.
 
+        Includes label information for app-group classification.
+
         Returns:
-            List of Helm release information dictionaries
+            List of Helm release information dictionaries with labels
 
         """
         result = self._run_helm(["list", "--all-namespaces", "-o", "json"])
@@ -268,15 +270,21 @@ class ClusterStatusCollector:
 
         releases = []
         for item in data:
-            releases.append(
-                {
-                    "name": item.get("name", "unknown"),
-                    "namespace": item.get("namespace", "unknown"),
-                    "status": item.get("status", "unknown"),
-                    "chart": item.get("chart", "unknown"),
-                    "app_version": item.get("app_version", "unknown"),
-                    "revision": item.get("revision", 0),
-                }
-            )
+            release_info = {
+                "name": item.get("name", "unknown"),
+                "namespace": item.get("namespace", "unknown"),
+                "status": item.get("status", "unknown"),
+                "chart": item.get("chart", "unknown"),
+                "app_version": item.get("app_version", "unknown"),
+                "revision": item.get("revision", 0),
+            }
+
+            # Collect labels if available (v3.13+)
+            # Labels are used for app-group classification
+            labels = item.get("labels", {})
+            if labels:
+                release_info["labels"] = labels
+
+            releases.append(release_info)
 
         return releases

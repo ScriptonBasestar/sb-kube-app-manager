@@ -15,12 +15,13 @@ def group_releases_by_app_group(
     helm_releases: list[dict[str, Any]],
     db: DeploymentDatabase | None = None,
 ) -> dict[str, Any]:
-    """Group Helm releases by app-group.
+    """Group Helm releases by app-group using priority-based classification.
 
-    This function organizes Helm releases into groups based on:
-    1. Labels (sbkube.io/app-group) if available
-    2. State DB records (deployment history)
-    3. Name pattern matching (app_XXX_category_subcategory)
+    Classification priority (most to least reliable):
+    1. Labels: sbkube.io/app-group (recommended - set at deploy time)
+    2. State DB: deployment history from sbkube state DB
+    3. Name pattern: app_XXX_category_subcategory from release name
+    4. Namespace pattern: app_XXX pattern from namespace name
 
     Args:
         helm_releases: List of Helm release dicts from cluster status
@@ -82,18 +83,24 @@ def group_releases_by_app_group(
         status = release.get("status", "unknown")
         chart = release.get("chart", "unknown")
 
-        # Try to determine app-group
+        # Try to determine app-group (priority-based)
         app_group = None
 
-        # Method 1: Check State DB
-        if release_name in state_db_mapping:
+        # Method 1 (Priority 1): Check sbkube.io/app-group label
+        # This is the most reliable way if label is set at deploy time
+        labels = release.get("labels", {})
+        if labels and isinstance(labels, dict):
+            app_group = labels.get("sbkube.io/app-group")
+
+        # Method 2 (Priority 2): Check State DB (deployment history)
+        if not app_group and release_name in state_db_mapping:
             app_group = state_db_mapping[release_name]
 
-        # Method 2: Extract from release name pattern
+        # Method 3 (Priority 3): Extract from release name pattern
         if not app_group:
             app_group = extract_app_group_from_name(release_name)
 
-        # Method 3: Try namespace pattern (less reliable)
+        # Method 4 (Priority 4): Try namespace pattern (least reliable)
         if not app_group and namespace != "default":
             app_group = extract_app_group_from_name(namespace)
 

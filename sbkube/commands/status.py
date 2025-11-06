@@ -278,51 +278,22 @@ def _collect_and_cache(
 
 
 def _prepare_cache_data(status_data: dict, cache: ClusterCache) -> dict:
-    """Prepare cache data based on view type (standard, by-group, or specific group).
+    """Prepare cache data.
+
+    Cache always contains raw cluster status with labels.
+    Grouping is performed on-demand when reading cache.
 
     Args:
         status_data: Raw cluster status data from collector
-        cache: ClusterCache instance containing view type info
+        cache: ClusterCache instance
 
     Returns:
-        Data appropriate for the cache view
+        Full cluster status data with labels
 
     """
-    helm_releases = status_data.get("helm_releases", [])
-
-    if cache.app_group:
-        # Specific app-group view: filter releases for this group
-        try:
-            db = DeploymentDatabase()
-            grouped = group_releases_by_app_group(helm_releases, db)
-            group_data = filter_by_app_group(grouped, cache.app_group)
-            if group_data:
-                return {
-                    **status_data,
-                    "view_type": "app_group",
-                    "app_group": cache.app_group,
-                    "helm_releases": group_data.get("apps", {}).values(),
-                }
-        except Exception:
-            # Fall back to all releases if grouping fails
-            pass
-
-    elif cache.by_group:
-        # By-group view: include grouping metadata
-        try:
-            db = DeploymentDatabase()
-            grouped = group_releases_by_app_group(helm_releases, db)
-            return {
-                **status_data,
-                "view_type": "by_group",
-                "grouped_releases": grouped,
-            }
-        except Exception:
-            # Fall back to standard view if grouping fails
-            pass
-
-    # Standard view: return as-is
-    return {**status_data, "view_type": "standard"}
+    # Always save full cluster status including labels
+    # Grouping logic is applied when displaying data
+    return status_data
 
 
 def _display_status(

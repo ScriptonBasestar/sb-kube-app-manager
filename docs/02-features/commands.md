@@ -263,16 +263,41 @@ sbkube deploy --app web   # Specific app
 
 **Cache Files** (v0.6.2+):
 
-Each view type creates a separate cache file for efficient multi-view queries:
+Single shared base cache file for all views:
 
 ```
 .sbkube/cluster_status/
-├── {context}_{cluster}.yaml              # Standard view (sbkube status)
-├── {context}_{cluster}_by-group.yaml     # Grouped view (sbkube status --by-group)
-└── {context}_{cluster}_group-{app_group}.yaml  # Specific group (sbkube status {app_group})
+└── {context}_{cluster}.yaml
+    ├── helm_releases: [with labels for app-group classification]
+    ├── nodes: [cluster node status]
+    ├── namespaces: [list of namespaces]
+    └── ...
 ```
 
-Each file is cached for 5 minutes (TTL-based). Use `--refresh` to force update.
+**App-group Classification** (v0.6.2+):
+
+Releases are classified by app-group using priority:
+
+1. **Label** (recommended): `sbkube.io/app-group=app_000_infra_network`
+   - Set at Helm release install time
+   - Most reliable and explicit
+
+2. **State DB**: Previous deployment records from sbkube
+   - Falls back if label not present
+
+3. **Name pattern**: Release name like `app_000_...`
+   - Auto-extracted from name
+
+4. **Namespace pattern**: Namespace like `app_000_...`
+   - Last resort fallback
+
+**Example**: Deploy with label
+```bash
+helm install myapp chart/ \
+  --set-string='podAnnotations.sbkube\.io/app-group=app_000_infra_network'
+```
+
+Cache expires in 5 minutes (TTL-based). Use `--refresh` to force update.
 
 **Examples**:
 

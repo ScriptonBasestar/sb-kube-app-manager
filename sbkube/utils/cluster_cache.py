@@ -20,23 +20,64 @@ console = Console()
 class ClusterCache:
     """Manages cluster status cache in YAML format.
 
-    Cache files are stored in {base_dir}/.sbkube/cluster_status/{context}_{cluster}.yaml
-    with TTL-based expiration.
+    Cache files are stored in {base_dir}/.sbkube/cluster_status/ with option-based naming:
+    - Standard view: {context}_{cluster}.yaml
+    - By-group view: {context}_{cluster}_by-group.yaml
+    - Specific group: {context}_{cluster}_group-{app_group}.yaml
+
+    Each view type has its own cache file with TTL-based expiration.
     """
 
-    def __init__(self, cache_dir: Path, context: str, cluster: str) -> None:
+    def __init__(
+        self,
+        cache_dir: Path,
+        context: str,
+        cluster: str,
+        by_group: bool = False,
+        app_group: str | None = None,
+    ) -> None:
         """Initialize cluster cache manager.
 
         Args:
             cache_dir: Directory for cache storage (.sbkube/cluster_status/)
             context: kubeconfig context name
             cluster: cluster identifier (from sources.yaml)
+            by_group: Whether to group by app-group
+            app_group: Specific app-group (if filtering)
 
         """
         self.cache_dir = Path(cache_dir)
         self.context = context
         self.cluster = cluster or "unknown"
-        self.cache_file = self.cache_dir / f"{self.context}_{self.cluster}.yaml"
+        self.by_group = by_group
+        self.app_group = app_group
+        self.cache_file = self._generate_cache_filename()
+
+    def _generate_cache_filename(self) -> Path:
+        """Generate cache filename based on options.
+
+        Returns:
+            Path object for cache file
+
+        Examples:
+            Standard: {context}_{cluster}.yaml
+            By-group: {context}_{cluster}_by-group.yaml
+            Specific group: {context}_{cluster}_group-{app_group}.yaml
+
+        """
+        base_name = f"{self.context}_{self.cluster}"
+
+        if self.app_group:
+            # Specific app-group view
+            filename = f"{base_name}_group-{self.app_group}.yaml"
+        elif self.by_group:
+            # All app-groups grouped view
+            filename = f"{base_name}_by-group.yaml"
+        else:
+            # Standard flat view
+            filename = f"{base_name}.yaml"
+
+        return self.cache_dir / filename
 
     def save(
         self, data: dict[str, Any], ttl_seconds: int = DEFAULT_CACHE_TTL_SECONDS

@@ -164,6 +164,8 @@ def cmd(
         cache_dir=cache_dir,
         context=sources.kubeconfig_context,
         cluster=sources.cluster or "unknown",
+        by_group=by_group,
+        app_group=app_group,
     )
     collector = ClusterStatusCollector(
         kubeconfig=sources.kubeconfig,
@@ -232,7 +234,13 @@ def _collect_and_cache(
     output: OutputManager,
     force_refresh: bool = False,
 ) -> None:
-    """Collect cluster status and save to cache."""
+    """Collect cluster status and save to cache.
+
+    Saves data appropriate for the view type:
+    - Standard view (no options): Full cluster status
+    - By-group view: Helm releases grouped by app-group
+    - Specific app-group: Releases for that app-group only
+    """
     import subprocess
 
     action = "Refreshing" if force_refresh else "Collecting"
@@ -240,7 +248,11 @@ def _collect_and_cache(
 
     try:
         status_data = collector.collect_all()
-        cache.save(status_data)
+
+        # Prepare data based on cache view type
+        cache_data = _prepare_cache_data(status_data, cache)
+
+        cache.save(cache_data)
         output.print_success("Status collected successfully")
     except subprocess.TimeoutExpired:
         output.print_warning("⏱️ Command timeout - kubectl/helm took too long")
@@ -263,6 +275,54 @@ def _collect_and_cache(
         else:
             output.print_error("No cache available to fall back on")
             sys.exit(1)
+
+
+def _prepare_cache_data(status_data: dict, cache: ClusterCache) -> dict:
+    """Prepare cache data based on view type (standard, by-group, or specific group).
+
+    Args:
+        status_data: Raw cluster status data from collector
+        cache: ClusterCache instance containing view type info
+
+    Returns:
+        Data appropriate for the cache view
+
+    """
+    helm_releases = status_data.get("helm_releases", [])
+
+    if cache.app_group:
+        # Specific app-group view: filter releases for this group
+        try:
+            db = DeploymentDatabase()
+            grouped = group_releases_by_app_group(helm_releases, db)
+            group_data = filter_by_app_group(grouped, cache.app_group)
+            if group_data:
+                return {
+                    **status_data,
+                    "view_type": "app_group",
+                    "app_group": cache.app_group,
+                    "helm_releases": group_data.get("apps", {}).values(),
+                }
+        except Exception:
+            # Fall back to all releases if grouping fails
+            pass
+
+    elif cache.by_group:
+        # By-group view: include grouping metadata
+        try:
+            db = DeploymentDatabase()
+            grouped = group_releases_by_app_group(helm_releases, db)
+            return {
+                **status_data,
+                "view_type": "by_group",
+                "grouped_releases": grouped,
+            }
+        except Exception:
+            # Fall back to standard view if grouping fails
+            pass
+
+    # Standard view: return as-is
+    return {**status_data, "view_type": "standard"}
 
 
 def _display_status(

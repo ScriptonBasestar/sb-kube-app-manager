@@ -261,6 +261,19 @@ sbkube deploy --app web   # Specific app
 - `--refresh`: Force cache refresh
 - `--watch`: Auto-refresh every 10s
 
+**Cache Files** (v0.6.2+):
+
+Each view type creates a separate cache file for efficient multi-view queries:
+
+```
+.sbkube/cluster_status/
+├── {context}_{cluster}.yaml              # Standard view (sbkube status)
+├── {context}_{cluster}_by-group.yaml     # Grouped view (sbkube status --by-group)
+└── {context}_{cluster}_group-{app_group}.yaml  # Specific group (sbkube status {app_group})
+```
+
+Each file is cached for 5 minutes (TTL-based). Use `--refresh` to force update.
+
 **Examples**:
 
 ```bash
@@ -269,6 +282,9 @@ sbkube status --by-group                # Grouped view
 sbkube status --unhealthy               # Problems only
 sbkube status app_000_infra_network     # Specific group
 sbkube status --deps                    # Dependency tree
+
+# Force refresh and create new cache
+sbkube status --by-group --refresh
 ```
 
 **Replaces**: `sbkube cluster status` (deprecated)

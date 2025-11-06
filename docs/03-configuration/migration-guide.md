@@ -25,6 +25,7 @@ ______________________________________________________________________
   - [Migration to v0.5.0](#migration-to-v050)
   - [Migration to v0.6.0](#migration-to-v060)
   - [Migration to v0.6.1](#migration-to-v061)
+- [Label Migration Guide](#label-migration-guide)
 - [Breaking Changes Summary](#breaking-changes-summary)
 - [FAQ](#faq)
 
@@ -310,6 +311,162 @@ ______________________________________________________________________
    - Better error context
 
 No configuration migration required for v0.6.1.
+
+______________________________________________________________________
+
+## Label Migration Guide
+
+### Overview
+
+SBKube v0.6.1+ automatically injects labels into all Kubernetes resources deployed via sbkube (Helm, YAML, Action, Kustomize). This enables proper app-group classification and status tracking via `sbkube status --by-group`.
+
+**Important**: Existing kubectl-deployed resources are **not affected**. Labels are only injected for new deployments via sbkube.
+
+### Automatic Label Injection
+
+When you deploy applications using sbkube, labels are automatically added:
+
+```yaml
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: sbkube
+    sbkube.io/app-group: app_000_infra_network
+    sbkube.io/app-name: traefik
+  annotations:
+    sbkube.io/deployment-id: dep_20250131_143022
+    sbkube.io/deployed-at: 2025-01-31T14:30:22Z
+    sbkube.io/deployed-by: archmagece
+```
+
+**Requirements**:
+- Application directory must follow naming pattern: `app_XXX_category_subcategory`
+- Example: `app_000_infra_network/traefik/`
+
+### Migration Path
+
+#### For Manual kubectl Users (Existing Resources)
+
+If you have existing resources deployed directly with `kubectl apply`, they won't be automatically relabeled. To enable proper status tracking:
+
+**Option 1: Re-deploy via sbkube** (Recommended)
+
+```bash
+# Create sbkube config for existing resources
+sbkube init
+
+# Add your apps to config.yaml
+# Then re-deploy
+sbkube apply --profile production
+```
+
+**Option 2: Manual Label Patching** (For non-sbkube resources)
+
+If you want to label existing resources without re-deploying:
+
+```bash
+# Add labels to existing deployment
+kubectl patch deployment myapp -n default \
+  -p '{"metadata":{"labels":{"sbkube.io/app-group":"app_000_infra_network","sbkube.io/app-name":"myapp","app.kubernetes.io/managed-by":"sbkube"}}}'
+
+# Add labels to existing statefulset
+kubectl patch statefulset mydb -n default \
+  -p '{"metadata":{"labels":{"sbkube.io/app-group":"app_010_database","sbkube.io/app-name":"postgres","app.kubernetes.io/managed-by":"sbkube"}}}'
+```
+
+**Option 3: Using kustomize to Add Labels** (For multiple resources)
+
+Create a `kustomization.yaml`:
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+commonLabels:
+  app.kubernetes.io/managed-by: sbkube
+  sbkube.io/app-group: app_000_infra_network
+  sbkube.io/app-name: myapp
+```
+
+Then apply:
+
+```bash
+kubectl apply -k .
+```
+
+#### For Helm Users
+
+If you deployed via Helm directly:
+
+```bash
+# Upgrade existing Helm release with sbkube labels
+helm upgrade myrelease ./chart \
+  --set-string commonLabels.app\\.kubernetes\\.io/managed-by=sbkube \
+  --set-string commonLabels.sbkube\\.io/app-group=app_000_infra_network \
+  --set-string commonLabels.sbkube\\.io/app-name=myapp
+```
+
+Or use sbkube for future deployments:
+
+```bash
+# Configure in config.yaml
+apps:
+  myapp:
+    type: helm
+    chart: myrepo/myapp
+
+# Deploy with labels
+sbkube apply
+```
+
+### Verifying Labels
+
+Check that resources have the correct labels:
+
+```bash
+# Check deployment labels
+kubectl get deployment -n default -o jsonpath='{.items[0].metadata.labels}'
+
+# View with app-group classification
+sbkube status --by-group
+
+# Check specific app-group
+sbkube status app_000_infra_network
+```
+
+### Label Classification Priority
+
+When `sbkube status` groups releases, it uses this priority:
+
+1. **`sbkube.io/app-group` label** (most reliable)
+2. State DB records from previous sbkube deployments
+3. Release/resource name pattern matching (`app_XXX_...`)
+4. Namespace name pattern matching
+
+### FAQ
+
+**Q: Do I need to relabel existing resources?**
+
+A: No, existing resources continue to work. Labels are only needed for proper `sbkube status --by-group` grouping and cluster status tracking.
+
+**Q: Can I mix sbkube and kubectl deployments?**
+
+A: Yes! Non-sbkube resources without labels will appear in `unmanaged_releases` in status output.
+
+**Q: What if my app directory doesn't follow `app_XXX_*` naming?**
+
+A: Labels won't be injected. Consider renaming your directory to match the pattern, or manually add labels.
+
+**Q: How do I remove sbkube labels?**
+
+A: Use kubectl patch to remove specific labels:
+
+```bash
+kubectl patch deployment myapp --type='json' -p='[{"op": "remove", "path": "/metadata/labels/sbkube.io~1app-group"}]'
+```
 
 ______________________________________________________________________
 

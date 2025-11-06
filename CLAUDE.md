@@ -300,12 +300,230 @@ make lint-fix
 
 **For all commands**: See [Makefile](Makefile) (`make help`) or [Quick Commands](docs/04-development/quick-commands.md)
 
+### Essential Development Commands
+
+**Daily Development Workflow**:
+```bash
+# 1. Quick validation before commit
+make check              # Fast syntax + type check (빠른 검증)
+
+# 2. Fix code quality issues
+make lint-fix           # Auto-fix with ruff + mypy + bandit
+make lint-fix UNSAFE_FIXES=1  # Include unsafe auto-fixes
+
+# 3. Run tests
+make test-quick         # Fast unit tests (no E2E, no slow)
+make test-unit-only     # Unit tests only (no E2E)
+make test               # All tests
+
+# 4. Test specific components
+make test-commands      # Test commands only
+make test-models        # Test Pydantic models
+make test-utils         # Test utilities
+```
+
+**Code Quality Levels**:
+```bash
+# Level 1: Quick check (가장 빠름 - 코드 수정 후 즉시 실행)
+make check              # Syntax + mypy (no auto-fix)
+
+# Level 2: Standard lint (일반적인 품질 검사)
+make lint-check         # Preview changes (diff mode)
+make lint-fix           # Auto-fix + format
+
+# Level 3: Strict lint (엄격한 품질 검사)
+make lint-strict        # All rules enabled
+make lint-strict-fix    # Strict with auto-fix
+```
+
+**Testing Strategies**:
+```bash
+# By test type
+make test-unit          # Unit tests (tests/unit/)
+make test-integration   # Integration tests (tests/integration/)
+make test-e2e           # End-to-end tests (tests/e2e/)
+make test-performance   # Performance benchmarks
+
+# By markers
+make test-k8s           # Tests requiring Kubernetes
+make test-helm          # Tests requiring Helm
+make test-fast          # Fast tests only (no slow marker)
+
+# Coverage
+make test-coverage      # With HTML coverage report
+```
+
+**CI Simulation**:
+```bash
+make ci                 # Run full CI checks (lint + test)
+make ci-fix             # CI with auto-fix
+```
+
 ### Working Directory (.sbkube)
 
 - **Location**: Determined by `sources.yaml` location
 - **Contents**: `charts/`, `repos/`, `build/`, `rendered/`
 - **Git**: NEVER commit (`.gitignore` rule)
 - **Auto-created**: During workflow execution
+
+**Key Insight**: `.sbkube` directory is NOT in project root but in the same directory as `sources.yaml`. This allows multiple config directories to have independent working directories.
+
+### High-Level Architecture Patterns
+
+**Understanding SBKube requires reading multiple files across different layers. Key patterns:**
+
+#### 1. Command Pattern (EnhancedBaseCommand)
+
+All commands inherit from `EnhancedBaseCommand` ([sbkube/utils/base_command.py](sbkube/utils/base_command.py)):
+
+```python
+class MyCommand(EnhancedBaseCommand):
+    def __init__(self, ...):
+        super().__init__(
+            base_dir=".",
+            app_config_dir="config",
+            output_format="human",  # NEW in v0.7.0
+        )
+        # Inherited attributes:
+        # - self.BASE_DIR, self.APP_CONFIG_DIR
+        # - self.CHARTS_DIR, self.REPOS_DIR
+        # - self.config_manager (ConfigManager)
+        # - self.formatter (OutputFormatter)  # v0.7.0+
+        # - self.hook_executor (HookExecutor)
+```
+
+**Critical**: `.sbkube` working directory is determined by `sources.yaml` location, NOT project root.
+
+#### 2. Configuration Hierarchy (ConfigManager)
+
+Configuration loading follows a strict hierarchy ([sbkube/models/config_manager.py](sbkube/models/config_manager.py)):
+
+```
+1. sources.yaml (cluster config) - Required in v0.4.10+
+2. config.yaml (app definitions)
+3. config-{env}.yaml (environment-specific) - Optional
+4. Inheritance: config.yaml ← config-{env}.yaml
+```
+
+**Pydantic Validation**:
+- [sbkube/models/config_model.py](sbkube/models/config_model.py): `SBKubeConfig`, `AppConfig`
+- [sbkube/models/sources_model.py](sbkube/models/sources_model.py): `SourceScheme`, `HelmSource`, `GitSource`
+- Validation errors collected in `self.validation_errors`
+
+#### 3. Workflow Execution Pattern
+
+4-stage workflow with hooks ([SPEC.md Section 3](SPEC.md)):
+
+```
+prepare → build → template → deploy
+   ↓        ↓         ↓         ↓
+Hooks:   Hooks:    Hooks:    Hooks:
+- pre    - pre     - pre     - pre
+- post   - post    - post    - post
+```
+
+**Hook Execution** ([sbkube/utils/hook_executor.py](sbkube/utils/hook_executor.py)):
+- Inline commands: executed in shell
+- Script files: executed with proper PATH
+- Error handling: fail-fast or continue based on config
+
+#### 4. Output Formatting (v0.7.0+)
+
+**OutputFormatter Pattern** ([sbkube/utils/output_formatter.py](sbkube/utils/output_formatter.py)):
+
+```python
+# All commands have:
+self.formatter = OutputFormatter(format_type=self.output_format)
+
+# Usage:
+self.formatter.section("Deployment Status")
+self.formatter.info("Processing app: nginx")
+self.formatter.success("Deployment completed")
+self.formatter.error("Failed to deploy")
+self.formatter.table(data, headers=["Name", "Status"])
+```
+
+**Format Types**:
+- `human`: Rich console output (default)
+- `llm`: Token-optimized output (80-90% reduction)
+- `json`: Structured JSON
+- `yaml`: YAML format
+
+#### 5. State Management (SQLAlchemy)
+
+**Database**: `~/.sbkube/deployments.db` ([sbkube/state/database.py](sbkube/state/database.py))
+
+**Models**:
+- `DeploymentState`: deployment history
+- `AppState`: individual app states
+- `RollbackPoint`: rollback snapshots
+
+**Usage Pattern**:
+```python
+from sbkube.state.tracker import StateTracker
+
+tracker = StateTracker()
+deployment_id = tracker.start_deployment(namespace, apps)
+tracker.update_app_status(app_name, status="success")
+tracker.complete_deployment(deployment_id)
+```
+
+#### 6. Error Handling System
+
+**Exception Hierarchy** ([sbkube/exceptions.py](sbkube/exceptions.py)):
+```
+SbkubeError (base)
+├── ConfigValidationError
+├── CliToolNotFoundError
+├── CliToolExecutionError
+├── HelmExecutionError
+└── ValidationError
+```
+
+**Error Formatting** ([sbkube/utils/error_formatter.py](sbkube/utils/error_formatter.py)):
+- Error classification
+- Contextual suggestions
+- User-friendly messages
+
+#### 7. CLI Structure (Click Framework)
+
+**CLI Entry Point** ([sbkube/cli.py](sbkube/cli.py)):
+
+```python
+@click.group(cls=SbkubeGroup)  # Custom group for categorized help
+@click.option("--kubeconfig", ...)
+@click.option("--context", ...)
+@click.option("--format", ...)  # v0.7.0+
+@click.pass_context
+def main(ctx, kubeconfig, context, format):
+    # Global context setup
+    ctx.obj = {"kubeconfig": kubeconfig, "context": context, "format": format}
+```
+
+**Command Categories**:
+- 핵심 워크플로우: prepare, build, template, deploy
+- 통합 명령어: apply (runs all 4 stages)
+- 상태 관리: status, history, rollback
+- 업그레이드/삭제: upgrade, delete
+- 유틸리티: init, validate, doctor, version
+
+#### 8. Validation System
+
+**Multi-Layer Validation** ([sbkube/utils/validation_system.py](sbkube/utils/validation_system.py)):
+
+```
+1. Schema Validation (Pydantic) - config structure
+2. Environment Validation - kubectl, helm, cluster access
+3. Dependency Validation - app deps graph
+4. Pre-Deployment Validation - namespace, resources
+5. Configuration Validation - custom rules
+```
+
+**Validator Types** ([sbkube/validators/](sbkube/validators/)):
+- `basic_validators.py`: basic checks
+- `environment_validators.py`: tool availability
+- `dependency_validators.py`: app dependency graph
+- `pre_deployment_validators.py`: cluster readiness
 
 ______________________________________________________________________
 
@@ -417,12 +635,24 @@ ______________________________________________________________________
 
 ## 6. Version Info
 
-- **Document Version**: 1.5
+- **Document Version**: 1.6
 - **Last Updated**: 2025-01-06
 - **Target SBKube Version**: v0.7.0+ (dev), v0.6.0 (stable)
 - **Author**: archmagece@users.noreply.github.com
 
 ### Change History
+
+- **v1.6 (2025-01-06)**:
+
+  - **Major Enhancement**: Added comprehensive architecture patterns section
+  - Added "High-Level Architecture Patterns" with 8 key patterns requiring multi-file understanding
+  - Expanded "Essential Development Commands" with daily workflow, testing strategies, and CI simulation
+  - Added practical examples for EnhancedBaseCommand, ConfigManager, OutputFormatter patterns
+  - Documented .sbkube working directory behavior (determined by sources.yaml location)
+  - Added detailed Makefile command reference with 3 quality levels (check, lint, lint-strict)
+  - Documented testing strategies (by type, by markers, coverage)
+  - Added validation system overview (multi-layer validation)
+  - Enhanced CLI structure explanation with command categories
 
 - **v1.5 (2025-01-06)**:
 

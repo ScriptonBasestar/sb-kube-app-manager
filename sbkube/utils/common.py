@@ -200,6 +200,9 @@ def run_command(
             e.stdout or "",
             f"Timeout expired after {timeout} seconds.\n{e.stderr or ''}",
         )
+    except KeyboardInterrupt:
+        # Re-raise KeyboardInterrupt to allow proper handling at CLI level
+        raise
     except Exception as e:
         return (1, "", str(e))
 

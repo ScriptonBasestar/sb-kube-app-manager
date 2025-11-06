@@ -463,6 +463,12 @@ def cmd(
                     output.print_error("Post-apply hook failed")
                     failed = True
 
+        except KeyboardInterrupt:
+            # User interrupted (Ctrl+C) - exit immediately
+            output.print("\n[yellow]⚠️  Operation interrupted by user[/yellow]", level="warning")
+            if "app_name_iter" in locals():
+                output.print_error(f"App '{app_name_iter}' deployment was interrupted")
+            raise  # Re-raise to exit the entire command
         except Exception:
             failed = True
             # Record failed deployment (if app_name_iter is available)

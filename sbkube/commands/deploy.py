@@ -95,6 +95,7 @@ def deploy_helm_app(
     deployment_id: str | None = None,
     operator: str | None = None,
     progress_tracker: Any = None,
+    cluster_global_values: dict | None = None,
 ) -> bool:
     """Helm 앱 배포 (install/upgrade).
 
@@ -112,6 +113,7 @@ def deploy_helm_app(
         deployment_id: 배포 ID (Phase 2)
         operator: 배포자 이름 (Phase 2)
         progress_tracker: ProgressTracker 인스턴스 (Phase 2)
+        cluster_global_values: 클러스터 전역 values (선택, v0.7.0+)
 
     Returns:
         성공 여부
@@ -239,6 +241,20 @@ def deploy_helm_app(
     if app.atomic:
         cmd.append("--atomic")
 
+    # Cluster global values (v0.7.0+, 최하위 우선순위)
+    import tempfile
+    temp_cluster_values_file = None
+    if cluster_global_values:
+        import yaml
+        console.print("  [dim]Applying cluster global values...[/dim]")
+        # 임시 파일에 cluster global values 저장
+        temp_cluster_values_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False, encoding="utf-8"
+        )
+        yaml.dump(cluster_global_values, temp_cluster_values_file, default_flow_style=False)
+        temp_cluster_values_file.close()
+        cmd.extend(["--values", temp_cluster_values_file.name])
+
     # Values 파일
     for values_file in app.values:
         values_path = app_config_dir / values_file
@@ -308,22 +324,59 @@ def deploy_helm_app(
     # 실행
     _update_progress("Installing/Upgrading Helm release")
 
-    return_code, stdout, stderr = run_command(cmd, timeout=300)
+    try:
+        return_code, stdout, stderr = run_command(cmd, timeout=300)
 
-    if return_code != 0:
-        reason = _get_connection_error_reason(stdout, stderr)
-        if reason:
-            raise KubernetesConnectionError(reason=reason)
-        output.print_error("Failed to deploy", error=stderr)
-        return False
+        if return_code != 0:
+            # Timeout detection
+            if return_code == -1 and "Timeout expired" in stderr:
+                timeout_msg = (
+                    f"Helm deployment timed out after 300 seconds (5 minutes).\n\n"
+                    f"Possible causes:\n"
+                    f"  - Pod image pull is slow or failing\n"
+                    f"  - Pod is failing health checks\n"
+                    f"  - Insufficient cluster resources\n\n"
+                    f"Troubleshooting:\n"
+                    f"  1. Check pod status: kubectl get pods -n {namespace}\n"
+                    f"  2. Check pod logs: kubectl logs -n {namespace} <pod-name>\n"
+                    f"  3. Describe pod: kubectl describe pod -n {namespace} <pod-name>\n"
+                    f"  4. Increase timeout: add 'timeout: 10m' to app config\n"
+                )
+                output.print_error("Helm deployment timeout", error=timeout_msg)
+                return False
 
-    if progress_tracker:
-        progress_tracker.console_print(
-            f"[green]✅ {app_name} deployed (release: {release_name})[/green]"
+            reason = _get_connection_error_reason(stdout, stderr)
+            if reason:
+                raise KubernetesConnectionError(reason=reason)
+            output.print_error("Failed to deploy", error=stderr)
+            return False
+
+        if progress_tracker:
+            progress_tracker.console_print(
+                f"[green]✅ {app_name} deployed (release: {release_name})[/green]"
+            )
+        else:
+            output.print_success(f"Helm app deployed: {app_name} (release: {release_name})")
+        return True
+    except KeyboardInterrupt:
+        console.print(
+            f"\n[yellow]⚠️  Deployment interrupted by user (Ctrl+C)[/yellow]"
         )
-    else:
-        output.print_success(f"Helm app deployed: {app_name} (release: {release_name})")
-    return True
+        console.print(
+            f"[yellow]ℹ️  App '{app_name}' deployment may be incomplete.[/yellow]"
+        )
+        console.print(
+            f"[dim]Check deployment status: kubectl get pods -n {namespace}[/dim]"
+        )
+        raise  # Re-raise to allow outer handler to exit properly
+    finally:
+        # 임시 파일 정리
+        if temp_cluster_values_file:
+            import os
+            try:
+                os.unlink(temp_cluster_values_file.name)
+            except Exception:
+                pass  # 정리 실패해도 무시
 
 
 def deploy_yaml_app(
@@ -989,6 +1042,7 @@ def cmd(
         )
 
         sources = None
+        cluster_global_values = None
         if sources_file_path and sources_file_path.exists():
             output.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
             try:
@@ -996,6 +1050,13 @@ def cmd(
 
                 sources_data = load_config_file(sources_file_path)
                 sources = SourceScheme(**sources_data)
+
+                # Load cluster global values (v0.7.0+)
+                cluster_global_values = sources.get_merged_global_values(sources_dir=APP_CONFIG_DIR)
+                if cluster_global_values:
+                    output.print(
+                        f"[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]"
+                    )
             except Exception as e:
                 output.print_error(f"Invalid sources file: {e}")
                 overall_success = False
@@ -1136,6 +1197,7 @@ def cmd(
                         kubeconfig,
                         context,
                         dry_run,
+                        cluster_global_values=cluster_global_values,
                     )
                 elif isinstance(app, YamlApp):
                     # apps_config를 딕셔너리로 변환 (Pydantic 모델 → dict)

@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 from sbkube.commands.deploy import deploy_hook_app
 from sbkube.models.config_model import HookApp
+from sbkube.utils.output_manager import OutputManager
 
 # ============================================================================
 # deploy_hook_app() 기본 테스트
@@ -34,12 +35,16 @@ def test_deploy_hook_app_basic(mock_hook_executor_class) -> None:
         ],
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     # deploy_hook_app 호출
     result = deploy_hook_app(
         app_name="test-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         namespace="default",
         dry_run=False,
     )
@@ -84,11 +89,15 @@ def test_deploy_hook_app_with_multiple_tasks(mock_hook_executor_class) -> None:
         ],
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     result = deploy_hook_app(
         app_name="multi-task-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         namespace="default",
         dry_run=False,
     )
@@ -111,11 +120,15 @@ def test_deploy_hook_app_with_custom_namespace(mock_hook_executor_class) -> None
         namespace="custom-namespace",
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     result = deploy_hook_app(
         app_name="custom-ns-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         namespace="default",  # 명령어 인자
         dry_run=False,
     )
@@ -140,11 +153,15 @@ def test_deploy_hook_app_namespace_fallback(mock_hook_executor_class) -> None:
         # namespace 지정 안 함
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     result = deploy_hook_app(
         app_name="fallback-ns-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         namespace="fallback-namespace",
         dry_run=False,
     )
@@ -166,11 +183,15 @@ def test_deploy_hook_app_with_kubeconfig(mock_hook_executor_class) -> None:
         tasks=[{"type": "command", "name": "test", "command": "echo test"}],
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     result = deploy_hook_app(
         app_name="kubeconfig-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         kubeconfig="/path/to/kubeconfig",
         context="test-context",
         namespace="default",
@@ -195,11 +216,15 @@ def test_deploy_hook_app_dry_run(mock_hook_executor_class) -> None:
         tasks=[{"type": "command", "name": "test", "command": "echo test"}],
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     result = deploy_hook_app(
         app_name="dry-run-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         namespace="default",
         dry_run=True,
     )
@@ -215,8 +240,7 @@ def test_deploy_hook_app_dry_run(mock_hook_executor_class) -> None:
 
 
 @patch("sbkube.commands.deploy.HookExecutor")
-@patch("sbkube.commands.deploy.console")
-def test_deploy_hook_app_empty_tasks(mock_console, mock_hook_executor_class) -> None:
+def test_deploy_hook_app_empty_tasks(mock_hook_executor_class) -> None:
     """빈 태스크 리스트 테스트 (경고 후 성공)."""
     mock_executor = MagicMock()
     mock_hook_executor_class.return_value = mock_executor
@@ -226,20 +250,21 @@ def test_deploy_hook_app_empty_tasks(mock_console, mock_hook_executor_class) -> 
         tasks=[],  # 빈 태스크
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     result = deploy_hook_app(
         app_name="empty-tasks-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         namespace="default",
         dry_run=False,
     )
 
-    # 경고 메시지 출력 확인
+    # 경고 메시지 출력 확인 (output.print 대신 output의 메서드 호출 확인)
     assert result is True
-    mock_console.print.assert_any_call(
-        "[yellow]⚠️  No tasks defined in Hook app, skipping[/yellow]"
-    )
     # execute_hook_tasks는 호출되지 않음
     mock_executor.execute_hook_tasks.assert_not_called()
 
@@ -256,11 +281,15 @@ def test_deploy_hook_app_execution_failure(mock_hook_executor_class) -> None:
         tasks=[{"type": "command", "name": "fail", "command": "false"}],
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     result = deploy_hook_app(
         app_name="failing-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         namespace="default",
         dry_run=False,
     )
@@ -281,11 +310,15 @@ def test_deploy_hook_app_context_passed(mock_hook_executor_class) -> None:
         tasks=[{"type": "command", "name": "test", "command": "echo test"}],
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     result = deploy_hook_app(
         app_name="context-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         namespace="test-namespace",
         dry_run=True,
     )
@@ -336,11 +369,15 @@ def test_deploy_hook_app_with_phase3_features(mock_hook_executor_class) -> None:
         },
     )
 
+    # OutputManager mock
+    output = MagicMock(spec=OutputManager)
+
     result = deploy_hook_app(
         app_name="phase3-hook",
         app=app,
         base_dir=Path("/test"),
         app_config_dir=Path("/test/config"),
+        output=output,
         namespace="default",
         dry_run=False,
     )

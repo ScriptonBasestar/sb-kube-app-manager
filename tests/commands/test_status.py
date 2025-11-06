@@ -40,14 +40,8 @@ class TestStatusByGroup:
         assert "--by-group" in result.output
         assert "Group applications by app-group" in result.output
 
-    @pytest.mark.integration
-    def test_status_by_group_with_valid_cluster(self, runner, k3s_cluster) -> None:
-        """Test --by-group with actual cluster (requires k3s)."""
-        # This test requires actual k3s cluster setup
-        # Mark as integration test
-        pytest.skip("Requires actual k3s cluster")
 
-
+@pytest.mark.integration
 class TestStatusDeps:
     """Tests for --deps option (Phase 6)."""
 
@@ -82,12 +76,8 @@ class TestStatusHealthCheck:
         assert "--health-check" in result.output
         assert "Show detailed health check status" in result.output
 
-    @pytest.mark.integration
-    def test_status_health_check_with_pods(self, runner, k3s_cluster_with_pods) -> None:
-        """Test --health-check displays pod health (requires k3s with pods)."""
-        pytest.skip("Requires actual k3s cluster with pods")
 
-
+@pytest.mark.integration
 class TestStatusManaged:
     """Tests for --managed option (Phase 4)."""
 
@@ -158,15 +148,5 @@ class TestStatusOptionCombinations:
 @pytest.mark.integration
 class TestStatusIntegration:
     """Integration tests for status command."""
+    pass
 
-    def test_status_with_real_cluster(self, runner, k3s_cluster) -> None:
-        """Test status with real k3s cluster."""
-        pytest.skip("Requires actual k3s cluster setup")
-
-    def test_status_cache_functionality(self, runner, k3s_cluster) -> None:
-        """Test status caching mechanism."""
-        pytest.skip("Requires actual k3s cluster setup")
-
-    def test_status_watch_mode(self, runner, k3s_cluster) -> None:
-        """Test status --watch mode."""
-        pytest.skip("Requires actual k3s cluster setup")

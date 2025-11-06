@@ -46,12 +46,8 @@ class TestHistoryList:
         result = runner.invoke(main, ["history", "--help"])
         assert "history" in result.output.lower()
 
-    @pytest.mark.integration
-    def test_history_list_with_deployments(self, runner, state_db_with_data) -> None:
-        """Test history lists deployments from State DB."""
-        pytest.skip("Requires State DB with sample data")
 
-
+@pytest.mark.integration
 class TestHistoryShow:
     """Tests for --show option."""
 
@@ -61,12 +57,8 @@ class TestHistoryShow:
         assert "--show" in result.output
         assert "Show detailed information for a specific deployment" in result.output
 
-    @pytest.mark.integration
-    def test_history_show_specific_deployment(self, runner, state_db_with_data) -> None:
-        """Test --show displays specific deployment details."""
-        pytest.skip("Requires State DB with sample data")
 
-
+@pytest.mark.integration
 class TestHistoryDiff:
     """Tests for --diff option (Phase 5)."""
 
@@ -82,14 +74,8 @@ class TestHistoryDiff:
         assert result.exit_code != 0
         assert "Invalid --diff format" in result.output
 
-    @pytest.mark.integration
-    def test_history_diff_two_deployments(
-        self, runner, state_db_with_multiple_deployments
-    ) -> None:
-        """Test --diff compares two deployments."""
-        pytest.skip("Requires State DB with multiple deployments")
 
-
+@pytest.mark.integration
 class TestHistoryValuesDiff:
     """Tests for --values-diff option (Phase 5)."""
 
@@ -104,14 +90,8 @@ class TestHistoryValuesDiff:
         result = runner.invoke(main, ["history", "--diff", "invalid"])
         assert result.exit_code != 0
 
-    @pytest.mark.integration
-    def test_history_values_diff_helm_releases(
-        self, runner, state_db_with_helm_data
-    ) -> None:
-        """Test --values-diff shows Helm values changes."""
-        pytest.skip("Requires State DB with Helm release data")
 
-
+@pytest.mark.integration
 class TestHistoryAppGroupFilter:
     """Tests for app-group filtering (Phase 5)."""
 
@@ -121,14 +101,8 @@ class TestHistoryAppGroupFilter:
         # Should accept app_group as argument
         assert "app_group" in result.output or "APP_GROUP" in result.output
 
-    @pytest.mark.integration
-    def test_history_filter_by_app_group(
-        self, runner, state_db_with_app_groups
-    ) -> None:
-        """Test filtering history by app-group."""
-        pytest.skip("Requires State DB with app-group data")
 
-
+@pytest.mark.integration
 class TestHistoryFormat:
     """Tests for --format option."""
 
@@ -139,17 +113,8 @@ class TestHistoryFormat:
         assert "json" in result.output.lower()
         assert "yaml" in result.output.lower()
 
-    @pytest.mark.integration
-    def test_history_format_json(self, runner, state_db_with_data) -> None:
-        """Test --format json output."""
-        pytest.skip("Requires State DB with sample data")
 
-    @pytest.mark.integration
-    def test_history_format_yaml(self, runner, state_db_with_data) -> None:
-        """Test --format yaml output."""
-        pytest.skip("Requires State DB with sample data")
-
-
+@pytest.mark.integration
 class TestHistoryLLMOutput:
     """Tests for LLM-friendly output (Phase 3)."""
 
@@ -254,27 +219,9 @@ class TestHistoryFilters:
         result = runner.invoke(main, ["history", "--help"])
         assert "--namespace" in result.output or "-n" in result.output
 
-    @pytest.mark.integration
-    def test_history_filter_by_cluster(self, runner, state_db_multicluster) -> None:
-        """Test filtering by cluster name."""
-        pytest.skip("Requires State DB with multi-cluster data")
-
 
 # Integration tests
 @pytest.mark.integration
 class TestHistoryIntegration:
     """Integration tests for history command."""
 
-    def test_history_after_deployment(self, runner, deployed_app) -> None:
-        """Test history shows deployment after sbkube apply."""
-        pytest.skip("Requires actual deployment")
-
-    def test_history_diff_real_deployments(self, runner, two_deployments) -> None:
-        """Test diff between two real deployments."""
-        pytest.skip("Requires two actual deployments")
-
-    def test_history_values_diff_real_helm_releases(
-        self, runner, helm_deployments
-    ) -> None:
-        """Test values-diff with real Helm releases."""
-        pytest.skip("Requires Helm deployments")

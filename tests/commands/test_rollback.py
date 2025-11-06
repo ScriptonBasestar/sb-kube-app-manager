@@ -42,12 +42,8 @@ class TestRollbackDryRun:
             or "plan" in result.output.lower()
         )
 
-    @pytest.mark.integration
-    def test_rollback_dry_run_shows_plan(self, runner, state_db_with_data) -> None:
-        """Test --dry-run displays rollback plan without executing."""
-        pytest.skip("Requires State DB with deployment data")
 
-
+@pytest.mark.integration
 class TestRollbackForce:
     """Tests for --force option."""
 
@@ -60,14 +56,8 @@ class TestRollbackForce:
             or "force" in result.output.lower()
         )
 
-    @pytest.mark.integration
-    def test_rollback_force_skips_confirmation(
-        self, runner, state_db_with_data
-    ) -> None:
-        """Test --force skips user confirmation."""
-        pytest.skip("Requires State DB and cluster")
 
-
+@pytest.mark.integration
 class TestRollbackList:
     """Tests for --list option."""
 
@@ -76,14 +66,8 @@ class TestRollbackList:
         result = runner.invoke(main, ["rollback", "--help"])
         assert "--list" in result.output
 
-    @pytest.mark.integration
-    def test_rollback_list_shows_available_deployments(
-        self, runner, state_db_with_data
-    ) -> None:
-        """Test --list displays rollback candidates."""
-        pytest.skip("Requires State DB with deployment history")
 
-
+@pytest.mark.integration
 class TestRollbackValidation:
     """Tests for rollback validation."""
 
@@ -93,29 +77,9 @@ class TestRollbackValidation:
         # Should fail gracefully
         assert result.exit_code != 0
 
-    @pytest.mark.integration
-    def test_rollback_target_validation(self, runner, state_db_with_data) -> None:
-        """Test rollback validates target deployment exists."""
-        pytest.skip("Requires State DB")
-
 
 # Integration tests
 @pytest.mark.integration
 class TestRollbackIntegration:
     """Integration tests for rollback command."""
 
-    def test_rollback_actual_deployment(self, runner, deployed_apps) -> None:
-        """Test rollback with actual deployment."""
-        pytest.skip("Requires actual deployment history")
-
-    def test_rollback_restores_state(self, runner, two_deployments) -> None:
-        """Test rollback restores previous deployment state."""
-        pytest.skip("Requires two actual deployments")
-
-    def test_rollback_updates_state_db(self, runner, deployment_with_state) -> None:
-        """Test rollback updates State DB correctly."""
-        pytest.skip("Requires deployment with State DB")
-
-    def test_rollback_helm_releases(self, runner, helm_releases) -> None:
-        """Test rollback reverts Helm releases."""
-        pytest.skip("Requires Helm releases")

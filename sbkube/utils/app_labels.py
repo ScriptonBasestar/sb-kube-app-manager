@@ -2,10 +2,18 @@
 
 This module provides functionality to automatically inject sbkube-specific
 labels and annotations into Helm charts and Kubernetes resources.
+
+Features:
+- Dynamic label injection to YAML resources without modifying source files
+- Consistent label format across Helm and YAML deployments
+- Support for multi-document YAML files (---)
 """
 
 import re
 from datetime import UTC, datetime
+from typing import Any
+
+import yaml
 
 
 def extract_app_group_from_name(app_name: str) -> str | None:
@@ -169,3 +177,75 @@ def build_helm_set_annotations(annotations: dict[str, str]) -> list[str]:
         helm_args.extend(["--set-string", f"commonAnnotations.{escaped_key}={value}"])
 
     return helm_args
+
+
+def inject_labels_to_yaml(
+    yaml_content: str,
+    labels: dict[str, str] | None = None,
+    annotations: dict[str, str] | None = None,
+) -> str:
+    """Inject labels and annotations into YAML resources dynamically.
+
+    This function injects sbkube labels/annotations into YAML without modifying
+    the source file. Supports multi-document YAML files.
+
+    Args:
+        yaml_content: Raw YAML content as string
+        labels: Dictionary of labels to inject (optional)
+        annotations: Dictionary of annotations to inject (optional)
+
+    Returns:
+        YAML string with injected labels/annotations
+
+    Example:
+        >>> yaml_text = "apiVersion: v1\\nkind: ConfigMap\\nmetadata:\\n  name: test"
+        >>> result = inject_labels_to_yaml(yaml_text, {"app": "test"})
+
+    """
+    if not labels and not annotations:
+        return yaml_content
+
+    try:
+        # Parse all documents in YAML (supports ---)
+        documents = list(yaml.safe_load_all(yaml_content))
+    except yaml.YAMLError:
+        # If parsing fails, return original content
+        return yaml_content
+
+    # Process each document
+    for doc in documents:
+        if doc is None or not isinstance(doc, dict):
+            continue
+
+        # Only inject into Kubernetes resources with metadata
+        if "kind" not in doc or "metadata" not in doc:
+            continue
+
+        metadata = doc["metadata"]
+        if not isinstance(metadata, dict):
+            continue
+
+        # Inject labels
+        if labels:
+            if "labels" not in metadata:
+                metadata["labels"] = {}
+            if isinstance(metadata["labels"], dict):
+                metadata["labels"].update(labels)
+
+        # Inject annotations
+        if annotations:
+            if "annotations" not in metadata:
+                metadata["annotations"] = {}
+            if isinstance(metadata["annotations"], dict):
+                metadata["annotations"].update(annotations)
+
+    # Convert back to YAML string
+    # Use safe_dump to maintain compatibility
+    output_lines = []
+    for i, doc in enumerate(documents):
+        if i > 0:
+            output_lines.append("---")
+        if doc is not None:
+            output_lines.append(yaml.safe_dump(doc, default_flow_style=False))
+
+    return "\n".join(output_lines)

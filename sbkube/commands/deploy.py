@@ -31,6 +31,7 @@ from sbkube.utils.app_labels import (
     build_sbkube_annotations,
     build_sbkube_labels,
     extract_app_group_from_name,
+    inject_labels_to_yaml,
 )
 from sbkube.utils.cli_check import (
     check_cluster_connectivity_or_exit,
@@ -366,6 +367,24 @@ def deploy_yaml_app(
         sbkube_work_dir = base_dir / ".sbkube"
     repos_dir = sbkube_work_dir / "repos"
 
+    # Phase 2: Extract app-group for label injection
+    app_group = extract_app_group_from_name(app_config_dir.name)
+    if not app_group:
+        app_group = extract_app_group_from_name(app_config_dir.parent.name)
+
+    # Build sbkube labels and annotations to inject
+    labels = None
+    annotations = None
+    if app_group:
+        labels = build_sbkube_labels(app_name, app_group)
+        annotations = build_sbkube_annotations()
+        console.print(f"  [dim]Will inject labels: app-group={app_group}[/dim]")
+    else:
+        console.print(
+            f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
+        )
+        console.print("  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]")
+
     for yaml_file in app.manifests:
         # ${repos.app-name} 변수 확장
         expanded_file = yaml_file
@@ -397,26 +416,64 @@ def deploy_yaml_app(
             output.print_error(f"YAML file not found: {yaml_path}")
             return False
 
-        cmd = ["kubectl", "apply", "-f", str(yaml_path)]
+        # Read and inject labels dynamically
+        try:
+            with yaml_path.open("r", encoding="utf-8") as f:
+                yaml_content = f.read()
 
-        if namespace:
-            cmd.extend(["--namespace", namespace])
+            # Inject labels if app-group detected
+            if labels and annotations:
+                yaml_content = inject_labels_to_yaml(yaml_content, labels, annotations)
+        except Exception as e:
+            output.print_error(f"Failed to process YAML file: {yaml_path}", error=str(e))
+            return False
 
-        if dry_run:
-            cmd.append("--dry-run=client")
-            cmd.append("--validate=false")
+        # Create temporary file with injected labels
+        import tempfile
+        temp_dir = base_dir / ".sbkube" / "temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
 
-        # Apply cluster configuration
-        cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                suffix=".yaml",
+                dir=str(temp_dir),
+                delete=False,
+                encoding="utf-8",
+            ) as temp_file:
+                temp_file.write(yaml_content)
+                temp_yaml_path = Path(temp_file.name)
 
-        console.print(f"  Applying: {yaml_file}")
-        return_code, stdout, stderr = run_command(cmd)
+            cmd = ["kubectl", "apply", "-f", str(temp_yaml_path)]
 
-        if return_code != 0:
-            reason = _get_connection_error_reason(stdout, stderr)
-            if reason:
-                raise KubernetesConnectionError(reason=reason)
-            output.print_error("Failed to apply", error=stderr)
+            if namespace:
+                cmd.extend(["--namespace", namespace])
+
+            if dry_run:
+                cmd.append("--dry-run=client")
+                cmd.append("--validate=false")
+
+            # Apply cluster configuration
+            cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
+
+            console.print(f"  Applying: {yaml_file}")
+            return_code, stdout, stderr = run_command(cmd)
+
+            # Clean up temporary file
+            try:
+                temp_yaml_path.unlink()
+            except Exception:
+                pass  # Ignore cleanup errors
+
+            if return_code != 0:
+                reason = _get_connection_error_reason(stdout, stderr)
+                if reason:
+                    raise KubernetesConnectionError(reason=reason)
+                output.print_error("Failed to apply", error=stderr)
+                return False
+
+        except Exception as e:
+            output.print_error(f"Failed to deploy YAML: {yaml_file}", error=str(e))
             return False
 
     output.print_success(f"YAML app deployed: {app_name}")

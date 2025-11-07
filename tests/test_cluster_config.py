@@ -42,10 +42,26 @@ def test_resolve_cluster_config_cli_override() -> None:
 
 def test_resolve_cluster_config_from_sources() -> None:
     """Should use sources.yaml when CLI options are not provided."""
-    # Create a temporary kubeconfig file
+    # Create a temporary kubeconfig file with valid context
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".yaml") as f:
         kubeconfig_path = f.name
-        f.write("apiVersion: v1\nkind: Config\n")
+        f.write("""apiVersion: v1
+kind: Config
+current-context: test-context
+contexts:
+- name: test-context
+  context:
+    cluster: test-cluster
+    user: test-user
+clusters:
+- name: test-cluster
+  cluster:
+    server: https://localhost:6443
+users:
+- name: test-user
+  user:
+    token: fake-token
+""")
 
     try:
         sources = SourceScheme(

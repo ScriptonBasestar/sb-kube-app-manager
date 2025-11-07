@@ -253,28 +253,34 @@ class TestPredefinedDecorators:
 class TestCommandRetry:
     """Test command execution with retry."""
 
-    @patch("subprocess.run")
+    @patch("sbkube.utils.retry.subprocess.run")
     def test_run_command_with_retry_success(self, mock_run) -> None:
         """Test successful command execution with retry."""
         mock_result = Mock()
         mock_result.stdout = "success output"
         mock_result.stderr = ""
+        mock_result.returncode = 0
         mock_run.return_value = mock_result
 
         result = run_command_with_retry(["echo", "test"])
         assert result == mock_result
         mock_run.assert_called_once()
 
-    @patch("subprocess.run")
+    @patch("sbkube.utils.retry.subprocess.run")
     @patch("time.sleep")  # Mock sleep to speed up test
     def test_run_command_with_retry_eventual_success(
         self, mock_sleep, mock_run
     ) -> None:
         """Test command execution that succeeds after retries."""
         # First call fails, second succeeds
+        mock_success = Mock()
+        mock_success.stdout = "success"
+        mock_success.stderr = ""
+        mock_success.returncode = 0
+
         mock_run.side_effect = [
             subprocess.CalledProcessError(1, ["test"], stderr="network error"),
-            Mock(stdout="success", stderr=""),
+            mock_success,
         ]
 
         result = run_command_with_retry(["test", "command"])
@@ -282,7 +288,7 @@ class TestCommandRetry:
         assert mock_run.call_count == 2
         mock_sleep.assert_called_once()
 
-    @patch("subprocess.run")
+    @patch("sbkube.utils.retry.subprocess.run")
     @patch("time.sleep")
     def test_run_command_with_retry_exhausted(self, mock_sleep, mock_run) -> None:
         """Test command execution that fails after all retries."""
@@ -296,24 +302,26 @@ class TestCommandRetry:
         # Should retry the configured number of times
         assert mock_run.call_count == NETWORK_RETRY_CONFIG.max_attempts
 
-    @patch("subprocess.run")
+    @patch("sbkube.utils.retry.subprocess.run")
     def test_run_helm_command_with_retry(self, mock_run) -> None:
         """Test Helm command execution with retry."""
         mock_result = Mock()
         mock_result.stdout = "helm output"
         mock_result.stderr = ""
+        mock_result.returncode = 0
         mock_run.return_value = mock_result
 
         result = run_helm_command_with_retry(["helm", "version"])
         assert result == mock_result
         mock_run.assert_called_once()
 
-    @patch("subprocess.run")
+    @patch("sbkube.utils.retry.subprocess.run")
     def test_run_git_command_with_retry(self, mock_run) -> None:
         """Test Git command execution with retry."""
         mock_result = Mock()
         mock_result.stdout = "git output"
         mock_result.stderr = ""
+        mock_result.returncode = 0
         mock_run.return_value = mock_result
 
         result = run_git_command_with_retry(["git", "status"])

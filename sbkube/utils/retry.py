@@ -258,7 +258,6 @@ def run_command_with_retry(
 
     # Set default subprocess arguments
     subprocess_defaults = {
-        "check": True,
         "capture_output": True,
         "text": True,
         "timeout": 300,  # 5 minutes default timeout
@@ -268,6 +267,7 @@ def run_command_with_retry(
     @retry_operation(config)
     def _run_command():
         logger.command(" ".join(cmd))
+        # Use check=False to handle errors manually via retry mechanism
         result = subprocess.run(cmd, check=False, **subprocess_defaults)
         if result.stdout:
             logger.verbose(f"STDOUT: {result.stdout.strip()}")

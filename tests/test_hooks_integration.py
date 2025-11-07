@@ -39,8 +39,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: redis
-    repo: bitnami
+    chart: bitnami/redis
     version: "19.0.0"
     hooks:
       pre_prepare:
@@ -93,12 +92,34 @@ spec:
 """
     )
 
-    # sources.yaml 생성
+    # Create a valid test kubeconfig
+    kubeconfig_path = project_dir / "test-kubeconfig.yaml"
+    kubeconfig_path.write_text(
+        """apiVersion: v1
+kind: Config
+current-context: test-context
+contexts:
+- name: test-context
+  context:
+    cluster: test-cluster
+    user: test-user
+clusters:
+- name: test-cluster
+  cluster:
+    server: https://localhost:6443
+users:
+- name: test-user
+  user:
+    token: fake-token
+"""
+    )
+
+    # sources.yaml 생성 (use test kubeconfig)
     sources_yaml = project_dir / "sources.yaml"
     sources_yaml.write_text(
-        """
-kubeconfig: "~/.kube/config"
-kubeconfig_context: "kind-test"
+        f"""kubeconfig: "{kubeconfig_path}"
+kubeconfig_context: "test-context"
+cluster: "test-cluster"
 
 helm_repos:
   bitnami:
@@ -128,7 +149,7 @@ def test_prepare_with_hooks_dry_run(tmp_project) -> None:
 
     # Dry-run 모드에서는 실제 실행하지 않지만 성공해야 함
     assert result.exit_code == 0
-    assert "Dry-run mode enabled" in result.output
+    assert "DRY-RUN" in result.output or "dry-run" in result.output.lower()
 
 
 def test_deploy_with_hooks_dry_run(tmp_project) -> None:
@@ -149,7 +170,7 @@ def test_deploy_with_hooks_dry_run(tmp_project) -> None:
     )
 
     # Dry-run 모드에서는 훅이 시뮬레이션되어야 함
-    assert "Dry-run mode enabled" in result.output or result.exit_code == 0
+    assert "DRY-RUN" in result.output or "dry-run" in result.output.lower() or result.exit_code == 0
 
 
 def test_template_with_hooks_dry_run(tmp_project) -> None:

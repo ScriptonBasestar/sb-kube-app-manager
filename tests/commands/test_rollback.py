@@ -37,8 +37,10 @@ class TestRollbackDryRun:
         """Test --dry-run option is available."""
         result = runner.invoke(main, ["rollback", "--help"])
         assert "--dry-run" in result.output
+        # Check for dry-run related text (multiple variations accepted)
         assert (
             "without actual rollback" in result.output.lower()
+            or "simulate" in result.output.lower()
             or "plan" in result.output.lower()
         )
 

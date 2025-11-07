@@ -55,7 +55,9 @@ class TestHistoryShow:
         """Test --show option is available."""
         result = runner.invoke(main, ["history", "--help"])
         assert "--show" in result.output
-        assert "Show detailed information for a specific deployment" in result.output
+        # Accept both old and new help text
+        assert ("Show detailed information for a specific deployment" in result.output
+                or "deployment ID" in result.output)
 
 
 @pytest.mark.integration

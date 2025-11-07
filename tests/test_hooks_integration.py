@@ -152,6 +152,7 @@ def test_prepare_with_hooks_dry_run(tmp_project) -> None:
     assert "DRY-RUN" in result.output or "dry-run" in result.output.lower()
 
 
+@pytest.mark.integration
 def test_deploy_with_hooks_dry_run(tmp_project) -> None:
     """Deploy 명령어 hooks (dry-run 모드) 테스트."""
     project_dir, _config_dir = tmp_project
@@ -173,6 +174,7 @@ def test_deploy_with_hooks_dry_run(tmp_project) -> None:
     assert "DRY-RUN" in result.output or "dry-run" in result.output.lower() or result.exit_code == 0
 
 
+@pytest.mark.integration
 def test_template_with_hooks_dry_run(tmp_project) -> None:
     """Template 명령어 hooks (dry-run 모드) 테스트."""
     project_dir, _config_dir = tmp_project
@@ -191,9 +193,10 @@ def test_template_with_hooks_dry_run(tmp_project) -> None:
     )
 
     # Dry-run 모드 확인
-    assert "Dry-run mode enabled" in result.output or result.exit_code == 0
+    assert "DRY-RUN" in result.output or "dry-run" in result.output.lower() or result.exit_code == 0
 
 
+@pytest.mark.integration
 def test_apply_with_hooks_dry_run(tmp_project) -> None:
     """Apply 명령어 hooks (dry-run 모드) 테스트."""
     project_dir, _config_dir = tmp_project
@@ -214,7 +217,7 @@ def test_apply_with_hooks_dry_run(tmp_project) -> None:
     )
 
     # Dry-run 모드 확인
-    assert "Dry-run mode enabled" in result.output or result.exit_code == 0
+    assert "DRY-RUN" in result.output or "dry-run" in result.output.lower() or result.exit_code == 0
 
 
 def test_hooks_with_failing_script(tmp_project) -> None:
@@ -238,8 +241,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: redis
-    repo: bitnami
+    chart: bitnami/redis
     version: "19.0.0"
 """
     )
@@ -260,6 +262,7 @@ apps:
     assert result.exit_code != 0
 
 
+@pytest.mark.integration
 def test_hooks_environment_variables(tmp_project) -> None:
     """훅에서 환경 변수 주입 테스트."""
     project_dir, config_dir = tmp_project
@@ -285,8 +288,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: redis
-    repo: bitnami
+    chart: bitnami/redis
     version: "19.0.0"
     release_name: my-redis
     hooks:
@@ -326,8 +328,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: redis
-    repo: bitnami
+    chart: bitnami/redis
     version: "19.0.0"
 """
     )
@@ -349,6 +350,7 @@ apps:
     assert result.exit_code == 0
 
 
+@pytest.mark.integration
 def test_app_hook_on_failure(tmp_project) -> None:
     """앱별 on_failure 훅 테스트."""
     project_dir, config_dir = tmp_project
@@ -363,8 +365,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: invalid-chart  # 존재하지 않는 차트
-    repo: bitnami
+    chart: bitnami/invalid-chart  # 존재하지 않는 차트
     version: "19.0.0"
     hooks:
       on_deploy_failure:

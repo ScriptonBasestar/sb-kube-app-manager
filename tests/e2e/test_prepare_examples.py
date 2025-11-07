@@ -11,6 +11,7 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 
 @pytest.mark.e2e
 @pytest.mark.requires_helm
+@pytest.mark.integration
 class TestPrepareExamples:
     """Test prepare command with various example configurations."""
 

@@ -42,9 +42,12 @@ def test_get_error_suggestions_returns_valid_guide() -> None:
 
 
 def test_get_error_suggestions_returns_none_for_unknown() -> None:
-    """get_error_suggestions should return None for unknown errors."""
+    """get_error_suggestions now returns fallback guide for unknown errors."""
     guide = get_error_suggestions("UnknownError")
-    assert guide is None
+    # Changed: now returns a fallback guide instead of None
+    assert guide is not None
+    assert isinstance(guide, dict)
+    assert "commands" in guide  # Fallback guide has commands
 
 
 def test_format_suggestions_returns_formatted_string() -> None:
@@ -61,9 +64,11 @@ def test_format_suggestions_returns_formatted_string() -> None:
 
 
 def test_format_suggestions_returns_empty_for_unknown() -> None:
-    """format_suggestions should return empty string for unknown errors."""
+    """format_suggestions now returns fallback guide for unknown errors."""
     result = format_suggestions("UnknownError")
-    assert result == ""
+    # Changed: now returns fallback guide instead of empty string
+    assert result != ""
+    assert "💡" in result  # Should have fallback guide formatting
 
 
 def test_get_quick_fix_command_returns_command() -> None:
@@ -79,9 +84,11 @@ def test_get_quick_fix_command_returns_none_for_non_recoverable() -> None:
 
 
 def test_get_quick_fix_command_returns_none_for_unknown() -> None:
-    """get_quick_fix_command should return None for unknown errors."""
+    """get_quick_fix_command now returns fallback quick fix for unknown errors."""
     command = get_quick_fix_command("UnknownError")
-    assert command is None
+    # Changed: now returns fallback quick fix instead of None
+    assert command is not None
+    assert "sbkube doctor" in command
 
 
 def test_is_auto_recoverable_true_for_recoverable() -> None:

@@ -7,6 +7,7 @@ import yaml
 
 from sbkube.commands.build import build_helm_app
 from sbkube.models.config_model import HelmApp, SBKubeConfig
+from sbkube.utils.output_manager import OutputManager
 
 
 class TestWorkflowV3:
@@ -66,7 +67,10 @@ class TestWorkflowV3:
             removes=["README.md"],
         )
 
-        # 6. Build 실행 (overrides/removes 적용)
+        # 6. OutputManager 생성
+        output = OutputManager()
+
+        # 7. Build 실행 (overrides/removes 적용)
         success = build_helm_app(
             app_name="grafana",
             app=app,
@@ -74,6 +78,7 @@ class TestWorkflowV3:
             charts_dir=charts_dir,
             build_dir=build_dir,
             app_config_dir=app_config_dir,
+            output=output,
         )
 
         assert success, "Build should succeed"
@@ -165,8 +170,9 @@ class TestWorkflowV3:
             removes=["LICENSE"],
         )
 
-        # 4. Build 실행
+        # 4. OutputManager 생성 및 Build 실행
         build_dir = tmp_path / "build"
+        output = OutputManager()
         success = build_helm_app(
             app_name="my-app",
             app=app,
@@ -174,6 +180,7 @@ class TestWorkflowV3:
             charts_dir=tmp_path / "charts",  # 사용 안 됨
             build_dir=build_dir,
             app_config_dir=tmp_path,
+            output=output,
         )
 
         assert success, "Build should succeed"
@@ -210,16 +217,18 @@ class TestWorkflowV3:
             dest="downloaded.yaml",
         )
 
-        # 3. Build 실행
+        # 3. OutputManager 생성 및 Build 실행
         from sbkube.commands.build import build_http_app
 
         build_dir = tmp_path / "build"
+        output = OutputManager()
         success = build_http_app(
             app_name="my-http-app",
             app=app,
             base_dir=tmp_path,
             build_dir=build_dir,
             app_config_dir=app_config_dir,
+            output=output,
         )
 
         assert success, "Build should succeed"

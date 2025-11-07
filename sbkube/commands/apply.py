@@ -204,16 +204,15 @@ def cmd(
                     )
                     overall_success = False
                     continue
-                else:
-                    # 경고만 출력하고 계속 진행
-                    output.print(
-                        "\n[yellow]⚠️  Continuing deployment despite missing dependencies (non-blocking mode)[/yellow]",
-                        level="warning",
-                    )
-                    output.print(
-                        "[dim]Tip: Use --strict-deps to enforce dependency validation[/dim]",
-                        level="info",
-                    )
+                # 경고만 출력하고 계속 진행
+                output.print(
+                    "\n[yellow]⚠️  Continuing deployment despite missing dependencies (non-blocking mode)[/yellow]",
+                    level="warning",
+                )
+                output.print(
+                    "[dim]Tip: Use --strict-deps to enforce dependency validation[/dim]",
+                    level="info",
+                )
             else:
                 # All deps are deployed
                 output.print_success(

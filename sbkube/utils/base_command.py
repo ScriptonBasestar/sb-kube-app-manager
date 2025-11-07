@@ -451,13 +451,13 @@ class EnhancedBaseCommand:
     def export_validated_config(
         self,
         output_path: str | Path,
-        format: str = "yaml",
+        output_format: str = "yaml",
     ) -> None:
         """Export validated configuration to file.
 
         Args:
             output_path: Output file path
-            format: Output format (yaml or json)
+            output_format: Output format (yaml or json)
 
         """
         if not self.app_group:
@@ -468,7 +468,7 @@ class EnhancedBaseCommand:
             self.config_manager.export_merged_config(
                 self.app_group,
                 output_path,
-                format,
+                output_format,
             )
             logger.success(f"Exported validated config to: {output_path}")
         except Exception as e:

@@ -10,7 +10,7 @@ from textwrap import dedent
 from typing import Any
 
 import yaml
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from .base_model import ConfigBaseModel, InheritableConfigModel
 
@@ -158,9 +158,9 @@ class SourceScheme(InheritableConfigModel):
     )
 
     # Repository configuration (optional)
-    helm_repos: dict[str, HelmRepoScheme] = {}
-    oci_registries: dict[str, OciRepoScheme] = {}
-    git_repos: dict[str, GitRepoScheme] = {}
+    helm_repos: dict[str, HelmRepoScheme] = Field(default_factory=dict)
+    oci_registries: dict[str, OciRepoScheme] = Field(default_factory=dict)
+    git_repos: dict[str, GitRepoScheme] = Field(default_factory=dict)
 
     # Global proxy settings
     http_proxy: str | None = None

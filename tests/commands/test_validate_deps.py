@@ -30,7 +30,7 @@ apps:
 class TestValidateDepsOptions:
     """Test suite for --skip-deps and --strict-deps options."""
 
-    def test_validate_skip_deps_option(self, temp_app_with_deps):
+    def test_validate_skip_deps_option(self, temp_app_with_deps) -> None:
         """Test --skip-deps option skips dependency validation."""
         runner = CliRunner()
         result = runner.invoke(
@@ -46,7 +46,7 @@ class TestValidateDepsOptions:
         assert result.exit_code == 0
         assert "의존성 검증 건너뜀" in result.output
 
-    def test_validate_strict_deps_option(self, temp_app_with_deps):
+    def test_validate_strict_deps_option(self, temp_app_with_deps) -> None:
         """Test --strict-deps option with missing dependencies."""
         runner = CliRunner()
         result = runner.invoke(
@@ -62,7 +62,7 @@ class TestValidateDepsOptions:
         # Note: This will fail if dependencies are not actually deployed
         assert "의존성" in result.output
 
-    def test_validate_conflicting_options(self, temp_app_with_deps):
+    def test_validate_conflicting_options(self, temp_app_with_deps) -> None:
         """Test that --skip-deps and --strict-deps cannot be used together."""
         runner = CliRunner()
         result = runner.invoke(
@@ -79,7 +79,7 @@ class TestValidateDepsOptions:
         assert result.exit_code != 0
         assert "함께 사용할 수 없습니다" in result.output
 
-    def test_validate_default_deps_behavior(self, temp_app_with_deps):
+    def test_validate_default_deps_behavior(self, temp_app_with_deps) -> None:
         """Test default dependency validation behavior (non-blocking warning)."""
         runner = CliRunner()
         result = runner.invoke(

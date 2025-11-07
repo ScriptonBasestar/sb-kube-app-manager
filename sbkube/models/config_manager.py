@@ -321,14 +321,14 @@ class ConfigManager:
         self,
         app_config: SBKubeConfig,
         output_path: str | Path,
-        format: str = "yaml",
+        output_format: str = "yaml",
     ) -> None:
         """Export merged configuration to file.
 
         Args:
             app_config: Application configuration to export
             output_path: Output file path
-            format: Output format (yaml or json)
+            output_format: Output format (yaml or json)
 
         """
         output_path = Path(output_path)
@@ -336,14 +336,14 @@ class ConfigManager:
 
         data = app_config.model_dump(exclude_none=True)
 
-        if format.lower() == "yaml":
+        if output_format.lower() == "yaml":
             with open(output_path, "w") as f:
                 yaml.dump(data, f, default_flow_style=False, sort_keys=False)
-        elif format.lower() == "json":
+        elif output_format.lower() == "json":
             with open(output_path, "w") as f:
                 json.dump(data, f, indent=2)
         else:
-            msg = f"Unsupported format: {format}"
+            msg = f"Unsupported format: {output_format}"
             raise ValueError(msg)
 
         logger.info(f"Exported configuration to {output_path}")

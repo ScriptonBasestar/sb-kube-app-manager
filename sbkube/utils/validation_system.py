@@ -555,7 +555,7 @@ class ValidationEngine(DiagnosticEngine):
             "\n💡 [bold]sbkube fix[/bold] 명령어로 자동 수정을 실행할 수 있습니다."
         )
 
-    def save_report(self, file_path: str | Path, format: str = "json") -> bool:
+    def save_report(self, file_path: str | Path, output_format: str = "json") -> bool:
         """보고서 저장."""
         if not self.current_report:
             logger.error("저장할 검증 보고서가 없습니다.")
@@ -565,13 +565,13 @@ class ValidationEngine(DiagnosticEngine):
             report_path = Path(file_path)
             report_path.parent.mkdir(parents=True, exist_ok=True)
 
-            if format.lower() == "json":
+            if output_format.lower() == "json":
                 with open(report_path, "w", encoding="utf-8") as f:
                     json.dump(
                         self.current_report.to_dict(), f, indent=2, ensure_ascii=False
                     )
             else:
-                logger.error(f"지원하지 않는 형식: {format}")
+                logger.error(f"지원하지 않는 형식: {output_format}")
                 return False
 
             logger.info(f"검증 보고서 저장됨: {report_path}")

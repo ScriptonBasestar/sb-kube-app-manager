@@ -6,7 +6,7 @@ from sbkube.utils.dict_merge import deep_merge, merge_multiple
 class TestDeepMerge:
     """Tests for deep_merge function."""
 
-    def test_simple_merge(self):
+    def test_simple_merge(self) -> None:
         """Test simple key-value merge."""
         base = {"a": 1, "b": 2}
         override = {"b": 3, "c": 4}
@@ -17,7 +17,7 @@ class TestDeepMerge:
         assert base == {"a": 1, "b": 2}
         assert override == {"b": 3, "c": 4}
 
-    def test_nested_dict_merge(self):
+    def test_nested_dict_merge(self) -> None:
         """Test nested dictionary merge."""
         base = {"a": 1, "b": {"c": 2, "d": 3}}
         override = {"b": {"d": 4, "e": 5}, "f": 6}
@@ -25,7 +25,7 @@ class TestDeepMerge:
 
         assert result == {"a": 1, "b": {"c": 2, "d": 4, "e": 5}, "f": 6}
 
-    def test_deep_nested_merge(self):
+    def test_deep_nested_merge(self) -> None:
         """Test deeply nested dictionary merge."""
         base = {
             "level1": {"level2": {"level3": {"key": "base_value", "other": "keep"}}}
@@ -37,7 +37,7 @@ class TestDeepMerge:
             "level1": {"level2": {"level3": {"key": "override_value", "other": "keep"}}}
         }
 
-    def test_list_replacement_not_merge(self):
+    def test_list_replacement_not_merge(self) -> None:
         """Test that lists are replaced, not merged."""
         base = {"items": [1, 2, 3]}
         override = {"items": [4, 5]}
@@ -45,13 +45,13 @@ class TestDeepMerge:
 
         assert result == {"items": [4, 5]}  # List replaced, not merged
 
-    def test_empty_dicts(self):
+    def test_empty_dicts(self) -> None:
         """Test merge with empty dictionaries."""
         assert deep_merge({}, {}) == {}
         assert deep_merge({"a": 1}, {}) == {"a": 1}
         assert deep_merge({}, {"b": 2}) == {"b": 2}
 
-    def test_override_different_types(self):
+    def test_override_different_types(self) -> None:
         """Test overriding with different types."""
         base = {"key": "string"}
         override = {"key": 123}
@@ -63,7 +63,7 @@ class TestDeepMerge:
         result2 = deep_merge(base2, override2)
         assert result2 == {"key": "string"}
 
-    def test_none_values(self):
+    def test_none_values(self) -> None:
         """Test handling None values."""
         base = {"a": 1, "b": None}
         override = {"b": 2, "c": None}
@@ -75,7 +75,7 @@ class TestDeepMerge:
 class TestMergeMultiple:
     """Tests for merge_multiple function."""
 
-    def test_merge_two_dicts(self):
+    def test_merge_two_dicts(self) -> None:
         """Test merging two dictionaries."""
         d1 = {"a": 1, "b": 2}
         d2 = {"b": 3, "c": 4}
@@ -83,7 +83,7 @@ class TestMergeMultiple:
 
         assert result == {"a": 1, "b": 3, "c": 4}
 
-    def test_merge_three_dicts(self):
+    def test_merge_three_dicts(self) -> None:
         """Test merging three dictionaries."""
         d1 = {"a": 1, "b": 2}
         d2 = {"b": 3, "c": 4}
@@ -92,7 +92,7 @@ class TestMergeMultiple:
 
         assert result == {"a": 1, "b": 3, "c": 5, "d": 6}
 
-    def test_merge_with_none(self):
+    def test_merge_with_none(self) -> None:
         """Test merging with None values."""
         d1 = {"a": 1}
         d2 = None
@@ -101,7 +101,7 @@ class TestMergeMultiple:
 
         assert result == {"a": 1, "b": 2}
 
-    def test_merge_with_empty(self):
+    def test_merge_with_empty(self) -> None:
         """Test merging with empty dicts."""
         d1 = {"a": 1}
         d2 = {}
@@ -110,7 +110,7 @@ class TestMergeMultiple:
 
         assert result == {"a": 1, "b": 2}
 
-    def test_merge_nested_dicts(self):
+    def test_merge_nested_dicts(self) -> None:
         """Test merging nested dictionaries."""
         d1 = {"global": {"storageClass": "nfs", "domain": "example.com"}}
         d2 = {"global": {"environment": "production"}}
@@ -125,12 +125,12 @@ class TestMergeMultiple:
             }
         }
 
-    def test_merge_no_args(self):
+    def test_merge_no_args(self) -> None:
         """Test merge with no arguments."""
         result = merge_multiple()
         assert result == {}
 
-    def test_merge_single_dict(self):
+    def test_merge_single_dict(self) -> None:
         """Test merge with single dictionary."""
         d1 = {"a": 1, "b": 2}
         result = merge_multiple(d1)
@@ -142,7 +142,7 @@ class TestMergeMultiple:
 class TestClusterGlobalValuesScenario:
     """Real-world scenario tests for cluster global values."""
 
-    def test_cluster_values_precedence(self):
+    def test_cluster_values_precedence(self) -> None:
         """Test cluster values file + inline values merge."""
         # cluster_values_file (lowest priority)
         cluster_file_values = {
@@ -175,7 +175,7 @@ class TestClusterGlobalValuesScenario:
             }
         }
 
-    def test_full_helm_values_precedence(self):
+    def test_full_helm_values_precedence(self) -> None:
         """Test full Helm values precedence chain."""
         # 1. cluster_values_file
         cluster_file = {"global": {"storageClass": "nfs", "replicas": 1}}

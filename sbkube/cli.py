@@ -1,6 +1,7 @@
 import logging
 import shlex
 import sys
+from typing import ClassVar
 
 import click
 
@@ -37,7 +38,7 @@ class SbkubeGroup(click.Group):
     """SBKube CLI 그룹 with categorized help display."""
 
     # 명령어 카테고리 정의
-    COMMAND_CATEGORIES = {
+    COMMAND_CATEGORIES: ClassVar[dict[str, list[str]]] = {
         "핵심 워크플로우": ["prepare", "build", "template", "deploy"],
         "통합 명령어": ["apply"],
         "상태 관리": ["status", "history", "rollback"],
@@ -46,7 +47,7 @@ class SbkubeGroup(click.Group):
     }
 
     # 카테고리별 이모지
-    CATEGORY_LABELS = {
+    CATEGORY_LABELS: ClassVar[dict[str, str]] = {
         "핵심 워크플로우": "🔄",
         "통합 명령어": "⚡",
         "상태 관리": "📊",
@@ -172,6 +173,7 @@ class SbkubeGroup(click.Group):
 )
 @click.option(
     "--format",
+    "output_format",
     type=click.Choice(["human", "llm", "json", "yaml"], case_sensitive=False),
     envvar="SBKUBE_OUTPUT_FORMAT",
     default="human",
@@ -186,7 +188,7 @@ def main(
     source: str,
     profile: str | None,
     namespace: str | None,
-    format: str,
+    output_format: str,
     verbose: bool,
 ) -> None:
     """sbkube: Kubernetes 애플리케이션 관리를 위한 CLI 도구.
@@ -197,7 +199,7 @@ def main(
     ctx.obj["kubeconfig"] = kubeconfig
     ctx.obj["context"] = context
     ctx.obj["namespace"] = namespace
-    ctx.obj["format"] = format
+    ctx.obj["format"] = output_format
     ctx.obj["verbose"] = verbose
 
     # --profile 옵션으로 sources 파일명 자동 생성

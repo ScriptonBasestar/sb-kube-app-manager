@@ -183,7 +183,7 @@ def inject_labels_to_yaml(
     labels: dict[str, str] | None = None,
     annotations: dict[str, str] | None = None,
 ) -> str:
-    """Inject labels and annotations into YAML resources dynamically.
+    r"""Inject labels and annotations into YAML resources dynamically.
 
     This function injects sbkube labels/annotations into YAML without modifying
     the source file. Supports multi-document YAML files.

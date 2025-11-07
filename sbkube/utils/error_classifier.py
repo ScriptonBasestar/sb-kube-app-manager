@@ -4,14 +4,14 @@
 """
 
 import re
-from typing import Any
+from typing import Any, ClassVar
 
 
 class ErrorClassifier:
     """에러 메시지 패턴 기반 분류기."""
 
     # 에러 패턴 정의 (우선순위 순)
-    PATTERNS: list[dict[str, Any]] = [
+    PATTERNS: ClassVar[list[dict[str, Any]]] = [
         # Database Authentication Errors
         {
             "category": "DatabaseAuthenticationError",

@@ -37,11 +37,15 @@ class ValidateCommand:
         schema_type: str | None,
         base_dir: str,
         custom_schema_path: str | None,
+        skip_deps: bool = False,
+        strict_deps: bool = False,
     ) -> None:
         self.base_dir = Path(base_dir)
         self.target_file = target_file
         self.schema_type = schema_type
         self.custom_schema_path = custom_schema_path
+        self.skip_deps = skip_deps
+        self.strict_deps = strict_deps
 
     def validate_dependencies(self, config: SBKubeConfig) -> bool:
         """Validate app-group dependencies declared in config.deps.
@@ -53,6 +57,10 @@ class ValidateCommand:
             bool: True if all dependencies are deployed, False otherwise
 
         """
+        if self.skip_deps:
+            logger.info("의존성 검증 건너뜀 (--skip-deps)")
+            return True
+
         if not config.deps:
             logger.info("앱 그룹 의존성 없음 (config.deps) - 검증 건너뜀")
             return True
@@ -63,8 +71,12 @@ class ValidateCommand:
 
         # Get target file's parent directory as base
         target_path = Path(self.target_file)
-        app_dir = target_path.parent
-        parent_dir = app_dir.parent if app_dir.name != "." else Path.cwd()
+        app_dir = target_path.parent.resolve()
+        parent_dir = app_dir.parent
+
+        logger.debug(f"Target file: {target_path}")
+        logger.debug(f"App dir: {app_dir}")
+        logger.debug(f"Base dir for deps: {parent_dir}")
 
         checker = DeploymentChecker(
             base_dir=parent_dir,
@@ -79,12 +91,21 @@ class ValidateCommand:
             for dep, (deployed, msg) in result["details"].items():
                 logger.info(f"  ✓ {dep}: {msg}")
             return True
+
         logger.error(f"❌ {len(result['missing'])}개 의존성이 배포되지 않음:")
         for dep in result["missing"]:
             _, msg = result["details"][dep]
             logger.error(f"  ✗ {dep}: {msg}")
 
-        logger.warning("배포가 실패할 수 있습니다. 의존성을 먼저 배포하세요:")
+        if self.strict_deps:
+            logger.error("의존성 검증 실패 (--strict-deps 모드)")
+            logger.warning("배포가 실패할 수 있습니다. 의존성을 먼저 배포하세요:")
+            for dep in result["missing"]:
+                logger.info(f"  sbkube deploy --app-dir {dep}")
+            return False
+
+        logger.warning("의존성 검증 실패 (논-블로킹) - 배포 시 실패할 수 있음")
+        logger.info("배포 권장 순서:")
         for dep in result["missing"]:
             logger.info(f"  sbkube deploy --app-dir {dep}")
 
@@ -242,6 +263,16 @@ class ValidateCommand:
 )
 @click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력 (추가 기능용)")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력 (추가 기능용)")
+@click.option(
+    "--skip-deps",
+    is_flag=True,
+    help="의존성 검증 건너뛰기 (config.deps 필드 무시)",
+)
+@click.option(
+    "--strict-deps",
+    is_flag=True,
+    help="의존성 검증 실패 시 오류 발생 (기본: 경고만 출력)",
+)
 @click.pass_context
 def cmd(
     ctx,
@@ -254,6 +285,8 @@ def cmd(
     custom_schema_path: str | None,
     verbose: bool,
     debug: bool,
+    skip_deps: bool,
+    strict_deps: bool,
 ) -> None:
     """config.yaml/toml 또는 sources.yaml/toml 파일을 JSON 스키마 및 데이터 모델로 검증합니다.
 
@@ -263,6 +296,12 @@ def cmd(
 
         # Validate specific app group
         sbkube validate --app-dir redis
+
+        # Skip dependency validation
+        sbkube validate --skip-deps
+
+        # Strict dependency validation (fail on missing deps)
+        sbkube validate --strict-deps
 
         # Explicit file path (backward compatible)
         sbkube validate /path/to/config.yaml
@@ -275,6 +314,11 @@ def cmd(
     ctx.obj["verbose"] = verbose
     ctx.obj["debug"] = debug
     setup_logging_from_context(ctx)
+
+    # Validate conflicting options
+    if skip_deps and strict_deps:
+        logger.error("--skip-deps와 --strict-deps는 함께 사용할 수 없습니다")
+        raise click.Abort
 
     # Resolve base directory
     BASE_DIR = Path(base_dir).resolve()
@@ -289,6 +333,8 @@ def cmd(
             schema_type=schema_type,
             base_dir=str(BASE_DIR),
             custom_schema_path=custom_schema_path,
+            skip_deps=skip_deps,
+            strict_deps=strict_deps,
         )
         validate_cmd.execute()
         return
@@ -337,6 +383,8 @@ def cmd(
                 schema_type=schema_type,
                 base_dir=str(BASE_DIR),
                 custom_schema_path=custom_schema_path,
+                skip_deps=skip_deps,
+                strict_deps=strict_deps,
             )
             validate_cmd.execute()
             console.print(

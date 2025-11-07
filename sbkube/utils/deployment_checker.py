@@ -56,6 +56,41 @@ class DeploymentChecker:
         self.namespace = namespace
         self.db = DeploymentDatabase()
 
+    def _find_by_directory_name(self, dir_name: str):
+        """Find deployment by matching directory name (last component of path).
+
+        This is a fallback method for backward compatibility when exact path
+        matching fails.
+
+        Args:
+            dir_name: Directory name to search for (e.g., "a000_infra_network")
+
+        Returns:
+            DeploymentDetail or None
+
+        """
+        from sbkube.state.database import DeploymentStatus
+
+        with self.db.get_session() as session:
+            from sbkube.models.deployment_state import Deployment
+
+            # Find all deployments for current cluster
+            deployments = (
+                session.query(Deployment)
+                .filter_by(cluster=self.cluster)
+                .order_by(Deployment.timestamp.desc())
+                .all()
+            )
+
+            # Match by directory name (last component of app_config_dir path)
+            for deployment in deployments:
+                if deployment.app_config_dir:
+                    stored_dir_name = Path(deployment.app_config_dir).name
+                    if stored_dir_name == dir_name:
+                        return self.db.get_deployment(deployment.deployment_id)
+
+            return None
+
     def check_app_group_deployed(
         self, app_config_dir: str, namespace: str | None = None
     ) -> tuple[bool, str]:
@@ -103,11 +138,47 @@ class DeploymentChecker:
                 app_config_dir=app_dir_path,
             )
         except Exception as e:
+            # Try with directory name only (backward compatibility)
+            try:
+                from sbkube.utils.logger import get_logger
+
+                logger = get_logger()
+                logger.debug(
+                    f"Failed to find deployment with full path, trying with dir name: {app_config_dir}"
+                )
+
+                # Try to match by directory name (last component of path)
+                latest = self._find_by_directory_name(app_config_dir)
+                if latest:
+                    if latest.status != DeploymentStatus.SUCCESS:
+                        return False, f"last status: {latest.status.value}"
+                    deployed_ns = latest.namespace
+                    return (
+                        True,
+                        f"deployed at {latest.timestamp} in namespace '{deployed_ns}'",
+                    )
+            except Exception:
+                pass
+
             return False, f"database error: {e}"
 
         # No deployment record found
         if not latest:
-            return False, "never deployed"
+            # Try with directory name only (backward compatibility)
+            try:
+                from sbkube.utils.logger import get_logger
+
+                logger = get_logger()
+                logger.debug(
+                    f"No deployment found with full path, trying with dir name: {app_config_dir}"
+                )
+
+                latest = self._find_by_directory_name(app_config_dir)
+            except Exception:
+                pass
+
+            if not latest:
+                return False, "never deployed"
 
         # Check deployment status
         if latest.status != DeploymentStatus.SUCCESS:

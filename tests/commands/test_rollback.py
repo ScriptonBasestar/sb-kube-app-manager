@@ -84,4 +84,3 @@ class TestRollbackValidation:
 @pytest.mark.integration
 class TestRollbackIntegration:
     """Integration tests for rollback command."""
-

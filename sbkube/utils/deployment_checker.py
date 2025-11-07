@@ -69,8 +69,6 @@ class DeploymentChecker:
             DeploymentDetail or None
 
         """
-        from sbkube.state.database import DeploymentStatus
-
         with self.db.get_session() as session:
             from sbkube.models.deployment_state import Deployment
 

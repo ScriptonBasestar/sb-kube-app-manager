@@ -393,28 +393,33 @@ pytest tests/unit/utils/test_retry.py -xvs
 
 **Common Test Issues and Solutions**:
 
-1. **API Signature Changes**: When build functions add new parameters (e.g., `output: OutputManager`), update all test calls:
+1. **API Signature Changes**: When build functions add new parameters (e.g., `output: OutputManager`), update all test
+   calls:
+
    ```python
    # Modern pattern (v0.7.1+)
    output = MagicMock(spec=OutputManager)
    build_helm_app(..., output=output)
    ```
 
-2. **Message Format Changes**: Use flexible assertions for UI messages that support multiple languages:
+1. **Message Format Changes**: Use flexible assertions for UI messages that support multiple languages:
+
    ```python
    # Accept both English and Korean
    assert ("App directory not found" in result.output
            or "설정 파일을 찾을 수 없습니다" in result.output)
    ```
 
-3. **Integration vs Unit**: Mark tests requiring actual infrastructure with `@pytest.mark.integration`:
+1. **Integration vs Unit**: Mark tests requiring actual infrastructure with `@pytest.mark.integration`:
+
    ```python
    @pytest.mark.integration
    def test_deploy_with_cluster():
        # Requires actual Kubernetes cluster
    ```
 
-4. **Deprecated Config Formats**: Always use modern format:
+1. **Deprecated Config Formats**: Always use modern format:
+
    ```python
    # ✅ Modern (v0.4.10+)
    chart: bitnami/redis
@@ -424,7 +429,8 @@ pytest tests/unit/utils/test_retry.py -xvs
    repo: bitnami
    ```
 
-5. **Incomplete Stubs**: Skip tests for incomplete implementations:
+1. **Incomplete Stubs**: Skip tests for incomplete implementations:
+
    ```python
    @pytest.mark.skip(reason="print_output is incomplete stub")
    def test_incomplete_feature():
@@ -433,6 +439,7 @@ pytest tests/unit/utils/test_retry.py -xvs
 **Test Fixture Patterns**:
 
 - **Kubeconfig fixtures** must include valid YAML structure:
+
   ```python
   kubeconfig_yaml = """
   apiVersion: v1
@@ -455,6 +462,7 @@ pytest tests/unit/utils/test_retry.py -xvs
   ```
 
 - **OutputManager mocking**:
+
   ```python
   from sbkube.utils.output_manager import OutputManager
   output = MagicMock(spec=OutputManager)
@@ -753,6 +761,7 @@ ______________________________________________________________________
 **Achievement**: 518 passed, 0 failed (improved from 27 failures)
 
 **Key Changes**:
+
 - Integration tests properly marked with `@pytest.mark.integration`
 - API signature changes: build functions now require `output: OutputManager` parameter
 - Error messages now support Korean, requiring flexible assertions
@@ -760,38 +769,45 @@ ______________________________________________________________________
 - Deprecated Helm config: `repo` field removed, use `chart: repo/name` format
 
 **Common Patterns Found**:
+
 1. **Kubeconfig validation**: Tests need valid YAML structure with contexts, clusters, users sections
-2. **OutputManager mocking**: `output = MagicMock(spec=OutputManager)` pattern
-3. **Flexible assertions**: Accept multiple language variants in error messages
-4. **Integration marking**: Mark cluster-dependent tests to skip in unit test runs
+1. **OutputManager mocking**: `output = MagicMock(spec=OutputManager)` pattern
+1. **Flexible assertions**: Accept multiple language variants in error messages
+1. **Integration marking**: Mark cluster-dependent tests to skip in unit test runs
 
 ### API Evolution Tracking
 
 **v0.7.1+ Changes**:
+
 - Added `output: OutputManager` parameter to `build_helm_app()` and `build_http_app()`
 - All deploy functions now require OutputManager for structured output
 
 **v0.7.0 Changes**:
+
 - Introduced `OutputFormatter` with LLM-friendly output
 - Added `--format` option: `human`, `llm`, `json`, `yaml`
 
 **v0.4.10+ Changes**:
+
 - Deprecated `repo` field in Helm app config
 - Use modern format: `chart: repo/name` instead of separate `repo:` field
 
 ### Test Infrastructure Requirements
 
 **Unit Tests**:
+
 - No external dependencies
 - Use mocks for OutputManager, HookExecutor, subprocess calls
 - Fast execution (< 2 seconds per test)
 
 **Integration Tests**:
+
 - Require valid kubeconfig (real or mocked with complete structure)
 - Marked with `@pytest.mark.integration`
 - Skipped in standard unit test runs
 
 **E2E Tests**:
+
 - Require actual Kubernetes cluster
 - Marked with `@pytest.mark.e2e` and `@pytest.mark.integration`
 - Run separately or in CI with cluster setup

@@ -171,7 +171,11 @@ def test_deploy_with_hooks_dry_run(tmp_project) -> None:
     )
 
     # Dry-run 모드에서는 훅이 시뮬레이션되어야 함
-    assert "DRY-RUN" in result.output or "dry-run" in result.output.lower() or result.exit_code == 0
+    assert (
+        "DRY-RUN" in result.output
+        or "dry-run" in result.output.lower()
+        or result.exit_code == 0
+    )
 
 
 @pytest.mark.integration
@@ -193,7 +197,11 @@ def test_template_with_hooks_dry_run(tmp_project) -> None:
     )
 
     # Dry-run 모드 확인
-    assert "DRY-RUN" in result.output or "dry-run" in result.output.lower() or result.exit_code == 0
+    assert (
+        "DRY-RUN" in result.output
+        or "dry-run" in result.output.lower()
+        or result.exit_code == 0
+    )
 
 
 @pytest.mark.integration
@@ -217,7 +225,11 @@ def test_apply_with_hooks_dry_run(tmp_project) -> None:
     )
 
     # Dry-run 모드 확인
-    assert "DRY-RUN" in result.output or "dry-run" in result.output.lower() or result.exit_code == 0
+    assert (
+        "DRY-RUN" in result.output
+        or "dry-run" in result.output.lower()
+        or result.exit_code == 0
+    )
 
 
 def test_hooks_with_failing_script(tmp_project) -> None:

@@ -150,8 +150,10 @@ class TestValidateAppDir:
         # Should fail with clear error message
         assert result.exit_code != 0
         # Accept either error message format
-        assert ("App directory not found" in result.output
-                or "Config file not found" in result.output)
+        assert (
+            "App directory not found" in result.output
+            or "Config file not found" in result.output
+        )
 
     def test_validate_app_dir_missing_config(self, runner, temp_project) -> None:
         """Test validate with app-dir but missing config file."""

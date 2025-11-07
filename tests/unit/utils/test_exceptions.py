@@ -119,8 +119,10 @@ class TestExceptionHandlers:
         formatted = format_error_with_suggestions(exc)
         assert "config.yaml" in formatted
         # Accept both Korean and English error messages
-        assert ("💡 Expected configuration file" in formatted
-                or "💡 설정 파일을 찾을 수 없습니다" in formatted)
+        assert (
+            "💡 Expected configuration file" in formatted
+            or "💡 설정 파일을 찾을 수 없습니다" in formatted
+        )
         assert "./config.yaml" in formatted
 
     def test_format_error_with_suggestions_generic(self) -> None:

@@ -74,6 +74,12 @@ from sbkube.utils.progress_tracker import ProgressTracker
     help="앱 그룹 의존성 검증 건너뛰기 (강제 배포 시)",
 )
 @click.option(
+    "--strict-deps",
+    is_flag=True,
+    default=False,
+    help="의존성 검증 실패 시 배포 중단 (기본: 경고만 출력하고 계속 진행)",
+)
+@click.option(
     "--no-progress",
     is_flag=True,
     default=False,
@@ -91,6 +97,7 @@ def cmd(
     skip_prepare: bool,
     skip_build: bool,
     skip_deps_check: bool,
+    strict_deps: bool,
     no_progress: bool,
 ) -> None:
     """SBKube apply 명령어.
@@ -168,38 +175,53 @@ def cmd(
             )
 
             if not dep_check_result["all_deployed"]:
-                output.print_error(
-                    f"Error: {len(dep_check_result['missing'])} dependencies not deployed:",
+                # 의존성 누락 정보 출력
+                output.print_warning(
+                    f"⚠️  {len(dep_check_result['missing'])} dependencies not deployed:",
                     missing_count=len(dep_check_result["missing"]),
                 )
                 missing_deps = []
                 for dep in dep_check_result["missing"]:
                     _, status_msg = dep_check_result["details"][dep]
                     missing_deps.append(f"{dep} ({status_msg})")
-                    output.print(f"  - {dep} ({status_msg})", level="error")
+                    output.print(f"  - {dep} ({status_msg})", level="warning")
 
                 output.print(
-                    "\n[yellow]💡 Deploy missing dependencies first:[/yellow]",
+                    "\n[yellow]💡 Recommended deployment order:[/yellow]",
                     level="warning",
                 )
                 for dep in dep_check_result["missing"]:
                     output.print(f"  sbkube apply --app-dir {dep}", level="info")
 
-                output.print(
-                    "\n[dim]Tip: Use --skip-deps-check to override this check[/dim]",
-                    level="info",
+                # strict_deps 모드일 때만 중단
+                if strict_deps:
+                    output.print_error(
+                        "Deployment aborted due to missing dependencies (--strict-deps mode)",
+                    )
+                    output.print(
+                        "\n[dim]Tip: Use --skip-deps-check to override this check, or remove --strict-deps to allow deployment with warnings[/dim]",
+                        level="info",
+                    )
+                    overall_success = False
+                    continue
+                else:
+                    # 경고만 출력하고 계속 진행
+                    output.print(
+                        "\n[yellow]⚠️  Continuing deployment despite missing dependencies (non-blocking mode)[/yellow]",
+                        level="warning",
+                    )
+                    output.print(
+                        "[dim]Tip: Use --strict-deps to enforce dependency validation[/dim]",
+                        level="info",
+                    )
+            else:
+                # All deps are deployed
+                output.print_success(
+                    f"All {len(config.deps)} dependencies are deployed:",
+                    deps_count=len(config.deps),
                 )
-
-                overall_success = False
-                continue
-
-            # All deps are deployed
-            output.print_success(
-                f"All {len(config.deps)} dependencies are deployed:",
-                deps_count=len(config.deps),
-            )
-            for dep, (deployed, msg) in dep_check_result["details"].items():
-                output.print(f"  - {dep}: {msg}", level="success")
+                for dep, (deployed, msg) in dep_check_result["details"].items():
+                    output.print(f"  - {dep}: {msg}", level="success")
         elif config.deps and skip_deps_check:
             output.print_warning(
                 f"Skipping dependency check ({len(config.deps)} deps declared)",

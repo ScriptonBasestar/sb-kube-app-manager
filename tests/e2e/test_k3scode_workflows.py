@@ -8,6 +8,8 @@ import pytest
 
 from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 
+pytestmark = pytest.mark.skip(reason="examples/k3scode directory does not exist")
+
 
 @pytest.mark.e2e
 @pytest.mark.integration

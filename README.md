@@ -7,8 +7,8 @@ ______________________________________________________________________
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)](<>)
 [![Repo](https://img.shields.io/badge/GitHub-sb--kube--app--manager-blue?logo=github)](https://github.com/ScriptonBasestar/sb-kube-app-manager)
-[![Version](https://img.shields.io/badge/version-0.7.0--dev-orange)](CHANGELOG.md)
-[![Stable](https://img.shields.io/badge/stable-0.6.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.0-green)](CHANGELOG.md)
+[![Stable](https://img.shields.io/badge/stable-0.7.2-blue)](CHANGELOG.md)
 
 **SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML
 manifests, and Git repositories into a unified declarative configuration.
@@ -67,6 +67,58 @@ Then deploy:
 ```bash
 sbkube apply --app-dir . --namespace production
 ```
+
+## 🎉 What's New in v0.8.0
+
+### Chart Path Collision Prevention ⚠️ Breaking Change
+
+**Problem Solved**: Charts from different repos with the same name no longer collide.
+
+```bash
+# Before v0.7.x (collision risk)
+.sbkube/charts/redis/           # Which repo? Which version?
+
+# After v0.8.0 (no collision)
+.sbkube/charts/bitnami/redis-18.0.0/      # Clear and unique
+.sbkube/charts/my-company/redis-1.0.0/    # Different repo
+```
+
+**Migration Required**:
+```bash
+rm -rf .sbkube/charts && sbkube prepare --force
+```
+
+**See**: [Migration Guide](docs/MIGRATION_v0.8.0.md) (5-minute migration)
+
+### PV/PVC Validation for Manual Provisioning 🔍
+
+**Problem Solved**: Detect missing PersistentVolumes before deployment.
+
+```bash
+# Before v0.8.0: Silent failure
+sbkube apply
+# ✅ Deployment succeeded
+# ❌ PVC stuck in Pending (no guidance)
+
+# After v0.8.0: Early detection
+sbkube validate
+# ❌ 스토리지 검증 실패: postgresql PV 없음
+# 💡 PV 생성 방법 안내 제공
+```
+
+**New Commands**:
+- `sbkube validate` - Now includes storage validation
+- `sbkube validate --skip-storage-check` - Skip storage validation
+- `sbkube validate --strict-storage-check` - Fail on missing PVs
+
+**See**:
+- [Storage Management Guide](docs/05-best-practices/storage-management.md)
+- [Storage Troubleshooting](docs/07-troubleshooting/storage-issues.md)
+- [Example: Manual PV](examples/storage-management/manual-pv-hostpath/)
+
+**Full Release Notes**: [RELEASE_v0.8.0.md](docs/RELEASE_v0.8.0.md)
+
+______________________________________________________________________
 
 ## 📚 Documentation
 
@@ -298,13 +350,32 @@ sbkube state rollback <id> → sbkube rollback <id>
 
 ## 🔄 마이그레이션
 
-v0.2.x에서 현재 버전으로 업그레이드하는 경우, 자동 마이그레이션 도구를 사용하세요:
+### v0.7.x → v0.8.0 업그레이드 (5분 소요)
+
+**⚠️ Breaking Change**: Chart 경로 구조 변경
+
+```bash
+# 1. 기존 charts 제거
+rm -rf .sbkube/charts
+
+# 2. 새 구조로 재다운로드
+sbkube prepare --force
+
+# 3. 배포
+sbkube apply
+```
+
+**상세 가이드**: [v0.8.0 Migration Guide](docs/MIGRATION_v0.8.0.md)
+
+### v0.2.x → v0.4.10+ 업그레이드
+
+자동 마이그레이션 도구를 사용하세요:
 
 ```bash
 sbkube migrate old-config.yaml -o config.yaml
 ```
 
-자세한 내용은 [CHANGELOG.md](CHANGELOG.md) 및 [Migration Guide](docs/03-configuration/migration-guide.md)를 참조하세요.
+**상세 내용**: [CHANGELOG.md](CHANGELOG.md) 및 [Migration Guide](docs/03-configuration/migration-guide.md)
 
 ## 💬 지원
 

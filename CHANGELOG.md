@@ -14,6 +14,50 @@ _(No unreleased features yet)_
 
 ______________________________________________________________________
 
+## [0.7.2] - 2025-01-10
+
+### 🐛 Bug Fixes
+
+**Base Directory Consistency Across Commands** (2025-01-10)
+
+- ✅ **FIXED**: Base directory mismatch between prepare and build/deploy/template commands
+- ✅ **FIXED**: Commands now consistently use sources.yaml location for `.sbkube` directory
+- ✅ **IMPROVED**: Running from project root with `--app-dir` subdirectory now works correctly
+- ✅ **NEW**: Automatic sources.yaml discovery by searching upward from app config directory
+- ✅ **NEW**: Fallback to base_dir if sources.yaml not found (backward compatibility)
+
+**Problem Fixed**:
+```bash
+# Before: Commands looked in different locations
+prepare: ph2_data/.sbkube/charts/memcached  ✅ (sources.yaml location)
+build:   .sbkube/charts/memcached           ❌ (base_dir)
+
+# After: All commands use same location
+prepare: ph2_data/.sbkube/charts/memcached  ✅
+build:   ph2_data/.sbkube/charts/memcached  ✅
+deploy:  ph2_data/.sbkube/charts/memcached  ✅
+```
+
+**Technical Details**:
+- Added `--source` option to build.py, deploy.py, template.py (default: "sources.yaml")
+- Implemented sources.yaml discovery logic matching prepare.py behavior
+- All commands now resolve `.sbkube` location based on sources.yaml parent directory
+- Supports multi-environment setups with sources.yaml in subdirectories
+
+**Files Modified**:
+- [sbkube/commands/build.py](sbkube/commands/build.py) - Added sources.yaml discovery
+- [sbkube/commands/deploy.py](sbkube/commands/deploy.py) - Added sources.yaml discovery
+- [sbkube/commands/template.py](sbkube/commands/template.py) - Added sources.yaml discovery
+
+**Testing**:
+```bash
+cd /project_root
+sbkube apply --app-dir ph2_data/app_100_data_memory
+# ✅ All commands now use ph2_data/.sbkube/
+```
+
+______________________________________________________________________
+
 ## [0.7.1] - 2025-01-06
 
 ### 🚀 New Features
@@ -64,6 +108,35 @@ apps:
     chart: authelia/authelia
     helm_label_injection: false  # Disable for strict validation charts
 ```
+
+### 🔧 Improvements
+
+**Chart Directory Structure Simplification** (2025-01-10)
+
+- ✅ **IMPROVED**: Simplified chart directory structure from `.sbkube/charts/{name}/{name}/` to `.sbkube/charts/{name}/`
+- ✅ **IMPROVED**: More accurate output messages showing actual chart destination paths
+- ✅ **IMPROVED**: Clearer directory structure aligning with user expectations
+- ✅ **NEW**: Legacy path detection with helpful migration guidance
+  - Automatically detects charts from v0.7.0 or earlier
+  - Provides step-by-step migration instructions when legacy paths are found
+  - Shows clear error messages with documentation links
+  - Available in `build` and `deploy` commands
+
+**Migration**:
+
+```bash
+# After upgrading to v0.7.1+
+rm -rf .sbkube/charts/
+sbkube prepare
+```
+
+**Technical Details**:
+
+- Changed `helm pull --untardir` target from `charts_dir / chart_name` to `charts_dir`
+- Helm automatically creates `{chart_name}/` subdirectory, resulting in single-level structure
+- Updated [sbkube/commands/prepare.py](sbkube/commands/prepare.py), [build.py](sbkube/commands/build.py), [template.py](sbkube/commands/template.py), [deploy.py](sbkube/commands/deploy.py)
+
+**See:** [directory-structure.md](docs/05-best-practices/directory-structure.md) - Technical background section
 
 ### 🐛 Bug Fixes
 

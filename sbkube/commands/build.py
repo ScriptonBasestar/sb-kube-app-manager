@@ -49,16 +49,33 @@ def build_helm_app(
 
     # 1. 소스 차트 경로 결정
     if app.is_remote_chart():
-        # Remote chart: charts/<chart-name>/<chart-name>/
+        # Remote chart: charts/<chart-name>/
         chart_name = app.get_chart_name()
-        source_path = charts_dir / chart_name / chart_name
+        source_path = charts_dir / chart_name
 
         if not source_path.exists():
-            output.print_error(
-                f"Remote chart not found: {source_path}",
-                chart_path=str(source_path),
-            )
-            output.print_warning("Run 'sbkube prepare' first")
+            # Check for legacy double-nested path (v0.7.0 and earlier)
+            legacy_path = charts_dir / chart_name / chart_name
+            if legacy_path.exists():
+                output.print_error(
+                    f"Chart found at legacy path (v0.7.0): {legacy_path}",
+                    chart_path=str(legacy_path),
+                )
+                output.print_warning(
+                    "This chart was downloaded with an older version of SBKube"
+                )
+                output.print("[yellow]💡 Migration required:[/yellow]")
+                output.print(f"   1. Remove old charts: rm -rf {charts_dir}")
+                output.print("   2. Re-download charts: sbkube prepare")
+                output.print(
+                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.7.1 migration)"
+                )
+            else:
+                output.print_error(
+                    f"Remote chart not found: {source_path}",
+                    chart_path=str(source_path),
+                )
+                output.print_warning("Run 'sbkube prepare' first")
             return False
     else:
         # Local chart: app_config_dir 기준
@@ -339,6 +356,12 @@ def build_http_app(
     help="설정 파일 이름 (app-dir 내부)",
 )
 @click.option(
+    "--source",
+    "sources_file_name",
+    default="sources.yaml",
+    help="소스 설정 파일 (base-dir 기준)",
+)
+@click.option(
     "--app",
     "app_name",
     default=None,
@@ -356,6 +379,7 @@ def cmd(
     app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
+    sources_file_name: str,
     app_name: str | None,
     dry_run: bool,
 ) -> None:
@@ -375,21 +399,42 @@ def cmd(
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()
 
-    SBKUBE_WORK_DIR = BASE_DIR / ".sbkube"
+    # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
+    try:
+        app_config_dirs = resolve_app_dirs(
+            BASE_DIR, app_config_dir_name, config_file_name, sources_file_name
+        )
+    except ValueError:
+        raise click.Abort
+
+    # Find sources.yaml to determine .sbkube location
+    # (준비 단계와 동일한 로직: sources.yaml 위치 기준)
+    sources_file_path = None
+    if app_config_dirs:
+        # Start from first app config dir and search upwards
+        search_dir = app_config_dirs[0]
+        while search_dir != search_dir.parent:
+            candidate = search_dir / sources_file_name
+            if candidate.exists():
+                sources_file_path = candidate
+                break
+            search_dir = search_dir.parent
+
+    # .sbkube 작업 디렉토리는 sources.yaml이 있는 위치 기준
+    # (prepare 명령어와 동일한 로직)
+    if sources_file_path:
+        SOURCES_BASE_DIR = sources_file_path.parent
+        SBKUBE_WORK_DIR = SOURCES_BASE_DIR / ".sbkube"
+    else:
+        # Fallback to BASE_DIR if sources.yaml not found
+        SBKUBE_WORK_DIR = BASE_DIR / ".sbkube"
+
     CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
     BUILD_DIR = SBKUBE_WORK_DIR / "build"
 
     # 작업 디렉토리 생성
     SBKUBE_WORK_DIR.mkdir(parents=True, exist_ok=True)
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
-
-    # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
-    try:
-        app_config_dirs = resolve_app_dirs(
-            BASE_DIR, app_config_dir_name, config_file_name
-        )
-    except ValueError:
-        raise click.Abort
 
     # 각 앱 그룹 처리
     overall_success = True

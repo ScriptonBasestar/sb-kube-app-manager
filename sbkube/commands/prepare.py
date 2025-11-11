@@ -108,7 +108,7 @@ def prepare_oci_chart(
         output.print("   Using public registry access")
 
     # Chart pull
-    dest_dir = charts_dir / chart_name
+    dest_dir = charts_dir
     chart_yaml = dest_dir / chart_name / "Chart.yaml"
 
     # Check if chart already exists (skip if not --force)
@@ -119,7 +119,7 @@ def prepare_oci_chart(
 
     if dry_run:
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would pull OCI chart: {oci_chart_url} → {dest_dir}[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would pull OCI chart: {oci_chart_url} → {dest_dir / chart_name}[/yellow]"
         )
         if app.version:
             output.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]")
@@ -129,13 +129,14 @@ def prepare_oci_chart(
             )
     else:
         # If force flag is set, remove existing chart directory
-        if force and dest_dir.exists():
-            output.print_warning(f"Removing existing chart (--force): {dest_dir}")
-            shutil.rmtree(dest_dir)
+        chart_dir = dest_dir / chart_name
+        if force and chart_dir.exists():
+            output.print_warning(f"Removing existing chart (--force): {chart_dir}")
+            shutil.rmtree(chart_dir)
 
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        output.print(f"  Pulling OCI chart: {oci_chart_url} → {dest_dir}")
+        output.print(f"  Pulling OCI chart: {oci_chart_url} → {dest_dir / chart_name}")
         cmd = [
             "helm",
             "pull",
@@ -299,7 +300,7 @@ def prepare_helm_app(
             return False
 
     # Chart pull
-    dest_dir = charts_dir / chart_name
+    dest_dir = charts_dir
     chart_yaml = dest_dir / chart_name / "Chart.yaml"
 
     # Check if chart already exists (skip if not --force)
@@ -310,7 +311,7 @@ def prepare_helm_app(
 
     if dry_run:
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would pull chart: {app.chart} → {dest_dir}[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would pull chart: {app.chart} → {dest_dir / chart_name}[/yellow]"
         )
         if app.version:
             output.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]")
@@ -320,13 +321,14 @@ def prepare_helm_app(
             )
     else:
         # If force flag is set, remove existing chart directory
-        if force and dest_dir.exists():
-            output.print_warning(f"Removing existing chart (--force): {dest_dir}")
-            shutil.rmtree(dest_dir)
+        chart_dir = dest_dir / chart_name
+        if force and chart_dir.exists():
+            output.print_warning(f"Removing existing chart (--force): {chart_dir}")
+            shutil.rmtree(chart_dir)
 
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-        output.print(f"  Pulling chart: {app.chart} → {dest_dir}")
+        output.print(f"  Pulling chart: {app.chart} → {dest_dir / chart_name}")
         cmd = [
             "helm",
             "pull",

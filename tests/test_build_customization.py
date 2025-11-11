@@ -22,7 +22,7 @@ class TestChartCustomization:
     def test_overrides_and_removes_combined(self, tmp_path, output_manager) -> None:
         """overrides와 removes를 동시에 사용하는 시나리오."""
         # 테스트 차트 생성
-        chart_dir = tmp_path / "charts" / "grafana" / "grafana"
+        chart_dir = tmp_path / "charts" / "grafana"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: grafana\nversion: 6.50.0")
         (chart_dir / "values.yaml").write_text("replicaCount: 1")
@@ -93,7 +93,7 @@ class TestChartCustomization:
     ) -> None:
         """Templates 디렉토리 전체를 교체하는 시나리오."""
         # 원본 차트
-        chart_dir = tmp_path / "charts" / "myapp" / "myapp"
+        chart_dir = tmp_path / "charts" / "myapp"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: myapp\nversion: 1.0.0")
 
@@ -154,7 +154,7 @@ class TestChartCustomization:
     def test_remove_specific_files(self, tmp_path, output_manager) -> None:
         """특정 파일들을 명시적으로 삭제."""
         # 테스트 차트
-        chart_dir = tmp_path / "charts" / "app" / "app"
+        chart_dir = tmp_path / "charts" / "app"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: app")
 
@@ -211,7 +211,7 @@ class TestChartCustomization:
     def test_security_hardening_scenario(self, tmp_path, output_manager) -> None:
         """보안 강화 시나리오: 기본 차트에 보안 설정 추가."""
         # 기본 차트 (보안 설정 없음)
-        chart_dir = tmp_path / "charts" / "webapp" / "webapp"
+        chart_dir = tmp_path / "charts" / "webapp"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: webapp\nversion: 1.0.0")
 
@@ -290,7 +290,7 @@ spec:
     def test_multi_tenant_scenario(self, tmp_path, output_manager) -> None:
         """멀티 테넌트 시나리오: 테넌트별 설정 파일 교체."""
         # 기본 차트
-        chart_dir = tmp_path / "charts" / "saas-app" / "saas-app"
+        chart_dir = tmp_path / "charts" / "saas-app"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: saas-app")
         (chart_dir / "values.yaml").write_text("""
@@ -371,7 +371,7 @@ data:
     def test_cleanup_unnecessary_files(self, tmp_path, output_manager) -> None:
         """불필요한 파일 제거 시나리오."""
         # 차트에 많은 불필요한 파일들이 있는 경우
-        chart_dir = tmp_path / "charts" / "bloated-chart" / "bloated-chart"
+        chart_dir = tmp_path / "charts" / "bloated-chart"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: bloated-chart")
         (chart_dir / "values.yaml").write_text("enabled: true")
@@ -446,7 +446,7 @@ data:
     def test_no_customization(self, tmp_path, output_manager) -> None:
         """커스터마이징 없이 빌드 (순수 복사)."""
         # 차트 생성
-        chart_dir = tmp_path / "charts" / "vanilla" / "vanilla"
+        chart_dir = tmp_path / "charts" / "vanilla"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: vanilla\nversion: 1.0.0")
         (chart_dir / "values.yaml").write_text("replicas: 1")

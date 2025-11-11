@@ -139,6 +139,31 @@ class TestHelmApp:
             HelmApp(type="helm", chart="   ")
         assert "chart cannot be empty" in str(exc_info.value)
 
+    def test_helm_app_oci_protocol_validation(self) -> None:
+        """Test that OCI protocol in chart field raises validation error."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            HelmApp(type="helm", chart="oci://registry-1.docker.io/bitnamicharts/supabase")
+        error_message = str(exc_info.value)
+        assert "Direct OCI protocol in 'chart' field is not supported" in error_message
+        assert "sources.yaml" in error_message
+        assert "oci_registries" in error_message
+
+    def test_helm_app_oci_github_registry_validation(self) -> None:
+        """Test OCI protocol validation with GitHub Container Registry."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            HelmApp(type="helm", chart="oci://ghcr.io/myorg/charts/myapp")
+        error_message = str(exc_info.value)
+        assert "Direct OCI protocol" in error_message
+        assert "sources.yaml" in error_message
+
+    def test_helm_app_oci_truecharts_validation(self) -> None:
+        """Test OCI protocol validation with TrueCharts registry."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            HelmApp(type="helm", chart="oci://tccr.io/truecharts/browserless-chrome")
+        error_message = str(exc_info.value)
+        assert "Direct OCI protocol" in error_message
+        assert "Example for Docker Hub Bitnami charts" in error_message
+
 
 # ============================================================================
 # YamlApp Tests

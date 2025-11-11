@@ -685,11 +685,52 @@ class HelmApp(ConfigBaseModel):
         - "repo/chart" (remote)
         - "./path" (relative local)
         - "/path" (absolute local)
+
+        금지 형식:
+        - "oci://..." (OCI protocol은 sources.yaml에서 설정)
         """
         if not v or not v.strip():
             msg = "chart cannot be empty"
             raise ValueError(msg)
-        return v.strip()
+
+        v = v.strip()
+
+        # OCI 프로토콜 직접 사용 감지
+        if v.startswith("oci://"):
+            msg = (
+                "Direct OCI protocol in 'chart' field is not supported.\n"
+                "\n"
+                "SBKube requires OCI registries to be defined in sources.yaml:\n"
+                "\n"
+                "  sources.yaml:\n"
+                "    oci_registries:\n"
+                "      myregistry:\n"
+                "        registry: oci://registry.example.com/path\n"
+                "\n"
+                "  config.yaml:\n"
+                "    apps:\n"
+                "      myapp:\n"
+                "        type: helm\n"
+                "        chart: myregistry/chartname\n"
+                "\n"
+                "Example for Docker Hub Bitnami charts:\n"
+                "\n"
+                "  sources.yaml:\n"
+                "    oci_registries:\n"
+                "      bitnami:\n"
+                "        registry: oci://registry-1.docker.io/bitnamicharts\n"
+                "\n"
+                "  config.yaml:\n"
+                "    apps:\n"
+                "      supabase:\n"
+                "        type: helm\n"
+                "        chart: bitnami/supabase\n"
+                "\n"
+                "For more details, see: docs/03-configuration/config-schema.md#oci-registry"
+            )
+            raise ValueError(msg)
+
+        return v
 
     def is_remote_chart(self) -> bool:
         """Remote chart 여부 판단.

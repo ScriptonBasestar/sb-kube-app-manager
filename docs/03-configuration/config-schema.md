@@ -455,6 +455,89 @@ apps:
 - context는 ~/.kube/config 또는 KUBECONFIG 환경변수의 kubeconfig 파일에 정의되어 있어야 합니다
 - app.context 지정 시 sources.yaml의 kubeconfig는 사용되지 않습니다 (시스템 기본 kubeconfig 사용)
 
+#### OCI Registry 사용법 {#oci-registry}
+
+**중요**: OCI 레지스트리의 Helm 차트를 사용하려면 **2단계 설정**이 필요합니다.
+
+**❌ 잘못된 방법 (지원하지 않음)**:
+
+```yaml
+# config.yaml - 이 방식은 에러가 발생합니다
+apps:
+  supabase:
+    type: helm
+    chart: oci://registry-1.docker.io/bitnamicharts/supabase  # ❌ 에러!
+```
+
+**✅ 올바른 방법**:
+
+**Step 1: sources.yaml에 OCI 레지스트리 등록**
+
+```yaml
+# sources.yaml
+oci_registries:
+  bitnami:
+    registry: oci://registry-1.docker.io/bitnamicharts
+
+  truecharts:
+    registry: oci://tccr.io/truecharts
+
+  ghcr:
+    registry: oci://ghcr.io/myorg/charts
+```
+
+**Step 2: config.yaml에서 repo/chart 형식 사용**
+
+```yaml
+# config.yaml
+namespace: platform
+
+apps:
+  # Bitnami Supabase from Docker Hub
+  supabase:
+    type: helm
+    chart: bitnami/supabase  # ✅ registry-name/chart-name 형식
+    version: "1.0.0"
+    values:
+      - values/supabase.yaml
+
+  # TrueCharts chart
+  browserless:
+    type: helm
+    chart: truecharts/browserless-chrome  # ✅ registry-name/chart-name
+    version: "2.0.0"
+```
+
+**주요 OCI 레지스트리**:
+
+- **Docker Hub Bitnami**: `oci://registry-1.docker.io/bitnamicharts`
+- **TrueCharts**: `oci://tccr.io/truecharts`
+- **GitHub Container Registry**: `oci://ghcr.io/org-name/charts`
+- **GitLab Container Registry**: `oci://registry.gitlab.com/project/charts`
+
+**인증이 필요한 경우**:
+
+```yaml
+# sources.yaml
+oci_registries:
+  private-registry:
+    registry: oci://my-registry.com/charts
+    username: myuser
+    password: mypass
+```
+
+또는 `helm registry login` 수동 실행:
+
+```bash
+echo $PASSWORD | helm registry login oci://my-registry.com -u $USERNAME --password-stdin
+```
+
+**참고 문서**:
+
+- [examples/prepare/helm-oci/](../../examples/prepare/helm-oci/) - OCI 레지스트리 예제
+- [sources-schema.md](sources-schema.md) - sources.yaml 상세 스키마
+- [Helm OCI Support](https://helm.sh/docs/topics/registries/) - Helm 공식 문서
+
 ______________________________________________________________________
 
 ### 2. yaml - YAML 매니페스트

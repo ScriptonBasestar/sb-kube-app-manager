@@ -110,6 +110,113 @@ ______________________________________________________________________
 
 ## Configuration Errors
 
+### ERR-CFG-001: OCI Protocol in chart Field
+
+```bash
+# Error
+ValueError: Direct OCI protocol in 'chart' field is not supported.
+
+SBKube requires OCI registries to be defined in sources.yaml:
+
+  sources.yaml:
+    oci_registries:
+      myregistry:
+        registry: oci://registry.example.com/path
+
+  config.yaml:
+    apps:
+      myapp:
+        type: helm
+        chart: myregistry/chartname
+```
+
+**Cause:** You used `chart: oci://...` directly in config.yaml, which is not supported. SBKube requires a two-step configuration for OCI registries.
+
+**Why This Design?**
+
+- **Consistency**: All remote sources (Helm repos, OCI registries, Git repos) are defined in sources.yaml
+- **Reusability**: Define registry once, use across multiple apps
+- **Maintainability**: Central management of registry URLs and credentials
+
+**Solution:**
+
+**Step 1: Add OCI registry to sources.yaml**
+
+```yaml
+# sources.yaml
+oci_registries:
+  bitnami:
+    registry: oci://registry-1.docker.io/bitnamicharts
+
+  truecharts:
+    registry: oci://tccr.io/truecharts
+```
+
+**Step 2: Update config.yaml to use registry name**
+
+```yaml
+# config.yaml - BEFORE (❌ Wrong)
+apps:
+  supabase:
+    type: helm
+    chart: oci://registry-1.docker.io/bitnamicharts/supabase  # ❌ Error!
+
+# config.yaml - AFTER (✅ Correct)
+apps:
+  supabase:
+    type: helm
+    chart: bitnami/supabase  # ✅ Uses registry name from sources.yaml
+    version: "1.0.0"
+```
+
+**Common OCI Registries:**
+
+- **Docker Hub Bitnami**: `oci://registry-1.docker.io/bitnamicharts`
+- **TrueCharts**: `oci://tccr.io/truecharts`
+- **GitHub Container Registry**: `oci://ghcr.io/org-name/charts`
+- **GitLab Container Registry**: `oci://registry.gitlab.com/project/charts`
+
+**Complete Example:**
+
+```yaml
+# sources.yaml
+kubeconfig: ~/.kube/config
+cluster: production
+
+oci_registries:
+  bitnami:
+    registry: oci://registry-1.docker.io/bitnamicharts
+
+  private-registry:
+    registry: oci://my-registry.com/charts
+    username: myuser
+    password: ${REGISTRY_PASSWORD}
+
+# config.yaml
+namespace: platform
+
+apps:
+  supabase:
+    type: helm
+    chart: bitnami/supabase
+    version: "1.0.0"
+    values:
+      - values/supabase.yaml
+
+  custom-app:
+    type: helm
+    chart: private-registry/my-app
+    version: "2.0.0"
+```
+
+**Related:**
+
+- [config-schema.md#oci-registry](../03-configuration/config-schema.md#oci-registry) - Detailed OCI usage guide
+- [sources-schema.md](../03-configuration/sources-schema.md) - sources.yaml schema
+- [examples/prepare/helm-oci/](../../examples/prepare/helm-oci/) - Complete OCI example
+
+______________________________________________________________________
+
 ### sources.yaml Not Found
 
 ```bash

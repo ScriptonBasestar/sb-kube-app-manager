@@ -8,9 +8,56 @@ ______________________________________________________________________
 
 ## [Unreleased]
 
+### 🚨 Breaking Changes
+
+**New Chart Path Structure to Prevent Collisions** (v0.8.0)
+
+- ⚠️ **BREAKING**: Chart path structure changed from `.sbkube/charts/{chart-name}/` to `.sbkube/charts/{repo}/{chart-name}-{version}/`
+- ✅ **FIXED**: Charts from different repos with same name no longer collide (e.g., `bitnami/redis` vs `my-company/redis`)
+- ✅ **FIXED**: Same chart with different versions can now coexist (e.g., `redis:18.0.0` and `redis:19.0.0`)
+- ✅ **NEW**: Automatic legacy path detection with migration guide
+
+**Migration Required**:
+```bash
+# Remove old charts and re-download
+rm -rf .sbkube/charts
+sbkube prepare --force
+```
+
+**New Path Examples**:
+```
+Before (v0.7.x):
+.sbkube/charts/redis/           # ❌ Collision risk
+.sbkube/charts/grafana/         # ❌ No version tracking
+
+After (v0.8.0):
+.sbkube/charts/bitnami/redis-18.0.0/         # ✅ No collision
+.sbkube/charts/my-company/redis-1.0.0/       # ✅ Different repo
+.sbkube/charts/bitnami/redis-19.0.0/         # ✅ Different version
+.sbkube/charts/grafana/grafana-latest/       # ✅ Version tracked
+```
+
+**What Changed**:
+- `HelmApp.get_chart_path()`: New method to generate versioned paths
+- `HelmApp.get_version_or_default()`: Returns version or "latest"
+- `prepare_helm_app()`: Saves charts to `{repo}/{chart-name}-{version}/`
+- `prepare_oci_chart()`: Same path structure for OCI registries
+- `build_helm_app()`: Reads from new path structure
+- Legacy path detection: Automatic warning for v0.7.x charts
+
+**Files Modified**:
+- [sbkube/models/config_model.py](sbkube/models/config_model.py:746-784) - Added `get_chart_path()`, `get_version_or_default()`
+- [sbkube/commands/prepare.py](sbkube/commands/prepare.py:110-192) - New path structure for OCI charts
+- [sbkube/commands/prepare.py](sbkube/commands/prepare.py:302-384) - New path structure for Helm charts
+- [sbkube/commands/build.py](sbkube/commands/build.py:50-98) - Legacy path detection
+- [tests/unit/test_chart_path_v080.py](tests/unit/test_chart_path_v080.py) - Comprehensive collision prevention tests
+
+**See Also**:
+- [docs/05-best-practices/directory-structure.md](docs/05-best-practices/directory-structure.md) - Migration guide
+
 ### ✨ New Features
 
-_(No unreleased features yet)_
+_(No other unreleased features)_
 
 ______________________________________________________________________
 

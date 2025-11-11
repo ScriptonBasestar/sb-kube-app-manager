@@ -6,6 +6,7 @@
 - 의존성: depends_on 필드
 """
 
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator, model_validator
@@ -742,6 +743,59 @@ class HelmApp(ConfigBaseModel):
             return self.chart.split("/")[1]
         # 로컬 경로에서 마지막 부분 추출
         return self.chart.rstrip("/").split("/")[-1]
+
+    def get_version_or_default(self) -> str:
+        """Chart 버전 추출 (없으면 'latest' 반환).
+
+        Returns:
+            버전 문자열 (예: '18.0.0') 또는 'latest'
+
+        """
+        return self.version if self.version else "latest"
+
+    def get_chart_path(self, charts_dir: Path | str) -> Path | None:
+        """Chart 저장 경로 생성 (repo/chart-version 구조).
+
+        v0.8.0+에서 도입된 새 경로 구조를 사용하여 chart 저장 위치를 결정합니다.
+        이 구조는 다음 문제를 해결합니다:
+        - 다른 repo의 같은 chart 이름 충돌 방지
+        - 같은 chart의 다른 버전 동시 사용 가능
+
+        Args:
+            charts_dir: charts 디렉토리 (Path 객체 또는 문자열)
+
+        Returns:
+            Chart 저장 경로 (Path 객체) 또는 None (로컬 차트인 경우)
+
+        Examples:
+            >>> app = HelmApp(chart="bitnami/redis", version="18.0.0")
+            >>> app.get_chart_path(Path(".sbkube/charts"))
+            Path(".sbkube/charts/bitnami/redis-18.0.0")
+
+            >>> app = HelmApp(chart="bitnami/redis")  # version 없음
+            >>> app.get_chart_path(Path(".sbkube/charts"))
+            Path(".sbkube/charts/bitnami/redis-latest")
+
+            >>> app = HelmApp(chart="./my-chart")  # 로컬 차트
+            >>> app.get_chart_path(Path(".sbkube/charts"))
+            None
+
+        """
+        from pathlib import Path
+
+        if not self.is_remote_chart():
+            # 로컬 차트는 경로 생성 불필요
+            return None
+
+        repo_name = self.get_repo_name()
+        chart_name = self.get_chart_name()
+        version = self.get_version_or_default()
+
+        # charts_dir이 문자열이면 Path로 변환
+        if isinstance(charts_dir, str):
+            charts_dir = Path(charts_dir)
+
+        return charts_dir / repo_name / f"{chart_name}-{version}"
 
 
 class YamlApp(ConfigBaseModel):

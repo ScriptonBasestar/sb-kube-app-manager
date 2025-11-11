@@ -154,27 +154,45 @@ def deploy_helm_app(
     if build_path.exists() and build_path.is_dir():
         chart_path = build_path
         console.print(f"  Using built chart: {chart_path}")
-    # 2. build 없으면 원본 차트 사용
+    # 2. build 없으면 원본 차트 사용 (v0.8.0+ path structure)
     elif app.is_remote_chart():
-        # Remote chart: .sbkube/charts/ 디렉토리에서 찾기
-        chart_name = app.get_chart_name()
-        source_path = charts_dir / chart_name  # .sbkube/charts/redis
+        # Remote chart: .sbkube/charts/{repo}/{chart-name}-{version}/
+        source_path = app.get_chart_path(charts_dir)
 
-        if not source_path.exists():
-            # Check for legacy double-nested path (v0.7.0 and earlier)
-            legacy_path = charts_dir / chart_name / chart_name
-            if legacy_path.exists():
+        if not source_path or not source_path.exists():
+            # Check for legacy paths (v0.7.1 and earlier)
+            chart_name = app.get_chart_name()
+
+            # Legacy v0.7.1: charts/{chart-name}/
+            legacy_v071_path = charts_dir / chart_name
+            # Legacy v0.7.0: charts/{chart-name}/{chart-name}/
+            legacy_v070_path = charts_dir / chart_name / chart_name
+
+            if legacy_v071_path.exists():
                 output.print_error(
-                    f"Chart found at legacy path (v0.7.0): {legacy_path}"
+                    f"Chart found at legacy path (v0.7.1): {legacy_v071_path}"
                 )
                 output.print_warning(
                     "This chart was downloaded with an older version of SBKube"
                 )
+                console.print("[yellow]💡 Migration required (v0.8.0 path structure):[/yellow]")
+                console.print(f"   1. Remove old charts: rm -rf {charts_dir}")
+                console.print("   2. Re-download charts: sbkube prepare --force")
+                console.print(
+                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.8.0 migration)"
+                )
+            elif legacy_v070_path.exists():
+                output.print_error(
+                    f"Chart found at legacy path (v0.7.0): {legacy_v070_path}"
+                )
+                output.print_warning(
+                    "This chart was downloaded with a very old version of SBKube"
+                )
                 console.print("[yellow]💡 Migration required:[/yellow]")
                 console.print(f"   1. Remove old charts: rm -rf {charts_dir}")
-                console.print("   2. Re-download charts: sbkube prepare")
+                console.print("   2. Re-download charts: sbkube prepare --force")
                 console.print(
-                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.7.1 migration)"
+                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.8.0 migration)"
                 )
             else:
                 output.print_error(f"Chart not found: {source_path}")

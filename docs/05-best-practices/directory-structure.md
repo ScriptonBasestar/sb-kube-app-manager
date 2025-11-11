@@ -1053,6 +1053,127 @@ deploy:
 
 ______________________________________________________________________
 
+## 🔄 버전 마이그레이션 가이드
+
+### v0.8.0 Chart Path Structure Migration
+
+**❗ Breaking Change**: v0.8.0부터 chart 저장 경로 구조가 변경되었습니다.
+
+#### 변경 사항
+
+**이전 구조 (v0.7.x)**:
+```
+.sbkube/charts/
+├── redis/           # ❌ repo 정보 없음, 버전 정보 없음
+├── grafana/         # ❌ 충돌 위험
+└── postgresql/
+```
+
+**새 구조 (v0.8.0+)**:
+```
+.sbkube/charts/
+├── bitnami/
+│   ├── redis-18.0.0/          # ✅ repo + 버전 명시
+│   ├── redis-19.0.0/          # ✅ 다른 버전 공존 가능
+│   └── postgresql-15.0.0/
+├── my-company/
+│   └── redis-1.0.0/           # ✅ 다른 repo의 redis 공존
+└── grafana/
+    └── grafana-latest/        # ✅ 버전 없으면 'latest'
+```
+
+#### 마이그레이션 절차
+
+**1. 자동 감지 (Legacy Path Detection)**
+
+v0.8.0+에서 build 실행 시 자동으로 legacy 경로를 감지하고 경고를 표시합니다:
+
+```bash
+$ sbkube build
+
+❌ Chart found at legacy path (v0.7.1): .sbkube/charts/redis
+⚠️  This chart was downloaded with an older version of SBKube
+💡 Migration required (v0.8.0 path structure):
+   1. Remove old charts: rm -rf .sbkube/charts
+   2. Re-download charts: sbkube prepare --force
+
+📚 See: docs/05-best-practices/directory-structure.md (v0.8.0 migration)
+```
+
+**2. 마이그레이션 실행**
+
+```bash
+# 기존 charts 제거
+rm -rf .sbkube/charts
+
+# 새 구조로 재다운로드
+sbkube prepare --force
+```
+
+**3. 확인**
+
+```bash
+# 새 구조 확인
+ls -R .sbkube/charts/
+
+# 예상 출력:
+# .sbkube/charts/bitnami/redis-18.0.0/
+# .sbkube/charts/grafana/grafana-7.0.6/
+```
+
+#### 왜 변경되었나요?
+
+**문제 1: 다른 repo, 같은 chart 이름 충돌**
+```yaml
+# 이전에는 불가능했던 시나리오
+apps:
+  redis-bitnami:
+    chart: bitnami/redis
+    version: 18.0.0
+
+  redis-custom:
+    chart: my-company/redis   # ❌ v0.7.x: 충돌!
+    version: 1.0.0             # ✅ v0.8.0: 공존 가능
+```
+
+**문제 2: 같은 chart, 다른 버전 충돌**
+```yaml
+# 이전에는 불가능했던 시나리오
+apps:
+  redis-old:
+    chart: bitnami/redis
+    version: 18.0.0           # ❌ v0.7.x: 덮어쓰기!
+
+  redis-new:
+    chart: bitnami/redis
+    version: 19.0.0           # ✅ v0.8.0: 공존 가능
+```
+
+#### 기술적 세부사항
+
+**변경된 파일**:
+- `sbkube/models/config_model.py`: `HelmApp.get_chart_path()` 추가
+- `sbkube/commands/prepare.py`: 새 경로 구조로 저장
+- `sbkube/commands/build.py`: 새 경로에서 읽기 + legacy 감지
+
+**테스트**:
+- `tests/unit/test_chart_path_v080.py`: 충돌 방지 시나리오 테스트
+- 모든 테스트 통과 확인 완료
+
+**롤백 방법** (필요 시):
+
+v0.7.x로 롤백이 필요한 경우:
+```bash
+# SBKube v0.7.x로 다운그레이드
+uv add sbkube==0.7.2
+
+# Charts 재다운로드
+rm -rf .sbkube/charts
+sbkube prepare
+```
+
+______________________________________________________________________
+
 ## 참고 자료
 
 ### SBKube 문서
@@ -1071,6 +1192,13 @@ ______________________________________________________________________
 ______________________________________________________________________
 
 ## 변경 이력
+
+### v1.2 (2025-01-11)
+
+- **v0.8.0 Chart Path Structure Migration 추가**: 새로운 `repo/chart-version` 경로 구조 설명
+- **충돌 방지 메커니즘 문서화**: 다른 repo/버전의 chart 공존 가능
+- **마이그레이션 가이드 추가**: Legacy 경로 감지 및 마이그레이션 절차
+- **롤백 방법 제공**: v0.7.x로 다운그레이드 방법 명시
 
 ### v1.1 (2025-10-31)
 

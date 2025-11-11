@@ -17,8 +17,8 @@ class TestBuildV3:
 
     def test_helm_app_with_overrides(self, tmp_path, output_manager) -> None:
         """overrides가 있는 Helm 앱 빌드 검증."""
-        # 테스트 디렉토리 구조 생성
-        charts_dir = tmp_path / "charts" / "grafana"
+        # 테스트 디렉토리 구조 생성 (v0.8.0+ path structure)
+        charts_dir = tmp_path / "charts" / "grafana" / "grafana-6.50.0"
         charts_dir.mkdir(parents=True)
         (charts_dir / "Chart.yaml").write_text("name: grafana\nversion: 6.50.0")
         (charts_dir / "values.yaml").write_text("replicaCount: 1")
@@ -59,8 +59,8 @@ class TestBuildV3:
 
     def test_helm_app_with_removes(self, tmp_path, output_manager) -> None:
         """Removes가 있는 Helm 앱 빌드 검증."""
-        # 테스트 디렉토리 구조 생성
-        charts_dir = tmp_path / "charts" / "grafana"
+        # 테스트 디렉토리 구조 생성 (v0.8.0+ path structure)
+        charts_dir = tmp_path / "charts" / "grafana" / "grafana-6.50.0"
         charts_dir.mkdir(parents=True)
         (charts_dir / "Chart.yaml").write_text("name: grafana")
         (charts_dir / "README.md").write_text("# Grafana Chart")  # 제거 대상
@@ -135,8 +135,8 @@ class TestBuildV3:
 
     def test_helm_app_with_glob_patterns(self, tmp_path, output_manager) -> None:
         """Glob 패턴을 사용한 overrides 테스트."""
-        # 테스트 차트 생성
-        chart_dir = tmp_path / "charts" / "ingress-nginx"
+        # 테스트 차트 생성 (v0.8.0+ path structure: repo/chart-version)
+        chart_dir = tmp_path / "charts" / "ingress-nginx" / "ingress-nginx-4.0.0"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: ingress-nginx\nversion: 4.0.0")
         (chart_dir / "templates").mkdir()
@@ -194,8 +194,8 @@ class TestBuildV3:
 
     def test_helm_app_with_mixed_patterns(self, tmp_path, output_manager) -> None:
         """Glob 패턴과 명시적 파일을 혼합 사용."""
-        # 테스트 차트 생성
-        chart_dir = tmp_path / "charts" / "app"
+        # 테스트 차트 생성 (v0.8.0+ path structure: repo/chart-version)
+        chart_dir = tmp_path / "charts" / "my" / "app-latest"
         chart_dir.mkdir(parents=True)
         (chart_dir / "Chart.yaml").write_text("name: app\nversion: 1.0.0")
         (chart_dir / "templates").mkdir()

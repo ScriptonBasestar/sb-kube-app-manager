@@ -57,11 +57,10 @@ def template_helm_app(
     if build_path.exists() and build_path.is_dir():
         chart_path = build_path
         output.print(f"  Using built chart: {chart_path}", level="info")
-    # build 없으면 원본 차트 사용
+    # build 없으면 원본 차트 사용 (v0.8.0+ path structure)
     elif app.is_remote_chart():
-        chart_name = app.get_chart_name()
-        source_path = charts_dir / chart_name
-        if source_path.exists():
+        source_path = app.get_chart_path(charts_dir)
+        if source_path and source_path.exists():
             chart_path = source_path
             output.print(f"  Using remote chart: {chart_path}", level="info")
     else:

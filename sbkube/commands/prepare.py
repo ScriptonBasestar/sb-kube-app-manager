@@ -6,6 +6,7 @@
 """
 
 import shutil
+import uuid
 from pathlib import Path
 
 import click
@@ -107,19 +108,19 @@ def prepare_oci_chart(
         output.print_warning("OCI registry authentication is not yet supported")
         output.print("   Using public registry access")
 
-    # Chart pull
-    dest_dir = charts_dir
-    chart_yaml = dest_dir / chart_name / "Chart.yaml"
+    # Chart pull (repo/chart-version 구조)
+    chart_dir = app.get_chart_path(charts_dir)
+    chart_yaml = chart_dir / "Chart.yaml"
 
     # Check if chart already exists (skip if not --force)
     if chart_yaml.exists() and not force:
-        output.print_warning(f"Chart already exists, skipping: {chart_name}")
+        output.print_warning(f"Chart already exists, skipping: {chart_dir.name}")
         output.print("    Use --force to re-download")
         return True
 
     if dry_run:
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would pull OCI chart: {oci_chart_url} → {dest_dir / chart_name}[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would pull OCI chart: {oci_chart_url} → {chart_dir}[/yellow]"
         )
         if app.version:
             output.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]")
@@ -129,21 +130,24 @@ def prepare_oci_chart(
             )
     else:
         # If force flag is set, remove existing chart directory
-        chart_dir = dest_dir / chart_name
         if force and chart_dir.exists():
             output.print_warning(f"Removing existing chart (--force): {chart_dir}")
             shutil.rmtree(chart_dir)
 
-        dest_dir.mkdir(parents=True, exist_ok=True)
+        chart_dir.parent.mkdir(parents=True, exist_ok=True)
 
-        output.print(f"  Pulling OCI chart: {oci_chart_url} → {dest_dir / chart_name}")
+        output.print(f"  Pulling OCI chart: {oci_chart_url} → {chart_dir}")
+
+        # Helm pull with temporary extraction, then move to versioned directory
+        # Use UUID suffix to prevent concurrent execution conflicts
+        temp_extract_dir = chart_dir.parent / f"_temp_{chart_name}_{uuid.uuid4().hex[:8]}"
         cmd = [
             "helm",
             "pull",
             oci_chart_url,
             "--untar",
             "--untardir",
-            str(dest_dir),
+            str(temp_extract_dir),
         ]
 
         if app.version:
@@ -166,7 +170,27 @@ def prepare_oci_chart(
                 f"   • Test pull manually: [cyan]helm pull {oci_chart_url}[/cyan]"
             )
             output.print("   • Check registry documentation for correct OCI path")
+            # Cleanup temp directory on failure
+            if temp_extract_dir.exists():
+                shutil.rmtree(temp_extract_dir)
             return False
+
+        # Move extracted chart to versioned directory
+        extracted_chart_path = temp_extract_dir / chart_name
+        if not extracted_chart_path.exists():
+            output.print_error(
+                f"Chart extraction failed: expected {extracted_chart_path}"
+            )
+            if temp_extract_dir.exists():
+                shutil.rmtree(temp_extract_dir)
+            return False
+
+        # Move to final destination
+        extracted_chart_path.rename(chart_dir)
+
+        # Cleanup temp directory
+        if temp_extract_dir.exists():
+            shutil.rmtree(temp_extract_dir)
 
     output.print_success(f"OCI chart prepared: {app_name}")
     return True
@@ -299,19 +323,19 @@ def prepare_helm_app(
             output.print_error(f"Failed to update repo: {stderr}")
             return False
 
-    # Chart pull
-    dest_dir = charts_dir
-    chart_yaml = dest_dir / chart_name / "Chart.yaml"
+    # Chart pull (repo/chart-version 구조)
+    chart_dir = app.get_chart_path(charts_dir)
+    chart_yaml = chart_dir / "Chart.yaml"
 
     # Check if chart already exists (skip if not --force)
     if chart_yaml.exists() and not force:
-        output.print_warning(f"Chart already exists, skipping: {chart_name}")
+        output.print_warning(f"Chart already exists, skipping: {chart_dir.name}")
         output.print("    Use --force to re-download")
         return True
 
     if dry_run:
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would pull chart: {app.chart} → {dest_dir / chart_name}[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would pull chart: {app.chart} → {chart_dir}[/yellow]"
         )
         if app.version:
             output.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]")
@@ -321,21 +345,24 @@ def prepare_helm_app(
             )
     else:
         # If force flag is set, remove existing chart directory
-        chart_dir = dest_dir / chart_name
         if force and chart_dir.exists():
             output.print_warning(f"Removing existing chart (--force): {chart_dir}")
             shutil.rmtree(chart_dir)
 
-        dest_dir.mkdir(parents=True, exist_ok=True)
+        chart_dir.parent.mkdir(parents=True, exist_ok=True)
 
-        output.print(f"  Pulling chart: {app.chart} → {dest_dir / chart_name}")
+        output.print(f"  Pulling chart: {app.chart} → {chart_dir}")
+
+        # Helm pull with temporary extraction, then move to versioned directory
+        # Use UUID suffix to prevent concurrent execution conflicts
+        temp_extract_dir = chart_dir.parent / f"_temp_{chart_name}_{uuid.uuid4().hex[:8]}"
         cmd = [
             "helm",
             "pull",
             f"{repo_name}/{chart_name}",
             "--untar",
             "--untardir",
-            str(dest_dir),
+            str(temp_extract_dir),
         ]
 
         if app.version:
@@ -359,7 +386,27 @@ def prepare_helm_app(
             output.print(
                 f"   • List charts in repo: [cyan]helm search repo {repo_name}/[/cyan]"
             )
+            # Cleanup temp directory on failure
+            if temp_extract_dir.exists():
+                shutil.rmtree(temp_extract_dir)
             return False
+
+        # Move extracted chart to versioned directory
+        extracted_chart_path = temp_extract_dir / chart_name
+        if not extracted_chart_path.exists():
+            output.print_error(
+                f"Chart extraction failed: expected {extracted_chart_path}"
+            )
+            if temp_extract_dir.exists():
+                shutil.rmtree(temp_extract_dir)
+            return False
+
+        # Move to final destination
+        extracted_chart_path.rename(chart_dir)
+
+        # Cleanup temp directory
+        if temp_extract_dir.exists():
+            shutil.rmtree(temp_extract_dir)
 
     output.print_success(f"Helm app prepared: {app_name}")
     return True

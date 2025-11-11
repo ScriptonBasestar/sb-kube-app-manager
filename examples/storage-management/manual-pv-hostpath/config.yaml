@@ -1,0 +1,23 @@
+namespace: database
+
+apps:
+  postgresql:
+    type: helm
+    chart: bitnami/postgresql
+    version: 13.0.0
+
+    values:
+      auth:
+        postgresPassword: changeme123
+        database: myapp
+
+      persistence:
+        enabled: true
+        storageClass: postgresql-hostpath  # ⚠️ Requires manual PV
+        size: 8Gi
+
+      primary:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi

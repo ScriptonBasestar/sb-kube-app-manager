@@ -39,6 +39,9 @@ class ValidateCommand:
         custom_schema_path: str | None,
         skip_deps: bool = False,
         strict_deps: bool = False,
+        skip_storage_check: bool = False,
+        strict_storage_check: bool = False,
+        kubeconfig: str | None = None,
     ) -> None:
         self.base_dir = Path(base_dir)
         self.target_file = target_file
@@ -46,6 +49,9 @@ class ValidateCommand:
         self.custom_schema_path = custom_schema_path
         self.skip_deps = skip_deps
         self.strict_deps = strict_deps
+        self.skip_storage_check = skip_storage_check
+        self.strict_storage_check = strict_storage_check
+        self.kubeconfig = kubeconfig
 
     def validate_dependencies(self, config: SBKubeConfig) -> bool:
         """Validate app-group dependencies declared in config.deps.
@@ -109,6 +115,60 @@ class ValidateCommand:
         for dep in result["missing"]:
             logger.info(f"  sbkube deploy --app-dir {dep}")
 
+        return False
+
+    def validate_storage(self, config: SBKubeConfig) -> bool:
+        """Validate PV/PVC requirements for apps with no-provisioner StorageClass.
+
+        Args:
+            config: Validated SBKubeConfig instance
+
+        Returns:
+            bool: True if all required PVs exist, False otherwise
+
+        """
+        if self.skip_storage_check:
+            logger.info("스토리지 검증 건너뜀 (--skip-storage-check)")
+            return True
+
+        logger.heading("스토리지 검증 (PV/PVC)")
+
+        from sbkube.validators.storage_validators import StorageValidatorLegacy
+
+        validator = StorageValidatorLegacy(kubeconfig=self.kubeconfig)
+        result = validator.check_required_pvs(config)
+
+        if result["all_exist"]:
+            if result["existing"]:
+                logger.success(
+                    f"✅ 모든 필요한 PV 존재 확인 ({len(result['existing'])}개)"
+                )
+                for pv in result["existing"]:
+                    logger.info(
+                        f"  ✓ {pv['app']}: {pv['storage_class']} ({pv['size']})"
+                    )
+            else:
+                logger.success("✅ 수동 PV가 필요한 앱이 없습니다")
+            return True
+
+        logger.error(f"❌ {len(result['missing'])}개의 PV가 없습니다:")
+        for pv in result["missing"]:
+            logger.error(f"  ✗ {pv['app']}: {pv['storage_class']} ({pv['size']})")
+
+        logger.warning("\n💡 PV 생성 방법:")
+        logger.info("  1. 수동 생성: kubectl apply -f pv.yaml")
+        logger.info(
+            "  2. Dynamic Provisioner 설치: local-path-provisioner, nfs-provisioner"
+        )
+        logger.info("  3. 검증 건너뛰기: sbkube validate --skip-storage-check")
+        logger.info("\n📚 자세한 내용: docs/05-best-practices/storage-management.md")
+
+        if self.strict_storage_check:
+            logger.error("스토리지 검증 실패 (--strict-storage-check 모드)")
+            logger.warning("배포가 실패할 수 있습니다. PV를 먼저 생성하세요")
+            return False
+
+        logger.warning("스토리지 검증 실패 (논-블로킹) - 배포 시 PVC가 Pending될 수 있음")
         return False
 
     def execute(self) -> None:
@@ -205,6 +265,11 @@ class ValidateCommand:
             deps_valid = self.validate_dependencies(config)
             if not deps_valid:
                 logger.warning("의존성 검증 실패 (논-블로킹) - 배포 시 실패할 수 있음")
+
+            # Validate storage (PV/PVC requirements)
+            storage_valid = self.validate_storage(config)
+            if not storage_valid:
+                logger.warning("스토리지 검증 실패 (논-블로킹) - PVC가 Pending될 수 있음")
         elif file_type == "sources":
             try:
                 logger.info("Pydantic 모델 검증 중 (SourceScheme)...")
@@ -273,6 +338,21 @@ class ValidateCommand:
     is_flag=True,
     help="의존성 검증 실패 시 오류 발생 (기본: 경고만 출력)",
 )
+@click.option(
+    "--skip-storage-check",
+    is_flag=True,
+    help="스토리지(PV/PVC) 검증 건너뛰기",
+)
+@click.option(
+    "--strict-storage-check",
+    is_flag=True,
+    help="스토리지 검증 실패 시 오류 발생 (기본: 경고만 출력)",
+)
+@click.option(
+    "--kubeconfig",
+    type=click.Path(exists=True),
+    help="kubeconfig 파일 경로 (기본: $KUBECONFIG 또는 ~/.kube/config)",
+)
 @click.pass_context
 def cmd(
     ctx,
@@ -287,6 +367,9 @@ def cmd(
     debug: bool,
     skip_deps: bool,
     strict_deps: bool,
+    skip_storage_check: bool,
+    strict_storage_check: bool,
+    kubeconfig: str | None,
 ) -> None:
     """config.yaml/toml 또는 sources.yaml/toml 파일을 JSON 스키마 및 데이터 모델로 검증합니다.
 
@@ -303,11 +386,20 @@ def cmd(
         # Strict dependency validation (fail on missing deps)
         sbkube validate --strict-deps
 
+        # Skip storage (PV/PVC) validation
+        sbkube validate --skip-storage-check
+
+        # Strict storage validation (fail on missing PVs)
+        sbkube validate --strict-storage-check
+
         # Explicit file path (backward compatible)
         sbkube validate /path/to/config.yaml
 
         # Custom config file name
         sbkube validate --app-dir redis --config-file custom.yaml
+
+        # With custom kubeconfig
+        sbkube validate --kubeconfig ~/.kube/production-config
 
     """
     ctx.ensure_object(dict)
@@ -318,6 +410,12 @@ def cmd(
     # Validate conflicting options
     if skip_deps and strict_deps:
         logger.error("--skip-deps와 --strict-deps는 함께 사용할 수 없습니다")
+        raise click.Abort
+
+    if skip_storage_check and strict_storage_check:
+        logger.error(
+            "--skip-storage-check와 --strict-storage-check는 함께 사용할 수 없습니다"
+        )
         raise click.Abort
 
     # Resolve base directory
@@ -335,6 +433,9 @@ def cmd(
             custom_schema_path=custom_schema_path,
             skip_deps=skip_deps,
             strict_deps=strict_deps,
+            skip_storage_check=skip_storage_check,
+            strict_storage_check=strict_storage_check,
+            kubeconfig=kubeconfig,
         )
         validate_cmd.execute()
         return
@@ -385,6 +486,9 @@ def cmd(
                 custom_schema_path=custom_schema_path,
                 skip_deps=skip_deps,
                 strict_deps=strict_deps,
+                skip_storage_check=skip_storage_check,
+                strict_storage_check=strict_storage_check,
+                kubeconfig=kubeconfig,
             )
             validate_cmd.execute()
             console.print(

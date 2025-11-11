@@ -57,7 +57,66 @@ After (v0.8.0):
 
 ### ✨ New Features
 
-_(No other unreleased features)_
+**PV/PVC Validation for Manual Provisioning** (v0.8.0)
+
+- ✅ **NEW**: `sbkube validate` now checks PV requirements for apps using `kubernetes.io/no-provisioner` StorageClass
+- ✅ **NEW**: Automatic detection of missing PVs before deployment
+- ✅ **NEW**: `--skip-storage-check` option to bypass PV validation
+- ✅ **NEW**: `--strict-storage-check` option to fail on missing PVs (default: warning only)
+- ✅ **NEW**: Comprehensive storage management documentation and examples
+
+**Problem Solved**:
+```bash
+# Before v0.8.0: PVC stays Pending, hard to diagnose
+$ sbkube apply
+# ... deployment succeeds but PVC stuck in Pending
+$ kubectl get pvc
+NAME              STATUS    VOLUME   CAPACITY
+postgresql-data   Pending            # ❌ No guidance on why
+
+# After v0.8.0: Early validation catches missing PVs
+$ sbkube validate
+❌ 스토리지 검증 실패:
+  ✗ postgresql: postgresql-hostpath (8Gi)
+
+💡 PV 생성 방법:
+  1. 수동 생성: kubectl apply -f pv.yaml
+  2. Dynamic Provisioner 설치: local-path-provisioner
+  3. 검증 건너뛰기: sbkube validate --skip-storage-check
+```
+
+**Features**:
+- **Validation**: Detects apps requiring manual PVs by checking for `kubernetes.io/no-provisioner` StorageClass
+- **Cluster Check**: Queries cluster for available PVs matching requirements (StorageClass, size, status)
+- **Flexible Patterns**: Supports common Helm chart patterns (persistence, primary.persistence)
+- **Size Comparison**: Intelligent size matching (Gi, G, Mi, M units)
+- **Graceful Degradation**: Skips validation if cluster unavailable (with warning)
+
+**New CLI Options**:
+```bash
+# Skip storage validation
+sbkube validate --skip-storage-check
+
+# Strict mode (fail on missing PVs)
+sbkube validate --strict-storage-check
+
+# Custom kubeconfig
+sbkube validate --kubeconfig ~/.kube/dev-cluster
+```
+
+**Files Added**:
+- [sbkube/validators/storage_validators.py](sbkube/validators/storage_validators.py) - PV validation logic
+- [tests/unit/validators/test_storage_validators.py](tests/unit/validators/test_storage_validators.py) - Comprehensive tests
+- [docs/05-best-practices/storage-management.md](docs/05-best-practices/storage-management.md) - Storage management guide
+- [docs/07-troubleshooting/storage-issues.md](docs/07-troubleshooting/storage-issues.md) - Troubleshooting guide
+- [examples/storage-management/manual-pv-hostpath/](examples/storage-management/manual-pv-hostpath/) - Working example
+
+**Files Modified**:
+- [sbkube/commands/validate.py](sbkube/commands/validate.py) - Integrated storage validation
+
+**See Also**:
+- [docs/05-best-practices/storage-management.md](docs/05-best-practices/storage-management.md) - Best practices
+- [docs/07-troubleshooting/storage-issues.md](docs/07-troubleshooting/storage-issues.md) - Common issues
 
 ______________________________________________________________________
 

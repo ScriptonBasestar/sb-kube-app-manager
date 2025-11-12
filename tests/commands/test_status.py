@@ -148,4 +148,3 @@ class TestStatusOptionCombinations:
 @pytest.mark.integration
 class TestStatusIntegration:
     """Integration tests for status command."""
-

@@ -168,7 +168,9 @@ class ValidateCommand:
             logger.warning("배포가 실패할 수 있습니다. PV를 먼저 생성하세요")
             return False
 
-        logger.warning("스토리지 검증 실패 (논-블로킹) - 배포 시 PVC가 Pending될 수 있음")
+        logger.warning(
+            "스토리지 검증 실패 (논-블로킹) - 배포 시 PVC가 Pending될 수 있음"
+        )
         return False
 
     def execute(self) -> None:
@@ -269,7 +271,9 @@ class ValidateCommand:
             # Validate storage (PV/PVC requirements)
             storage_valid = self.validate_storage(config)
             if not storage_valid:
-                logger.warning("스토리지 검증 실패 (논-블로킹) - PVC가 Pending될 수 있음")
+                logger.warning(
+                    "스토리지 검증 실패 (논-블로킹) - PVC가 Pending될 수 있음"
+                )
         elif file_type == "sources":
             try:
                 logger.info("Pydantic 모델 검증 중 (SourceScheme)...")

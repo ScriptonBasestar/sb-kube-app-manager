@@ -1,8 +1,6 @@
 # Storage Management Best Practices
 
-> **Version**: v0.8.0
-> **Last Updated**: 2025-01-11
-> **Audience**: DevOps Engineers, Cluster Administrators
+> **Version**: v0.8.0 **Last Updated**: 2025-01-11 **Audience**: DevOps Engineers, Cluster Administrators
 
 ## TL;DR
 
@@ -10,18 +8,18 @@
 - **Solution**: Use `sbkube validate` to check PV requirements before deployment
 - **Best Practice**: Use dynamic provisioners (local-path, NFS) for production
 
----
+______________________________________________________________________
 
 ## 📋 Table of Contents
 
 1. [Understanding StorageClass Types](#understanding-storageclass-types)
-2. [PV Validation Workflow](#pv-validation-workflow)
-3. [Manual PV Creation](#manual-pv-creation)
-4. [Dynamic Provisioners (Recommended)](#dynamic-provisioners-recommended)
-5. [Common Patterns](#common-patterns)
-6. [Troubleshooting](#troubleshooting)
+1. [PV Validation Workflow](#pv-validation-workflow)
+1. [Manual PV Creation](#manual-pv-creation)
+1. [Dynamic Provisioners (Recommended)](#dynamic-provisioners-recommended)
+1. [Common Patterns](#common-patterns)
+1. [Troubleshooting](#troubleshooting)
 
----
+______________________________________________________________________
 
 ## Understanding StorageClass Types
 
@@ -30,12 +28,14 @@
 Kubernetes automatically creates PVs when PVCs are created.
 
 **Examples**:
+
 - `rancher.io/local-path` (Rancher Local Path Provisioner)
 - `nfs-client` (NFS Subdir External Provisioner)
 - `kubernetes.io/aws-ebs` (AWS EBS)
 - `kubernetes.io/gce-pd` (Google Persistent Disk)
 
 **Benefits**:
+
 - ✅ Fully automatic - no manual PV creation
 - ✅ Production-ready
 - ✅ Supports dynamic resizing
@@ -45,20 +45,23 @@ Kubernetes automatically creates PVs when PVCs are created.
 Requires manual PV creation before deploying apps.
 
 **Examples**:
+
 - `kubernetes.io/no-provisioner` with hostPath
 - `kubernetes.io/no-provisioner` with local volumes
 
 **Use Cases**:
+
 - Development/testing environments
 - Single-node clusters (k3s, minikube)
 - Specific hardware requirements (SSD, NVMe)
 
 **Challenges**:
+
 - ❌ Manual PV creation required
 - ❌ PVC stays Pending without PV
 - ❌ No automatic cleanup
 
----
+______________________________________________________________________
 
 ## PV Validation Workflow
 
@@ -91,7 +94,7 @@ See [Manual PV Creation](#manual-pv-creation) section.
 sbkube apply
 ```
 
----
+______________________________________________________________________
 
 ## Manual PV Creation
 
@@ -191,7 +194,7 @@ spec:
 EOF
 ```
 
----
+______________________________________________________________________
 
 ## Dynamic Provisioners (Recommended)
 
@@ -255,7 +258,7 @@ apps:
         size: 8Gi
 ```
 
----
+______________________________________________________________________
 
 ## Common Patterns
 
@@ -332,7 +335,7 @@ sbkube validate
 sbkube apply
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -419,19 +422,19 @@ spec:
             - correct-node-name  # ✅ Specify correct node
 ```
 
----
+______________________________________________________________________
 
 ## Best Practices Summary
 
 1. **Production**: Always use dynamic provisioners
-2. **Development**: Manual PVs acceptable, but document clearly
-3. **Validation**: Run `sbkube validate` before every deployment
-4. **Node Affinity**: Always specify for hostPath PVs
-5. **Reclaim Policy**: Use `Retain` for manual PVs (avoid data loss)
-6. **Size Planning**: PV size must be ≥ PVC size
-7. **Access Modes**: Match PV and PVC access modes
+1. **Development**: Manual PVs acceptable, but document clearly
+1. **Validation**: Run `sbkube validate` before every deployment
+1. **Node Affinity**: Always specify for hostPath PVs
+1. **Reclaim Policy**: Use `Retain` for manual PVs (avoid data loss)
+1. **Size Planning**: PV size must be ≥ PVC size
+1. **Access Modes**: Match PV and PVC access modes
 
----
+______________________________________________________________________
 
 ## Related Documentation
 
@@ -439,7 +442,7 @@ spec:
 - [Examples: Storage Management](../../examples/storage-management/)
 - [Config Schema: Persistence](../03-configuration/config-schema.md)
 
----
+______________________________________________________________________
 
 ## Change History
 

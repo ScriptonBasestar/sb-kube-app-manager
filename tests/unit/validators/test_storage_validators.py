@@ -3,10 +3,10 @@
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from sbkube.models.config_model import HelmApp, SBKubeConfig
-from sbkube.validators.storage_validators import StorageValidator, StorageValidatorLegacy
+from sbkube.validators.storage_validators import (
+    StorageValidatorLegacy,
+)
 
 
 class TestStorageValidator:

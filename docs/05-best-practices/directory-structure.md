@@ -888,11 +888,13 @@ ______________________________________________________________________
 ### 변경 내용: 이중 중첩 제거
 
 **v0.7.0 이하** (이중 중첩):
+
 ```
 .sbkube/charts/redis/redis/  ← redis가 두 번 (혼란스러움)
 ```
 
 **v0.7.1+** (단일 레벨):
+
 ```
 .sbkube/charts/redis/  ← 간결하고 명확
 ```
@@ -900,6 +902,7 @@ ______________________________________________________________________
 ### 구현 방법
 
 **이전 코드** (v0.7.0):
+
 ```python
 # sbkube/commands/prepare.py
 dest_dir = charts_dir / chart_name  # .sbkube/charts/redis
@@ -909,6 +912,7 @@ cmd = ["helm", "pull", f"{repo_name}/{chart_name}",
 ```
 
 **개선된 코드** (v0.7.1):
+
 ```python
 # sbkube/commands/prepare.py
 dest_dir = charts_dir  # .sbkube/charts
@@ -930,9 +934,7 @@ helm pull bitnami/redis --untar --untardir /path/to/target
 
 ### 이점
 
-✅ **구조 단순화**: 불필요한 중첩 제거
-✅ **사용자 편의성**: 직관적인 경로
-✅ **코드 간결화**: 경로 계산 단순화
+✅ **구조 단순화**: 불필요한 중첩 제거 ✅ **사용자 편의성**: 직관적인 경로 ✅ **코드 간결화**: 경로 계산 단순화
 
 ### 마이그레이션
 
@@ -1062,6 +1064,7 @@ ______________________________________________________________________
 #### 변경 사항
 
 **이전 구조 (v0.7.x)**:
+
 ```
 .sbkube/charts/
 ├── redis/           # ❌ repo 정보 없음, 버전 정보 없음
@@ -1070,6 +1073,7 @@ ______________________________________________________________________
 ```
 
 **새 구조 (v0.8.0+)**:
+
 ```
 .sbkube/charts/
 ├── bitnami/
@@ -1124,6 +1128,7 @@ ls -R .sbkube/charts/
 #### 왜 변경되었나요?
 
 **문제 1: 다른 repo, 같은 chart 이름 충돌**
+
 ```yaml
 # 이전에는 불가능했던 시나리오
 apps:
@@ -1137,6 +1142,7 @@ apps:
 ```
 
 **문제 2: 같은 chart, 다른 버전 충돌**
+
 ```yaml
 # 이전에는 불가능했던 시나리오
 apps:
@@ -1152,17 +1158,20 @@ apps:
 #### 기술적 세부사항
 
 **변경된 파일**:
+
 - `sbkube/models/config_model.py`: `HelmApp.get_chart_path()` 추가
 - `sbkube/commands/prepare.py`: 새 경로 구조로 저장
 - `sbkube/commands/build.py`: 새 경로에서 읽기 + legacy 감지
 
 **테스트**:
+
 - `tests/unit/test_chart_path_v080.py`: 충돌 방지 시나리오 테스트
 - 모든 테스트 통과 확인 완료
 
 **롤백 방법** (필요 시):
 
 v0.7.x로 롤백이 필요한 경우:
+
 ```bash
 # SBKube v0.7.x로 다운그레이드
 uv add sbkube==0.7.2

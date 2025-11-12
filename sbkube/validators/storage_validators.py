@@ -5,7 +5,6 @@ PV/PVC 요구사항 검증 및 클러스터 스토리지 상태 확인을 담당
 
 import json
 import subprocess
-from pathlib import Path
 from typing import Any
 
 from sbkube.models.config_model import HelmApp, SBKubeConfig
@@ -98,18 +97,19 @@ class StorageValidator(ValidationCheck):
                 level=DiagnosticLevel.SUCCESS,
                 severity=ValidationSeverity.INFO,
                 message=f"모든 필요한 PV가 존재합니다 ({len(existing)}개)",
-                details="\n".join([
-                    f"  ✓ {pv['app']}: {pv['storage_class']} ({pv['size']})"
-                    for pv in existing
-                ]),
+                details="\n".join(
+                    [
+                        f"  ✓ {pv['app']}: {pv['storage_class']} ({pv['size']})"
+                        for pv in existing
+                    ]
+                ),
                 risk_level="low",
             )
 
         # PV 누락 발견
-        missing_details = "\n".join([
-            f"  ✗ {pv['app']}: {pv['storage_class']} ({pv['size']})"
-            for pv in missing
-        ])
+        missing_details = "\n".join(
+            [f"  ✗ {pv['app']}: {pv['storage_class']} ({pv['size']})" for pv in missing]
+        )
 
         recommendation = (
             "다음 방법 중 하나를 선택하세요:\n"
@@ -119,7 +119,7 @@ class StorageValidator(ValidationCheck):
             "     - NFS Provisioner: https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner\n"
             "  3. 검증 건너뛰기: sbkube validate --skip-storage-check\n"
             "\n"
-            f"📚 자세한 내용: docs/05-best-practices/storage-management.md"
+            "📚 자세한 내용: docs/05-best-practices/storage-management.md"
         )
 
         return self.create_validation_result(
@@ -245,9 +245,7 @@ class StorageValidator(ValidationCheck):
             logger.debug(f"PV 조회 오류: {e}")
             return None
 
-    def _pv_exists(
-        self, required: dict[str, Any], cluster_pvs: list[dict]
-    ) -> bool:
+    def _pv_exists(self, required: dict[str, Any], cluster_pvs: list[dict]) -> bool:
         """필요한 PV가 클러스터에 존재하는지 확인.
 
         Args:
@@ -278,9 +276,7 @@ class StorageValidator(ValidationCheck):
 
         return False
 
-    def _size_sufficient(
-        self, pv_size: str | None, required_size: str
-    ) -> bool:
+    def _size_sufficient(self, pv_size: str | None, required_size: str) -> bool:
         """PV 크기가 요구사항을 만족하는지 확인.
 
         Args:

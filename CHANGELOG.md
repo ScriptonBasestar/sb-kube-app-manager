@@ -12,12 +12,15 @@ ______________________________________________________________________
 
 **New Chart Path Structure to Prevent Collisions** (v0.8.0)
 
-- ⚠️ **BREAKING**: Chart path structure changed from `.sbkube/charts/{chart-name}/` to `.sbkube/charts/{repo}/{chart-name}-{version}/`
-- ✅ **FIXED**: Charts from different repos with same name no longer collide (e.g., `bitnami/redis` vs `my-company/redis`)
+- ⚠️ **BREAKING**: Chart path structure changed from `.sbkube/charts/{chart-name}/` to
+  `.sbkube/charts/{repo}/{chart-name}-{version}/`
+- ✅ **FIXED**: Charts from different repos with same name no longer collide (e.g., `bitnami/redis` vs
+  `my-company/redis`)
 - ✅ **FIXED**: Same chart with different versions can now coexist (e.g., `redis:18.0.0` and `redis:19.0.0`)
 - ✅ **NEW**: Automatic legacy path detection with migration guide
 
 **Migration Required**:
+
 ```bash
 # Remove old charts and re-download
 rm -rf .sbkube/charts
@@ -25,6 +28,7 @@ sbkube prepare --force
 ```
 
 **New Path Examples**:
+
 ```
 Before (v0.7.x):
 .sbkube/charts/redis/           # ❌ Collision risk
@@ -38,6 +42,7 @@ After (v0.8.0):
 ```
 
 **What Changed**:
+
 - `HelmApp.get_chart_path()`: New method to generate versioned paths
 - `HelmApp.get_version_or_default()`: Returns version or "latest"
 - `prepare_helm_app()`: Saves charts to `{repo}/{chart-name}-{version}/`
@@ -46,13 +51,16 @@ After (v0.8.0):
 - Legacy path detection: Automatic warning for v0.7.x charts
 
 **Files Modified**:
-- [sbkube/models/config_model.py](sbkube/models/config_model.py:746-784) - Added `get_chart_path()`, `get_version_or_default()`
+
+- [sbkube/models/config_model.py](sbkube/models/config_model.py:746-784) - Added `get_chart_path()`,
+  `get_version_or_default()`
 - [sbkube/commands/prepare.py](sbkube/commands/prepare.py:110-192) - New path structure for OCI charts
 - [sbkube/commands/prepare.py](sbkube/commands/prepare.py:302-384) - New path structure for Helm charts
 - [sbkube/commands/build.py](sbkube/commands/build.py:50-98) - Legacy path detection
 - [tests/unit/test_chart_path_v080.py](tests/unit/test_chart_path_v080.py) - Comprehensive collision prevention tests
 
 **See Also**:
+
 - [docs/05-best-practices/directory-structure.md](docs/05-best-practices/directory-structure.md) - Migration guide
 
 ### ✨ New Features
@@ -66,6 +74,7 @@ After (v0.8.0):
 - ✅ **NEW**: Comprehensive storage management documentation and examples
 
 **Problem Solved**:
+
 ```bash
 # Before v0.8.0: PVC stays Pending, hard to diagnose
 $ sbkube apply
@@ -86,6 +95,7 @@ $ sbkube validate
 ```
 
 **Features**:
+
 - **Validation**: Detects apps requiring manual PVs by checking for `kubernetes.io/no-provisioner` StorageClass
 - **Cluster Check**: Queries cluster for available PVs matching requirements (StorageClass, size, status)
 - **Flexible Patterns**: Supports common Helm chart patterns (persistence, primary.persistence)
@@ -93,6 +103,7 @@ $ sbkube validate
 - **Graceful Degradation**: Skips validation if cluster unavailable (with warning)
 
 **New CLI Options**:
+
 ```bash
 # Skip storage validation
 sbkube validate --skip-storage-check
@@ -105,16 +116,21 @@ sbkube validate --kubeconfig ~/.kube/dev-cluster
 ```
 
 **Files Added**:
+
 - [sbkube/validators/storage_validators.py](sbkube/validators/storage_validators.py) - PV validation logic
-- [tests/unit/validators/test_storage_validators.py](tests/unit/validators/test_storage_validators.py) - Comprehensive tests
-- [docs/05-best-practices/storage-management.md](docs/05-best-practices/storage-management.md) - Storage management guide
+- [tests/unit/validators/test_storage_validators.py](tests/unit/validators/test_storage_validators.py) - Comprehensive
+  tests
+- [docs/05-best-practices/storage-management.md](docs/05-best-practices/storage-management.md) - Storage management
+  guide
 - [docs/07-troubleshooting/storage-issues.md](docs/07-troubleshooting/storage-issues.md) - Troubleshooting guide
 - [examples/storage-management/manual-pv-hostpath/](examples/storage-management/manual-pv-hostpath/) - Working example
 
 **Files Modified**:
+
 - [sbkube/commands/validate.py](sbkube/commands/validate.py) - Integrated storage validation
 
 **See Also**:
+
 - [docs/05-best-practices/storage-management.md](docs/05-best-practices/storage-management.md) - Best practices
 - [docs/07-troubleshooting/storage-issues.md](docs/07-troubleshooting/storage-issues.md) - Common issues
 
@@ -133,6 +149,7 @@ ______________________________________________________________________
 - ✅ **NEW**: Fallback to base_dir if sources.yaml not found (backward compatibility)
 
 **Problem Fixed**:
+
 ```bash
 # Before: Commands looked in different locations
 prepare: ph2_data/.sbkube/charts/memcached  ✅ (sources.yaml location)
@@ -145,17 +162,20 @@ deploy:  ph2_data/.sbkube/charts/memcached  ✅
 ```
 
 **Technical Details**:
+
 - Added `--source` option to build.py, deploy.py, template.py (default: "sources.yaml")
 - Implemented sources.yaml discovery logic matching prepare.py behavior
 - All commands now resolve `.sbkube` location based on sources.yaml parent directory
 - Supports multi-environment setups with sources.yaml in subdirectories
 
 **Files Modified**:
+
 - [sbkube/commands/build.py](sbkube/commands/build.py) - Added sources.yaml discovery
 - [sbkube/commands/deploy.py](sbkube/commands/deploy.py) - Added sources.yaml discovery
 - [sbkube/commands/template.py](sbkube/commands/template.py) - Added sources.yaml discovery
 
 **Testing**:
+
 ```bash
 cd /project_root
 sbkube apply --app-dir ph2_data/app_100_data_memory
@@ -240,7 +260,8 @@ sbkube prepare
 
 - Changed `helm pull --untardir` target from `charts_dir / chart_name` to `charts_dir`
 - Helm automatically creates `{chart_name}/` subdirectory, resulting in single-level structure
-- Updated [sbkube/commands/prepare.py](sbkube/commands/prepare.py), [build.py](sbkube/commands/build.py), [template.py](sbkube/commands/template.py), [deploy.py](sbkube/commands/deploy.py)
+- Updated [sbkube/commands/prepare.py](sbkube/commands/prepare.py), [build.py](sbkube/commands/build.py),
+  [template.py](sbkube/commands/template.py), [deploy.py](sbkube/commands/deploy.py)
 
 **See:** [directory-structure.md](docs/05-best-practices/directory-structure.md) - Technical background section
 

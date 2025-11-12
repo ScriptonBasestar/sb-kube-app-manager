@@ -3,8 +3,10 @@
 Tests for new repo/chart-version path structure to prevent chart name collisions.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from sbkube.models.config_model import HelmApp
 from sbkube.utils.output_manager import OutputManager
 

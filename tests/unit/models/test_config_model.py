@@ -142,7 +142,9 @@ class TestHelmApp:
     def test_helm_app_oci_protocol_validation(self) -> None:
         """Test that OCI protocol in chart field raises validation error."""
         with pytest.raises(ConfigValidationError) as exc_info:
-            HelmApp(type="helm", chart="oci://registry-1.docker.io/bitnamicharts/supabase")
+            HelmApp(
+                type="helm", chart="oci://registry-1.docker.io/bitnamicharts/supabase"
+            )
         error_message = str(exc_info.value)
         assert "Direct OCI protocol in 'chart' field is not supported" in error_message
         assert "sources.yaml" in error_message

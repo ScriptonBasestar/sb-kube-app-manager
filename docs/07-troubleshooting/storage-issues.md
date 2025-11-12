@@ -1,17 +1,17 @@
 # Troubleshooting: Storage Issues
 
-> **Version**: v0.8.0
-> **Last Updated**: 2025-01-11
+> **Version**: v0.8.0 **Last Updated**: 2025-01-11
 
 ## TL;DR
 
 Common storage issues and their solutions:
+
 - **PVC Pending**: No matching PV or provisioner → Create PV or install provisioner
 - **Validation Fails**: Missing PV detected → Create PV before deployment
 - **Wrong Node**: Pod can't mount → Add node affinity to PV
 - **Size Mismatch**: PV too small → Recreate PV with larger size
 
----
+______________________________________________________________________
 
 ## Issue 1: PVC Stuck in Pending State
 
@@ -52,6 +52,7 @@ volumeBindingMode: WaitForFirstConsumer
 ```
 
 **Cause 2**: PV exists but doesn't match PVC requirements
+
 - Different StorageClass
 - Insufficient capacity
 - Incompatible access modes
@@ -183,7 +184,7 @@ sbkube validate --skip-storage-check
 sbkube apply
 ```
 
----
+______________________________________________________________________
 
 ## Issue 2: SBKube Validation Fails with Missing PV
 
@@ -233,7 +234,7 @@ See [Solution B in Issue 1](#solution-b-install-dynamic-provisioner-recommended)
 sbkube validate --strict-storage-check
 ```
 
----
+______________________________________________________________________
 
 ## Issue 3: PV Exists but Pod Still Pending
 
@@ -342,7 +343,7 @@ kubectl get pod postgresql-0 -o jsonpath='{.spec.nodeName}'
 # If different nodes and PV uses hostPath, add correct node affinity
 ```
 
----
+______________________________________________________________________
 
 ## Issue 4: Data Loss After PV Deletion
 
@@ -382,7 +383,7 @@ reclaimPolicy: Retain  # ✅ Keep data after PVC deletion
 volumeBindingMode: WaitForFirstConsumer
 ```
 
----
+______________________________________________________________________
 
 ## Issue 5: Multiple PVCs, Some Pending
 
@@ -445,46 +446,52 @@ spec:
 EOF
 ```
 
----
+______________________________________________________________________
 
 ## Quick Diagnosis Checklist
 
 When facing storage issues, check in this order:
 
 1. **PVC Status**:
+
    ```bash
    kubectl get pvc
    kubectl describe pvc <pvc-name>
    ```
 
-2. **PV Availability**:
+1. **PV Availability**:
+
    ```bash
    kubectl get pv
    ```
 
-3. **StorageClass**:
+1. **StorageClass**:
+
    ```bash
    kubectl get storageclass
    kubectl get storageclass <class-name> -o yaml
    ```
 
-4. **Validation**:
+1. **Validation**:
+
    ```bash
    sbkube validate
    ```
 
-5. **Pod Events**:
+1. **Pod Events**:
+
    ```bash
    kubectl describe pod <pod-name>
    ```
 
-6. **Node Affinity** (hostPath only):
+1. **Node Affinity** (hostPath only):
+
    ```bash
    kubectl get pv <pv-name> -o yaml | grep -A10 nodeAffinity
    kubectl get pod <pod-name> -o jsonpath='{.spec.nodeName}'
    ```
 
----
+______________________________________________________________________
 
 ## Related Documentation
 
@@ -492,7 +499,7 @@ When facing storage issues, check in this order:
 - [Examples: Storage Management](../../examples/storage-management/)
 - [Config Schema: Persistence](../03-configuration/config-schema.md)
 
----
+______________________________________________________________________
 
 ## Change History
 

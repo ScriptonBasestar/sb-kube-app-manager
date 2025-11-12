@@ -175,7 +175,9 @@ def deploy_helm_app(
                 output.print_warning(
                     "This chart was downloaded with an older version of SBKube"
                 )
-                console.print("[yellow]💡 Migration required (v0.8.0 path structure):[/yellow]")
+                console.print(
+                    "[yellow]💡 Migration required (v0.8.0 path structure):[/yellow]"
+                )
                 console.print(f"   1. Remove old charts: rm -rf {charts_dir}")
                 console.print("   2. Re-download charts: sbkube prepare --force")
                 console.print(

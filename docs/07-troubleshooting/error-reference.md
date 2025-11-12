@@ -130,7 +130,8 @@ SBKube requires OCI registries to be defined in sources.yaml:
         chart: myregistry/chartname
 ```
 
-**Cause:** You used `chart: oci://...` directly in config.yaml, which is not supported. SBKube requires a two-step configuration for OCI registries.
+**Cause:** You used `chart: oci://...` directly in config.yaml, which is not supported. SBKube requires a two-step
+configuration for OCI registries.
 
 **Why This Design?**
 

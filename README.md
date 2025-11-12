@@ -84,6 +84,7 @@ sbkube apply --app-dir . --namespace production
 ```
 
 **Migration Required**:
+
 ```bash
 rm -rf .sbkube/charts && sbkube prepare --force
 ```
@@ -107,11 +108,13 @@ sbkube validate
 ```
 
 **New Commands**:
+
 - `sbkube validate` - Now includes storage validation
 - `sbkube validate --skip-storage-check` - Skip storage validation
 - `sbkube validate --strict-storage-check` - Fail on missing PVs
 
 **See**:
+
 - [Storage Management Guide](docs/05-best-practices/storage-management.md)
 - [Storage Troubleshooting](docs/07-troubleshooting/storage-issues.md)
 - [Example: Manual PV](examples/storage-management/manual-pv-hostpath/)

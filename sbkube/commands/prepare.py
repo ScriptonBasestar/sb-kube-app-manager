@@ -140,7 +140,9 @@ def prepare_oci_chart(
 
         # Helm pull with temporary extraction, then move to versioned directory
         # Use UUID suffix to prevent concurrent execution conflicts
-        temp_extract_dir = chart_dir.parent / f"_temp_{chart_name}_{uuid.uuid4().hex[:8]}"
+        temp_extract_dir = (
+            chart_dir.parent / f"_temp_{chart_name}_{uuid.uuid4().hex[:8]}"
+        )
         cmd = [
             "helm",
             "pull",
@@ -355,7 +357,9 @@ def prepare_helm_app(
 
         # Helm pull with temporary extraction, then move to versioned directory
         # Use UUID suffix to prevent concurrent execution conflicts
-        temp_extract_dir = chart_dir.parent / f"_temp_{chart_name}_{uuid.uuid4().hex[:8]}"
+        temp_extract_dir = (
+            chart_dir.parent / f"_temp_{chart_name}_{uuid.uuid4().hex[:8]}"
+        )
         cmd = [
             "helm",
             "pull",

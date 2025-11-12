@@ -30,6 +30,7 @@ class StorageValidator(ValidationCheck):
 
         Args:
             kubeconfig: kubeconfig 파일 경로 (None이면 기본값 사용)
+
         """
         super().__init__(
             name="storage_validation",
@@ -46,6 +47,7 @@ class StorageValidator(ValidationCheck):
 
         Returns:
             검증 결과
+
         """
         if not context.config:
             return self.create_validation_result(
@@ -140,6 +142,7 @@ class StorageValidator(ValidationCheck):
 
         Returns:
             필요한 PV 정보 리스트
+
         """
         required = []
 
@@ -167,6 +170,7 @@ class StorageValidator(ValidationCheck):
 
         Returns:
             PV 정보 (항상 None, v0.8.0 limitation)
+
         """
         # v0.8.0: Cannot detect PV requirements from HelmApp
         # because values is list[str] (file paths), not dict
@@ -181,6 +185,7 @@ class StorageValidator(ValidationCheck):
 
         Returns:
             no-provisioner 여부
+
         """
         try:
             cmd = ["kubectl", "get", "storageclass", storage_class, "-o", "json"]
@@ -216,6 +221,7 @@ class StorageValidator(ValidationCheck):
 
         Returns:
             PV 리스트 (조회 실패 시 None)
+
         """
         try:
             cmd = ["kubectl", "get", "pv", "-o", "json"]
@@ -254,6 +260,7 @@ class StorageValidator(ValidationCheck):
 
         Returns:
             존재 여부
+
         """
         storage_class = required.get("storage_class")
         required_size = required.get("size")
@@ -285,6 +292,7 @@ class StorageValidator(ValidationCheck):
 
         Returns:
             충분 여부
+
         """
         if not pv_size:
             return False
@@ -319,6 +327,7 @@ class StorageValidator(ValidationCheck):
 
         Raises:
             ValueError: 파싱 실패
+
         """
         size = size.strip()
 
@@ -341,6 +350,7 @@ class StorageValidator(ValidationCheck):
 
         Returns:
             바이트 크기
+
         """
         multipliers = {
             "Ti": 1024**4,
@@ -369,6 +379,7 @@ class StorageValidatorLegacy:
 
         Args:
             kubeconfig: kubeconfig 파일 경로
+
         """
         self.kubeconfig = kubeconfig
         self._validator = StorageValidator(kubeconfig=kubeconfig)
@@ -385,6 +396,7 @@ class StorageValidatorLegacy:
                 "missing": [{"app": str, "storage_class": str, "size": str}],
                 "existing": [{"app": str, "storage_class": str, "size": str}],
             }
+
         """
         required_pvs = self._validator._extract_required_pvs(config)
 

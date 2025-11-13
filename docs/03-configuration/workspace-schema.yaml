@@ -1,46 +1,16 @@
-# workspace.yaml Schema Draft
-# Version: 1.0
-# Purpose: Multi-phase deployment orchestration for SBKube
-# Status: Design Review - 2025-01-13
-
-# ==============================================================================
-# DESIGN DECISIONS (Based on workspace-feature-plan.md review)
-# ==============================================================================
+# workspace.yaml - Multi-phase Deployment Configuration
 #
-# 1. FILE NAMING: workspace.yaml (CONFIRMED)
-#    - Rationale: Consistent with sources.yaml and config.yaml naming pattern
-#    - Alternatives considered: phases.yaml, deployment-plan.yaml
-#    - Decision: workspace.yaml clearly indicates top-level orchestration scope
+# This is an example file showing the complete workspace.yaml schema.
+# Users should create their own workspace.yaml based on this template.
 #
-# 2. PHASE-LEVEL SOURCES REFERENCE: Override Approach (RECOMMENDED)
-#    - Option A (Override): Each phase references external sources.yaml file
-#    - Option B (Inline): Embed sources config directly in workspace.yaml
-#    - Decision: Option A for better separation of concerns and reusability
-#    - Rationale:
-#      * Different phases may target different clusters
-#      * Sources files can be reused across workspaces
-#      * Cleaner separation: workspace (orchestration) vs sources (targeting)
+# Schema Version: 1.0
+# Target SBKube Version: v0.9.0 (implementation pending)
+# Status: DESIGN RESOLVED - Ready for implementation
 #
-# 3. CLUSTER TARGETING: Single-Cluster Sequential (v1.0 FOCUS)
-#    - 90% use case: Sequential deployment to same cluster
-#    - 10% use case: Multi-cluster deployment
-#    - Decision: Design for single-cluster first, enable multi-cluster later
-#    - Rationale:
-#      * Simplicity for majority use case
-#      * Multi-cluster can be added incrementally via sources.yaml overrides
-#
-# 4. REPOSITORY MANAGEMENT: Three-Level Precedence
-#    - Level 1 (Highest): App-level config in config.yaml
-#    - Level 2 (Medium): Phase-level sources.yaml
-#    - Level 3 (Lowest): Workspace-level global
-#    - Decision: App > Phase > Workspace (most specific wins)
-#    - Rationale: Follows SBKube's existing inheritance pattern
-#
-# ==============================================================================
-
-# ==============================================================================
-# SCHEMA STRUCTURE
-# ==============================================================================
+# Documentation:
+# - User Guide: docs/03-configuration/workspace-schema.md
+# - Design Decisions: docs/02-features/future/workspace-design.md
+# - Implementation Plan: docs/02-features/future/workspace-roadmap.md
 
 # Required: Schema version for future compatibility
 version: "1.0"

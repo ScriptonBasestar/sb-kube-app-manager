@@ -1,3 +1,11 @@
+______________________________________________________________________
+
+## type: Design Document
+audience: Developer, Architect
+topics: [workspace, design, architecture, multi-phase, orchestration]
+llm_priority: high
+last_updated: 2025-01-13
+
 # Workspace Feature Design Decisions
 
 **Document Type**: Design Review

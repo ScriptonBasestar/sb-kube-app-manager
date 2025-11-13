@@ -1,3 +1,11 @@
+______________________________________________________________________
+
+## type: Implementation Plan
+audience: Developer
+topics: [workspace, roadmap, implementation, multi-phase]
+llm_priority: medium
+last_updated: 2025-01-13
+
 # Workspace Feature Implementation Plan
 
 **Status**: ✅ DESIGN RESOLVED - 구현 준비 완료
@@ -5,8 +13,10 @@
 **Last Updated**: 2025-01-13
 **Design Review Completed**: 2025-01-13
 
-**설계 결정 문서**: [docs/99-internal/design-decisions/workspace-design-decisions.md](../../docs/99-internal/design-decisions/workspace-design-decisions.md)
-**스키마 초안**: [docs/99-internal/design-decisions/workspace-schema-draft.yaml](../../docs/99-internal/design-decisions/workspace-schema-draft.yaml)
+**관련 문서**:
+- [workspace-design.md](workspace-design.md) - 설계 결정 문서
+- [workspace-schema.md](../../03-configuration/workspace-schema.md) - 스키마 사용자 가이드
+- [workspace-schema.yaml](../../03-configuration/workspace-schema.yaml) - 스키마 예제
 
 ---
 

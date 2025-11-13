@@ -104,8 +104,10 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
 **Use Case**: p1-kube, p2-kube, p3-kube처럼 단계별로 나뉜 프로젝트 구조 지원
 
 **설계 문서**:
-- [workspace-design-decisions.md](../99-internal/design-decisions/workspace-design-decisions.md)
-- [workspace-schema-draft.yaml](../99-internal/design-decisions/workspace-schema-draft.yaml)
+- [workspace-design.md](../02-features/future/workspace-design.md) - Design decisions
+- [workspace-schema.md](../03-configuration/workspace-schema.md) - Schema guide
+- [workspace-schema.yaml](../03-configuration/workspace-schema.yaml) - Example schema
+- [workspace-roadmap.md](../02-features/future/workspace-roadmap.md) - Implementation plan
 
 ### v0.9.x (2025 Q3-Q4)
 

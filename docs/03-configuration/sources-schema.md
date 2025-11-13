@@ -1,3 +1,11 @@
+______________________________________________________________________
+
+## type: API Reference
+audience: End User
+topics: [sources, configuration, cluster, helm, oci, git, kubeconfig]
+llm_priority: high
+last_updated: 2025-01-13
+
 # sources.yaml Schema Guide
 
 > **Complete schema reference for SBKube's cluster configuration file**

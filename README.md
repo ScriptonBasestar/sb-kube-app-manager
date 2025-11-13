@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## type: Project Overview audience: End User, Developer topics: [introduction, features, installation, documentation] llm_priority: high entry_point: true last_updated: 2025-01-06
+## type: Project Overview audience: End User, Developer topics: [introduction, features, installation, documentation] llm_priority: high entry_point: true last_updated: 2025-11-13
 
 # 🧩 SBKube
 
@@ -8,7 +8,7 @@ ______________________________________________________________________
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)](<>)
 [![Repo](https://img.shields.io/badge/GitHub-sb--kube--app--manager-blue?logo=github)](https://github.com/ScriptonBasestar/sb-kube-app-manager)
 [![Version](https://img.shields.io/badge/version-0.8.0-green)](CHANGELOG.md)
-[![Stable](https://img.shields.io/badge/stable-0.7.2-blue)](CHANGELOG.md)
+[![Stable](https://img.shields.io/badge/stable-0.8.0-blue)](CHANGELOG.md)
 
 **SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML
 manifests, and Git repositories into a unified declarative configuration.
@@ -24,19 +24,29 @@ ______________________________________________________________________
 ### Installation
 
 ```bash
+# Using uv (recommended)
+uv add sbkube
+
+# Or using pip
 pip install sbkube
+
+# Verify installation
+sbkube version
+# Expected: 0.8.0
 ```
 
 ### Basic Usage
 
 ```bash
-# Unified workflow (recommended)
+# Unified workflow (recommended - v0.8.0+)
+sbkube validate --app-dir config   # 🆕 Validate config and check PVs
 sbkube apply --app-dir config --namespace production
 
 # Or step-by-step execution
 sbkube prepare --app-dir config    # Download Helm charts and Git repos
 sbkube build --app-dir config      # Build custom images (if needed)
 sbkube template --app-dir config   # Render Kubernetes manifests
+sbkube validate --app-dir config   # 🆕 Validate before deployment (v0.8.0+)
 sbkube deploy --app-dir config --namespace production  # Deploy to cluster
 ```
 

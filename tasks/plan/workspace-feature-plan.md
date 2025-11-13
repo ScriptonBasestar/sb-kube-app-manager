@@ -1,8 +1,12 @@
 # Workspace Feature Implementation Plan
 
-**Status**: On Hold - 설계 재검토 필요
+**Status**: ✅ DESIGN RESOLVED - 구현 준비 완료
 **Created**: 2025-01-08
-**Last Updated**: 2025-01-08
+**Last Updated**: 2025-01-13
+**Design Review Completed**: 2025-01-13
+
+**설계 결정 문서**: [docs/99-internal/design-decisions/workspace-design-decisions.md](../../docs/99-internal/design-decisions/workspace-design-decisions.md)
+**스키마 초안**: [docs/99-internal/design-decisions/workspace-schema-draft.yaml](../../docs/99-internal/design-decisions/workspace-schema-draft.yaml)
 
 ---
 
@@ -42,85 +46,62 @@ Workspace (workspace.yaml)
 
 ---
 
-## 🚨 설계 이슈 (롤백 사유)
+## ✅ 설계 결정 (2025-01-13 해결됨)
 
-### Issue #1: Phase별 Sources 참조
+### Issue #1: Phase별 Sources 참조 ✅ RESOLVED
 
 **문제**:
 - 초기 설계: workspace가 단일 `sources.yaml`만 참조
 - 실제 요구사항: 각 Phase가 독립적인 `sources.yaml` 가질 수 있음
 
+**최종 결정: 옵션 A (Override Approach)** ✅
+
 ```yaml
-# 현재 설계 (불충분)
-workspace.yaml:
-  source: sources.yaml  # 단일 sources만
-
-# 필요한 설계
-workspace.yaml:
-  phases:
-    p1:
-      source: p1-kube/sources.yaml  # Phase별 sources
-    p2:
-      source: p2-kube/sources.yaml
-```
-
-**해결 방안 (검토 필요)**:
-
-**옵션 A: Phase-level Source Override**
-```yaml
-# Workspace-level 기본값 + Phase-level override
-source: sources.yaml  # 기본값 (optional)
-
+# workspace.yaml
 phases:
-  p1:
-    source: p1-kube/sources.yaml  # override
-  p2:
-    # source 생략 → workspace의 sources.yaml 사용
+  p1-infra:
+    source: p1-kube/sources.yaml  # Required: 각 phase는 sources.yaml 참조
+    app_groups: [...]
+  p2-data:
+    source: p2-kube/sources.yaml
+    app_groups: [...]
 ```
 
-**장점**:
-- 단순한 경우와 복잡한 경우 모두 지원
-- 후방 호환성 유지
+**선택 근거**:
+- ✅ 관심사 분리 (Orchestration vs Targeting)
+- ✅ Sources 파일 재사용 가능
+- ✅ 다중 클러스터/단일 클러스터 모두 지원
+- ✅ 기존 SBKube 아키텍처 패턴과 일관성
 
-**단점**:
-- 복잡도 증가
-- 검증 로직 추가 필요
+**우선순위 규칙**:
+1. App-level (config.yaml) - 최우선
+2. Phase-level (sources.yaml)
+3. Workspace-level (global section) - 최하위
 
-**옵션 B: Phase별 Inline Config**
-```yaml
-phases:
-  p1:
-    kubeconfig: ~/.kube/config
-    kubeconfig_context: prod
-    helm_repos: {...}
-```
-
-**장점**:
-- 명시적
-
-**단점**:
-- 설정 중복 가능성
-
-### Issue #2: Cluster Targeting 복잡도
+### Issue #2: Cluster Targeting 복잡도 ✅ RESOLVED
 
 **질문**:
 - 각 Phase가 **다른 클러스터**를 타겟팅할 수 있는가?
 - 대부분의 use case는 **동일 클러스터, 순차 배포**인가?
 
-**일반적 시나리오**:
-1. **동일 클러스터, 순차 배포** (90% 케이스)
-   - Phase 1, 2, 3 모두 같은 prod 클러스터
-   - 순서만 다름 (infra → data → app)
+**최종 결정: v1.0은 단일 클러스터 순차 배포 집중** ✅
 
-2. **다중 클러스터, 순차 배포** (10% 케이스)
-   - Phase 1: dev 클러스터
-   - Phase 2: staging 클러스터
-   - Phase 3: prod 클러스터
+**선택 근거 (80/20 Rule)**:
+- ✅ 90% 사용 사례: 동일 클러스터, 순차 배포 (infra → data → app)
+- ✅ 10% 사용 사례: 다중 클러스터 (향후 v1.1+에서 지원)
+- ✅ 단순성 우선: 대다수를 위한 최적화
+- ✅ 점진적 확장: 다중 클러스터는 breaking change 없이 추가 가능
 
-**설계 결정 필요**:
-- 대다수 케이스를 위한 단순성 vs 소수 케이스를 위한 유연성
+**v1.0 구현**:
+- 같은 클러스터에 순차 배포
+- 각 phase는 다른 namespace 사용 가능
+- Phase 의존성 해결 (Kahn's algorithm)
 
-### Issue #3: Repository 관리
+**v1.1+ 향후 개선**:
+- 다중 클러스터 병렬 배포
+- 클러스터 간 의존성 검증
+
+### Issue #3: Repository 관리 ✅ RESOLVED
 
 **문제**:
 - Phase별로 **다른 Helm/OCI 리포지토리** 필요할 수 있음
@@ -132,10 +113,48 @@ Phase 2 (data): bitnami 리포지토리
 Phase 3 (app): custom OCI registry
 ```
 
-**해결 방안**:
-1. Workspace-level 글로벌 리포지토리 (공통)
-2. Phase-level 리포지토리 추가 (선택적)
-3. App-level 리포지토리 (sources.yaml에서)
+**최종 결정: App > Phase > Workspace 우선순위** ✅
+
+**3단계 우선순위**:
+1. **App-level** (config.yaml) - 최우선
+   ```yaml
+   apps:
+     nginx:
+       chart: custom-repo/nginx  # 명시적 리포지토리 참조
+   ```
+
+2. **Phase-level** (sources.yaml)
+   ```yaml
+   helm_repos:
+     custom-repo:
+       url: https://charts.internal.com
+   ```
+
+3. **Workspace-level** (workspace.yaml global)
+   ```yaml
+   global:
+     helm_repos:
+       bitnami:
+         url: https://charts.bitnami.com/bitnami
+   ```
+
+**선택 근거**:
+- ✅ 가장 구체적인 설정이 우선
+- ✅ 기존 SBKube 상속 패턴과 일관성
+- ✅ Global 기본값 + 명시적 override 지원
+
+### Issue #4: 파일 네이밍 ✅ RESOLVED
+
+**최종 결정: workspace.yaml** ✅
+
+**선택 근거**:
+- ✅ sources.yaml, config.yaml과 일관된 네이밍 패턴
+- ✅ "workspace"가 top-level orchestration 범위를 명확히 표현
+- ✅ 향후 확장성 (workspace-level hooks, validation 등)
+
+**거부된 대안**:
+- ❌ phases.yaml: 너무 좁은 범위 (phase만 함축)
+- ❌ deployment-plan.yaml: 너무 일반적
 
 ---
 

@@ -1,0 +1,289 @@
+# workspace.yaml Schema Draft
+# Version: 1.0
+# Purpose: Multi-phase deployment orchestration for SBKube
+# Status: Design Review - 2025-01-13
+
+# ==============================================================================
+# DESIGN DECISIONS (Based on workspace-feature-plan.md review)
+# ==============================================================================
+#
+# 1. FILE NAMING: workspace.yaml (CONFIRMED)
+#    - Rationale: Consistent with sources.yaml and config.yaml naming pattern
+#    - Alternatives considered: phases.yaml, deployment-plan.yaml
+#    - Decision: workspace.yaml clearly indicates top-level orchestration scope
+#
+# 2. PHASE-LEVEL SOURCES REFERENCE: Override Approach (RECOMMENDED)
+#    - Option A (Override): Each phase references external sources.yaml file
+#    - Option B (Inline): Embed sources config directly in workspace.yaml
+#    - Decision: Option A for better separation of concerns and reusability
+#    - Rationale:
+#      * Different phases may target different clusters
+#      * Sources files can be reused across workspaces
+#      * Cleaner separation: workspace (orchestration) vs sources (targeting)
+#
+# 3. CLUSTER TARGETING: Single-Cluster Sequential (v1.0 FOCUS)
+#    - 90% use case: Sequential deployment to same cluster
+#    - 10% use case: Multi-cluster deployment
+#    - Decision: Design for single-cluster first, enable multi-cluster later
+#    - Rationale:
+#      * Simplicity for majority use case
+#      * Multi-cluster can be added incrementally via sources.yaml overrides
+#
+# 4. REPOSITORY MANAGEMENT: Three-Level Precedence
+#    - Level 1 (Highest): App-level config in config.yaml
+#    - Level 2 (Medium): Phase-level sources.yaml
+#    - Level 3 (Lowest): Workspace-level global
+#    - Decision: App > Phase > Workspace (most specific wins)
+#    - Rationale: Follows SBKube's existing inheritance pattern
+#
+# ==============================================================================
+
+# ==============================================================================
+# SCHEMA STRUCTURE
+# ==============================================================================
+
+# Required: Schema version for future compatibility
+version: "1.0"
+
+# Required: Workspace metadata
+metadata:
+  # Required: Workspace name (alphanumeric + dash/underscore)
+  name: production-deployment
+
+  # Optional: Human-readable description
+  description: "Production infrastructure and application deployment"
+
+  # Optional: Environment label (dev, staging, prod, etc.)
+  environment: prod
+
+  # Optional: Tags for categorization
+  tags:
+    - production
+    - multi-phase
+    - infrastructure
+
+# Optional: Global defaults applied to all phases (unless overridden)
+global:
+  # Optional: Default kubeconfig path for all phases
+  # Each phase can override with its own sources.yaml
+  kubeconfig: ~/.kube/config
+
+  # Optional: Default kubectl context for all phases
+  # Recommended: Set this at phase level for clarity
+  context: production-cluster
+
+  # Optional: Global Helm repository definitions
+  # Precedence: App > Phase > Workspace
+  helm_repos:
+    bitnami:
+      url: https://charts.bitnami.com/bitnami
+    prometheus-community:
+      url: https://prometheus-community.github.io/helm-charts
+
+  # Optional: Global OCI registry credentials
+  # Note: Sensitive data should use environment variables
+  oci_registries:
+    docker-io:
+      url: registry-1.docker.io
+      # Use env vars for credentials: $DOCKER_USERNAME, $DOCKER_PASSWORD
+
+  # Optional: Global Git repository credentials
+  git_credentials:
+    github:
+      # Use SSH keys or personal access tokens via env vars
+      # Example: $GITHUB_TOKEN
+
+  # Optional: Default timeout for all operations (seconds)
+  timeout: 600
+
+  # Optional: Default behavior on failure
+  on_failure: stop  # Options: stop, continue, rollback
+
+# Required: Phase definitions (ordered map - execution order matters)
+phases:
+  # Phase name must be unique within workspace
+  p1-infra:
+    # Required: Phase description
+    description: "Network and storage infrastructure"
+
+    # Required: Reference to sources.yaml for this phase
+    # Path is relative to workspace.yaml location
+    # This sources.yaml defines cluster targeting and repositories for this phase
+    source: p1-kube/sources.yaml
+
+    # Required: List of app groups to deploy in this phase
+    # Must match app group directories in p1-kube/
+    app_groups:
+      - a000_network      # Deploy network first
+      - a001_storage      # Then storage
+
+    # Optional: Phase dependencies (must complete before this phase starts)
+    # Empty for first phase
+    depends_on: []
+
+    # Optional: Phase-specific settings (override global)
+    timeout: 900
+    on_failure: stop
+
+    # Optional: Phase-level environment variables
+    env:
+      INFRA_NAMESPACE: infrastructure
+      STORAGE_CLASS: standard
+
+  p2-data:
+    description: "Database and caching layer"
+    source: p2-kube/sources.yaml
+    app_groups:
+      - a100_postgres     # PostgreSQL cluster
+      - a101_redis        # Redis cache
+
+    # Required: This phase depends on infrastructure
+    depends_on:
+      - p1-infra
+
+    # Optional: Wait for phase dependencies to be fully ready
+    # Not just deployed, but passing readiness checks
+    wait_for_ready: true
+
+    env:
+      DB_NAMESPACE: databases
+      POSTGRES_VERSION: "15"
+
+  p3-app:
+    description: "Application services"
+    source: p3-kube/sources.yaml
+    app_groups:
+      - a200_backend      # Backend services
+      - a201_frontend     # Frontend services
+
+    depends_on:
+      - p2-data           # Must wait for databases
+
+    # Optional: Parallel deployment within phase
+    # Deploy app groups concurrently if no internal dependencies
+    parallel: true
+
+    # Optional: Rollback strategy for this phase
+    rollback:
+      enabled: true
+      auto: false         # Manual rollback approval required
+
+# Optional: Hooks for workspace-level lifecycle events
+hooks:
+  # Before workspace deployment starts
+  pre_workspace:
+    - name: validate-cluster-access
+      type: script
+      script: scripts/validate-cluster.sh
+      on_failure: stop
+
+  # After workspace deployment completes
+  post_workspace:
+    - name: send-notification
+      type: command
+      command: "curl -X POST https://api.slack.com/notify"
+      on_failure: continue
+
+  # Before each phase
+  pre_phase:
+    - name: backup-state
+      type: script
+      script: scripts/backup-phase-state.sh
+
+  # After each phase
+  post_phase:
+    - name: verify-phase
+      type: script
+      script: scripts/verify-phase.sh
+
+# Optional: Validation rules for workspace
+validation:
+  # Validate all sources.yaml files exist
+  check_sources_exist: true
+
+  # Validate all app_group directories exist
+  check_app_groups_exist: true
+
+  # Detect circular dependencies in phases
+  check_circular_deps: true
+
+  # Verify cluster connectivity before deployment
+  check_cluster_access: true
+
+# ==============================================================================
+# EXAMPLE USAGE
+# ==============================================================================
+#
+# Deploy entire workspace:
+#   sbkube workspace deploy -f workspace.yaml
+#
+# Deploy specific phase:
+#   sbkube workspace deploy -f workspace.yaml --phase p2-data
+#
+# Validate workspace:
+#   sbkube workspace validate -f workspace.yaml
+#
+# Show workspace status:
+#   sbkube workspace status -f workspace.yaml
+#
+# Rollback specific phase:
+#   sbkube workspace rollback -f workspace.yaml --phase p3-app
+#
+# ==============================================================================
+
+# ==============================================================================
+# MIGRATION FROM CURRENT SBKUBE WORKFLOW
+# ==============================================================================
+#
+# Current SBKube workflow (single phase):
+#   cd p1-kube/
+#   sbkube apply -c sources.yaml
+#
+# Equivalent workspace workflow:
+#   # Create workspace.yaml with single phase referencing p1-kube/sources.yaml
+#   sbkube workspace deploy -f workspace.yaml --phase p1-infra
+#
+# Benefits of workspace approach:
+#   - Explicit phase ordering
+#   - Dependency management
+#   - Unified status tracking
+#   - Automated sequential execution
+#   - Rollback coordination
+#
+# ==============================================================================
+
+# ==============================================================================
+# BACKWARD COMPATIBILITY NOTES
+# ==============================================================================
+#
+# - Existing SBKube workflows (sbkube apply) remain unchanged
+# - workspace.yaml is OPTIONAL - only for multi-phase deployments
+# - Single-phase projects can continue using sources.yaml + config.yaml
+# - No breaking changes to existing config formats
+#
+# ==============================================================================
+
+# ==============================================================================
+# IMPLEMENTATION PHASES (NOT IN SCOPE FOR THIS REVIEW)
+# ==============================================================================
+#
+# Phase 1: Core Models
+#   - WorkspaceConfig Pydantic model
+#   - PhaseConfig model
+#   - Validation logic
+#
+# Phase 2: CLI Commands
+#   - sbkube workspace deploy
+#   - sbkube workspace validate
+#   - sbkube workspace status
+#
+# Phase 3: Dependency Resolution
+#   - Topological sorting (Kahn's algorithm)
+#   - Circular dependency detection (DFS)
+#
+# Phase 4: State Management
+#   - Workspace-level deployment tracking
+#   - Phase-level status
+#   - Rollback point creation
+#
+# ==============================================================================

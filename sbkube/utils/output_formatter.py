@@ -484,6 +484,293 @@ class OutputFormatter:
         }
         return yaml.dump(result, allow_unicode=True, default_flow_style=False)
 
+    def table(
+        self,
+        data: list[dict[str, Any]],
+        headers: list[str] | None = None,
+        title: str | None = None,
+    ) -> str:
+        """Format table data based on output format.
+
+        Args:
+            data: List of dicts with row data
+            headers: Optional column headers (auto-detect if None)
+            title: Optional table title
+
+        Returns:
+            Formatted table string
+
+        """
+        if not data:
+            return ""
+
+        # Auto-detect headers if not provided
+        if headers is None:
+            headers = list(data[0].keys())
+
+        if self.format == OutputFormat.LLM:
+            return self._table_llm(data, headers, title)
+        if self.format == OutputFormat.JSON:
+            result = {"headers": headers, "rows": data}
+            if title:
+                result["title"] = title
+            return json.dumps(result, indent=2, ensure_ascii=False)
+        if self.format == OutputFormat.YAML and yaml:
+            result = {"headers": headers, "rows": data}
+            if title:
+                result["title"] = title
+            return yaml.dump(result, allow_unicode=True, default_flow_style=False)
+
+        # Human format - return placeholder (use Rich Console directly)
+        return f"Table: {title or 'Data'} ({len(data)} rows)"
+
+    def _table_llm(
+        self, data: list[dict[str, Any]], headers: list[str], title: str | None
+    ) -> str:
+        """LLM-friendly table format (CSV-like with --- separator)."""
+        lines = []
+
+        if title:
+            lines.append(f"# {title}")
+
+        # Headers
+        header_line = "  ".join(str(h).upper() for h in headers)
+        lines.append(header_line)
+        lines.append("---")
+
+        # Rows
+        for row in data:
+            values = [str(row.get(h, "")) for h in headers]
+            row_line = "  ".join(values)
+            lines.append(row_line)
+
+        return "\n".join(lines)
+
+    def tree(
+        self, data: dict[str, Any], root_label: str = "Root", indent: int = 0
+    ) -> str:
+        """Format tree structure based on output format.
+
+        Args:
+            data: Nested dict representing tree structure
+            root_label: Label for root node
+            indent: Initial indentation level
+
+        Returns:
+            Formatted tree string
+
+        """
+        if self.format == OutputFormat.LLM:
+            return self._tree_llm(data, root_label, indent)
+        if self.format == OutputFormat.JSON:
+            return json.dumps(
+                {"root": root_label, "data": data}, indent=2, ensure_ascii=False
+            )
+        if self.format == OutputFormat.YAML and yaml:
+            return yaml.dump(
+                {"root": root_label, "data": data},
+                allow_unicode=True,
+                default_flow_style=False,
+            )
+
+        # Human format
+        return f"Tree: {root_label}"
+
+    def _tree_llm(
+        self, data: dict[str, Any] | list[Any], label: str = "", indent: int = 0
+    ) -> str:
+        """LLM-friendly tree structure (indented list)."""
+        lines = []
+        prefix = "  " * indent
+
+        if isinstance(data, dict):
+            if label:
+                lines.append(f"{prefix}{label}:")
+            for key, value in data.items():
+                if isinstance(value, (dict, list)):
+                    lines.append(self._tree_llm(value, key, indent + 1))
+                else:
+                    lines.append(f"{prefix}  {key}: {value}")
+        elif isinstance(data, list):
+            if label:
+                lines.append(f"{prefix}{label}:")
+            for i, item in enumerate(data):
+                if isinstance(item, (dict, list)):
+                    lines.append(self._tree_llm(item, f"[{i}]", indent + 1))
+                else:
+                    lines.append(f"{prefix}  - {item}")
+        else:
+            lines.append(f"{prefix}{label}: {data}")
+
+        return "\n".join(lines)
+
+    def stream(self, event: dict[str, Any]) -> str:
+        """Format streaming event (JSONL format for LLM/JSON).
+
+        Args:
+            event: Event dict (type, level, message, data, etc.)
+
+        Returns:
+            Formatted event string (JSONL for llm/json, text for human)
+
+        """
+        if self.format in (OutputFormat.LLM, OutputFormat.JSON):
+            # JSONL format: one JSON object per line
+            return json.dumps(event, ensure_ascii=False)
+        if self.format == OutputFormat.YAML and yaml:
+            # YAML document separator
+            return "---\n" + yaml.dump(event, allow_unicode=True)
+
+        # Human format: simple text
+        event_type = event.get("type", "log")
+        level = event.get("level", "info")
+        message = event.get("message", "")
+        return f"[{level.upper()}] {event_type}: {message}"
+
+    def error(
+        self,
+        error_type: str,
+        message: str,
+        code: str | None = None,
+        suggestions: list[str] | None = None,
+        references: list[str] | None = None,
+    ) -> str | dict:
+        """Format error message with structured data.
+
+        Args:
+            error_type: Error type (e.g., "ValidationError", "DeploymentError")
+            message: Error message
+            code: Optional error code (e.g., "CONFIG_001")
+            suggestions: Optional list of suggestions
+            references: Optional list of documentation references
+
+        Returns:
+            Formatted error (str for human/llm, dict for json/yaml)
+
+        """
+        error_data = {
+            "type": error_type,
+            "message": message,
+            "code": code,
+            "suggestions": suggestions or [],
+            "references": references or [],
+        }
+
+        if self.format == OutputFormat.JSON:
+            return {"error": error_data}
+        if self.format == OutputFormat.YAML and yaml:
+            return yaml.dump(
+                {"error": error_data}, allow_unicode=True, default_flow_style=False
+            )
+        if self.format == OutputFormat.LLM:
+            lines = [
+                f"ERROR: {error_type}",
+                f"MESSAGE: {message}",
+            ]
+            if code:
+                lines.append(f"CODE: {code}")
+            if suggestions:
+                lines.append("SUGGESTIONS:")
+                for suggestion in suggestions:
+                    lines.append(f"- {suggestion}")
+            if references:
+                lines.append("REFERENCES:")
+                for ref in references:
+                    lines.append(f"- {ref}")
+            return "\n".join(lines)
+
+        # Human format
+        lines = [f"❌ {error_type}: {message}"]
+        if code:
+            lines.append(f"   Code: {code}")
+        if suggestions:
+            lines.append("   Suggestions:")
+            for suggestion in suggestions:
+                lines.append(f"   • {suggestion}")
+        if references:
+            lines.append("   See also:")
+            for ref in references:
+                lines.append(f"   • {ref}")
+        return "\n".join(lines)
+
+    def progress(
+        self, task: str, current: int, total: int, status: str = "running"
+    ) -> str:
+        """Format progress update.
+
+        Args:
+            task: Task name
+            current: Current progress value
+            total: Total value
+            status: Task status (running, completed, failed)
+
+        Returns:
+            Formatted progress string
+
+        """
+        percentage = int(current / total * 100) if total > 0 else 0
+
+        if self.format in (OutputFormat.LLM, OutputFormat.JSON):
+            # JSONL event
+            event = {
+                "type": "progress",
+                "task": task,
+                "current": current,
+                "total": total,
+                "percentage": percentage,
+                "status": status,
+            }
+            return json.dumps(event, ensure_ascii=False)
+
+        if self.format == OutputFormat.YAML and yaml:
+            event = {
+                "type": "progress",
+                "task": task,
+                "current": current,
+                "total": total,
+                "percentage": percentage,
+                "status": status,
+            }
+            return yaml.dump(event, allow_unicode=True)
+
+        # Human format
+        return f"{task}: {current}/{total} ({percentage}%)"
+
+    def parallel_tasks(self, tasks: dict[str, dict[str, Any]]) -> str | dict:
+        """Format parallel task status.
+
+        Args:
+            tasks: Dict mapping task names to status dicts (status, progress, etc.)
+
+        Returns:
+            Formatted parallel tasks output
+
+        """
+        if self.format == OutputFormat.JSON:
+            return {"parallel_tasks": tasks}
+        if self.format == OutputFormat.YAML and yaml:
+            return yaml.dump(
+                {"parallel_tasks": tasks}, allow_unicode=True, default_flow_style=False
+            )
+        if self.format == OutputFormat.LLM:
+            lines = ["PARALLEL TASKS:"]
+            for task_name, task_data in tasks.items():
+                status = task_data.get("status", "unknown")
+                progress = task_data.get("progress", 0)
+                lines.append(f"- {task_name}: {status} ({progress}%)")
+            return "\n".join(lines)
+
+        # Human format
+        lines = ["Parallel Tasks:"]
+        for task_name, task_data in tasks.items():
+            status = task_data.get("status", "unknown")
+            progress = task_data.get("progress", 0)
+            status_icon = (
+                "✅" if status == "completed" else "🔄" if status == "running" else "⏳"
+            )
+            lines.append(f"  {status_icon} {task_name}: {status} ({progress}%)")
+        return "\n".join(lines)
+
     def print_output(self, output: str | dict) -> None:
         """Print formatted output.
 
@@ -493,14 +780,15 @@ class OutputFormatter:
         """
         if isinstance(output, dict):
             # JSON or YAML dict → convert to string
-            if self.format == OutputFormat.JSON or (
-                self.format == OutputFormat.YAML and yaml
-            ):
-                pass
+            if self.format == OutputFormat.JSON:
+                print(json.dumps(output, indent=2, ensure_ascii=False))
+            elif self.format == OutputFormat.YAML and yaml:
+                print(yaml.dump(output, allow_unicode=True, default_flow_style=False))
             else:
-                pass
+                # Fallback to JSON
+                print(json.dumps(output, indent=2, ensure_ascii=False))
         else:
-            pass
+            print(output)
 
 
 def get_output_format_from_context(ctx: Any) -> OutputFormat:

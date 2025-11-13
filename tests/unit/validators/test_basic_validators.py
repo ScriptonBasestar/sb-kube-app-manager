@@ -2,10 +2,8 @@
 
 import asyncio
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
-import yaml
 
 from sbkube.utils.diagnostic_system import DiagnosticLevel
 from sbkube.utils.validation_system import ValidationContext, ValidationSeverity

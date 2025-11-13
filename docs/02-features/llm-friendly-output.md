@@ -393,22 +393,102 @@ export sbkube_output_format=llm
 - ✅ `apply` 명령어 LLM 출력 통합
 - ✅ `template` 명령어 LLM 출력 통합
 
-### Phase 3 (진행 중) 🚧
+### Phase 3 (완료) ✅
 
 - ✅ `status` 명령어 LLM 출력 통합 (2025-01-03 완료)
   - 클러스터 및 노드 정보
   - Helm 릴리스 상태 (앱그룹별, 네임스페이스별)
   - 구조화된 배포 목록
   - 80-85% 토큰 절약
-- ⏳ `history` 명령어 LLM 출력 통합
+- ✅ `history` 명령어 LLM 출력 통합
 - ⏳ 나머지 명령어 통합 (`rollback`, `delete`, `upgrade` 등)
 
-### Phase 4 (예정)
+### Phase 4 (완료) ✅ - 2025-11-13
+
+**고급 출력 포맷 최적화**
+
+- ✅ 테이블 출력 최적화 (CSV-like format with --- separator)
+  - `formatter.table()` 메서드 추가
+  - LLM/JSON/YAML 포맷 지원
+  - 50% 추가 토큰 절감
+- ✅ 차트/그래프 데이터 최적화
+  - `formatter.tree()` 메서드 추가
+  - 들여쓰기 기반 구조화
+  - 히스토리/의존성 트리 지원
+- ✅ 에러 메시지 구조화
+  - `formatter.error()` 메서드 추가
+  - 에러 타입별 JSON 스키마
+  - suggestions/references 배열 지원
+
+**구현 파일:**
+
+- `sbkube/utils/output_formatter.py` (368줄 → 794줄)
+- `tests/unit/utils/test_output_formatter_phase4.py` (34 테스트)
+
+### Phase 5 (완료) ✅ - 2025-11-13
+
+**스트리밍 출력 지원**
+
+- ✅ 프로그레스 바 대체
+  - `formatter.progress()` 메서드 추가
+  - JSONL 포맷 이벤트 스트리밍
+  - 주기적 상태 업데이트
+- ✅ 실시간 로그 스트리밍
+  - `formatter.stream()` 메서드 추가
+  - JSONL (JSON Lines) 포맷
+  - 각 라인이 독립적인 JSON 객체
+- ✅ 병렬 작업 출력
+  - `formatter.parallel_tasks()` 메서드 추가
+  - 여러 앱 동시 배포 시 구조화된 출력
+  - 앱별 상태 및 진행률 표시
+
+**구현 예시:**
+
+```python
+# Table output (LLM format)
+formatter.table(
+    data=[{"name": "app1", "status": "running"}],
+    headers=["name", "status"],
+    title="Applications"
+)
+# Output:
+# # Applications
+# NAME  STATUS
+# ---
+# app1  running
+
+# Tree output (dependency structure)
+formatter.tree(
+    data={"apps": {"app1": "running", "app2": "pending"}},
+    root_label="Deployment Status"
+)
+
+# Error with suggestions
+formatter.error(
+    error_type="ValidationError",
+    message="Invalid config",
+    code="CONFIG_001",
+    suggestions=["Check YAML syntax"],
+    references=["docs/config-schema.md"]
+)
+
+# Streaming progress
+formatter.stream({"type": "progress", "task": "deploy", "percentage": 50})
+# Output (JSONL): {"type":"progress","task":"deploy","percentage":50}
+
+# Parallel tasks status
+formatter.parallel_tasks({
+    "app1": {"status": "completed", "progress": 100},
+    "app2": {"status": "running", "progress": 50}
+})
+```
+
+### Phase 6 (예정)
 
 - `--format compact` 추가 (더 간결한 human 모드)
 - 필드 선택 옵션 (`--fields`)
-- LLM 친화적 dependency tree 출력
-- LLM 친화적 health check 출력
+- LLM 친화적 dependency tree 출력 통합
+- LLM 친화적 health check 출력 통합
 
 ## 관련 문서
 
@@ -418,4 +498,4 @@ export sbkube_output_format=llm
 
 ______________________________________________________________________
 
-**작성일:** 2025-01-03 **버전:** v0.6.1+ **마지막 업데이트:** 2025-01-03 (Phase 3 status 명령어 완료)
+**작성일:** 2025-01-03 **버전:** v0.8.0+ **마지막 업데이트:** 2025-11-13 (Phase 4-5 완료: 고급 포맷 최적화 및 스트리밍 출력)

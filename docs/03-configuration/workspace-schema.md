@@ -40,6 +40,82 @@ Multi-phase deployment를 위한 `workspace.yaml` 설정 파일의 완전한 스
 
 ______________________________________________________________________
 
+## 🚀 Quick Start
+
+**5분 안에 workspace 시작하기**:
+
+### 1. 프로젝트 구조 준비
+
+```bash
+# 프로젝트 디렉토리 구조
+mkdir -p p1-kube/a000_network p2-kube/a100_postgres
+```
+
+### 2. workspace.yaml 생성
+
+```yaml
+# workspace.yaml
+version: "1.0"
+
+metadata:
+  name: my-first-workspace
+
+phases:
+  p1-infra:
+    description: "Infrastructure"
+    source: p1-kube/sources.yaml
+    app_groups:
+      - a000_network
+    depends_on: []
+
+  p2-data:
+    description: "Database"
+    source: p2-kube/sources.yaml
+    app_groups:
+      - a100_postgres
+    depends_on:
+      - p1-infra
+```
+
+### 3. 각 Phase의 sources.yaml 생성
+
+```bash
+# p1-kube/sources.yaml
+cat > p1-kube/sources.yaml <<EOF
+kubeconfig: ~/.kube/config
+kubeconfig_context: production-cluster
+helm_repos:
+  cilium:
+    url: https://helm.cilium.io/
+EOF
+
+# p2-kube/sources.yaml
+cat > p2-kube/sources.yaml <<EOF
+kubeconfig: ~/.kube/config
+kubeconfig_context: production-cluster
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami
+EOF
+```
+
+### 4. 검증 및 배포 (v0.9.0+)
+
+```bash
+# 설정 검증
+sbkube workspace validate -f workspace.yaml
+
+# 전체 배포
+sbkube workspace deploy -f workspace.yaml
+
+# 또는 특정 phase만
+sbkube workspace deploy -f workspace.yaml --phase p1-infra
+```
+
+**다음 단계**: 아래 Complete Example 참조하여 더 복잡한 구조 구축
+
+______________________________________________________________________
+
 ## 📂 File Structure Overview
 
 ```yaml
@@ -329,6 +405,87 @@ env:
 - Hooks 스크립트에서 참조 가능
 - 앱 배포 시 환경변수로 전달
 
+### parallel (boolean, 선택) 🔮 v1.1+
+
+Phase 내 앱 그룹의 병렬 배포를 활성화합니다.
+
+```yaml
+parallel: true
+```
+
+**규칙**:
+- `true`: 앱 그룹 간 의존성이 없으면 병렬로 배포
+- `false` (기본값): 순차 배포
+- **v1.0 제한**: v1.0에서는 항상 순차 배포 (이 옵션 무시됨)
+- **v1.1+ 계획**: 병렬 배포 지원
+
+**예시** (v1.1+):
+```yaml
+p2-data:
+  parallel: true
+  app_groups:
+    - a100_postgres  # 병렬 시작
+    - a101_redis     # 병렬 시작
+```
+
+### wait_for_ready (boolean, 선택) 🔮 v1.1+
+
+의존하는 Phase가 완전히 준비 상태가 될 때까지 대기합니다.
+
+```yaml
+wait_for_ready: true
+```
+
+**규칙**:
+- `true`: Phase 배포 완료 + readiness check 통과까지 대기
+- `false` (기본값): Phase 배포 완료만 확인
+- **v1.0 제한**: v1.0에서는 배포 완료만 확인
+- **v1.1+ 계획**: Readiness check 지원
+
+**차이점**:
+```yaml
+# wait_for_ready: false (기본)
+- p1-infra 배포 완료 → p2-data 즉시 시작
+
+# wait_for_ready: true (v1.1+)
+- p1-infra 배포 완료 → Pod readiness 확인 → p2-data 시작
+```
+
+### rollback (object, 선택) 🔮 v1.1+
+
+Phase별 롤백 전략을 정의합니다.
+
+```yaml
+rollback:
+  enabled: true
+  auto: false  # Manual approval required
+```
+
+**필드**:
+- `enabled` (boolean): 롤백 기능 활성화 여부
+- `auto` (boolean): 실패 시 자동 롤백 여부
+  - `true`: 자동 롤백
+  - `false`: 수동 승인 필요
+
+**v1.0 vs v1.1+**:
+- **v1.0**: `on_failure: stop/continue` 만 지원
+- **v1.1+**: `rollback` 블록으로 세밀한 제어
+
+**on_failure와의 관계**:
+```yaml
+# Option 1: 즉시 중단
+on_failure: stop
+
+# Option 2: 계속 진행
+on_failure: continue
+
+# Option 3: 롤백 (v1.1+)
+on_failure: stop
+rollback:
+  enabled: true
+  auto: true  # 자동 롤백
+```
+
 ______________________________________________________________________
 
 ## 🔗 Phase Dependency Resolution
@@ -480,6 +637,197 @@ project/
     │   └── config.yaml
     └── a201_frontend/
         └── config.yaml
+```
+
+______________________________________________________________________
+
+## 💡 Best Practices
+
+### Phase 분할 전략
+
+**권장 Phase 구조**:
+
+1. **p1-infra** (Infrastructure): 기반 인프라
+   - Network (CNI: Cilium, Calico)
+   - Storage (NFS, Ceph)
+   - Ingress Controller
+   - Cert Manager
+
+2. **p2-data** (Data Layer): 데이터 계층
+   - Database (PostgreSQL, MySQL)
+   - Cache (Redis, Memcached)
+   - Message Queue (RabbitMQ, Kafka)
+
+3. **p3-app** (Application): 애플리케이션
+   - Backend Services
+   - Frontend Services
+   - APIs
+
+4. **p4-monitoring** (Optional): 관측성
+   - Prometheus
+   - Grafana
+   - Loki
+   - Alert Manager
+
+### 네이밍 규칙
+
+**Phase 네이밍**:
+```yaml
+# 권장: p[숫자]-[역할]
+p1-infra        # ✅ 명확한 순서와 역할
+p2-data         # ✅
+p3-app          # ✅
+
+# 비권장
+infrastructure  # ❌ 순서 불명확
+phase1          # ❌ 역할 불명확
+```
+
+**App Group 네이밍**:
+```yaml
+# 권장: a[숫자]_[역할]
+a000_network    # ✅ 순서와 역할 명확
+a001_storage    # ✅
+a100_postgres   # ✅
+
+# 비권장
+network         # ❌ 순서 불명확
+```
+
+### Timeout 설정 가이드
+
+**Phase별 권장 timeout** (초 단위):
+
+```yaml
+phases:
+  p1-infra:
+    timeout: 900     # 15분 - 네트워크 초기화 시간 필요
+
+  p2-data:
+    timeout: 1200    # 20분 - 데이터베이스 초기화 시간
+
+  p3-app:
+    timeout: 600     # 10분 - 일반 앱 배포
+
+  p4-monitoring:
+    timeout: 600     # 10분
+```
+
+**경험 법칙**:
+- 기본: 600초 (10분)
+- Network/Storage: 900-1200초 (15-20분)
+- Database: 1200-1800초 (20-30분)
+- 단순 App: 300-600초 (5-10분)
+
+### 의존성 관리 원칙
+
+**1. 명시적 의존성**:
+```yaml
+# ✅ 명확한 의존성 표현
+phases:
+  p2-data:
+    depends_on:
+      - p1-infra  # Infrastructure 먼저 필요함을 명시
+```
+
+**2. 최소 의존성**:
+```yaml
+# ✅ 꼭 필요한 의존성만
+phases:
+  p3-app:
+    depends_on:
+      - p2-data     # DB 의존성만 명시
+    # p1-infra는 p2-data에 의해 간접적으로 보장됨
+```
+
+**3. 과도한 의존성 피하기**:
+```yaml
+# ❌ 불필요한 의존성
+phases:
+  p4-monitoring:
+    depends_on:
+      - p1-infra
+      - p2-data
+      - p3-app     # 모든 것에 의존 - 과도함
+
+# ✅ 필요한 의존성만
+phases:
+  p4-monitoring:
+    depends_on:
+      - p3-app     # p3-app만 있으면 충분 (간접 의존)
+```
+
+### 환경별 관리
+
+**개발/스테이징/프로덕션 분리**:
+
+```bash
+# 환경별 workspace 파일 사용
+workspace-dev.yaml
+workspace-staging.yaml
+workspace-prod.yaml
+```
+
+**또는 metadata로 구분**:
+```yaml
+# workspace-prod.yaml
+metadata:
+  name: production-deployment
+  environment: prod
+
+global:
+  kubeconfig: ~/.kube/prod-config
+  context: production-cluster
+```
+
+### 테스트 전략
+
+**점진적 테스트**:
+
+1. **단일 Phase 테스트**:
+   ```bash
+   sbkube workspace deploy -f workspace.yaml --phase p1-infra
+   ```
+
+2. **의존성 체인 테스트**:
+   ```bash
+   # p1 → p2 순서 확인
+   sbkube workspace deploy -f workspace.yaml --phase p2-data
+   ```
+
+3. **전체 테스트**:
+   ```bash
+   sbkube workspace deploy -f workspace.yaml
+   ```
+
+**Dry-run 활용**:
+```bash
+# 실제 배포 전 검증
+sbkube workspace validate -f workspace.yaml
+sbkube workspace deploy -f workspace.yaml --dry-run
+```
+
+### 문제 해결 팁
+
+**Phase 실패 시**:
+```bash
+# 1. 현재 상태 확인
+sbkube workspace status -f workspace.yaml
+
+# 2. 실패한 phase만 재배포
+sbkube workspace deploy -f workspace.yaml --phase p2-data
+
+# 3. 전체 재배포 (필요시)
+sbkube workspace deploy -f workspace.yaml --force
+```
+
+**디버깅**:
+```bash
+# Verbose 모드로 상세 로그 확인
+sbkube workspace deploy -f workspace.yaml --verbose
+
+# 특정 app group만 테스트
+cd p2-kube && sbkube apply -c sources.yaml -g a100_postgres
 ```
 
 ______________________________________________________________________

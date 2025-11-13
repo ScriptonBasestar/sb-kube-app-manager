@@ -8,6 +8,8 @@ ______________________________________________________________________
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-11-13
+
 ### 🚨 Breaking Changes
 
 **New Chart Path Structure to Prevent Collisions** (v0.8.0)

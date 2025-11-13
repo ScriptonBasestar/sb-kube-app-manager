@@ -1,8 +1,8 @@
 # SBKube v0.8.0 Release Notes
 
-> **Release Date**: 2025-01-11
+> **Release Date**: 2025-11-13
 > **Type**: Minor Release with Breaking Changes
-> **Status**: Development
+> **Status**: Released
 
 ---
 
@@ -328,6 +328,6 @@ See [CHANGELOG.md](../CHANGELOG.md) for complete version history.
 
 ---
 
-**Released**: 2025-01-11
+**Released**: 2025-11-13
 **Version**: 0.8.0
 **Previous**: 0.7.2

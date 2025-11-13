@@ -40,9 +40,9 @@ class TestWorkflowV3:
             )
         )
 
-        # 3. Mock chart (prepare 시뮬레이션)
+        # 3. Mock chart (prepare 시뮬레이션) - v0.8.0 path structure
         # 실제로는 helm pull을 실행하지만, 테스트에서는 미리 차트를 생성
-        mock_chart_dir = charts_dir / "grafana"
+        mock_chart_dir = charts_dir / "grafana" / "grafana-6.50.0"
         mock_chart_dir.mkdir(parents=True, exist_ok=True)
         (mock_chart_dir / "Chart.yaml").write_text("name: grafana\nversion: 6.50.0")
         (mock_chart_dir / "values.yaml").write_text(

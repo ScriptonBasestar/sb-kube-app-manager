@@ -63,6 +63,18 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
 - 🔄 사전/사후 배포 검증 시스템 강화
 - 🔄 문서 개선 및 튜토리얼 추가
 
+### v0.8.0 (2025-01-13 - 릴리즈 완료) ✅
+
+**목표**: Chart Path Collision Prevention 및 Storage 개선
+
+- ✅ Chart path structure 개선 (`.sbkube/charts/{repo}/{chart-name}-{version}/`)
+- ✅ PV/PVC validation for manual provisioning (`kubernetes.io/no-provisioner`)
+- ✅ 차트 충돌 방지 (같은 이름, 다른 repo 지원)
+- ✅ 버전별 차트 관리 (같은 차트, 다른 버전 공존)
+- ✅ 레거시 경로 자동 감지 및 마이그레이션 가이드
+
+**Breaking Changes**: Chart path 구조 변경 (마이그레이션 필수)
+
 ### v0.8.x (2025 Q2-Q3)
 
 **목표**: Hooks 고도화 및 성능 최적화
@@ -75,11 +87,31 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
 
 ## 중기 로드맵 (v0.9.x - v1.0.x)
 
-### v0.9.x (2025 Q4 - 2026 Q1)
+### v0.9.0 (2025 Q2 - 계획 중) 🟡
 
-**목표**: 엔터프라이즈 기능 및 웹 UI
+**목표**: Workspace 기능 (Multi-Phase Deployment)
 
-- [ ] 멀티 클러스터 동시 배포
+- ✅ Workspace 설계 완료 (2025-01-13)
+  - ✅ 파일명: workspace.yaml
+  - ✅ Phase-level sources 참조 (Override 방식)
+  - ✅ 단일 클러스터 순차 배포
+  - ✅ Repository 우선순위: App > Phase > Workspace
+- [ ] Pydantic 모델 구현 (WorkspaceConfig, PhaseConfig)
+- [ ] CLI 명령어 구현 (workspace validate/deploy/status)
+- [ ] Phase 의존성 해결 (Kahn's algorithm)
+- [ ] Workspace-level 상태 관리
+
+**Use Case**: p1-kube, p2-kube, p3-kube처럼 단계별로 나뉜 프로젝트 구조 지원
+
+**설계 문서**:
+- [workspace-design-decisions.md](../99-internal/design-decisions/workspace-design-decisions.md)
+- [workspace-schema-draft.yaml](../99-internal/design-decisions/workspace-schema-draft.yaml)
+
+### v0.9.x (2025 Q3-Q4)
+
+**목표**: 엔터프라이즈 기능 확장
+
+- [ ] 멀티 클러스터 동시 배포 (Workspace v1.1)
 - [ ] 웹 UI 프로토타입 (배포 상태 대시보드)
 - [ ] 분산 잠금 (동시 배포 충돌 방지)
 - [ ] 고급 롤백 (스냅샷 기반)

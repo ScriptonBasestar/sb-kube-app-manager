@@ -152,10 +152,10 @@ class TestBuildWithNewPaths:
         from sbkube.commands.build import build_helm_app
 
         # Create charts: grafana/loki-18.0.0 and my-company/redis-1.0.0
-        bitnami_chart = tmp_path / "charts" / "grafana" / "redis-18.0.0"
-        bitnami_chart.mkdir(parents=True)
-        (bitnami_chart / "Chart.yaml").write_text("name: redis\nversion: 18.0.0")
-        (bitnami_chart / "templates").mkdir()
+        grafana_chart = tmp_path / "charts" / "grafana" / "redis-18.0.0"
+        grafana_chart.mkdir(parents=True)
+        (grafana_chart / "Chart.yaml").write_text("name: redis\nversion: 18.0.0")
+        (grafana_chart / "templates").mkdir()
 
         custom_chart = tmp_path / "charts" / "my-company" / "redis-1.0.0"
         custom_chart.mkdir(parents=True)
@@ -195,7 +195,7 @@ class TestBuildWithNewPaths:
         assert (build_dir / "redis-custom" / "Chart.yaml").exists()
 
         # Verify correct versions
-        bitnami_version = (build_dir / "redis-grafana" / "Chart.yaml").read_text()
+        grafana_version = (build_dir / "redis-grafana" / "Chart.yaml").read_text()
         custom_version = (build_dir / "redis-custom" / "Chart.yaml").read_text()
-        assert "version: 18.0.0" in bitnami_version
+        assert "version: 18.0.0" in grafana_version
         assert "version: 1.0.0" in custom_version

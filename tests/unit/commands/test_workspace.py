@@ -10,8 +10,10 @@ from click.testing import CliRunner
 
 from sbkube.commands.workspace import (
     WorkspaceGraphCommand,
+    WorkspaceInitCommand,
     WorkspaceValidateCommand,
     graph_cmd,
+    init_cmd,
     validate_cmd,
 )
 from sbkube.exceptions import ConfigValidationError
@@ -263,4 +265,91 @@ class TestWorkspaceCLI:
         runner = CliRunner()
         result = runner.invoke(graph_cmd, [str(workspace_file)])
 
+        assert result.exit_code != 0
+
+
+class TestWorkspaceInitCommand:
+    """WorkspaceInitCommand 테스트."""
+
+    def test_default_template(self, tmp_path: Path) -> None:
+        """기본 템플릿 생성 테스트."""
+        output_file = tmp_path / "workspace.yaml"
+
+        cmd = WorkspaceInitCommand(
+            output_file=str(output_file),
+            interactive=False,
+        )
+        cmd.execute()
+
+        # 파일 생성 확인
+        assert output_file.exists()
+
+        # 내용 검증
+        with open(output_file, encoding="utf-8") as f:
+            workspace = yaml.safe_load(f)
+
+        assert workspace["version"] == "1.0"
+        assert workspace["metadata"]["name"] == "my-workspace"
+        assert len(workspace["phases"]) == 3
+        assert "p1-infra" in workspace["phases"]
+        assert "p2-data" in workspace["phases"]
+        assert "p3-app" in workspace["phases"]
+
+    def test_file_already_exists_no_overwrite(self, tmp_path: Path) -> None:
+        """파일 존재 시 덮어쓰기 거부 테스트."""
+        output_file = tmp_path / "workspace.yaml"
+        output_file.write_text("existing content")
+
+        cmd = WorkspaceInitCommand(
+            output_file=str(output_file),
+            interactive=False,
+        )
+
+        # click.confirm이 False를 반환하도록 mock
+        with patch("click.confirm", return_value=False):
+            with pytest.raises(click.Abort):
+                cmd.execute()
+
+    def test_file_already_exists_overwrite(self, tmp_path: Path) -> None:
+        """파일 존재 시 덮어쓰기 허용 테스트."""
+        output_file = tmp_path / "workspace.yaml"
+        output_file.write_text("existing content")
+
+        cmd = WorkspaceInitCommand(
+            output_file=str(output_file),
+            interactive=False,
+        )
+
+        # click.confirm이 True를 반환하도록 mock
+        with patch("click.confirm", return_value=True):
+            cmd.execute()
+
+        # 새 내용으로 덮어쓰기 확인
+        with open(output_file, encoding="utf-8") as f:
+            workspace = yaml.safe_load(f)
+        assert workspace["version"] == "1.0"
+
+    def test_init_cli_non_interactive(self, tmp_path: Path) -> None:
+        """workspace init CLI 비대화형 모드 테스트."""
+        output_file = tmp_path / "workspace.yaml"
+
+        runner = CliRunner()
+        result = runner.invoke(init_cmd, [str(output_file), "--non-interactive"])
+
+        assert result.exit_code == 0
+        assert output_file.exists()
+        assert "Workspace 파일 생성 완료" in result.output
+
+    def test_init_cli_with_existing_file(self, tmp_path: Path) -> None:
+        """workspace init CLI 기존 파일 존재 시 테스트."""
+        output_file = tmp_path / "workspace.yaml"
+        output_file.write_text("existing")
+
+        runner = CliRunner()
+        # 'n' 입력으로 덮어쓰기 거부
+        result = runner.invoke(
+            init_cmd, [str(output_file), "--non-interactive"], input="n\n"
+        )
+
+        # Abort되므로 exit_code != 0
         assert result.exit_code != 0

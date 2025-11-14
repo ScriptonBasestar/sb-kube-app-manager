@@ -49,6 +49,7 @@ apps:                          # 애플리케이션 딕셔너리 (필수)
     enabled: boolean           # 활성화 여부 (기본: true)
     depends_on: [string]       # 앱 간 의존성 (선택)
     namespace: string          # 앱별 네임스페이스 (선택)
+    notes: string              # 앱 설명/메모 (선택)
     # ... 타입별 필드
 ```
 
@@ -304,6 +305,45 @@ apps:
 
 - 대부분의 경우 전역 `namespace`만 설정하고 앱별 `namespace`는 생략
 - 특정 앱만 다른 네임스페이스가 필요한 경우에만 앱별 오버라이드 사용
+
+#### notes (string, 선택)
+
+앱에 대한 설명이나 메모를 기록합니다. Documentation as Code 패턴을 지원합니다.
+
+```yaml
+apps:
+  victoria-metrics:
+    type: helm
+    chart: vm/victoria-metrics-single
+    notes: |
+      High-performance Prometheus-compatible TSDB
+      - 20x faster than Prometheus
+      - 7x less storage space
+      - Full PromQL support
+
+  thanos:
+    type: helm
+    chart: bitnami/thanos
+    enabled: false
+    notes: |
+      Long-term storage for Prometheus
+      - Deploy AFTER Prometheus (Phase 6)
+      - Requires S3/GCS/Azure storage bucket
+```
+
+**활용 방법**:
+
+- **설계 결정 기록**: 왜 이 솔루션을 선택했는지 문서화
+- **배포 순서**: 의존성이나 배포 순서에 대한 중요 정보 기록
+- **운영 정보**: 담당자, 백업 일정, DR 절차 등
+- **마이그레이션 가이드**: 설정 변경 이력이나 업그레이드 절차
+
+**표시 방법**:
+
+```bash
+# Notes 필드와 함께 상태 확인
+sbkube status --show-notes
+```
 
 #### labels (dict, 선택)
 

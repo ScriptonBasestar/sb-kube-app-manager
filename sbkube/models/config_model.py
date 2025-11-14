@@ -571,6 +571,12 @@ class HookApp(ConfigBaseModel):
         description="앱에 적용할 주석",
     )
 
+    # 문서화
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes or description for this application",
+    )
+
     # HookApp은 hooks를 가질 수 없음 (재귀 방지)
     # hooks 필드는 의도적으로 제외
 
@@ -675,6 +681,12 @@ class HelmApp(ConfigBaseModel):
 
     # 훅
     hooks: AppHooks | None = None
+
+    # 문서화
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes or description for this application",
+    )
 
     @field_validator("chart")
     @classmethod
@@ -872,6 +884,12 @@ class YamlApp(ConfigBaseModel):
     enabled: bool = True
     hooks: AppHooks | None = None
 
+    # 문서화
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes or description for this application",
+    )
+
     @field_validator("manifests")
     @classmethod
     def validate_manifests(cls, v: list[str]) -> list[str]:
@@ -971,6 +989,12 @@ class ActionApp(ConfigBaseModel):
     enabled: bool = True
     hooks: AppHooks | None = None
 
+    # 문서화
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes or description for this application",
+    )
+
     @field_validator("actions")
     @classmethod
     def validate_actions(cls, v: list[ActionSpec]) -> list[ActionSpec]:
@@ -1001,6 +1025,12 @@ class ExecApp(ConfigBaseModel):
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
     hooks: AppHooks | None = None
+
+    # 문서화
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes or description for this application",
+    )
 
     @field_validator("commands")
     @classmethod
@@ -1045,6 +1075,12 @@ class GitApp(ConfigBaseModel):
     enabled: bool = True
     hooks: AppHooks | None = None
 
+    # 문서화
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes or description for this application",
+    )
+
     @field_validator("repo")
     @classmethod
     def validate_repo(cls, v: str) -> str:
@@ -1072,6 +1108,12 @@ class KustomizeApp(ConfigBaseModel):
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
     hooks: AppHooks | None = None
+
+    # 문서화
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes or description for this application",
+    )
 
     @field_validator("path")
     @classmethod
@@ -1113,6 +1155,12 @@ class HttpApp(ConfigBaseModel):
     enabled: bool = True
     hooks: AppHooks | None = None
 
+    # 문서화
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes or description for this application",
+    )
+
     @field_validator("url")
     @classmethod
     def validate_http_url(cls, v: str) -> str:
@@ -1149,6 +1197,12 @@ class NoopApp(ConfigBaseModel):
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
     hooks: AppHooks | None = None
+
+    # 문서화
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes or description for this application",
+    )
 
 
 # ============================================================================

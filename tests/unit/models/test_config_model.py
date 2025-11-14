@@ -15,6 +15,7 @@ from sbkube.models.config_model import (
     HookApp,
     HttpApp,
     KustomizeApp,
+    NoopApp,
     SBKubeConfig,
     YamlApp,
 )
@@ -166,6 +167,20 @@ class TestHelmApp:
         assert "Direct OCI protocol" in error_message
         assert "Example for Docker Hub grafana charts" in error_message
 
+    def test_helm_app_with_notes(self) -> None:
+        """Test HelmApp with notes field."""
+        app = HelmApp(
+            type="helm",
+            chart="grafana/grafana",
+            notes="Production Grafana instance for metrics visualization",
+        )
+        assert app.notes == "Production Grafana instance for metrics visualization"
+
+    def test_helm_app_without_notes(self) -> None:
+        """Test HelmApp without notes field (backward compatibility)."""
+        app = HelmApp(type="helm", chart="grafana/grafana")
+        assert app.notes is None
+
 
 # ============================================================================
 # YamlApp Tests
@@ -218,6 +233,20 @@ class TestYamlApp:
         with pytest.raises(ConfigValidationError) as exc_info:
             YamlApp(type="yaml", manifests=[])
         assert "manifests cannot be empty" in str(exc_info.value)
+
+    def test_yaml_app_with_notes(self) -> None:
+        """Test YamlApp with notes field."""
+        app = YamlApp(
+            type="yaml",
+            manifests=["deployment.yaml"],
+            notes="Custom Kubernetes manifests for backend service",
+        )
+        assert app.notes == "Custom Kubernetes manifests for backend service"
+
+    def test_yaml_app_without_notes(self) -> None:
+        """Test YamlApp without notes field (backward compatibility)."""
+        app = YamlApp(type="yaml", manifests=["deployment.yaml"])
+        assert app.notes is None
 
 
 # ============================================================================
@@ -367,6 +396,23 @@ class TestActionApp:
         assert "should be a file path, not a command" in str(exc_info.value).lower()
         assert "type: exec" in str(exc_info.value).lower()
 
+    def test_action_app_with_notes(self) -> None:
+        """Test ActionApp with notes field."""
+        app = ActionApp(
+            type="action",
+            actions=[{"type": "apply", "path": "setup.yaml"}],
+            notes="Custom setup actions for database initialization",
+        )
+        assert app.notes == "Custom setup actions for database initialization"
+
+    def test_action_app_without_notes(self) -> None:
+        """Test ActionApp without notes field (backward compatibility)."""
+        app = ActionApp(
+            type="action",
+            actions=[{"type": "apply", "path": "setup.yaml"}],
+        )
+        assert app.notes is None
+
 
 # ============================================================================
 # ExecApp Tests
@@ -409,6 +455,20 @@ class TestExecApp:
         with pytest.raises(ConfigValidationError) as exc_info:
             ExecApp(type="exec", commands=[])
         assert "commands cannot be empty" in str(exc_info.value)
+
+    def test_exec_app_with_notes(self) -> None:
+        """Test ExecApp with notes field."""
+        app = ExecApp(
+            type="exec",
+            commands=["./post-deploy.sh"],
+            notes="Post-deployment verification scripts",
+        )
+        assert app.notes == "Post-deployment verification scripts"
+
+    def test_exec_app_without_notes(self) -> None:
+        """Test ExecApp without notes field (backward compatibility)."""
+        app = ExecApp(type="exec", commands=["echo test"])
+        assert app.notes is None
 
 
 # ============================================================================
@@ -473,6 +533,20 @@ class TestGitApp:
             GitApp(type="git", repo="")
         assert "repo cannot be empty" in str(exc_info.value)
 
+    def test_git_app_with_notes(self) -> None:
+        """Test GitApp with notes field."""
+        app = GitApp(
+            type="git",
+            repo="https://github.com/user/repo",
+            notes="External manifests from upstream repository",
+        )
+        assert app.notes == "External manifests from upstream repository"
+
+    def test_git_app_without_notes(self) -> None:
+        """Test GitApp without notes field (backward compatibility)."""
+        app = GitApp(type="git", repo="https://github.com/user/repo")
+        assert app.notes is None
+
 
 # ============================================================================
 # KustomizeApp Tests
@@ -508,6 +582,20 @@ class TestKustomizeApp:
             depends_on=["secrets"],
         )
         assert app.depends_on == ["secrets"]
+
+    def test_kustomize_app_with_notes(self) -> None:
+        """Test KustomizeApp with notes field."""
+        app = KustomizeApp(
+            type="kustomize",
+            path="overlays/production",
+            notes="Kustomize overlays for production environment",
+        )
+        assert app.notes == "Kustomize overlays for production environment"
+
+    def test_kustomize_app_without_notes(self) -> None:
+        """Test KustomizeApp without notes field (backward compatibility)."""
+        app = KustomizeApp(type="kustomize", path="overlays/production")
+        assert app.notes is None
 
 
 # ============================================================================
@@ -562,6 +650,25 @@ class TestHttpApp:
                 type="http", url="ftp://example.com/file.yaml", dest="manifest.yaml"
             )
         assert "url must start with http:// or https://" in str(exc_info.value)
+
+    def test_http_app_with_notes(self) -> None:
+        """Test HttpApp with notes field."""
+        app = HttpApp(
+            type="http",
+            url="https://example.com/manifest.yaml",
+            dest="manifest.yaml",
+            notes="Downloaded manifest from external source",
+        )
+        assert app.notes == "Downloaded manifest from external source"
+
+    def test_http_app_without_notes(self) -> None:
+        """Test HttpApp without notes field (backward compatibility)."""
+        app = HttpApp(
+            type="http",
+            url="https://example.com/manifest.yaml",
+            dest="manifest.yaml",
+        )
+        assert app.notes is None
 
 
 # ============================================================================
@@ -771,6 +878,69 @@ class TestHookApp:
         assert app.labels == {"app": "hook-app"}
         assert app.annotations == {"version": "1.0.0"}
         assert app.enabled is True
+
+    def test_hook_app_with_notes(self) -> None:
+        """Test HookApp with notes field."""
+        app = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+            notes="Custom hook tasks for post-deployment verification",
+        )
+        assert app.notes == "Custom hook tasks for post-deployment verification"
+
+    def test_hook_app_without_notes(self) -> None:
+        """Test HookApp without notes field (backward compatibility)."""
+        app = HookApp(
+            type="hook",
+            tasks=[{"type": "command", "name": "test", "command": "echo test"}],
+        )
+        assert app.notes is None
+
+
+# ============================================================================
+# NoopApp Tests
+# ============================================================================
+
+
+class TestNoopApp:
+    """Tests for NoopApp model."""
+
+    def test_noop_app_basic(self) -> None:
+        """Test NoopApp with minimal configuration."""
+        app = NoopApp(type="noop")
+        assert app.type == "noop"
+        assert app.enabled is True
+
+    def test_noop_app_with_description(self) -> None:
+        """Test NoopApp with description."""
+        app = NoopApp(
+            type="noop",
+            description="Manual database setup (already completed)",
+        )
+        assert app.description == "Manual database setup (already completed)"
+
+    def test_noop_app_with_notes(self) -> None:
+        """Test NoopApp with notes field."""
+        app = NoopApp(
+            type="noop",
+            description="Manual database setup",
+            notes="External RDS instance managed via AWS Console. Contact: platform-team@company.com",
+        )
+        assert app.notes == "External RDS instance managed via AWS Console. Contact: platform-team@company.com"
+
+    def test_noop_app_without_notes(self) -> None:
+        """Test NoopApp without notes field (backward compatibility)."""
+        app = NoopApp(type="noop", description="Manual setup")
+        assert app.notes is None
+
+    def test_noop_app_with_dependencies(self) -> None:
+        """Test NoopApp with dependencies."""
+        app = NoopApp(
+            type="noop",
+            description="Manual network configuration",
+            depends_on=["infrastructure"],
+        )
+        assert app.depends_on == ["infrastructure"]
 
 
 # ============================================================================

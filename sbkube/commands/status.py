@@ -75,6 +75,11 @@ DEFAULT_CACHE_TTL_SECONDS = 300
     is_flag=True,
     help="Show detailed health check status (Phase 7)",
 )
+@click.option(
+    "--show-notes",
+    is_flag=True,
+    help="Show application notes/descriptions in status output",
+)
 @click.argument("app_group", required=False)
 @click.pass_context
 def cmd(
@@ -88,6 +93,7 @@ def cmd(
     watch: bool,
     deps: bool,
     health_check: bool,
+    show_notes: bool,
     app_group: str | None,
 ) -> None:
     r"""Display application and cluster status.
@@ -197,6 +203,7 @@ def cmd(
                     app_group=app_group,
                     show_cache_info=False,
                     health_check=health_check,
+                    show_notes=show_notes,
                 )
                 output.print("\n[dim]Next update in 10 seconds...[/dim]")
                 time.sleep(10)
@@ -223,6 +230,7 @@ def cmd(
         app_group=app_group,
         show_cache_info=True,
         health_check=health_check,
+        show_notes=show_notes,
     )
 
     output.finalize()
@@ -306,6 +314,7 @@ def _display_status(
     app_group: str | None = None,
     show_cache_info: bool = True,
     health_check: bool = False,
+    show_notes: bool = False,
 ) -> None:
     """Display cluster status from cache."""
     data = cache.load()
@@ -334,10 +343,11 @@ def _display_status(
             app_group=app_group,
             unhealthy=unhealthy,
             health_check=health_check,
+            show_notes=show_notes,
         )
     else:
         # Standard summary view
-        _display_summary_status(data, helm_releases, output, unhealthy, health_check)
+        _display_summary_status(data, helm_releases, output, unhealthy, health_check, show_notes)
 
     # Show cache metadata at the end
     _display_cache_info(cache, output, show_cache_info)
@@ -353,6 +363,7 @@ def _display_summary_status(
     output: OutputManager,
     unhealthy: bool = False,
     health_check: bool = False,
+    show_notes: bool = False,
 ) -> None:
     """Display standard summary status table."""
     if output.format_type == "human":
@@ -438,6 +449,7 @@ def _display_grouped_status(
     app_group: str | None = None,
     unhealthy: bool = False,
     health_check: bool = False,
+    show_notes: bool = False,
 ) -> None:
     """Display app-group grouped status."""
     try:

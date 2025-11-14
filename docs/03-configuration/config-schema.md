@@ -466,7 +466,7 @@ apps:
 apps:
   supabase:
     type: helm
-    chart: oci://registry-1.docker.io/bitnamicharts/supabase  # ❌ 에러!
+    chart: oci://ghcr.io/grafana/helm-charts/supabase  # ❌ 에러!
 ```
 
 **✅ 올바른 방법**:
@@ -476,8 +476,8 @@ apps:
 ```yaml
 # sources.yaml
 oci_registries:
-  bitnami:
-    registry: oci://registry-1.docker.io/bitnamicharts
+  grafana:
+    registry: oci://ghcr.io/grafana/helm-charts
 
   truecharts:
     registry: oci://tccr.io/truecharts
@@ -493,10 +493,10 @@ oci_registries:
 namespace: platform
 
 apps:
-  # Bitnami Supabase from Docker Hub
+  # grafana Supabase from Docker Hub
   supabase:
     type: helm
-    chart: bitnami/supabase  # ✅ registry-name/chart-name 형식
+    chart: grafana/grafana  # ✅ registry-name/chart-name 형식
     version: "1.0.0"
     values:
       - values/supabase.yaml
@@ -510,7 +510,7 @@ apps:
 
 **주요 OCI 레지스트리**:
 
-- **Docker Hub Bitnami**: `oci://registry-1.docker.io/bitnamicharts`
+- **Docker Hub grafana**: `oci://ghcr.io/grafana/helm-charts`
 - **TrueCharts**: `oci://tccr.io/truecharts`
 - **GitHub Container Registry**: `oci://ghcr.io/org-name/charts`
 - **GitLab Container Registry**: `oci://registry.gitlab.com/project/charts`

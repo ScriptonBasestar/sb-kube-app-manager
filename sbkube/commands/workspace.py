@@ -206,6 +206,201 @@ class WorkspaceGraphCommand:
         )
 
 
+class WorkspaceInitCommand:
+    """Workspace 초기화 명령어."""
+
+    def __init__(
+        self,
+        output_file: str = "workspace.yaml",
+        interactive: bool = True,
+    ) -> None:
+        """Initialize workspace init command.
+
+        Args:
+            output_file: 생성할 workspace.yaml 경로
+            interactive: 대화형 모드 여부
+
+        """
+        self.output_file = Path(output_file)
+        self.interactive = interactive
+        self.console = Console()
+
+    def execute(self) -> None:
+        """Execute workspace initialization.
+
+        Raises:
+            click.Abort: 초기화 실패 시
+
+        """
+        logger.heading("Workspace Initialization")
+
+        # 파일 존재 확인
+        if self.output_file.exists():
+            if not click.confirm(
+                f"{self.output_file} 파일이 이미 존재합니다. 덮어쓰시겠습니까?",
+                default=False,
+            ):
+                logger.info("Workspace 초기화가 취소되었습니다.")
+                raise click.Abort
+
+        # 템플릿 생성
+        if self.interactive:
+            workspace_config = self._interactive_template()
+        else:
+            workspace_config = self._default_template()
+
+        # YAML 저장
+        try:
+            import yaml
+
+            self.output_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.output_file, "w", encoding="utf-8") as f:
+                yaml.dump(
+                    workspace_config,
+                    f,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                    sort_keys=False,
+                )
+            logger.success(f"✅ Workspace 파일 생성 완료: {self.output_file}")
+        except Exception as e:
+            logger.error(f"Workspace 파일 생성 실패: {e}")
+            raise click.Abort
+
+        # 다음 단계 안내
+        self._show_next_steps()
+
+    def _interactive_template(self) -> dict:
+        """대화형 템플릿 생성."""
+        self.console.print("\n[bold cyan]📝 Workspace 설정 입력[/bold cyan]")
+
+        workspace_name = click.prompt(
+            "Workspace 이름", default="my-workspace", type=str
+        )
+        description = click.prompt(
+            "설명 (선택사항)", default="", type=str, show_default=False
+        )
+        environment = click.prompt(
+            "환경 (dev/staging/prod)", default="dev", type=str
+        )
+
+        # Phase 개수 입력
+        num_phases = click.prompt("Phase 개수", default=2, type=int)
+
+        phases = {}
+        for i in range(1, num_phases + 1):
+            self.console.print(f"\n[bold yellow]Phase {i} 설정[/bold yellow]")
+            phase_name = click.prompt(
+                f"Phase {i} 이름", default=f"p{i}-phase", type=str
+            )
+            phase_desc = click.prompt(
+                f"Phase {i} 설명", default=f"Phase {i}", type=str
+            )
+            phase_source = click.prompt(
+                f"Phase {i} sources.yaml 경로",
+                default=f"p{i}-kube/sources.yaml",
+                type=str,
+            )
+
+            # App groups 입력
+            app_groups_str = click.prompt(
+                f"Phase {i} 앱 그룹 (쉼표 구분)",
+                default=f"a{i*100:03d}_app",
+                type=str,
+            )
+            app_groups = [g.strip() for g in app_groups_str.split(",")]
+
+            # 의존성 입력 (Phase 2부터)
+            depends_on = []
+            if i > 1:
+                prev_phases = list(phases.keys())
+                if click.confirm(
+                    f"Phase {i}가 이전 Phase에 의존합니까?", default=True
+                ):
+                    depends_str = click.prompt(
+                        f"의존하는 Phase (쉼표 구분, 가능: {', '.join(prev_phases)})",
+                        default=prev_phases[-1] if prev_phases else "",
+                        type=str,
+                    )
+                    depends_on = [d.strip() for d in depends_str.split(",") if d.strip()]
+
+            phases[phase_name] = {
+                "description": phase_desc,
+                "source": phase_source,
+                "app_groups": app_groups,
+            }
+            if depends_on:
+                phases[phase_name]["depends_on"] = depends_on
+
+        return {
+            "version": "1.0",
+            "metadata": {
+                "name": workspace_name,
+                "description": description if description else None,
+                "environment": environment,
+                "tags": ["workspace", environment],
+            },
+            "global": {
+                "timeout": 600,
+                "on_failure": "stop",
+            },
+            "phases": phases,
+        }
+
+    def _default_template(self) -> dict:
+        """기본 템플릿 생성."""
+        return {
+            "version": "1.0",
+            "metadata": {
+                "name": "my-workspace",
+                "description": "Multi-phase deployment workspace",
+                "environment": "dev",
+                "tags": ["workspace", "multi-phase"],
+            },
+            "global": {
+                "kubeconfig": None,
+                "context": None,
+                "timeout": 600,
+                "on_failure": "stop",
+                "helm_repos": {},
+            },
+            "phases": {
+                "p1-infra": {
+                    "description": "Infrastructure phase",
+                    "source": "p1-kube/sources.yaml",
+                    "app_groups": ["a000_network", "a001_storage"],
+                    "depends_on": [],
+                },
+                "p2-data": {
+                    "description": "Data layer phase",
+                    "source": "p2-kube/sources.yaml",
+                    "app_groups": ["a100_postgres", "a101_redis"],
+                    "depends_on": ["p1-infra"],
+                },
+                "p3-app": {
+                    "description": "Application phase",
+                    "source": "p3-kube/sources.yaml",
+                    "app_groups": ["a200_backend", "a201_frontend"],
+                    "depends_on": ["p2-data"],
+                },
+            },
+        }
+
+    def _show_next_steps(self) -> None:
+        """다음 단계 안내."""
+        self.console.print("\n[bold green]🎉 Workspace 초기화 완료![/bold green]")
+        self.console.print("\n[bold cyan]다음 단계:[/bold cyan]")
+        self.console.print(f"  1. {self.output_file} 파일을 확인하세요")
+        self.console.print("  2. 각 Phase의 sources.yaml 파일을 생성하세요:")
+        self.console.print("     - p1-kube/sources.yaml")
+        self.console.print("     - p2-kube/sources.yaml")
+        self.console.print("     - p3-kube/sources.yaml")
+        self.console.print("\n  3. Workspace를 검증하세요:")
+        self.console.print(f"     sbkube workspace validate {self.output_file}")
+        self.console.print("\n  4. Phase 의존성 그래프를 확인하세요:")
+        self.console.print(f"     sbkube workspace graph {self.output_file}")
+
+
 @click.group(name="workspace")
 def workspace_group() -> None:
     """Workspace 관리 명령어."""
@@ -278,3 +473,49 @@ def graph_cmd(
 
     graph_command = WorkspaceGraphCommand(workspace_file)
     graph_command.execute()
+
+
+@workspace_group.command(name="init")
+@click.argument(
+    "output_file",
+    type=click.Path(dir_okay=False, resolve_path=True),
+    default="workspace.yaml",
+)
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    help="대화형 입력 없이 기본 템플릿 생성",
+)
+@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@click.pass_context
+def init_cmd(
+    ctx: click.Context,
+    output_file: str,
+    non_interactive: bool,
+    verbose: bool,
+    debug: bool,
+) -> None:
+    """workspace.yaml 템플릿을 생성합니다.
+
+    Examples:
+        # Interactive mode (default)
+        sbkube workspace init
+
+        # Non-interactive mode (default template)
+        sbkube workspace init --non-interactive
+
+        # Custom output path
+        sbkube workspace init /path/to/workspace.yaml
+
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
+    ctx.obj["debug"] = debug
+    setup_logging_from_context(ctx)
+
+    init_command = WorkspaceInitCommand(
+        output_file=output_file,
+        interactive=not non_interactive,
+    )
+    init_command.execute()

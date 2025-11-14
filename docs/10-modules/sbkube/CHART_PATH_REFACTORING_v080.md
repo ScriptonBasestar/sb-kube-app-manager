@@ -18,8 +18,8 @@
 ```yaml
 # 문제 시나리오 1: 다른 repo, 같은 chart 이름
 apps:
-  redis-bitnami:
-    chart: bitnami/redis
+  redis-grafana:
+    chart: grafana/loki
     version: 18.0.0
 
   redis-custom:
@@ -29,11 +29,11 @@ apps:
 # 문제 시나리오 2: 같은 chart, 다른 버전
 apps:
   redis-old:
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 18.0.0           # ❌ 덮어쓰기!
 
   redis-new:
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 19.0.0
 ```
 
@@ -61,7 +61,7 @@ apps:
 **새 경로 구조**:
 ```
 .sbkube/charts/
-├── bitnami/
+├── grafana/
 │   ├── redis-18.0.0/          # ✅ repo + 버전 명시
 │   ├── redis-19.0.0/          # ✅ 다른 버전 공존
 │   └── postgresql-15.0.0/
@@ -100,7 +100,7 @@ class HelmApp(ConfigBaseModel):
         """repo/chart-version 경로 생성
 
         Returns:
-            Path(".sbkube/charts/bitnami/redis-18.0.0")
+            Path(".sbkube/charts/grafana/loki-18.0.0")
             또는 None (로컬 차트)
         """
         if not self.is_remote_chart():
@@ -125,7 +125,7 @@ class HelmApp(ConfigBaseModel):
 chart_dir = charts_dir / chart_name  # .sbkube/charts/redis/
 
 # After (v0.8.0+)
-chart_dir = app.get_chart_path(charts_dir)  # .sbkube/charts/bitnami/redis-18.0.0/
+chart_dir = app.get_chart_path(charts_dir)  # .sbkube/charts/grafana/loki-18.0.0/
 
 # Atomic move pattern with UUID-based temp directory
 import uuid
@@ -258,7 +258,7 @@ sbkube prepare --force
 ls -R .sbkube/charts/
 
 # Expected output:
-# .sbkube/charts/bitnami/redis-18.0.0/
+# .sbkube/charts/grafana/loki-18.0.0/
 # .sbkube/charts/grafana/grafana-7.0.6/
 ```
 

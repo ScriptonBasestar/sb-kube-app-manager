@@ -116,7 +116,7 @@ apps:
 apps:
   redis:
     type: helm
-    repo: bitnami
+    repo: grafana
     chart: redis
     version: "19.0.0"
     # values 파일 없이 set_values만 사용

@@ -24,7 +24,7 @@ class TestStorageValidator:
             apps={
                 "nginx": HelmApp(
                     type="helm",
-                    chart="bitnami/nginx",
+                    chart="grafana/nginx",
                     version="15.0.0",
                 )
             },
@@ -103,7 +103,7 @@ class TestStorageValidator:
             apps={
                 "postgresql": HelmApp(
                     type="helm",
-                    chart="bitnami/postgresql",
+                    chart="prometheus-community/kube-state-metrics",
                     version="13.0.0",
                 )
             },

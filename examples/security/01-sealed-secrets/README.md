@@ -38,7 +38,7 @@ data:
 ### ✅ Sealed Secrets 해결책
 
 ```yaml
-apiVersion: bitnami.com/v1alpha1
+apiVersion: grafana.com/v1alpha1
 kind: SealedSecret
 metadata:
   name: db-password
@@ -171,7 +171,7 @@ rbac:
 
 ```bash
 # kubeseal 설치
-wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.0/kubeseal-0.24.0-linux-amd64.tar.gz
+wget https://github.com/grafana-labs/sealed-secrets/releases/download/v0.24.0/kubeseal-0.24.0-linux-amd64.tar.gz
 tar -xzf kubeseal-0.24.0-linux-amd64.tar.gz
 sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 
@@ -290,7 +290,7 @@ metadata:
   name: my-secret
   namespace: production
   annotations:
-    sealedsecrets.bitnami.com/scope: strict
+    sealedsecrets.grafana.com/scope: strict
 ```
 
 **namespace-wide**:
@@ -298,7 +298,7 @@ metadata:
 # 같은 네임스페이스면 이름 달라도 복호화 가능
 metadata:
   annotations:
-    sealedsecrets.bitnami.com/scope: namespace-wide
+    sealedsecrets.grafana.com/scope: namespace-wide
 ```
 
 **cluster-wide**:
@@ -306,7 +306,7 @@ metadata:
 # 클러스터 어디서든 복호화 가능
 metadata:
   annotations:
-    sealedsecrets.bitnami.com/scope: cluster-wide
+    sealedsecrets.grafana.com/scope: cluster-wide
 ```
 
 ### 3. 키 로테이션
@@ -320,7 +320,7 @@ metadata:
 ```bash
 # 비공개키 백업 (안전한 장소에 보관!)
 kubectl get secret -n sealed-secrets \
-  -l sealedsecrets.bitnami.com/sealed-secrets-key=active \
+  -l sealedsecrets.grafana.com/sealed-secrets-key=active \
   -o yaml > sealed-secrets-key-backup.yaml
 ```
 
@@ -463,7 +463,7 @@ kubeseal --cert=pub-cert.pem -f plain-secret.yaml -o yaml > new-sealed-secret.ya
 ```bash
 # 정기적 키 백업
 kubectl get secret -n sealed-secrets \
-  -l sealedsecrets.bitnami.com/sealed-secrets-key \
+  -l sealedsecrets.grafana.com/sealed-secrets-key \
   -o yaml > sealed-secrets-keys-backup-$(date +%Y%m%d).yaml
 ```
 
@@ -540,7 +540,7 @@ sealedSecrets:
 
 ```yaml
 # Helm template
-apiVersion: bitnami.com/v1alpha1
+apiVersion: grafana.com/v1alpha1
 kind: SealedSecret
 metadata:
   name: db-credentials
@@ -566,8 +566,8 @@ done
 ## 📚 추가 학습 자료
 
 ### 공식 문서
-- [Sealed Secrets GitHub](https://github.com/bitnami-labs/sealed-secrets)
-- [Bitnami Sealed Secrets Docs](https://docs.bitnami.com/tutorials/sealed-secrets/)
+- [Sealed Secrets GitHub](https://github.com/grafana-labs/sealed-secrets)
+- [grafana Sealed Secrets Docs](https://docs.grafana.com/tutorials/sealed-secrets/)
 
 ### SBKube 관련
 - [Application Types - YAML](../../docs/02-features/application-types.md#2-yaml)

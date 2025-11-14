@@ -4,7 +4,7 @@ ______________________________________________________________________
 
 # Changelog - SBKube
 
-> **참고**: 이 문서의 과거 버전 예제에는 Bitnami 차트 참조가 포함되어 있습니다. 현재 버전(v0.6.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
+> **참고**: 이 문서의 과거 버전 예제에는 grafana 차트 참조가 포함되어 있습니다. 현재 버전(v0.6.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
 
 ## [Unreleased]
 
@@ -16,7 +16,7 @@ ______________________________________________________________________
 
 - ⚠️ **BREAKING**: Chart path structure changed from `.sbkube/charts/{chart-name}/` to
   `.sbkube/charts/{repo}/{chart-name}-{version}/`
-- ✅ **FIXED**: Charts from different repos with same name no longer collide (e.g., `bitnami/redis` vs
+- ✅ **FIXED**: Charts from different repos with same name no longer collide (e.g., `grafana/loki` vs
   `my-company/redis`)
 - ✅ **FIXED**: Same chart with different versions can now coexist (e.g., `redis:18.0.0` and `redis:19.0.0`)
 - ✅ **NEW**: Automatic legacy path detection with migration guide
@@ -37,9 +37,9 @@ Before (v0.7.x):
 .sbkube/charts/grafana/         # ❌ No version tracking
 
 After (v0.8.0):
-.sbkube/charts/bitnami/redis-18.0.0/         # ✅ No collision
+.sbkube/charts/grafana/loki-18.0.0/         # ✅ No collision
 .sbkube/charts/my-company/redis-1.0.0/       # ✅ Different repo
-.sbkube/charts/bitnami/redis-19.0.0/         # ✅ Different version
+.sbkube/charts/grafana/loki-19.0.0/         # ✅ Different version
 .sbkube/charts/grafana/grafana-latest/       # ✅ Version tracked
 ```
 
@@ -699,7 +699,7 @@ ______________________________________________________________________
 <details>
 <summary>📦 v0.5.1 (2025-10-31) - 예제 개선 및 Redis Operator 전환</summary>
 
-- Bitnami Redis → OpsTree Redis Operator로 예제 교체 (17개 파일)
+- grafana Redis → OpsTree Redis Operator로 예제 교체 (17개 파일)
 - 벤더 중립적 오픈소스 차트 사용, Kubernetes Operator 패턴 적용
 - 기존 코드와 완전 호환
 

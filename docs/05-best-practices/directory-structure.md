@@ -238,7 +238,7 @@ SBKube가 자동으로 생성하는 작업 디렉토리입니다. `sources.yaml`
 >
 > ```bash
 > # Helm 명령어 (SBKube 내부 동작)
-> helm pull bitnami/redis --untar --untardir .sbkube/charts
+> helm pull grafana/loki --untar --untardir .sbkube/charts
 >
 > # 결과:
 > # .sbkube/charts/redis/  ← 차트가 직접 저장됨
@@ -275,7 +275,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: bitnami/redis
+    chart: grafana/loki
     version: "18.0.0"
     values:
       - values/redis.yaml
@@ -283,7 +283,7 @@ apps:
   memcached:
     type: helm
     enabled: true
-    chart: bitnami/memcached
+    chart: grafana/memcached
     values:
       - values/memcached.yaml
 
@@ -926,7 +926,7 @@ cmd = ["helm", "pull", f"{repo_name}/{chart_name}",
 Helm은 `--untardir` 경로 **아래**에 차트 이름으로 디렉토리를 자동 생성합니다:
 
 ```bash
-helm pull bitnami/redis --untar --untardir /path/to/target
+helm pull grafana/loki --untar --untardir /path/to/target
 # 결과: /path/to/target/redis/
 ```
 
@@ -1076,7 +1076,7 @@ ______________________________________________________________________
 
 ```
 .sbkube/charts/
-├── bitnami/
+├── grafana/
 │   ├── redis-18.0.0/          # ✅ repo + 버전 명시
 │   ├── redis-19.0.0/          # ✅ 다른 버전 공존 가능
 │   └── postgresql-15.0.0/
@@ -1121,7 +1121,7 @@ sbkube prepare --force
 ls -R .sbkube/charts/
 
 # 예상 출력:
-# .sbkube/charts/bitnami/redis-18.0.0/
+# .sbkube/charts/grafana/loki-18.0.0/
 # .sbkube/charts/grafana/grafana-7.0.6/
 ```
 
@@ -1132,8 +1132,8 @@ ls -R .sbkube/charts/
 ```yaml
 # 이전에는 불가능했던 시나리오
 apps:
-  redis-bitnami:
-    chart: bitnami/redis
+  redis-grafana:
+    chart: grafana/loki
     version: 18.0.0
 
   redis-custom:
@@ -1147,11 +1147,11 @@ apps:
 # 이전에는 불가능했던 시나리오
 apps:
   redis-old:
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 18.0.0           # ❌ v0.7.x: 덮어쓰기!
 
   redis-new:
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 19.0.0           # ✅ v0.8.0: 공존 가능
 ```
 

@@ -7,7 +7,7 @@ apps:
   nginx-custom:
     type: helm
     helm:
-      repo: bitnami
+      repo: grafana
       chart: nginx
       version: "13.0.0"
       release_name: nginx-custom

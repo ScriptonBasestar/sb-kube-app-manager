@@ -162,7 +162,7 @@ deps: ["a000_infra"]  # 앱 그룹 의존성
 apps:
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     version: "18.0.0"
     values: ["values/production.yaml"]
     hooks:  # 배포 전후 자동화
@@ -177,7 +177,7 @@ kubeconfig: ~/.kube/config
 kubeconfig_context: production-cluster
 
 helm_repos:
-  bitnami: https://charts.bitnami.com/bitnami
+  grafana: https://grafana.github.io/helm-charts
   grafana: https://grafana.github.io/helm-charts
 ```
 

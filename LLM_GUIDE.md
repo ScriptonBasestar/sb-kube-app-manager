@@ -495,7 +495,7 @@ apps:
   - name: database
     type: helm
     helm:
-      repo: bitnami
+      repo: grafana
       chart: postgresql
 
   - name: backend
@@ -610,7 +610,7 @@ apps:
   - name: database
     type: helm
     helm:
-      repo: bitnami
+      repo: grafana
       chart: postgresql
       version: "12.0.0"
       release_name: myapp-db
@@ -759,7 +759,7 @@ apps:
   - name: nginx
     type: helm
     helm:
-      repo: bitnami
+      repo: grafana
       chart: nginx
       version: "13.0.0"
       overrides:
@@ -867,7 +867,7 @@ ______________________________________________________________________
 
 ```bash
 # Add repository
-helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
 
 # Retry

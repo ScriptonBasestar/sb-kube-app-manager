@@ -131,8 +131,8 @@ phases:
 kubeconfig: ~/.kube/config
 context: production-cluster
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 ```
 
 ### Precedence Rules
@@ -235,8 +235,8 @@ When Helm/OCI repository defined at multiple levels, which takes precedence?
 # workspace.yaml
 global:
   helm_repos:
-    bitnami:
-      url: https://charts.bitnami.com/bitnami
+    grafana:
+      url: https://grafana.github.io/helm-charts
 ```
 
 #### Level 2: Phase Sources
@@ -273,24 +273,24 @@ apps:
 # workspace.yaml
 global:
   helm_repos:
-    bitnami:
-      url: https://charts.bitnami.com/bitnami  # Default
+    grafana:
+      url: https://grafana.github.io/helm-charts  # Default
 
 # p1-kube/sources.yaml
 helm_repos:
-  bitnami:
-    url: https://charts.internal.com/bitnami-mirror  # Override for this phase
+  grafana:
+    url: https://charts.internal.com/grafana-mirror  # Override for this phase
 
 # p1-kube/config.yaml
 apps:
   redis:
-    chart: bitnami/redis  # Uses phase-level mirror
+    chart: grafana/loki  # Uses phase-level mirror
   nginx:
     chart: custom/nginx   # Uses app-level explicit reference
 ```
 
 **Result**:
-- `redis` chart: Fetched from `https://charts.internal.com/bitnami-mirror` (phase-level)
+- `redis` chart: Fetched from `https://charts.internal.com/grafana-mirror` (phase-level)
 - `nginx` chart: Fetched from `custom` repo (must be defined somewhere)
 
 ---

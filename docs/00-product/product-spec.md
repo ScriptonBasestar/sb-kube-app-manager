@@ -599,7 +599,7 @@ DevOps 엔지니어 Frank는 모든 배포 전에 클러스터 상태를 확인�
 apps:
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     hooks:
       pre_deploy:
         - echo "Creating database backup..."

@@ -31,7 +31,7 @@ hooks:
 apps:
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     hooks:
       pre_deploy:          # 이 앱 배포 직전
         - echo "Deploying Redis..."
@@ -114,7 +114,7 @@ sbkube deploy --app-dir examples/hooks --dry-run
 apps:
   postgresql:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     hooks:
       pre_deploy:
         - ./scripts/backup-db.sh

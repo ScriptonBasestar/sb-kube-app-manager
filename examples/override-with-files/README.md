@@ -381,7 +381,7 @@ apps:
   nginx:
     type: helm
     chart: nginx
-    repo: bitnami
+    repo: grafana
 
     # 커스텀 템플릿 추가
     overrides:

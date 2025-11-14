@@ -119,7 +119,7 @@ phases:
 **예시**:
 ```
 Phase 1 (infra): cilium, coredns 리포지토리
-Phase 2 (data): bitnami 리포지토리
+Phase 2 (data): grafana 리포지토리
 Phase 3 (app): custom OCI registry
 ```
 
@@ -144,8 +144,8 @@ Phase 3 (app): custom OCI registry
    ```yaml
    global:
      helm_repos:
-       bitnami:
-         url: https://charts.bitnami.com/bitnami
+       grafana:
+         url: https://grafana.github.io/helm-charts
    ```
 
 **선택 근거**:

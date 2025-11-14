@@ -340,7 +340,7 @@ apps:
 apps:
   custom-app:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     overrides:
       templates/secret.yaml: custom/secret.yaml
     removes:

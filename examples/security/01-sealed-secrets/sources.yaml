@@ -6,4 +6,4 @@ kubeconfig_context: default
 # Helm 리포지토리
 helm_repos:
   sealed-secrets:
-    url: https://bitnami-labs.github.io/sealed-secrets
+    url: https://grafana-labs.github.io/sealed-secrets

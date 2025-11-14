@@ -336,7 +336,7 @@ class AppHooks(ConfigBaseModel):
         # Shell 명령어 hooks (기존 방식)
         database:
           type: helm
-          chart: bitnami/postgresql
+          chart: prometheus-community/kube-state-metrics
           hooks:
             pre_prepare:
               - echo "Preparing database chart"
@@ -713,18 +713,18 @@ class HelmApp(ConfigBaseModel):
                 "        type: helm\n"
                 "        chart: myregistry/chartname\n"
                 "\n"
-                "Example for Docker Hub Bitnami charts:\n"
+                "Example for Docker Hub grafana charts:\n"
                 "\n"
                 "  sources.yaml:\n"
                 "    oci_registries:\n"
-                "      bitnami:\n"
-                "        registry: oci://registry-1.docker.io/bitnamicharts\n"
+                "      grafana:\n"
+                "        registry: oci://ghcr.io/grafana/helm-charts\n"
                 "\n"
                 "  config.yaml:\n"
                 "    apps:\n"
                 "      supabase:\n"
                 "        type: helm\n"
-                "        chart: bitnami/supabase\n"
+                "        chart: grafana/grafana\n"
                 "\n"
                 "For more details, see: docs/03-configuration/config-schema.md#oci-registry"
             )
@@ -809,13 +809,13 @@ class HelmApp(ConfigBaseModel):
             Chart 저장 경로 (Path 객체) 또는 None (로컬 차트인 경우)
 
         Examples:
-            >>> app = HelmApp(chart="bitnami/redis", version="18.0.0")
+            >>> app = HelmApp(chart="grafana/loki", version="18.0.0")
             >>> app.get_chart_path(Path(".sbkube/charts"))
-            Path(".sbkube/charts/bitnami/redis-18.0.0")
+            Path(".sbkube/charts/grafana/loki-18.0.0")
 
-            >>> app = HelmApp(chart="bitnami/redis")  # version 없음
+            >>> app = HelmApp(chart="grafana/loki")  # version 없음
             >>> app.get_chart_path(Path(".sbkube/charts"))
-            Path(".sbkube/charts/bitnami/redis-latest")
+            Path(".sbkube/charts/grafana/loki-latest")
 
             >>> app = HelmApp(chart="./my-chart")  # 로컬 차트
             >>> app.get_chart_path(Path(".sbkube/charts"))

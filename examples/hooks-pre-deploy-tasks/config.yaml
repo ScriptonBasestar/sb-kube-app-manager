@@ -5,7 +5,7 @@ apps:
     type: helm
     enabled: true
     specs:
-      repo: bitnami
+      repo: grafana
       chart: postgresql
       version: 12.5.8
     values:

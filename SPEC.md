@@ -499,7 +499,7 @@ deps: ["a000_infra"]
 apps:
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     version: "18.0.0"
     values: ["values/production.yaml"]
     hooks:
@@ -537,7 +537,7 @@ kubeconfig_context: production-cluster
 cluster: production-k3s
 
 helm_repos:
-  bitnami: https://charts.bitnami.com/bitnami
+  grafana: https://grafana.github.io/helm-charts
   grafana: https://grafana.github.io/helm-charts
 
 git:
@@ -698,7 +698,7 @@ from sbkube.utils.file_loader import load_config
 
 config = load_config("config/production/config.yaml")
 print(config.namespace)  # 'production'
-print(config.apps["redis"].chart)  # 'bitnami/redis'
+print(config.apps["redis"].chart)  # 'grafana/loki'
 ```
 
 ______________________________________________________________________
@@ -840,7 +840,7 @@ hooks:
 apps:
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     hooks:
       pre_deploy: ["./backup-db.sh"]
       post_deploy: ["kubectl wait --for=condition=ready pod -l app=postgresql"]

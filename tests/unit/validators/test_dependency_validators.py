@@ -48,7 +48,7 @@ def helm_config_with_apps(tmp_path: Path) -> tuple[Path, dict[str, Any]]:
                 "name": "nginx",
                 "type": "helm",
                 "specs": {
-                    "chart": "bitnami/nginx",
+                    "chart": "grafana/nginx",
                     "version": "15.0.0",
                     "values": ["config/nginx-values.yaml"],
                 },
@@ -256,7 +256,7 @@ class TestDependencyResolutionValidator:
             "name": "myapp",
             "version": "1.0.0",
             "dependencies": [
-                {"name": "postgresql", "version": "12.0.0", "repository": "https://charts.bitnami.com/bitnami"}
+                {"name": "postgresql", "version": "12.0.0", "repository": "https://grafana.github.io/helm-charts"}
             ]
         }))
 
@@ -322,7 +322,7 @@ class TestNetworkConnectivityValidator:
         sources = {
             "helm": {
                 "repositories": [
-                    {"name": "bitnami", "url": "https://charts.bitnami.com/bitnami"},
+                    {"name": "grafana", "url": "https://grafana.github.io/helm-charts"},
                 ]
             }
         }
@@ -350,7 +350,7 @@ class TestNetworkConnectivityValidator:
         sources = {
             "helm": {
                 "repositories": [
-                    {"name": "bitnami", "url": "https://charts.bitnami.com/bitnami"},
+                    {"name": "grafana", "url": "https://grafana.github.io/helm-charts"},
                 ]
             }
         }

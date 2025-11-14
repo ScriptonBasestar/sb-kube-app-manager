@@ -805,9 +805,9 @@ This works fine - apps are distinguished by their key:
 ```yaml
 apps:
   redis-cache:
-    chart: bitnami/redis    # Same chart
+    chart: grafana/loki    # Same chart
   redis-queue:
-    chart: bitnami/redis    # Different app name
+    chart: grafana/loki    # Different app name
 ```
 
 ### Q: How to rollback a migration?

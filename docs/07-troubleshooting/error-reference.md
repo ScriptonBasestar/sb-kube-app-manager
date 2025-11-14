@@ -146,8 +146,8 @@ configuration for OCI registries.
 ```yaml
 # sources.yaml
 oci_registries:
-  bitnami:
-    registry: oci://registry-1.docker.io/bitnamicharts
+  grafana:
+    registry: oci://ghcr.io/grafana/helm-charts
 
   truecharts:
     registry: oci://tccr.io/truecharts
@@ -160,19 +160,19 @@ oci_registries:
 apps:
   supabase:
     type: helm
-    chart: oci://registry-1.docker.io/bitnamicharts/supabase  # ❌ Error!
+    chart: oci://ghcr.io/grafana/helm-charts/supabase  # ❌ Error!
 
 # config.yaml - AFTER (✅ Correct)
 apps:
   supabase:
     type: helm
-    chart: bitnami/supabase  # ✅ Uses registry name from sources.yaml
+    chart: grafana/grafana  # ✅ Uses registry name from sources.yaml
     version: "1.0.0"
 ```
 
 **Common OCI Registries:**
 
-- **Docker Hub Bitnami**: `oci://registry-1.docker.io/bitnamicharts`
+- **Docker Hub grafana**: `oci://ghcr.io/grafana/helm-charts`
 - **TrueCharts**: `oci://tccr.io/truecharts`
 - **GitHub Container Registry**: `oci://ghcr.io/org-name/charts`
 - **GitLab Container Registry**: `oci://registry.gitlab.com/project/charts`
@@ -185,8 +185,8 @@ kubeconfig: ~/.kube/config
 cluster: production
 
 oci_registries:
-  bitnami:
-    registry: oci://registry-1.docker.io/bitnamicharts
+  grafana:
+    registry: oci://ghcr.io/grafana/helm-charts
 
   private-registry:
     registry: oci://my-registry.com/charts
@@ -199,7 +199,7 @@ namespace: platform
 apps:
   supabase:
     type: helm
-    chart: bitnami/supabase
+    chart: grafana/grafana
     version: "1.0.0"
     values:
       - values/supabase.yaml

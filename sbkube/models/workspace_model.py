@@ -80,8 +80,8 @@ class GlobalDefaults(ConfigBaseModel):
           timeout: 600
           on_failure: stop
           helm_repos:
-            bitnami:
-              url: https://charts.bitnami.com/bitnami
+            grafana:
+              url: https://grafana.github.io/helm-charts
     """
 
     kubeconfig: Annotated[

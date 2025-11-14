@@ -425,11 +425,11 @@ pytest tests/unit/utils/test_retry.py -xvs
 
    ```python
    # ✅ Modern (v0.4.10+)
-   chart: bitnami/redis
+   chart: grafana/loki
 
    # ❌ Deprecated
    chart: redis
-   repo: bitnami
+   repo: grafana
    ```
 
 1. **Incomplete Stubs**: Skip tests for incomplete implementations:

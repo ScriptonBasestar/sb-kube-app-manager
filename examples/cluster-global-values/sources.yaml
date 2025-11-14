@@ -14,4 +14,4 @@ global_values:
     deployment_timestamp: "2025-01-06T10:00:00Z"
 
 helm_repos:
-  bitnami: https://charts.bitnami.com/bitnami
+  grafana: https://grafana.github.io/helm-charts

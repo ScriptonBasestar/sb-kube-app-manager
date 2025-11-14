@@ -53,7 +53,7 @@ class TestConfigStructureValidator:
                 {
                     "name": "nginx",
                     "type": "helm",
-                    "specs": {"chart": "bitnami/nginx"},
+                    "specs": {"chart": "grafana/nginx"},
                 }
             ],
         }
@@ -149,7 +149,7 @@ class TestConfigStructureValidator:
                 {
                     "name": "nginx",
                     "type": "helm",
-                    "specs": {"chart": "bitnami/nginx"},
+                    "specs": {"chart": "grafana/nginx"},
                 }
             ],
         }
@@ -157,7 +157,7 @@ class TestConfigStructureValidator:
 
         sources = {
             "helm": {
-                "bitnami": {"url": "https://charts.bitnami.com/bitnami"}
+                "grafana": {"url": "https://grafana.github.io/helm-charts"}
             }
         }
         sources_file.write_text(yaml.dump(sources))

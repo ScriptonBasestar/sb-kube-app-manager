@@ -4,7 +4,7 @@ apps:
   postgresql:
     type: helm
     enabled: true
-    chart: bitnami/postgresql  # repo/chart format (v0.5.0+)
+    chart: prometheus-community/kube-state-metrics  # repo/chart format (v0.5.0+)
     version: "15.0.0"
     values:
       auth:

@@ -150,7 +150,7 @@ namespace: database
 apps:
   postgresql:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     version: 13.0.0
     values:
       persistence:
@@ -219,7 +219,7 @@ namespace: database
 apps:
   postgresql:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     version: 13.0.0
     values:
       persistence:
@@ -249,7 +249,7 @@ namespace: database
 apps:
   postgresql:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     version: 13.0.0
     values:
       persistence:
@@ -307,14 +307,14 @@ namespace: database
 apps:
   postgresql:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     values:
       persistence:
         storageClass: local-path  # ✅ Dynamic
 
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     values:
       master:
         persistence:

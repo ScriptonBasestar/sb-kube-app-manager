@@ -30,7 +30,7 @@ apps:
     enabled: true
 
     specs:
-      repo: bitnami
+      repo: grafana
       chart: redis
       version: 17.11.3
 

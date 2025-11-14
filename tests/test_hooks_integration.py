@@ -39,7 +39,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: bitnami/redis
+    chart: grafana/loki
     version: "19.0.0"
     hooks:
       pre_prepare:
@@ -122,8 +122,8 @@ kubeconfig_context: "test-context"
 cluster: "test-cluster"
 
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 """
     )
 
@@ -254,7 +254,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: bitnami/redis
+    chart: grafana/loki
     version: "19.0.0"
 """
     )
@@ -302,7 +302,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: bitnami/redis
+    chart: grafana/loki
     version: "19.0.0"
     release_name: my-redis
     hooks:
@@ -342,7 +342,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: bitnami/redis
+    chart: grafana/loki
     version: "19.0.0"
 """
     )
@@ -379,7 +379,7 @@ apps:
   redis:
     type: helm
     enabled: true
-    chart: bitnami/invalid-chart  # 존재하지 않는 차트
+    chart: grafana/invalid-chart  # 존재하지 않는 차트
     version: "19.0.0"
     hooks:
       on_deploy_failure:

@@ -45,8 +45,8 @@ kubeconfig_context: prod-cluster
 cluster_values_file: cluster-values.yaml
 
 helm_repos:
-  - name: bitnami
-    url: https://charts.bitnami.com/bitnami
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
 ```
 
 **cluster-values.yaml**:
@@ -78,8 +78,8 @@ global_values:
     replicas: 1
 
 helm_repos:
-  - name: bitnami
-    url: https://charts.bitnami.com/bitnami
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
 ```
 
 ## 3. Combining Both (Recommended)
@@ -100,8 +100,8 @@ global_values:
     deployment_timestamp: "2025-01-06T10:00:00Z"
 
 helm_repos:
-  - name: bitnami
-    url: https://charts.bitnami.com/bitnami
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
 ```
 
 ## Complete Example
@@ -119,8 +119,8 @@ global_values:
     environment: production
 
 helm_repos:
-  - name: bitnami
-    url: https://charts.bitnami.com/bitnami
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
 ```
 
 ### cluster-values.yaml
@@ -140,7 +140,7 @@ namespace: default
 apps:
   nginx:
     type: helm
-    chart: bitnami/nginx
+    chart: grafana/nginx
     values:
       - values/nginx-custom.yaml
 ```

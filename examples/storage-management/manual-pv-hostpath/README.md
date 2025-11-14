@@ -122,7 +122,7 @@ sbkube delete
 kubectl delete pv postgresql-pv
 
 # Delete data directory (optional, will lose data!)
-# kubectl exec -it postgresql-0 -n database -- rm -rf /bitnami/postgresql
+# kubectl exec -it postgresql-0 -n database -- rm -rf /prometheus-community/kube-state-metrics
 ```
 
 ## Troubleshooting

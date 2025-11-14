@@ -242,7 +242,7 @@ ______________________________________________________________________
 
 **✅ 업그레이드가 필요한 경우**:
 
-- 여러 repo의 동일 이름 chart 사용 (예: `bitnami/redis`와 `my-company/redis`)
+- 여러 repo의 동일 이름 chart 사용 (예: `grafana/loki`와 `my-company/redis`)
 - 동일 chart의 다른 버전 필요 (예: redis 18.0.0과 19.0.0)
 - PV/PVC 사용 (수동 프로비저닝)
 - 최신 버그 수정 및 보안 패치 필요
@@ -338,8 +338,8 @@ ______________________________________________________________________
 **After (v0.8.0)**:
 
 ```
-.sbkube/charts/bitnami/redis-18.0.0/    # ✅ repo + version
-.sbkube/charts/bitnami/redis-19.0.0/    # ✅ 다른 버전 공존
+.sbkube/charts/grafana/loki-18.0.0/    # ✅ repo + version
+.sbkube/charts/grafana/loki-19.0.0/    # ✅ 다른 버전 공존
 .sbkube/charts/my-company/redis-1.0.0/  # ✅ 다른 repo 공존
 ```
 

@@ -37,7 +37,7 @@ sbkube apply
 
 **After (v0.8.0)**:
 ```
-.sbkube/charts/bitnami/redis-18.0.0/
+.sbkube/charts/grafana/loki-18.0.0/
 .sbkube/charts/grafana/grafana-latest/
 ```
 

@@ -67,7 +67,7 @@ Define in each app's `hooks` field:
 apps:
   database:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     hooks:
       # prepare stage hooks
       pre_prepare:
@@ -118,7 +118,7 @@ hooks:
 apps:
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     hooks:
       pre_deploy:
         - echo "Deploying Redis..."
@@ -140,7 +140,7 @@ hooks:
 apps:
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     # App-specific hooks (this app only)
     hooks:
       post_deploy:
@@ -382,7 +382,7 @@ apps:
 apps:
   postgresql:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     version: 13.0.0
     hooks:
       pre_deploy:
@@ -438,7 +438,7 @@ apps:
 apps:
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     hooks:
       post_deploy:
         - kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis --timeout=300s

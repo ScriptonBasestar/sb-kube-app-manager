@@ -94,8 +94,8 @@ cat > p2-kube/sources.yaml <<EOF
 kubeconfig: ~/.kube/config
 kubeconfig_context: production-cluster
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 EOF
 ```
 
@@ -225,8 +225,8 @@ global:
 ```yaml
 global:
   helm_repos:
-    bitnami:
-      url: https://charts.bitnami.com/bitnami
+    grafana:
+      url: https://grafana.github.io/helm-charts
     prometheus-community:
       url: https://prometheus-community.github.io/helm-charts
 ```
@@ -573,8 +573,8 @@ global:
   kubeconfig: ~/.kube/config
   context: production-cluster
   helm_repos:
-    bitnami:
-      url: https://charts.bitnami.com/bitnami
+    grafana:
+      url: https://grafana.github.io/helm-charts
   timeout: 600
   on_failure: stop
 

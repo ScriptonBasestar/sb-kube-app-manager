@@ -38,7 +38,7 @@ ______________________________________________________________________
 **After (v0.8.0)**:
 
 ```
-.sbkube/charts/bitnami/redis-18.0.0/      # ✅ repo + version
+.sbkube/charts/grafana/loki-18.0.0/      # ✅ repo + version
 .sbkube/charts/grafana/grafana-6.50.0/    # ✅ 명확한 식별
 ```
 
@@ -60,7 +60,7 @@ ______________________________________________________________________
 apps:
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 18.0.0
 ```
 
@@ -76,7 +76,7 @@ rm -rf .sbkube/charts
 sbkube prepare --force
 
 # 3. 확인
-ls .sbkube/charts/bitnami/
+ls .sbkube/charts/grafana/
 # Expected: redis-18.0.0/
 
 # 4. 배포
@@ -156,13 +156,13 @@ ______________________________________________________________________
 apps:
   cache:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 18.0.0
     release_name: redis-cache
 
   session:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 19.0.0
     release_name: redis-session
 ```
@@ -170,7 +170,7 @@ apps:
 **결과**:
 
 ```
-.sbkube/charts/bitnami/
+.sbkube/charts/grafana/
 ├── redis-18.0.0/
 └── redis-19.0.0/
 ```
@@ -182,7 +182,7 @@ rm -rf .sbkube/charts
 sbkube prepare --force
 
 # 확인
-ls .sbkube/charts/bitnami/
+ls .sbkube/charts/grafana/
 # Expected: redis-18.0.0/ redis-19.0.0/
 
 sbkube apply
@@ -192,7 +192,7 @@ ______________________________________________________________________
 
 ### Case 4: 다른 Repo의 동일 이름 Chart (v0.8.0 신기능)
 
-**시나리오**: bitnami/redis와 my-company/redis 동시 사용
+**시나리오**: grafana/loki와 my-company/redis 동시 사용
 
 **Before (v0.7.x)**: ❌ 불가능 - 충돌 발생
 
@@ -204,7 +204,7 @@ ______________________________________________________________________
 apps:
   public-cache:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 18.0.0
 
   internal-cache:
@@ -217,7 +217,7 @@ apps:
 
 ```
 .sbkube/charts/
-├── bitnami/
+├── grafana/
 │   └── redis-18.0.0/
 └── my-company/
     └── redis-1.0.0/
@@ -286,9 +286,9 @@ ls -R .sbkube/charts/
 
 ```
 .sbkube/charts/:
-bitnami/  grafana/
+grafana/  grafana/
 
-.sbkube/charts/bitnami:
+.sbkube/charts/grafana:
 redis-18.0.0/
 
 .sbkube/charts/grafana:
@@ -467,7 +467,7 @@ ______________________________________________________________________
 
 **A**: ❌ 아니요! 설정 파일은 **변경 불필요**합니다.
 
-- `chart: bitnami/redis` → 그대로
+- `chart: grafana/loki` → 그대로
 - `version: 18.0.0` → 그대로
 - `overrides: [...]` → 그대로
 

@@ -69,7 +69,7 @@ class TestGlobalDefaults:
             timeout=900,
             on_failure="rollback",
             helm_repos={
-                "bitnami": {"url": "https://charts.bitnami.com/bitnami"}
+                "grafana": {"url": "https://grafana.github.io/helm-charts"}
             },
         )
 
@@ -77,7 +77,7 @@ class TestGlobalDefaults:
         assert defaults.context == "prod-cluster"
         assert defaults.timeout == 900
         assert defaults.on_failure == "rollback"
-        assert "bitnami" in defaults.helm_repos
+        assert "grafana" in defaults.helm_repos
 
 
 class TestPhaseConfig:

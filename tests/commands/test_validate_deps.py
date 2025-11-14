@@ -20,7 +20,7 @@ deps:
 apps:
   nginx:
     type: helm
-    chart: bitnami/nginx
+    chart: grafana/nginx
     version: 15.0.0
 """
     (app_dir / "config.yaml").write_text(config_content)

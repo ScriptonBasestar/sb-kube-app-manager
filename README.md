@@ -89,7 +89,7 @@ sbkube apply --app-dir . --namespace production
 .sbkube/charts/redis/           # Which repo? Which version?
 
 # After v0.8.0 (no collision)
-.sbkube/charts/bitnami/redis-18.0.0/      # Clear and unique
+.sbkube/charts/grafana/loki-5.0.0/        # Clear and unique
 .sbkube/charts/my-company/redis-1.0.0/    # Different repo
 ```
 

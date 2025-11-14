@@ -5,11 +5,11 @@ namespace: default
 apps:
   nginx:
     type: helm
-    chart: bitnami/nginx
+    chart: grafana/nginx
     values:
       - values/nginx-custom.yaml
 
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     # No app-specific values file - uses only cluster global values

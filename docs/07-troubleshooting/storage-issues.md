@@ -157,7 +157,7 @@ namespace: database
 apps:
   postgresql:
     type: helm
-    chart: bitnami/postgresql
+    chart: prometheus-community/kube-state-metrics
     values:
       persistence:
         enabled: true

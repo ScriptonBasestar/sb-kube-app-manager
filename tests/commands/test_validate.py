@@ -24,7 +24,7 @@ def temp_project(tmp_path):
 apps:
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     version: "17.0.0"
     enabled: true
 """
@@ -42,8 +42,8 @@ apps:
     sources_content = """kubeconfig: ~/.kube/config
 kubeconfig_context: default
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 """
     (tmp_path / "sources.yaml").write_text(sources_content)
 
@@ -186,7 +186,7 @@ class TestValidateCurrentDir:
 apps:
   redis:
     type: helm
-    chart: bitnami/redis
+    chart: grafana/loki
     enabled: true
 """
         (app1_dir / "config.yaml").write_text(config_content)

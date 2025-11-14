@@ -25,8 +25,8 @@ app_dirs:
   # nginx는 의도적으로 제외
 
 helm_repos:
-  bitnami:
-    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts
 ```
 
 ## 사용 방법

@@ -8,7 +8,7 @@ ______________________________________________________________________
 
 v0.8.0 이전 버전에서는 chart 경로가 `charts/{chart-name}/`으로 단순했기 때문에, 다음과 같은 충돌 문제가 발생했습니다:
 
-1. **동일 이름, 다른 Repo**: `bitnami/redis`와 `my-company/redis`
+1. **동일 이름, 다른 Repo**: `grafana/loki`와 `my-company/redis`
 1. **동일 Chart, 다른 버전**: `redis:18.0.0`과 `redis:19.0.0`
 
 v0.8.0부터는 `charts/{repo}/{chart-name}-{version}/` 구조로 변경되어 이러한 문제가 **자동으로 해결**됩니다.
@@ -46,7 +46,7 @@ sbkube prepare --force
 # 4. 확인
 ls -R .sbkube/charts/
 # Expected:
-# .sbkube/charts/bitnami/redis-18.0.0/
+# .sbkube/charts/grafana/loki-18.0.0/
 # .sbkube/charts/my-company/redis-1.0.0/
 ```
 
@@ -62,11 +62,11 @@ ______________________________________________________________________
 # config.yaml
 apps:
   cache:
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 18.0.0
 
   session:
-    chart: bitnami/redis
+    chart: grafana/loki
     version: 19.0.0  # ❌ 18.0.0을 덮어쓰거나 충돌
 ```
 
@@ -87,7 +87,7 @@ Expected: 18.0.0, Found: 19.0.0 at .sbkube/charts/redis/
 sbkube prepare --force
 
 # 확인
-ls .sbkube/charts/bitnami/
+ls .sbkube/charts/grafana/
 # Expected:
 # redis-18.0.0/
 # redis-19.0.0/
@@ -124,7 +124,7 @@ sbkube prepare --force
 tree .sbkube/charts/
 # Expected:
 # charts/
-# ├── bitnami/
+# ├── grafana/
 # │   └── redis-18.0.0/
 # └── grafana/
 #     └── grafana-6.50.0/
@@ -287,7 +287,7 @@ ______________________________________________________________________
 
 ```
 .sbkube/charts/
-├── bitnami/
+├── grafana/
 │   ├── redis-18.0.0/      # ✅ repo + version
 │   ├── redis-19.0.0/      # ✅ 다른 버전 공존
 │   └── postgresql-12.0.0/
@@ -318,7 +318,7 @@ tree .sbkube/charts/ -L 3
 find .sbkube/charts/ -name "redis*" -type d
 
 # Chart.yaml 내용 확인
-cat .sbkube/charts/bitnami/redis-18.0.0/Chart.yaml
+cat .sbkube/charts/grafana/loki-18.0.0/Chart.yaml
 ```
 
 ### 로그 레벨 높이기

@@ -238,8 +238,8 @@ Helm chart repository configuration.
 
 ```yaml
 helm_repos:
-  bitnami: https://charts.bitnami.com/bitnami
   grafana: https://grafana.github.io/helm-charts
+  prometheus-community: https://prometheus-community.github.io/helm-charts
 ```
 
 **Object format** (with authentication):
@@ -398,7 +398,7 @@ kubeconfig: ~/.kube/config
 kubeconfig_context: prod-cluster
 
 helm_repos:
-  bitnami: https://charts.bitnami.com/bitnami
+  grafana: https://grafana.github.io/helm-charts
 ```
 
 ### With Cluster Global Values
@@ -415,7 +415,7 @@ global_values:
     environment: production
 
 helm_repos:
-  bitnami: https://charts.bitnami.com/bitnami
+  grafana: https://grafana.github.io/helm-charts
 ```
 
 ### Advanced Configuration
@@ -440,7 +440,7 @@ app_dirs:
 
 # Helm repositories
 helm_repos:
-  bitnami: https://charts.bitnami.com/bitnami
+  grafana: https://grafana.github.io/helm-charts
 
   private-charts:
     url: https://charts.example.com

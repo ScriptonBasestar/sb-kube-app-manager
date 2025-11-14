@@ -28,9 +28,9 @@ Before (v0.7.x):
 .sbkube/charts/grafana/         # ❌ No version tracking
 
 After (v0.8.0):
-.sbkube/charts/bitnami/redis-18.0.0/         # ✅ No collision
+.sbkube/charts/grafana/loki-18.0.0/         # ✅ No collision
 .sbkube/charts/my-company/redis-1.0.0/       # ✅ Different repo
-.sbkube/charts/bitnami/redis-19.0.0/         # ✅ Different version
+.sbkube/charts/grafana/loki-19.0.0/         # ✅ Different version
 .sbkube/charts/grafana/grafana-latest/       # ✅ Version tracked
 ```
 
@@ -44,7 +44,7 @@ sbkube prepare --force
 ```
 
 **Why This Change**:
-- **Problem 1**: Charts from different repos with same name collided (e.g., `bitnami/redis` vs `my-company/redis`)
+- **Problem 1**: Charts from different repos with same name collided (e.g., `grafana/loki` vs `my-company/redis`)
 - **Problem 2**: Different versions of same chart couldn't coexist (e.g., `redis:18.0.0` vs `redis:19.0.0`)
 - **Solution**: New path structure includes repo and version: `{repo}/{chart-name}-{version}/`
 

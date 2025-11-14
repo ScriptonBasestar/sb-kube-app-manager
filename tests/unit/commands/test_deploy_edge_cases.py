@@ -394,6 +394,97 @@ class TestNamespaceCreation:
         assert mock_run_command.call_count == 2
 
 
+class TestDeploymentTimeout:
+    """Test deployment timeout scenarios."""
+
+    @patch("sbkube.commands.deploy.run_command")
+    def test_helm_deployment_timeout(self, mock_run_command, tmp_path: Path) -> None:
+        """Test timeout detection and error message."""
+        # Arrange
+        build_dir = tmp_path / "build"
+        build_dir.mkdir(exist_ok=True)
+        app_build_dir = build_dir / "nginx"
+        app_build_dir.mkdir(exist_ok=True)
+        (app_build_dir / "Chart.yaml").write_text("name: nginx")
+
+        app = HelmApp(
+            type="helm",
+            chart="bitnami/nginx",
+            namespace="default",
+        )
+
+        # Mock responses:
+        # 1. Namespace check succeeds
+        # 2. Helm command times out (return code -1)
+        mock_run_command.side_effect = [
+            (0, "", ""),  # namespace check succeeds
+            (-1, "", "Timeout expired after 300 seconds"),  # helm timeout
+        ]
+        output = MagicMock(spec=OutputManager)
+
+        # Act
+        result = deploy_helm_app(
+            app_name="nginx",
+            app=app,
+            base_dir=tmp_path,
+            charts_dir=tmp_path / "charts",
+            build_dir=build_dir,
+            app_config_dir=tmp_path / "config",
+            output=output,
+            dry_run=False,
+        )
+
+        # Assert
+        assert result is False
+        # Verify timeout error was printed
+        output.print_error.assert_called()
+        # Check that error message contains timeout info
+        call_args = output.print_error.call_args
+        assert "timeout" in str(call_args).lower()
+
+
+class TestKeyboardInterrupt:
+    """Test keyboard interrupt (Ctrl+C) handling."""
+
+    @patch("sbkube.commands.deploy.run_command")
+    def test_keyboard_interrupt_during_deployment(
+        self, mock_run_command, tmp_path: Path
+    ) -> None:
+        """Test that KeyboardInterrupt is properly re-raised."""
+        # Arrange
+        build_dir = tmp_path / "build"
+        build_dir.mkdir(exist_ok=True)
+        app_build_dir = build_dir / "nginx"
+        app_build_dir.mkdir(exist_ok=True)
+        (app_build_dir / "Chart.yaml").write_text("name: nginx")
+
+        app = HelmApp(
+            type="helm",
+            chart="bitnami/nginx",
+            namespace="default",
+        )
+
+        # Mock run_command to raise KeyboardInterrupt
+        mock_run_command.side_effect = [
+            (0, "", ""),  # namespace check succeeds
+            KeyboardInterrupt(),  # User presses Ctrl+C during helm command
+        ]
+        output = MagicMock(spec=OutputManager)
+
+        # Act & Assert
+        with pytest.raises(KeyboardInterrupt):
+            deploy_helm_app(
+                app_name="nginx",
+                app=app,
+                base_dir=tmp_path,
+                charts_dir=tmp_path / "charts",
+                build_dir=build_dir,
+                app_config_dir=tmp_path / "config",
+                output=output,
+                dry_run=False,
+            )
+
+
 class TestHelmDeploymentOptions:
     """Test various Helm deployment options."""
 

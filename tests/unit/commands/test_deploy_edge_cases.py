@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sbkube.commands.deploy import deploy_helm_app
+from sbkube.exceptions import KubernetesConnectionError
 from sbkube.models.config_model import HelmApp
 from sbkube.utils.output_manager import OutputManager
 
@@ -36,28 +37,30 @@ class TestConnectionErrorHandling:
             namespace="default",
         )
 
-        # Simulate connection refused error
-        mock_run_command.return_value = (
-            1,
-            "",
-            "Error: connection refused to kubernetes cluster",
-        )
+        # Mock responses:
+        # 1. Namespace check succeeds
+        # 2. Helm command fails with connection refused
+        mock_run_command.side_effect = [
+            (0, "", ""),  # namespace check succeeds
+            (1, "", "Error: connection refused to kubernetes cluster"),  # helm fails
+        ]
         output = MagicMock(spec=OutputManager)
 
-        # Act
-        result = deploy_helm_app(
-            app_name="nginx",
-            app=app,
-            base_dir=tmp_path,
-            charts_dir=tmp_path / "charts",
-            build_dir=build_dir,
-            app_config_dir=tmp_path / "config",
-            output=output,
-            dry_run=False,
-        )
+        # Act & Assert
+        with pytest.raises(KubernetesConnectionError) as exc_info:
+            deploy_helm_app(
+                app_name="nginx",
+                app=app,
+                base_dir=tmp_path,
+                charts_dir=tmp_path / "charts",
+                build_dir=build_dir,
+                app_config_dir=tmp_path / "config",
+                output=output,
+                dry_run=False,
+            )
 
-        # Assert
-        assert result is False
+        # Verify error message contains connection refused
+        assert "connection refused" in str(exc_info.value).lower()
 
     @patch("sbkube.commands.deploy.run_command")
     def test_timeout_error(self, mock_run_command, tmp_path: Path) -> None:
@@ -75,28 +78,71 @@ class TestConnectionErrorHandling:
             namespace="default",
         )
 
-        # Simulate timeout error
-        mock_run_command.return_value = (
-            1,
-            "",
-            "Error: i/o timeout connecting to kubernetes",
-        )
+        # Mock responses:
+        # 1. Namespace check succeeds
+        # 2. Helm command fails with timeout
+        mock_run_command.side_effect = [
+            (0, "", ""),  # namespace check succeeds
+            (1, "", "Error: i/o timeout connecting to kubernetes"),  # helm fails
+        ]
         output = MagicMock(spec=OutputManager)
 
-        # Act
-        result = deploy_helm_app(
-            app_name="nginx",
-            app=app,
-            base_dir=tmp_path,
-            charts_dir=tmp_path / "charts",
-            build_dir=build_dir,
-            app_config_dir=tmp_path / "config",
-            output=output,
-            dry_run=False,
+        # Act & Assert
+        with pytest.raises(KubernetesConnectionError) as exc_info:
+            deploy_helm_app(
+                app_name="nginx",
+                app=app,
+                base_dir=tmp_path,
+                charts_dir=tmp_path / "charts",
+                build_dir=build_dir,
+                app_config_dir=tmp_path / "config",
+                output=output,
+                dry_run=False,
+            )
+
+        # Verify error message contains timeout
+        assert "timeout" in str(exc_info.value).lower()
+
+    @patch("sbkube.commands.deploy.run_command")
+    def test_connection_error_in_stdout(self, mock_run_command, tmp_path: Path) -> None:
+        """Test connection error detection in stdout instead of stderr."""
+        # Arrange
+        build_dir = tmp_path / "build"
+        build_dir.mkdir(exist_ok=True)
+        app_build_dir = build_dir / "nginx"
+        app_build_dir.mkdir(exist_ok=True)
+        (app_build_dir / "Chart.yaml").write_text("name: nginx")
+
+        app = HelmApp(
+            type="helm",
+            chart="bitnami/nginx",
+            namespace="default",
         )
 
-        # Assert
-        assert result is False
+        # Mock responses:
+        # 1. Namespace check succeeds
+        # 2. Helm command fails with error in stdout
+        mock_run_command.side_effect = [
+            (0, "", ""),  # namespace check succeeds
+            (1, "connection refused to cluster", ""),  # error in stdout
+        ]
+        output = MagicMock(spec=OutputManager)
+
+        # Act & Assert
+        with pytest.raises(KubernetesConnectionError) as exc_info:
+            deploy_helm_app(
+                app_name="nginx",
+                app=app,
+                base_dir=tmp_path,
+                charts_dir=tmp_path / "charts",
+                build_dir=build_dir,
+                app_config_dir=tmp_path / "config",
+                output=output,
+                dry_run=False,
+            )
+
+        # Verify error message contains connection refused
+        assert "connection refused" in str(exc_info.value).lower()
 
 
 class TestLegacyPathHandling:

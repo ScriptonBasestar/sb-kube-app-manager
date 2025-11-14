@@ -419,3 +419,190 @@ class TestInitKubeconfigDetection:
         # Assert - Should still create files with default context
         assert (tmp_path / "config" / "sources.yaml").exists()
         assert (tmp_path / "config" / "config.yaml").exists()
+
+
+class TestInitTemplateRendering:
+    """Test template rendering and error handling."""
+
+    @patch("sbkube.utils.cli_check.get_available_contexts")
+    def test_init_template_rendering_missing_file(
+        self, mock_contexts, tmp_path: Path
+    ) -> None:
+        """Test handling of missing template files during rendering."""
+        # Arrange
+        mock_contexts.return_value = (["default"], None)
+
+        # Act
+        command = InitCommand(
+            base_dir=str(tmp_path),
+            template_name="basic",
+            project_name="test",
+            interactive=False,
+        )
+        # Initialize template_vars first
+        command._collect_project_info()
+
+        # Mock template to raise error
+        with patch.object(command, "_render_single_template") as mock_render:
+            mock_render.side_effect = FileNotFoundError("Template not found")
+
+            # Assert
+            with pytest.raises(FileNotFoundError):
+                command._render_templates()
+
+    @patch("sbkube.utils.cli_check.get_available_contexts")
+    def test_init_template_rendering_permission_error(
+        self, mock_contexts, tmp_path: Path
+    ) -> None:
+        """Test handling of permission errors during template rendering."""
+        # Arrange
+        mock_contexts.return_value = (["default"], None)
+
+        command = InitCommand(
+            base_dir=str(tmp_path),
+            template_name="basic",
+            project_name="test",
+            interactive=False,
+        )
+        # Initialize template_vars first
+        command._collect_project_info()
+
+        # Mock environment to simulate permission error
+        with patch("sbkube.commands.init.Environment") as mock_env_class:
+            mock_env = MagicMock()
+            mock_env_class.return_value = mock_env
+            mock_template = MagicMock()
+            mock_env.get_template.return_value = mock_template
+            mock_template.render.side_effect = PermissionError("Permission denied")
+
+            # Assert
+            with pytest.raises(PermissionError):
+                command._render_templates()
+
+
+class TestInitGitignoreErrors:
+    """Test gitignore update error handling."""
+
+    @patch("sbkube.utils.cli_check.get_available_contexts")
+    def test_init_gitignore_write_permission_error(
+        self, mock_contexts, tmp_path: Path
+    ) -> None:
+        """Test handling of permission errors when updating .gitignore."""
+        # Arrange
+        mock_contexts.return_value = (["default"], None)
+
+        # Create read-only .gitignore
+        gitignore = tmp_path / ".gitignore"
+        gitignore.write_text("*.pyc\n")
+        gitignore.chmod(0o444)  # Read-only
+
+        # Act
+        command = InitCommand(
+            base_dir=str(tmp_path),
+            template_name="basic",
+            project_name="test",
+            interactive=False,
+        )
+
+        # Should not raise, just log warning
+        try:
+            command.execute()
+        finally:
+            # Cleanup: restore write permission
+            gitignore.chmod(0o644)
+
+        # Assert - Should still create other files
+        assert (tmp_path / "config" / "config.yaml").exists()
+        assert (tmp_path / "README.md").exists()
+
+
+class TestInitCLIErrors:
+    """Test CLI-level error handling."""
+
+    @patch("sbkube.commands.init.InitCommand")
+    def test_cli_command_execution_error(self, mock_init_class) -> None:
+        """Test CLI handles command execution errors."""
+        # Arrange
+        mock_command = MagicMock()
+        mock_init_class.return_value = mock_command
+        mock_command.execute.side_effect = RuntimeError("Execution failed")
+
+        # Act
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            result = runner.invoke(cmd, ["--non-interactive"], obj={})
+
+        # Assert
+        assert result.exit_code == 1
+        assert "초기화 실패" in result.output or "Execution failed" in result.output
+
+
+class TestInitReadmeContent:
+    """Test README.md content generation."""
+
+    @patch("sbkube.utils.cli_check.get_available_contexts")
+    @patch.object(InitCommand, "_collect_project_info")
+    def test_init_readme_without_environments(
+        self, mock_collect, mock_contexts, tmp_path: Path
+    ) -> None:
+        """Test README generation when environments are disabled."""
+        # Arrange
+        mock_contexts.return_value = (["default"], None)
+
+        # Act
+        command = InitCommand(
+            base_dir=str(tmp_path),
+            template_name="basic",
+            project_name="test-no-env",
+            interactive=False,
+        )
+
+        # Mock _collect_project_info to set create_environments=False
+        def set_no_env():
+            command.template_vars = {
+                "project_name": "test-no-env",
+                "namespace": "test-no-env",
+                "app_name": "test-no-env",
+                "app_type": "helm",
+                "create_environments": False,  # Disabled
+                "use_grafana": True,
+                "use_prometheus": False,
+                "kubeconfig": "~/.kube/config",
+                "kubeconfig_context": "default",
+                "cluster": "test-no-env-cluster",
+            }
+
+        mock_collect.side_effect = set_no_env
+        command.execute()
+
+        # Assert
+        readme = tmp_path / "README.md"
+        assert readme.exists()
+        content = readme.read_text()
+        assert "test-no-env" in content
+        # Should not mention environment configs
+        assert "config-*.yaml" not in content
+
+    @patch("sbkube.utils.cli_check.get_available_contexts")
+    def test_init_readme_with_environments(
+        self, mock_contexts, tmp_path: Path
+    ) -> None:
+        """Test README generation includes environment section."""
+        # Arrange
+        mock_contexts.return_value = (["default"], None)
+
+        # Act
+        command = InitCommand(
+            base_dir=str(tmp_path),
+            template_name="basic",
+            project_name="test-with-env",
+            interactive=False,
+        )
+        command.execute()
+
+        # Assert
+        readme = tmp_path / "README.md"
+        content = readme.read_text()
+        assert "test-with-env" in content
+        # Should mention environment configs
+        assert "config-*.yaml" in content or "환경별 설정" in content

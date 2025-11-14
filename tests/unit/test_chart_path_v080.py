@@ -96,9 +96,9 @@ class TestBuildWithNewPaths:
         from sbkube.commands.build import build_helm_app
 
         # Create new path structure: charts/grafana/loki-18.0.0/
-        chart_dir = tmp_path / "charts" / "grafana" / "redis-18.0.0"
+        chart_dir = tmp_path / "charts" / "grafana" / "loki-18.0.0"
         chart_dir.mkdir(parents=True)
-        (chart_dir / "Chart.yaml").write_text("name: redis\nversion: 18.0.0")
+        (chart_dir / "Chart.yaml").write_text("name: loki\nversion: 18.0.0")
         (chart_dir / "values.yaml").write_text("replicaCount: 1")
         (chart_dir / "templates").mkdir()
         (chart_dir / "templates" / "deployment.yaml").write_text("kind: Deployment")
@@ -107,7 +107,7 @@ class TestBuildWithNewPaths:
         build_dir = tmp_path / "build"
 
         success = build_helm_app(
-            app_name="redis",
+            app_name="loki",
             app=app,
             base_dir=tmp_path,
             charts_dir=tmp_path / "charts",
@@ -117,23 +117,23 @@ class TestBuildWithNewPaths:
         )
 
         assert success
-        assert (build_dir / "redis" / "Chart.yaml").exists()
+        assert (build_dir / "loki" / "Chart.yaml").exists()
 
     def test_build_detects_legacy_v071_path(self, tmp_path, output_manager):
         """Test build detects legacy v0.7.1 path and shows migration guide."""
         from sbkube.commands.build import build_helm_app
 
-        # Create legacy v0.7.1 path: charts/redis/
-        legacy_chart_dir = tmp_path / "charts" / "redis"
+        # Create legacy v0.7.1 path: charts/loki/
+        legacy_chart_dir = tmp_path / "charts" / "loki"
         legacy_chart_dir.mkdir(parents=True)
-        (legacy_chart_dir / "Chart.yaml").write_text("name: redis\nversion: 18.0.0")
+        (legacy_chart_dir / "Chart.yaml").write_text("name: loki\nversion: 18.0.0")
 
         app = HelmApp(type="helm", chart="grafana/loki", version="18.0.0")
         build_dir = tmp_path / "build"
 
         # Should fail and detect legacy path
         success = build_helm_app(
-            app_name="redis",
+            app_name="loki",
             app=app,
             base_dir=tmp_path,
             charts_dir=tmp_path / "charts",
@@ -151,25 +151,25 @@ class TestBuildWithNewPaths:
         """Test build with multiple charts having same name from different repos."""
         from sbkube.commands.build import build_helm_app
 
-        # Create charts: grafana/loki-18.0.0 and my-company/redis-1.0.0
-        grafana_chart = tmp_path / "charts" / "grafana" / "redis-18.0.0"
+        # Create charts: grafana/loki-18.0.0 and my-company/loki-1.0.0
+        grafana_chart = tmp_path / "charts" / "grafana" / "loki-18.0.0"
         grafana_chart.mkdir(parents=True)
-        (grafana_chart / "Chart.yaml").write_text("name: redis\nversion: 18.0.0")
+        (grafana_chart / "Chart.yaml").write_text("name: loki\nversion: 18.0.0")
         (grafana_chart / "templates").mkdir()
 
-        custom_chart = tmp_path / "charts" / "my-company" / "redis-1.0.0"
+        custom_chart = tmp_path / "charts" / "my-company" / "loki-1.0.0"
         custom_chart.mkdir(parents=True)
-        (custom_chart / "Chart.yaml").write_text("name: redis\nversion: 1.0.0")
+        (custom_chart / "Chart.yaml").write_text("name: loki\nversion: 1.0.0")
         (custom_chart / "templates").mkdir()
 
         # Build both
         app1 = HelmApp(type="helm", chart="grafana/loki", version="18.0.0")
-        app2 = HelmApp(type="helm", chart="my-company/redis", version="1.0.0")
+        app2 = HelmApp(type="helm", chart="my-company/loki", version="1.0.0")
 
         build_dir = tmp_path / "build"
 
         success1 = build_helm_app(
-            app_name="redis-grafana",
+            app_name="loki-grafana",
             app=app1,
             base_dir=tmp_path,
             charts_dir=tmp_path / "charts",
@@ -179,7 +179,7 @@ class TestBuildWithNewPaths:
         )
 
         success2 = build_helm_app(
-            app_name="redis-custom",
+            app_name="loki-custom",
             app=app2,
             base_dir=tmp_path,
             charts_dir=tmp_path / "charts",
@@ -191,11 +191,11 @@ class TestBuildWithNewPaths:
         # Both should succeed
         assert success1
         assert success2
-        assert (build_dir / "redis-grafana" / "Chart.yaml").exists()
-        assert (build_dir / "redis-custom" / "Chart.yaml").exists()
+        assert (build_dir / "loki-grafana" / "Chart.yaml").exists()
+        assert (build_dir / "loki-custom" / "Chart.yaml").exists()
 
         # Verify correct versions
-        grafana_version = (build_dir / "redis-grafana" / "Chart.yaml").read_text()
-        custom_version = (build_dir / "redis-custom" / "Chart.yaml").read_text()
+        grafana_version = (build_dir / "loki-grafana" / "Chart.yaml").read_text()
+        custom_version = (build_dir / "loki-custom" / "Chart.yaml").read_text()
         assert "version: 18.0.0" in grafana_version
         assert "version: 1.0.0" in custom_version

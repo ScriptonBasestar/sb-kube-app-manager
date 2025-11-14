@@ -196,6 +196,7 @@ def cmd(
                 _display_status(
                     cache,
                     output,
+                    base_path=base_path,
                     by_group=by_group,
                     managed=managed,
                     show_all=show_all,
@@ -223,6 +224,7 @@ def cmd(
     _display_status(
         cache,
         output,
+        base_path=base_path,
         by_group=by_group,
         managed=managed,
         show_all=show_all,
@@ -307,6 +309,7 @@ def _prepare_cache_data(status_data: dict, cache: ClusterCache) -> dict:
 def _display_status(
     cache: ClusterCache,
     output: OutputManager,
+    base_path: Path,
     by_group: bool = False,
     managed: bool = False,
     show_all: bool = False,
@@ -332,6 +335,21 @@ def _display_status(
     # Get Helm releases
     helm_releases = data.get("helm_releases", [])
 
+    # Load config for notes if requested
+    app_notes_map: dict[str, str] = {}
+    if show_notes:
+        try:
+            config_manager = ConfigManager(base_path)
+            config = config_manager.load_config()
+            if config and config.apps:
+                # Build app name -> notes mapping
+                for app in config.apps:
+                    if app.notes:
+                        app_notes_map[app.name] = app.notes
+        except Exception:
+            # Silently ignore config loading errors when showing notes
+            pass
+
     # Phase 4: Implement app-group grouping
     if by_group or app_group or managed:
         _display_grouped_status(
@@ -344,10 +362,11 @@ def _display_status(
             unhealthy=unhealthy,
             health_check=health_check,
             show_notes=show_notes,
+            app_notes_map=app_notes_map,
         )
     else:
         # Standard summary view
-        _display_summary_status(data, helm_releases, output, unhealthy, health_check, show_notes)
+        _display_summary_status(data, helm_releases, output, unhealthy, health_check, show_notes, app_notes_map)
 
     # Show cache metadata at the end
     _display_cache_info(cache, output, show_cache_info)
@@ -364,8 +383,11 @@ def _display_summary_status(
     unhealthy: bool = False,
     health_check: bool = False,
     show_notes: bool = False,
+    app_notes_map: dict[str, str] | None = None,
 ) -> None:
     """Display standard summary status table."""
+    if app_notes_map is None:
+        app_notes_map = {}
     if output.format_type == "human":
         console = output.get_console()
         table = Table(show_header=True, header_style="bold magenta", border_style="dim")
@@ -421,6 +443,17 @@ def _display_summary_status(
         console.print(table)
         console.print()
 
+        # Display notes if requested
+        if show_notes and app_notes_map:
+            console.print("[bold]📝 Application Notes:[/bold]\n")
+            for app_name in sorted(app_notes_map.keys()):
+                notes = app_notes_map[app_name]
+                console.print(f"[cyan]{app_name}:[/cyan]")
+                # Indent notes content
+                for line in notes.split("\n"):
+                    console.print(f"  {line}")
+                console.print()
+
         # Phase 7: Health check details
         if health_check:
             _display_health_check_details(data, output)
@@ -432,11 +465,14 @@ def _display_summary_status(
 
         # Record releases as deployments
         for release in helm_releases:
+            app_name = release.get("name", "unknown")
+            notes = app_notes_map.get(app_name) if show_notes else None
             output.add_deployment(
-                name=release.get("name", "unknown"),
+                name=app_name,
                 namespace=release.get("namespace", "unknown"),
                 status=release.get("status", "unknown"),
                 version=release.get("chart", ""),
+                notes=notes,
             )
 
 
@@ -450,8 +486,11 @@ def _display_grouped_status(
     unhealthy: bool = False,
     health_check: bool = False,
     show_notes: bool = False,
+    app_notes_map: dict[str, str] | None = None,
 ) -> None:
     """Display app-group grouped status."""
+    if app_notes_map is None:
+        app_notes_map = {}
     try:
         # Initialize State DB
         db = DeploymentDatabase()
@@ -474,7 +513,7 @@ def _display_grouped_status(
                 output.print(f"  - {ag}")
             return
 
-        _display_single_app_group(app_group, group_data, output)
+        _display_single_app_group(app_group, group_data, output, show_notes, app_notes_map)
         return
 
     # Display all app-groups
@@ -536,18 +575,27 @@ def _display_grouped_status(
             group_data = managed_groups[ag_name]
             apps = group_data.get("apps", {})
             for app_name, app_info in apps.items():
+                notes = app_notes_map.get(app_name) if show_notes else None
                 output.add_deployment(
                     name=app_name,
                     namespace=group_data.get("namespace", "unknown"),
                     status=app_info.get("status", "unknown"),
                     version=app_info.get("chart", ""),
+                    notes=notes,
                 )
 
 
 def _display_single_app_group(
-    app_group: str, group_data: dict, output: OutputManager
+    app_group: str,
+    group_data: dict,
+    output: OutputManager,
+    show_notes: bool = False,
+    app_notes_map: dict[str, str] | None = None,
 ) -> None:
     """Display detailed information for a single app-group."""
+    if app_notes_map is None:
+        app_notes_map = {}
+
     console = output.get_console()
     output.print(f"[bold cyan]App Group: {app_group}[/bold cyan]")
     output.print(f"Namespace: {group_data.get('namespace', 'N/A')}")
@@ -573,6 +621,20 @@ def _display_single_app_group(
             )
         console.print(table)
         console.print()
+
+        # Display notes if requested
+        if show_notes:
+            displayed_notes = False
+            for app_name in sorted(apps.keys()):
+                if app_name in app_notes_map:
+                    if not displayed_notes:
+                        console.print("[bold]📝 Application Notes:[/bold]\n")
+                        displayed_notes = True
+                    notes = app_notes_map[app_name]
+                    console.print(f"[cyan]{app_name}:[/cyan]")
+                    for line in notes.split("\n"):
+                        console.print(f"  {line}")
+                    console.print()
 
 
 def _display_app_group_summary(

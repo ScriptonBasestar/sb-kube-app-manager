@@ -213,6 +213,7 @@ class OutputManager:
         namespace: str,
         status: str,
         version: str | None = None,
+        notes: str | None = None,
     ) -> None:
         """배포 정보 기록 (LLM/JSON/YAML 출력용).
 
@@ -221,16 +222,18 @@ class OutputManager:
             namespace: 네임스페이스
             status: 배포 상태 (deployed, failed, skipped 등)
             version: 차트 버전 (선택)
+            notes: 앱 설명/메모 (선택)
 
         """
-        self.deployments.append(
-            {
-                "name": name,
-                "namespace": namespace,
-                "status": status,
-                "version": version or "",
-            }
-        )
+        deployment_info = {
+            "name": name,
+            "namespace": namespace,
+            "status": status,
+            "version": version or "",
+        }
+        if notes:
+            deployment_info["notes"] = notes
+        self.deployments.append(deployment_info)
 
     def finalize(
         self,

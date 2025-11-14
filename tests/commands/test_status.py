@@ -98,6 +98,16 @@ class TestStatusUnhealthy:
         assert "Show only unhealthy resources" in result.output
 
 
+class TestStatusShowNotes:
+    """Tests for --show-notes option (Documentation as Code feature)."""
+
+    def test_status_show_notes_option_exists(self, runner) -> None:
+        """Test --show-notes option is available."""
+        result = runner.invoke(main, ["status", "--help"])
+        assert "--show-notes" in result.output
+        assert "Show application notes" in result.output
+
+
 class TestStatusAppGroup:
     """Tests for app-group argument (Phase 4)."""
 

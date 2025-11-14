@@ -281,6 +281,7 @@ class TestOutputManager:
         assert manager.deployments[0]["namespace"] == "default"
         assert manager.deployments[0]["status"] == "deployed"
         assert manager.deployments[0]["version"] == ""
+        assert "notes" not in manager.deployments[0]
 
         # Add deployment with version
         manager.add_deployment(
@@ -292,6 +293,25 @@ class TestOutputManager:
         assert manager.deployments[1]["namespace"] == "production"
         assert manager.deployments[1]["status"] == "failed"
         assert manager.deployments[1]["version"] == "1.2.3"
+        assert "notes" not in manager.deployments[1]
+
+        # Add deployment with notes
+        manager.add_deployment(
+            name="app3",
+            namespace="default",
+            status="deployed",
+            version="2.0.0",
+            notes="High-performance Prometheus-compatible TSDB\n- 20x faster\n- 7x less storage",
+        )
+
+        assert len(manager.deployments) == 3
+        assert manager.deployments[2]["name"] == "app3"
+        assert manager.deployments[2]["namespace"] == "default"
+        assert manager.deployments[2]["status"] == "deployed"
+        assert manager.deployments[2]["version"] == "2.0.0"
+        assert manager.deployments[2]["notes"] == (
+            "High-performance Prometheus-compatible TSDB\n- 20x faster\n- 7x less storage"
+        )
 
     @patch("sbkube.utils.output_formatter.OutputFormatter.print_output")
     def test_finalize_with_deployments(self, mock_print_output) -> None:

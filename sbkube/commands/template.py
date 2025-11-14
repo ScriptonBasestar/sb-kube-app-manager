@@ -204,7 +204,7 @@ def template_yaml_app(
         output.print_warning("Build directory not found, using original files")
         # build 없으면 원본 파일 사용
         combined_content = ""
-        for file_rel_path in app.files:
+        for file_rel_path in app.manifests:
             file_path = app_config_dir / file_rel_path
             if file_path.exists():
                 content = file_path.read_text(encoding="utf-8")

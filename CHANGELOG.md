@@ -8,6 +8,15 @@ ______________________________________________________________________
 
 ## [Unreleased]
 
+### Added
+
+- **Documentation as Code**: Added optional `notes` field to all app types for documenting design decisions, deployment order, and operational information
+  - Supports multiline YAML with `|` syntax
+  - Available in all 9 app types: helm, yaml, action, exec, git, kustomize, http, noop, hook
+  - CLI: `sbkube status --show-notes` flag added (foundation for future UI enhancement)
+  - Example: `examples/documentation-as-code/`
+  - Fully backward compatible (optional field)
+
 ## [0.8.0] - 2025-11-13
 
 ### 🚨 Breaking Changes

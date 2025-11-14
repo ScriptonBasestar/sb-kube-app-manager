@@ -1,0 +1,13 @@
+# Example sources.yaml for documentation-as-code example
+
+cluster: example-cluster
+kubeconfig: ~/.kube/config
+kubeconfig_context: example-context
+
+helm_repos:
+  vm:
+    url: https://victoriametrics.github.io/helm-charts/
+  bitnami:
+    url: https://charts.bitnami.com/bitnami
+  timescale:
+    url: https://charts.timescale.com

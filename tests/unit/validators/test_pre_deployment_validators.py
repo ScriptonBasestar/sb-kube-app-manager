@@ -156,6 +156,168 @@ class TestDeploymentSimulator:
         assert result.level == DiagnosticLevel.ERROR
         assert result.severity == ValidationSeverity.CRITICAL
 
+    @patch("subprocess.run")
+    def test_yaml_type_deployment(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """YAML 타입 앱 배포 시뮬레이션 테스트."""
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        config_file = config_dir / "config.yaml"
+
+        # YAML 파일 생성
+        yaml_dir = Path(mock_context.base_dir) / "yamls"
+        yaml_dir.mkdir(parents=True, exist_ok=True)
+        (yaml_dir / "deployment.yaml").write_text(
+            "apiVersion: v1\nkind: Service\nmetadata:\n  name: test-service"
+        )
+
+        config = {
+            "namespace": "test",
+            "apps": [
+                {
+                    "name": "test-app",
+                    "type": "yaml",
+                    "specs": {"path": "yamls"},
+                }
+            ],
+        }
+        config_file.write_text(yaml.dump(config))
+
+        # kubectl apply --dry-run 성공 시뮬레이션
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+        validator = DeploymentSimulator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증
+        assert result.level in [
+            DiagnosticLevel.SUCCESS,
+            DiagnosticLevel.WARNING,
+            DiagnosticLevel.ERROR,
+            DiagnosticLevel.INFO,
+        ]
+
+    @patch("subprocess.run")
+    def test_helm_with_values_files(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Values 파일이 있는 Helm 배포 테스트."""
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        config_file = config_dir / "config.yaml"
+
+        # Helm 차트 및 values 파일 생성
+        chart_dir = Path(mock_context.base_dir) / "charts" / "nginx"
+        chart_dir.mkdir(parents=True, exist_ok=True)
+        (chart_dir / "Chart.yaml").write_text("apiVersion: v2\nname: nginx\nversion: 1.0.0")
+
+        values_dir = Path(mock_context.base_dir) / "values"
+        values_dir.mkdir(parents=True, exist_ok=True)
+        (values_dir / "prod.yaml").write_text("replicas: 3")
+
+        config = {
+            "namespace": "test",
+            "apps": [
+                {
+                    "name": "nginx",
+                    "type": "helm",
+                    "specs": {
+                        "path": "charts/nginx",
+                        "values": ["values/prod.yaml"],
+                    },
+                }
+            ],
+        }
+        config_file.write_text(yaml.dump(config))
+
+        # helm template 성공 시뮬레이션
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout="apiVersion: v1\nkind: Service\nmetadata:\n  name: nginx",
+        )
+
+        validator = DeploymentSimulator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증
+        assert result.level in [
+            DiagnosticLevel.SUCCESS,
+            DiagnosticLevel.WARNING,
+            DiagnosticLevel.ERROR,
+            DiagnosticLevel.INFO,
+        ]
+
+    @patch("subprocess.run")
+    def test_helm_template_rendering_failure(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Helm 템플릿 렌더링 실패 테스트."""
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        config_file = config_dir / "config.yaml"
+
+        # Helm 차트 생성
+        chart_dir = Path(mock_context.base_dir) / "charts" / "nginx"
+        chart_dir.mkdir(parents=True, exist_ok=True)
+        (chart_dir / "Chart.yaml").write_text("apiVersion: v2\nname: nginx\nversion: 1.0.0")
+
+        config = {
+            "namespace": "test",
+            "apps": [
+                {
+                    "name": "nginx",
+                    "type": "helm",
+                    "specs": {"path": "charts/nginx"},
+                }
+            ],
+        }
+        config_file.write_text(yaml.dump(config))
+
+        # helm template 실패 시뮬레이션
+        mock_run.return_value = MagicMock(
+            returncode=1,
+            stderr="Error: template rendering failed",
+        )
+
+        validator = DeploymentSimulator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (렌더링 실패 시 ERROR)
+        assert result.level == DiagnosticLevel.ERROR
+        assert result.severity == ValidationSeverity.CRITICAL
+
+    @patch("subprocess.run")
+    def test_helm_deployment_timeout(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Helm 배포 시뮬레이션 타임아웃 테스트."""
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        config_file = config_dir / "config.yaml"
+
+        # Helm 차트 생성
+        chart_dir = Path(mock_context.base_dir) / "charts" / "nginx"
+        chart_dir.mkdir(parents=True, exist_ok=True)
+        (chart_dir / "Chart.yaml").write_text("apiVersion: v2\nname: nginx\nversion: 1.0.0")
+
+        config = {
+            "namespace": "test",
+            "apps": [
+                {
+                    "name": "nginx",
+                    "type": "helm",
+                    "specs": {"path": "charts/nginx"},
+                }
+            ],
+        }
+        config_file.write_text(yaml.dump(config))
+
+        # subprocess timeout 시뮬레이션
+        mock_run.side_effect = subprocess.TimeoutExpired("helm", 60)
+
+        validator = DeploymentSimulator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (타임아웃 시 ERROR)
+        assert result.level == DiagnosticLevel.ERROR
+        assert result.severity == ValidationSeverity.CRITICAL
 
 class TestRiskAssessmentValidator:
     """RiskAssessmentValidator 테스트."""

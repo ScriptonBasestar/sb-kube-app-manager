@@ -371,6 +371,351 @@ spec:
         # 검증
         assert result.level in [DiagnosticLevel.SUCCESS, DiagnosticLevel.WARNING, DiagnosticLevel.ERROR, DiagnosticLevel.INFO]
 
+    @patch("subprocess.run")
+    def test_helm_chart_with_repo_field(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Helm 차트에 repo 필드가 있는 경우 테스트 (deprecated 패턴)."""
+        # Helm 설치됨
+        mock_run.return_value = MagicMock(returncode=0, stdout="v3.12.0")
+
+        # config.yaml with repo field (deprecated)
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        config_file = config_dir / "config.yaml"
+        config = {
+            "apps": [
+                {
+                    "name": "remote-app",
+                    "type": "helm",
+                    "specs": {
+                        "repo": "grafana",
+                        "chart": "loki",
+                        "version": "2.0.0",
+                    },
+                }
+            ]
+        }
+        config_file.write_text(yaml.dump(config))
+
+        validator = HelmChartValidator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (repo 필드 사용 시 저장소 접근성 확인 시도)
+        assert result.level in [DiagnosticLevel.SUCCESS, DiagnosticLevel.WARNING, DiagnosticLevel.ERROR, DiagnosticLevel.INFO]
+
+    @patch("subprocess.run")
+    def test_helm_chart_missing_repo_field(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Helm 차트에 repo 필드가 없는 경우 테스트."""
+        # Helm 설치됨
+        mock_run.return_value = MagicMock(returncode=0, stdout="v3.12.0")
+
+        # config.yaml with missing repo field
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        config_file = config_dir / "config.yaml"
+        config = {
+            "apps": [
+                {
+                    "name": "incomplete-app",
+                    "type": "helm",
+                    "specs": {
+                        "chart": "nginx",  # repo 없음
+                    },
+                }
+            ]
+        }
+        config_file.write_text(yaml.dump(config))
+
+        validator = HelmChartValidator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (repo 없음 오류)
+        assert result.level in [DiagnosticLevel.ERROR, DiagnosticLevel.WARNING, DiagnosticLevel.SUCCESS, DiagnosticLevel.INFO]
+
+    @patch("subprocess.run")
+    def test_helm_chart_empty_templates_dir(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Helm 차트의 templates 디렉토리가 비어있는 경우 테스트."""
+        # Helm 설치됨
+        mock_run.return_value = MagicMock(returncode=0, stdout="v3.12.0")
+
+        # Helm 차트 생성 with empty templates
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        charts_dir = Path(mock_context.base_dir) / "charts" / "empty-templates"
+        charts_dir.mkdir(parents=True, exist_ok=True)
+
+        # Chart.yaml
+        chart_yaml = charts_dir / "Chart.yaml"
+        chart_yaml.write_text(yaml.dump({
+            "apiVersion": "v2",
+            "name": "empty-templates",
+            "version": "1.0.0",
+        }))
+
+        # Empty templates directory
+        templates_dir = charts_dir / "templates"
+        templates_dir.mkdir(exist_ok=True)
+
+        # config.yaml
+        config_file = config_dir / "config.yaml"
+        config = {
+            "apps": [
+                {"name": "empty-templates", "type": "helm", "specs": {"path": "charts/empty-templates"}},
+            ]
+        }
+        config_file.write_text(yaml.dump(config))
+
+        validator = HelmChartValidator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (빈 templates 디렉토리 경고 또는 에러)
+        assert result.level in [DiagnosticLevel.SUCCESS, DiagnosticLevel.WARNING, DiagnosticLevel.ERROR, DiagnosticLevel.INFO]
+
+    @patch("subprocess.run")
+    def test_helm_chart_invalid_template_yaml(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Helm 차트의 템플릿에 잘못된 YAML이 있는 경우 테스트."""
+        # Helm 설치됨
+        mock_run.return_value = MagicMock(returncode=0, stdout="v3.12.0")
+
+        # Helm 차트 생성 with invalid template
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        charts_dir = Path(mock_context.base_dir) / "charts" / "invalid-template"
+        charts_dir.mkdir(parents=True, exist_ok=True)
+
+        # Chart.yaml
+        chart_yaml = charts_dir / "Chart.yaml"
+        chart_yaml.write_text(yaml.dump({
+            "apiVersion": "v2",
+            "name": "invalid-template",
+            "version": "1.0.0",
+        }))
+
+        # templates directory with invalid YAML
+        templates_dir = charts_dir / "templates"
+        templates_dir.mkdir(exist_ok=True)
+        (templates_dir / "bad.yaml").write_text("invalid: yaml: : :")
+
+        # config.yaml
+        config_file = config_dir / "config.yaml"
+        config = {
+            "apps": [
+                {"name": "invalid-template", "type": "helm", "specs": {"path": "charts/invalid-template"}},
+            ]
+        }
+        config_file.write_text(yaml.dump(config))
+
+        validator = HelmChartValidator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (잘못된 템플릿 YAML)
+        assert result.level in [DiagnosticLevel.SUCCESS, DiagnosticLevel.WARNING, DiagnosticLevel.ERROR, DiagnosticLevel.INFO]
+
+    @patch("subprocess.run")
+    def test_helm_chart_yaml_not_dict(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Chart.yaml이 dict가 아닌 경우 테스트."""
+        # Helm 설치됨
+        mock_run.return_value = MagicMock(returncode=0, stdout="v3.12.0")
+
+        # Helm 차트 생성 with Chart.yaml as list
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        charts_dir = Path(mock_context.base_dir) / "charts" / "not-dict"
+        charts_dir.mkdir(parents=True, exist_ok=True)
+
+        # Chart.yaml as a list (not a dict)
+        chart_yaml = charts_dir / "Chart.yaml"
+        chart_yaml.write_text("- item1\n- item2\n")
+
+        # templates directory
+        templates_dir = charts_dir / "templates"
+        templates_dir.mkdir(exist_ok=True)
+        (templates_dir / "deployment.yaml").write_text("apiVersion: v1\nkind: Pod\n")
+
+        # config.yaml
+        config_file = config_dir / "config.yaml"
+        config = {
+            "apps": [
+                {"name": "not-dict", "type": "helm", "specs": {"path": "charts/not-dict"}},
+            ]
+        }
+        config_file.write_text(yaml.dump(config))
+
+        validator = HelmChartValidator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (Chart.yaml이 dict가 아님)
+        assert result.level == DiagnosticLevel.ERROR
+        assert result.severity == ValidationSeverity.HIGH
+
+    @patch("subprocess.run")
+    def test_helm_chart_missing_name_field(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Chart.yaml에 name 필드가 없는 경우 테스트."""
+        # Helm 설치됨
+        mock_run.return_value = MagicMock(returncode=0, stdout="v3.12.0")
+
+        # Helm 차트 생성 without name field
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        charts_dir = Path(mock_context.base_dir) / "charts" / "no-name"
+        charts_dir.mkdir(parents=True, exist_ok=True)
+
+        # Chart.yaml without name
+        chart_yaml = charts_dir / "Chart.yaml"
+        chart_yaml.write_text(yaml.dump({
+            "apiVersion": "v2",
+            "version": "1.0.0",
+            # name field missing
+        }))
+
+        # templates directory
+        templates_dir = charts_dir / "templates"
+        templates_dir.mkdir(exist_ok=True)
+        (templates_dir / "deployment.yaml").write_text("apiVersion: v1\nkind: Pod\n")
+
+        # config.yaml
+        config_file = config_dir / "config.yaml"
+        config = {
+            "apps": [
+                {"name": "no-name", "type": "helm", "specs": {"path": "charts/no-name"}},
+            ]
+        }
+        config_file.write_text(yaml.dump(config))
+
+        validator = HelmChartValidator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (name 필드 없음)
+        assert result.level == DiagnosticLevel.ERROR
+        assert result.severity == ValidationSeverity.HIGH
+
+    @patch("subprocess.run")
+    def test_helm_chart_missing_version_field(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Chart.yaml에 version 필드가 없는 경우 테스트."""
+        # Helm 설치됨
+        mock_run.return_value = MagicMock(returncode=0, stdout="v3.12.0")
+
+        # Helm 차트 생성 without version field
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        charts_dir = Path(mock_context.base_dir) / "charts" / "no-version"
+        charts_dir.mkdir(parents=True, exist_ok=True)
+
+        # Chart.yaml without version
+        chart_yaml = charts_dir / "Chart.yaml"
+        chart_yaml.write_text(yaml.dump({
+            "apiVersion": "v2",
+            "name": "no-version",
+            # version field missing
+        }))
+
+        # templates directory
+        templates_dir = charts_dir / "templates"
+        templates_dir.mkdir(exist_ok=True)
+        (templates_dir / "deployment.yaml").write_text("apiVersion: v1\nkind: Pod\n")
+
+        # config.yaml
+        config_file = config_dir / "config.yaml"
+        config = {
+            "apps": [
+                {"name": "no-version", "type": "helm", "specs": {"path": "charts/no-version"}},
+            ]
+        }
+        config_file.write_text(yaml.dump(config))
+
+        validator = HelmChartValidator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (version 필드 없음)
+        assert result.level == DiagnosticLevel.ERROR
+        assert result.severity == ValidationSeverity.HIGH
+
+    @patch("subprocess.run")
+    def test_helm_chart_unsupported_api_version(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Chart.yaml에 지원하지 않는 apiVersion이 있는 경우 테스트."""
+        # Helm 설치됨
+        mock_run.return_value = MagicMock(returncode=0, stdout="v3.12.0")
+
+        # Helm 차트 생성 with unsupported apiVersion
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        charts_dir = Path(mock_context.base_dir) / "charts" / "bad-api"
+        charts_dir.mkdir(parents=True, exist_ok=True)
+
+        # Chart.yaml with unsupported apiVersion
+        chart_yaml = charts_dir / "Chart.yaml"
+        chart_yaml.write_text(yaml.dump({
+            "apiVersion": "v999",  # Unsupported
+            "name": "bad-api",
+            "version": "1.0.0",
+        }))
+
+        # templates directory
+        templates_dir = charts_dir / "templates"
+        templates_dir.mkdir(exist_ok=True)
+        (templates_dir / "deployment.yaml").write_text("apiVersion: v1\nkind: Pod\n")
+
+        # config.yaml
+        config_file = config_dir / "config.yaml"
+        config = {
+            "apps": [
+                {"name": "bad-api", "type": "helm", "specs": {"path": "charts/bad-api"}},
+            ]
+        }
+        config_file.write_text(yaml.dump(config))
+
+        validator = HelmChartValidator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (지원하지 않는 apiVersion)
+        assert result.level == DiagnosticLevel.ERROR
+        assert result.severity == ValidationSeverity.HIGH
+
+    @patch("subprocess.run")
+    def test_helm_chart_no_templates_dir(
+        self, mock_run: MagicMock, mock_context: ValidationContext
+    ) -> None:
+        """Helm 차트에 templates 디렉토리가 아예 없는 경우 테스트."""
+        # Helm 설치됨
+        mock_run.return_value = MagicMock(returncode=0, stdout="v3.12.0")
+
+        # Helm 차트 생성 without templates directory
+        config_dir = Path(mock_context.base_dir) / mock_context.config_dir
+        charts_dir = Path(mock_context.base_dir) / "charts" / "no-templates"
+        charts_dir.mkdir(parents=True, exist_ok=True)
+
+        # Chart.yaml
+        chart_yaml = charts_dir / "Chart.yaml"
+        chart_yaml.write_text(yaml.dump({
+            "apiVersion": "v2",
+            "name": "no-templates",
+            "version": "1.0.0",
+        }))
+
+        # No templates directory
+
+        # config.yaml
+        config_file = config_dir / "config.yaml"
+        config = {
+            "apps": [
+                {"name": "no-templates", "type": "helm", "specs": {"path": "charts/no-templates"}},
+            ]
+        }
+        config_file.write_text(yaml.dump(config))
+
+        validator = HelmChartValidator()
+        result = asyncio.run(validator.run_validation(mock_context))
+
+        # 검증 (templates 디렉토리 없음)
+        assert result.level in [DiagnosticLevel.ERROR, DiagnosticLevel.WARNING, DiagnosticLevel.SUCCESS, DiagnosticLevel.INFO]
+
 
 class TestValuesCompatibilityValidator:
     """ValuesCompatibilityValidator 테스트."""

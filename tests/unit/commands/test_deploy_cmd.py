@@ -561,6 +561,186 @@ spec:
         assert "my-kustomize" in result.output.lower()
 
 
+    @patch("sbkube.commands.deploy.run_command")
+    @patch("sbkube.commands.deploy.check_kubectl_installed_or_exit")
+    @patch("sbkube.commands.deploy.resolve_cluster_config")
+    @patch("sbkube.commands.deploy.check_cluster_connectivity_or_exit")
+    def test_deploy_action_app_success(
+        self,
+        mock_cluster_check,
+        mock_resolve_cluster,
+        mock_kubectl_check,
+        mock_run_command,
+        runner,
+        tmp_path,
+    ) -> None:
+        """Test successful deployment of Action app."""
+        # Configure mocks
+        mock_resolve_cluster.return_value = (str(tmp_path / "kubeconfig"), "test-context")
+
+        # Setup directory structure
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create temporary kubeconfig
+        kubeconfig_file = tmp_path / "kubeconfig"
+        kubeconfig_file.write_text(
+            """
+apiVersion: v1
+kind: Config
+current-context: test-context
+contexts:
+- name: test-context
+  context:
+    cluster: test-cluster
+    user: test-user
+clusters:
+- name: test-cluster
+  cluster:
+    server: https://localhost:6443
+users:
+- name: test-user
+  user:
+    token: fake-token
+"""
+        )
+
+        # Create sources.yaml
+        sources_file = tmp_path / "sources.yaml"
+        sources_file.write_text(
+            f"""
+kubeconfig: {kubeconfig_file}
+kubeconfig_context: test-context
+cluster: test-cluster
+"""
+        )
+
+        # Create manifests directory with sample manifest
+        manifests_dir = config_dir / "manifests"
+        manifests_dir.mkdir()
+        (manifests_dir / "deployment.yaml").write_text(
+            """
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 1
+"""
+        )
+
+        # Create config.yaml with Action app
+        config_file = config_dir / "config.yaml"
+        config_data = {
+            "namespace": "default",
+            "apps": {
+                "my-action": {
+                    "type": "action",
+                    "enabled": True,
+                    "actions": [
+                        {
+                            "type": "apply",
+                            "path": "manifests/deployment.yaml",
+                        }
+                    ],
+                }
+            },
+        }
+        with open(config_file, "w") as f:
+            yaml.dump(config_data, f)
+
+        # Mock successful kubectl command
+        mock_run_command.return_value = (0, "deployment.apps/nginx created", "")
+
+        # Run deploy
+        result = runner.invoke(
+            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+        )
+
+        # Assert
+        assert result.exit_code == 0
+        assert "my-action" in result.output.lower()
+
+    @patch("sbkube.commands.deploy.run_command")
+    @patch("sbkube.commands.deploy.check_kubectl_installed_or_exit")
+    @patch("sbkube.commands.deploy.resolve_cluster_config")
+    @patch("sbkube.commands.deploy.check_cluster_connectivity_or_exit")
+    def test_deploy_noop_app_success(
+        self,
+        mock_cluster_check,
+        mock_resolve_cluster,
+        mock_kubectl_check,
+        mock_run_command,
+        runner,
+        tmp_path,
+    ) -> None:
+        """Test successful deployment of Noop app (does nothing)."""
+        # Configure mocks
+        mock_resolve_cluster.return_value = (str(tmp_path / "kubeconfig"), "test-context")
+
+        # Setup directory structure
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create temporary kubeconfig
+        kubeconfig_file = tmp_path / "kubeconfig"
+        kubeconfig_file.write_text(
+            """
+apiVersion: v1
+kind: Config
+current-context: test-context
+contexts:
+- name: test-context
+  context:
+    cluster: test-cluster
+    user: test-user
+clusters:
+- name: test-cluster
+  cluster:
+    server: https://localhost:6443
+users:
+- name: test-user
+  user:
+    token: fake-token
+"""
+        )
+
+        # Create sources.yaml
+        sources_file = tmp_path / "sources.yaml"
+        sources_file.write_text(
+            f"""
+kubeconfig: {kubeconfig_file}
+kubeconfig_context: test-context
+cluster: test-cluster
+"""
+        )
+
+        # Create config.yaml with Noop app
+        config_file = config_dir / "config.yaml"
+        config_data = {
+            "namespace": "default",
+            "apps": {
+                "my-noop": {
+                    "type": "noop",
+                    "enabled": True,
+                }
+            },
+        }
+        with open(config_file, "w") as f:
+            yaml.dump(config_data, f)
+
+        # Run deploy (noop shouldn't call any commands)
+        result = runner.invoke(
+            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+        )
+
+        # Assert
+        assert result.exit_code == 0
+        assert "my-noop" in result.output.lower()
+        # Noop app should not call run_command
+        assert mock_run_command.call_count == 0
+
+
 class TestDeployCommandOptions:
     """Test deploy command options."""
 

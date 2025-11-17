@@ -370,6 +370,197 @@ cluster: test-cluster
         assert result.exit_code == 0
 
 
+    @patch("sbkube.commands.deploy.run_command")
+    @patch("sbkube.commands.deploy.check_kubectl_installed_or_exit")
+    @patch("sbkube.commands.deploy.resolve_cluster_config")
+    @patch("sbkube.commands.deploy.check_cluster_connectivity_or_exit")
+    def test_deploy_hook_app_success(
+        self,
+        mock_cluster_check,
+        mock_resolve_cluster,
+        mock_kubectl_check,
+        mock_run_command,
+        runner,
+        tmp_path,
+    ) -> None:
+        """Test successful deployment of Hook app."""
+        # Configure mocks
+        mock_resolve_cluster.return_value = (str(tmp_path / "kubeconfig"), "test-context")
+
+        # Setup directory structure
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create temporary kubeconfig
+        kubeconfig_file = tmp_path / "kubeconfig"
+        kubeconfig_file.write_text(
+            """
+apiVersion: v1
+kind: Config
+current-context: test-context
+contexts:
+- name: test-context
+  context:
+    cluster: test-cluster
+    user: test-user
+clusters:
+- name: test-cluster
+  cluster:
+    server: https://localhost:6443
+users:
+- name: test-user
+  user:
+    token: fake-token
+"""
+        )
+
+        # Create sources.yaml
+        sources_file = tmp_path / "sources.yaml"
+        sources_file.write_text(
+            f"""
+kubeconfig: {kubeconfig_file}
+kubeconfig_context: test-context
+cluster: test-cluster
+"""
+        )
+
+        # Create config.yaml with Hook app
+        config_file = config_dir / "config.yaml"
+        config_data = {
+            "namespace": "default",
+            "apps": {
+                "my-hook": {
+                    "type": "hook",
+                    "enabled": True,
+                    "tasks": [
+                        {
+                            "type": "command",
+                            "name": "test-hook",
+                            "command": "echo 'Hook executed'",
+                        }
+                    ],
+                }
+            },
+        }
+        with open(config_file, "w") as f:
+            yaml.dump(config_data, f)
+
+        # Mock successful command execution
+        mock_run_command.return_value = (0, "Hook executed", "")
+
+        # Run deploy
+        result = runner.invoke(
+            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+        )
+
+        # Assert
+        assert result.exit_code == 0
+        assert "my-hook" in result.output.lower()
+
+    @patch("sbkube.commands.deploy.run_command")
+    @patch("sbkube.commands.deploy.check_kubectl_installed_or_exit")
+    @patch("sbkube.commands.deploy.resolve_cluster_config")
+    @patch("sbkube.commands.deploy.check_cluster_connectivity_or_exit")
+    def test_deploy_kustomize_app_success(
+        self,
+        mock_cluster_check,
+        mock_resolve_cluster,
+        mock_kubectl_check,
+        mock_run_command,
+        runner,
+        tmp_path,
+    ) -> None:
+        """Test successful deployment of Kustomize app."""
+        # Configure mocks
+        mock_resolve_cluster.return_value = (str(tmp_path / "kubeconfig"), "test-context")
+
+        # Setup directory structure
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create temporary kubeconfig
+        kubeconfig_file = tmp_path / "kubeconfig"
+        kubeconfig_file.write_text(
+            """
+apiVersion: v1
+kind: Config
+current-context: test-context
+contexts:
+- name: test-context
+  context:
+    cluster: test-cluster
+    user: test-user
+clusters:
+- name: test-cluster
+  cluster:
+    server: https://localhost:6443
+users:
+- name: test-user
+  user:
+    token: fake-token
+"""
+        )
+
+        # Create sources.yaml
+        sources_file = tmp_path / "sources.yaml"
+        sources_file.write_text(
+            f"""
+kubeconfig: {kubeconfig_file}
+kubeconfig_context: test-context
+cluster: test-cluster
+"""
+        )
+
+        # Create kustomization directory
+        kustomize_dir = config_dir / "kustomize"
+        kustomize_dir.mkdir()
+        (kustomize_dir / "kustomization.yaml").write_text(
+            """
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+"""
+        )
+        (kustomize_dir / "deployment.yaml").write_text(
+            """
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 1
+"""
+        )
+
+        # Create config.yaml with Kustomize app
+        config_file = config_dir / "config.yaml"
+        config_data = {
+            "namespace": "default",
+            "apps": {
+                "my-kustomize": {
+                    "type": "kustomize",
+                    "enabled": True,
+                    "path": "kustomize",
+                }
+            },
+        }
+        with open(config_file, "w") as f:
+            yaml.dump(config_data, f)
+
+        # Mock successful kubectl kustomize command
+        mock_run_command.return_value = (0, "deployment.apps/nginx created", "")
+
+        # Run deploy
+        result = runner.invoke(
+            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+        )
+
+        # Assert
+        assert result.exit_code == 0
+        assert "my-kustomize" in result.output.lower()
+
+
 class TestDeployCommandOptions:
     """Test deploy command options."""
 

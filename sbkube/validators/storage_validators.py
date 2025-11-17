@@ -49,7 +49,10 @@ class StorageValidator(ValidationCheck):
             검증 결과
 
         """
-        if not context.config:
+        # context.config는 동적으로 추가되는 속성이므로 getattr 사용
+        config = getattr(context, "config", None)
+
+        if not config:
             return self.create_validation_result(
                 level=DiagnosticLevel.WARNING,
                 severity=ValidationSeverity.LOW,
@@ -59,7 +62,7 @@ class StorageValidator(ValidationCheck):
             )
 
         # PV 요구사항 추출
-        required_pvs = self._extract_required_pvs(context.config)
+        required_pvs = self._extract_required_pvs(config)
 
         if not required_pvs:
             return self.create_validation_result(

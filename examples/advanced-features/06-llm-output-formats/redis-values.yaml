@@ -1,0 +1,24 @@
+# Redis Values - Minimal Configuration for Demo
+
+# Disable authentication for simplicity
+auth:
+  enabled: false
+
+# Single replica for demo
+replica:
+  replicaCount: 1
+
+# Disable persistence for demo
+master:
+  persistence:
+    enabled: false
+
+# Resource limits
+master:
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi

@@ -1,0 +1,12 @@
+# Cluster Configuration
+# This sources.yaml provides basic cluster config for LLM output format demonstration
+
+clusters:
+  - name: local
+    context: default
+    default: true
+
+helm_sources:
+  - name: bitnami
+    url: https://charts.bitnami.com/bitnami
+    type: https

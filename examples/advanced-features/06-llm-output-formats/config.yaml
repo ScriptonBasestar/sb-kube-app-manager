@@ -1,0 +1,25 @@
+# LLM Output Formats Example Configuration
+# Demonstrates SBKube's LLM-friendly output formats (v0.7.0+)
+
+namespace: llm-demo
+
+global_labels:
+  example: llm-output-formats
+  managed-by: sbkube
+
+apps:
+  # Simple Redis deployment for demonstration
+  redis-demo:
+    type: helm
+    chart: bitnami/redis
+    version: "18.0.0"
+
+    values:
+      - redis-values.yaml
+
+    labels:
+      app: redis
+      component: cache
+
+    annotations:
+      description: "Simple Redis deployment for LLM output format demonstration"

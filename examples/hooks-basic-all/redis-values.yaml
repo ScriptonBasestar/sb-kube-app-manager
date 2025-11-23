@@ -1,0 +1,12 @@
+# Redis Values for Hooks Example
+# Demonstrates minimal configuration for testing hooks functionality
+
+auth:
+  enabled: false
+
+master:
+  persistence:
+    enabled: false
+
+replica:
+  replicaCount: 0

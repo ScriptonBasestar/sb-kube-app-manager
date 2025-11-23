@@ -1,19 +1,13 @@
 namespace: pre-deploy-test
 
 apps:
-  - name: postgres
+  postgres:
     type: helm
     enabled: true
-    specs:
-      repo: grafana
-      chart: postgresql
-      version: 12.5.8
+    chart: grafana/postgresql
+    version: 12.5.8
     values:
-      auth:
-        existingSecret: db-credentials
-      primary:
-        persistence:
-          enabled: false
+      - postgres-values.yaml
 
     hooks:
       # 배포 전 Task들
@@ -21,44 +15,36 @@ apps:
         # Task 1: Namespace 확인
         - type: command
           name: ensure-namespace
-          command:
-            - bash
-            - -c
-            - |
-              echo "Checking namespace: $SBKUBE_NAMESPACE"
-              kubectl get namespace $SBKUBE_NAMESPACE || \
-              kubectl create namespace $SBKUBE_NAMESPACE
-              echo "✅ Namespace ready"
+          command: |
+            echo "Checking namespace: $SBKUBE_NAMESPACE"
+            kubectl get namespace $SBKUBE_NAMESPACE || \
+            kubectl create namespace $SBKUBE_NAMESPACE
+            echo "Namespace ready"
 
         # Task 2: Secret 생성
         - type: manifests
           name: create-secret
-          paths:
+          files:
             - manifests/secret.yaml
 
         # Task 3: ConfigMap 배포
         - type: manifests
           name: create-config
-          paths:
+          files:
             - manifests/app-config.yaml
 
         # Task 4: 환경 검증
         - type: command
           name: verify-environment
-          command:
-            - bash
-            - scripts/verify-environment.sh
+          command: bash scripts/verify-environment.sh
 
       # 배포 후 검증
       post_deploy_tasks:
         - type: command
           name: verify-deployment
-          command:
-            - bash
-            - -c
-            - |
-              echo "Waiting for PostgreSQL..."
-              kubectl wait --for=condition=ready pod \
-                -l app.kubernetes.io/name=postgresql \
-                -n $SBKUBE_NAMESPACE --timeout=300s
-              echo "✅ Deployment successful"
+          command: |
+            echo "Waiting for PostgreSQL..."
+            kubectl wait --for=condition=ready pod \
+              -l app.kubernetes.io/name=postgresql \
+              -n $SBKUBE_NAMESPACE --timeout=300s
+            echo "Deployment successful"

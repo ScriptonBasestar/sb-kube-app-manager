@@ -1,0 +1,9 @@
+# PostgreSQL Values for Pre-Deploy Tasks Example
+# Demonstrates database configuration with existing secret
+
+auth:
+  existingSecret: db-credentials
+
+primary:
+  persistence:
+    enabled: false

@@ -8,15 +8,15 @@ namespace: hooks-test
 hooks:
   deploy:
     pre:
-      - echo "🚀 [Command-Level] Starting deployment for ALL apps"
-      - echo "Namespace: $SBKUBE_NAMESPACE"
-      - echo "Phase: $SBKUBE_PHASE"
+      - echo "[Command-Level] Starting deployment for ALL apps"
+      - echo "Namespace - $SBKUBE_NAMESPACE"
+      - echo "Phase - $SBKUBE_PHASE"
 
     post:
-      - echo "✅ [Command-Level] Deployment completed for ALL apps"
+      - echo "[Command-Level] Deployment completed for ALL apps"
 
     on_failure:
-      - echo "❌ [Command-Level] Deployment FAILED"
+      - echo "[Command-Level] Deployment FAILED"
 
 # ============================================================
 # Apps
@@ -25,23 +25,14 @@ apps:
   # --------------------------------------------------------
   # Redis App - 모든 Hook 타입 시연
   # --------------------------------------------------------
-  - name: redis
+  redis:
     type: helm
     enabled: true
-
-    specs:
-      repo: grafana
-      chart: redis
-      version: 17.11.3
+    chart: grafana/redis
+    version: 17.11.3
 
     values:
-      auth:
-        enabled: false
-      master:
-        persistence:
-          enabled: false
-      replica:
-        replicaCount: 0
+      - redis-values.yaml
 
     # --------------------------------------------------------
     # App-Level Hooks (앱별 훅)
@@ -52,12 +43,12 @@ apps:
       # 기본 Shell Hooks
       # ----------------------------------------------------
       pre_deploy:
-        - echo "📦 [App-Level Shell] Redis: App-level pre-deploy hook"
-        - echo "App Name: $SBKUBE_APP_NAME"
-        - echo "App Type: $SBKUBE_APP_TYPE"
+        - echo "[App-Level Shell] Redis - App-level pre-deploy hook"
+        - echo "App Name - $SBKUBE_APP_NAME"
+        - echo "App Type - $SBKUBE_APP_TYPE"
 
       post_deploy:
-        - echo "📦 [App-Level Shell] Redis: App-level post-deploy hook"
+        - echo "[App-Level Shell] Redis - App-level post-deploy hook"
         - kubectl get pods -n $SBKUBE_NAMESPACE -l app.kubernetes.io/name=redis
 
       # ----------------------------------------------------
@@ -66,7 +57,7 @@ apps:
       # - 파일 경로만 지정
       # ----------------------------------------------------
       pre_deploy_manifests:
-        - path: manifests/configmap-phase1.yaml
+        - manifests/configmap-phase1.yaml
 
       # post_deploy_manifests:
       #   # 사용 안 함 (예시를 위해 주석)
@@ -81,13 +72,13 @@ apps:
         # Task 1: Manifests 타입 (YAML 파일 배포)
         - type: manifests
           name: deploy-phase2-cm
-          paths:
+          files:
             - manifests/configmap-phase2.yaml
 
         # Task 2: Inline 타입 (파일 없이 YAML 직접 정의)
         - type: inline
           name: create-inline-cm
-          yaml: |
+          content:
             apiVersion: v1
             kind: ConfigMap
             metadata:
@@ -100,12 +91,9 @@ apps:
         # Task 3: Command 타입 (Shell 명령어 실행)
         - type: command
           name: verify-deployment
-          command:
-            - bash
-            - -c
-            - |
-              echo "🔍 [Phase 2 Command] Verifying deployment..."
-              kubectl get configmap -n hooks-test basic-phase1-cm
-              kubectl get configmap -n hooks-test basic-phase2-cm
-              kubectl get configmap -n hooks-test basic-inline-cm
-              echo "✅ All ConfigMaps created successfully!"
+          command: |
+            echo "[Phase 2 Command] Verifying deployment..."
+            kubectl get configmap -n hooks-test basic-phase1-cm
+            kubectl get configmap -n hooks-test basic-phase2-cm
+            kubectl get configmap -n hooks-test basic-inline-cm
+            echo "All ConfigMaps created successfully!"

@@ -1,0 +1,47 @@
+namespace: app-cluster-b
+
+global_labels:
+  cluster: cluster-b
+  region: us-east
+  environment: production
+
+global_annotations:
+  deployed-by: sbkube
+  cluster-role: secondary
+
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: "18.0.0"
+    values:
+      - values/redis-cluster-b.yaml
+    labels:
+      app: redis
+      tier: cache
+    enabled: true
+
+  postgresql:
+    type: helm
+    chart: bitnami/postgresql
+    version: "13.0.0"
+    values:
+      - values/postgresql-cluster-b.yaml
+    labels:
+      app: postgresql
+      tier: database
+    enabled: true
+
+  nginx:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/nginx-cluster-b.yaml
+    depends_on:
+      - redis
+      - postgresql
+    labels:
+      app: nginx
+      tier: frontend
+    enabled: true

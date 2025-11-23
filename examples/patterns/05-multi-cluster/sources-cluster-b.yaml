@@ -1,0 +1,10 @@
+clusters:
+  - name: cluster-b
+    context: cluster-b-context
+    default: true
+    kubeconfig: ~/.kube/config-cluster-b
+
+helm_sources:
+  - name: bitnami
+    url: https://charts.bitnami.com/bitnami
+    type: https

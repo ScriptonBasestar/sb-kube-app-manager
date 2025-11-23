@@ -7,13 +7,13 @@ apps:
   # 1. Redis - 세션 스토어 & 캐시
   redis:
     type: yaml
-    files:
+    manifests:
       - manifests/redis.yaml
 
   # 2. PostgreSQL - 메인 데이터베이스
   postgresql:
     type: yaml
-    files:
+    manifests:
       - manifests/postgresql.yaml
 
   # 3. Mailhog - 이메일 테스트 서버
@@ -27,5 +27,5 @@ apps:
   # 4. LocalStack - AWS 서비스 로컬 에뮬레이터 (S3 포함)
   localstack:
     type: yaml
-    files:
+    manifests:
       - manifests/localstack.yaml

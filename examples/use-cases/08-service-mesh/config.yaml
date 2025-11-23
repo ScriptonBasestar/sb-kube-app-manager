@@ -31,7 +31,7 @@ apps:
   # 네임스페이스 설정 (Sidecar 자동 주입)
   namespace-config:
     type: yaml
-    files:
+    manifests:
       - manifests/namespace.yaml
     depends_on:
       - linkerd-control-plane
@@ -39,7 +39,7 @@ apps:
   # Demo Microservices
   demo-services:
     type: yaml
-    files:
+    manifests:
       - manifests/frontend.yaml
       - manifests/backend.yaml
       - manifests/database.yaml

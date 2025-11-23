@@ -4,7 +4,7 @@ apps:
   # 1단계: PersistentVolume (Registry 스토리지)
   storage-setup:
     type: yaml
-    files:
+    manifests:
       - manifests/storage-pv.yaml
     enabled: true
 

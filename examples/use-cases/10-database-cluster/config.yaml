@@ -13,7 +13,7 @@ apps:
   # 데모 클라이언트 앱 (DB 접속 테스트)
   demo-client:
     type: yaml
-    files:
+    manifests:
       - manifests/demo-client.yaml
     depends_on:
       - postgresql-ha

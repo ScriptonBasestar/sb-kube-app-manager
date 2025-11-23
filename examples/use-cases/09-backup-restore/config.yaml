@@ -4,7 +4,7 @@ apps:
   # NFS 백업 스토리지
   backup-storage:
     type: yaml
-    files:
+    manifests:
       - manifests/nfs-storage.yaml
     namespace: velero
     enabled: true
@@ -23,14 +23,14 @@ apps:
   # 데모 애플리케이션 (백업 대상)
   demo-app:
     type: yaml
-    files:
+    manifests:
       - manifests/demo-app.yaml
     enabled: true
 
   # Velero Schedule (자동 백업)
   backup-schedule:
     type: yaml
-    files:
+    manifests:
       - manifests/backup-schedule.yaml
     depends_on:
       - velero

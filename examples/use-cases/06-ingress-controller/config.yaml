@@ -9,7 +9,7 @@ apps:
   # 데모 애플리케이션
   demo-apps:
     type: yaml
-    files:
+    manifests:
       - manifests/apps.yaml
     depends_on:
       - traefik
@@ -17,7 +17,7 @@ apps:
   # Traefik 미들웨어
   middlewares:
     type: yaml
-    files:
+    manifests:
       - manifests/middlewares.yaml
     depends_on:
       - demo-apps
@@ -25,7 +25,7 @@ apps:
   # IngressRoute
   ingress-routes:
     type: yaml
-    files:
+    manifests:
       - manifests/ingress-routes.yaml
     depends_on:
       - middlewares

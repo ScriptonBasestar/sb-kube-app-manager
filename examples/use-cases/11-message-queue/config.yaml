@@ -13,7 +13,7 @@ apps:
   # Producer (메시지 발행자)
   producer:
     type: yaml
-    files:
+    manifests:
       - manifests/producer.yaml
     depends_on:
       - rabbitmq
@@ -22,7 +22,7 @@ apps:
   # Consumer (메시지 소비자)
   consumer:
     type: yaml
-    files:
+    manifests:
       - manifests/consumer.yaml
     depends_on:
       - rabbitmq

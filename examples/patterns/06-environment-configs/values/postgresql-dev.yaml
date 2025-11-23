@@ -1,0 +1,17 @@
+# Development PostgreSQL overrides
+auth:
+  password: "dev-pg-password"
+
+primary:
+  persistence:
+    enabled: false  # No persistence in dev
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+readReplicas:
+  replicaCount: 0  # No replicas in dev

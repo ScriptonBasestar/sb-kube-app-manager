@@ -1,0 +1,21 @@
+# Staging Redis overrides
+auth:
+  password: "staging-redis-password"
+
+master:
+  persistence:
+    enabled: true
+    size: 4Gi
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 150m
+      memory: 128Mi
+
+replica:
+  replicaCount: 1  # 1 replica in staging
+
+metrics:
+  enabled: true

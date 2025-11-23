@@ -1,0 +1,9 @@
+# Base Redis configuration - shared across environments
+architecture: standalone
+
+auth:
+  enabled: true
+  # Password will be overridden per environment
+
+metrics:
+  enabled: false  # Enabled in staging/prod only

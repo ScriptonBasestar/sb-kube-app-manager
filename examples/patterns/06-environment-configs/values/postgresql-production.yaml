@@ -1,0 +1,25 @@
+# Production PostgreSQL overrides
+auth:
+  password: "production-pg-password"
+
+primary:
+  persistence:
+    enabled: true
+    size: 20Gi
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+
+readReplicas:
+  replicaCount: 2  # 2 read replicas in production
+
+metrics:
+  enabled: true
+
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM

@@ -1,0 +1,8 @@
+# Base PostgreSQL configuration - shared across environments
+auth:
+  username: appuser
+  database: appdb
+  # Password will be overridden per environment
+
+metrics:
+  enabled: false  # Enabled in staging/prod only

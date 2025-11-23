@@ -1,0 +1,54 @@
+# Production environment overrides
+namespace: myapp-production
+
+global_labels:
+  environment: production
+  managed-by: sbkube
+  project: myapp
+  criticality: high
+
+global_annotations:
+  cost-center: ops-team
+  auto-scale: "true"
+  backup: "enabled"
+  monitoring: "enabled"
+
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: "18.0.0"
+    values:
+      - values/redis-base.yaml
+      - values/redis-production.yaml
+    labels:
+      app: redis
+      tier: cache
+    enabled: true
+
+  postgresql:
+    type: helm
+    chart: bitnami/postgresql
+    version: "13.0.0"
+    values:
+      - values/postgresql-base.yaml
+      - values/postgresql-production.yaml
+    labels:
+      app: postgresql
+      tier: database
+    enabled: true
+
+  backend:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/backend-base.yaml
+      - values/backend-production.yaml
+    depends_on:
+      - redis
+      - postgresql
+    labels:
+      app: backend
+      tier: application
+    enabled: true

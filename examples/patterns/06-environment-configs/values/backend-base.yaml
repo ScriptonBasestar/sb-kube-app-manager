@@ -1,0 +1,6 @@
+# Base backend configuration - shared across environments
+service:
+  type: ClusterIP
+
+autoscaling:
+  enabled: false  # Enabled in staging/prod only

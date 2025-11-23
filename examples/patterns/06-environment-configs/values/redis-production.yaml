@@ -1,0 +1,24 @@
+# Production Redis overrides
+auth:
+  password: "production-redis-password"
+
+master:
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+replica:
+  replicaCount: 2  # 2 replicas in production
+
+metrics:
+  enabled: true
+
+sentinel:
+  enabled: true

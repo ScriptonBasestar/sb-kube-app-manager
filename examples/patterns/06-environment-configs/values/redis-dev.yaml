@@ -1,0 +1,17 @@
+# Development Redis overrides
+auth:
+  password: "dev-redis-password"
+
+master:
+  persistence:
+    enabled: false  # No persistence in dev
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+replica:
+  replicaCount: 0  # No replicas in dev

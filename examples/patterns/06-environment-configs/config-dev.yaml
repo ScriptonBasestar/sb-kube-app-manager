@@ -1,0 +1,51 @@
+# Development environment overrides
+namespace: myapp-dev
+
+global_labels:
+  environment: development
+  managed-by: sbkube
+  project: myapp
+
+global_annotations:
+  cost-center: dev-team
+  auto-scale: "false"
+
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: "18.0.0"
+    values:
+      - values/redis-base.yaml
+      - values/redis-dev.yaml
+    labels:
+      app: redis
+      tier: cache
+    enabled: true
+
+  postgresql:
+    type: helm
+    chart: bitnami/postgresql
+    version: "13.0.0"
+    values:
+      - values/postgresql-base.yaml
+      - values/postgresql-dev.yaml
+    labels:
+      app: postgresql
+      tier: database
+    enabled: true
+
+  backend:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/backend-base.yaml
+      - values/backend-dev.yaml
+    depends_on:
+      - redis
+      - postgresql
+    labels:
+      app: backend
+      tier: application
+    enabled: true

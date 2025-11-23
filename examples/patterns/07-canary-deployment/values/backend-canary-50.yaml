@@ -1,0 +1,27 @@
+# Canary version configuration - 50% traffic
+replicaCount: 5  # 50% of traffic (5 out of 10 pods)
+
+image:
+  tag: "2.0.0-canary"
+
+service:
+  type: ClusterIP
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+podLabels:
+  version: canary
+  track: canary
+  app: backend
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9113"
+  canary: "true"
+  canary-weight: "50"

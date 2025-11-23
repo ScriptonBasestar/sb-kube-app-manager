@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: canary-demo
+  labels:
+    app: backend
+spec:
+  selector:
+    app: backend  # Selects both stable and canary pods
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+  type: ClusterIP

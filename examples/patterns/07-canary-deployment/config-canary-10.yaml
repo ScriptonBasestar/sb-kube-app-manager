@@ -1,0 +1,32 @@
+# Canary deployment - 10% traffic
+namespace: canary-demo
+
+global_labels:
+  deployment-strategy: canary
+  managed-by: sbkube
+  canary-weight: "10"
+
+apps:
+  backend-stable:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/backend-stable.yaml
+    labels:
+      app: backend
+      version: stable
+      track: stable
+    enabled: true
+
+  backend-canary:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/backend-canary-10.yaml
+    labels:
+      app: backend
+      version: canary
+      track: canary
+    enabled: true

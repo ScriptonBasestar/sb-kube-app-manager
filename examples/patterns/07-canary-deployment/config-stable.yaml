@@ -1,0 +1,19 @@
+# Stable version deployment
+namespace: canary-demo
+
+global_labels:
+  deployment-strategy: canary
+  managed-by: sbkube
+
+apps:
+  backend-stable:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/backend-stable.yaml
+    labels:
+      app: backend
+      version: stable
+      track: stable
+    enabled: true

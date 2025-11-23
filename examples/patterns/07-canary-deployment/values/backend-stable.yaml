@@ -1,0 +1,25 @@
+# Stable version configuration
+replicaCount: 9  # 90% of traffic (9 out of 10 pods)
+
+image:
+  tag: "1.0.0"
+
+service:
+  type: ClusterIP
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+podLabels:
+  version: stable
+  track: stable
+  app: backend
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9113"

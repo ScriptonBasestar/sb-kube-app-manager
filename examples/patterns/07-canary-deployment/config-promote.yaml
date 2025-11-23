@@ -1,0 +1,33 @@
+# Promote canary to stable - 100% traffic to new version
+namespace: canary-demo
+
+global_labels:
+  deployment-strategy: canary
+  managed-by: sbkube
+  canary-weight: "100"
+
+apps:
+  backend-stable:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/backend-promoted.yaml
+    labels:
+      app: backend
+      version: stable
+      track: stable
+    enabled: true
+
+  # Canary removed after promotion
+  backend-canary:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/backend-canary-50.yaml
+    labels:
+      app: backend
+      version: canary
+      track: canary
+    enabled: false  # Disabled after promotion

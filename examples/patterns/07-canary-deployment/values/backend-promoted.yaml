@@ -1,0 +1,26 @@
+# Promoted canary to stable - now running new version as stable
+replicaCount: 10  # 100% of traffic
+
+image:
+  tag: "2.0.0"  # Canary promoted, remove -canary suffix
+
+service:
+  type: ClusterIP
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+podLabels:
+  version: stable
+  track: stable
+  app: backend
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9113"
+  promoted-from: "canary"

@@ -1,0 +1,33 @@
+# Blue environment active, green idle
+namespace: bluegreen-demo
+
+global_labels:
+  deployment-strategy: blue-green
+  managed-by: sbkube
+
+apps:
+  backend-blue:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/backend-blue.yaml
+    labels:
+      app: backend
+      version: blue
+      environment: blue
+      status: active
+    enabled: true
+
+  backend-green:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+    values:
+      - values/backend-green-idle.yaml
+    labels:
+      app: backend
+      version: green
+      environment: green
+      status: idle
+    enabled: true

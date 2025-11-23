@@ -1,0 +1,27 @@
+# Green environment - active
+replicaCount: 3
+
+image:
+  tag: "2.0.0"
+
+service:
+  type: ClusterIP
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+podLabels:
+  version: green
+  environment: green
+  status: active
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9113"

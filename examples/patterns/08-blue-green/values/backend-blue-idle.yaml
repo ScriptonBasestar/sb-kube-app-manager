@@ -1,0 +1,25 @@
+# Blue environment - idle (after switch to green)
+replicaCount: 1  # Reduced replicas when idle
+
+image:
+  tag: "1.0.0"
+
+service:
+  type: ClusterIP
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+podLabels:
+  version: blue
+  environment: blue
+  status: idle
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9113"

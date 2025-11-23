@@ -1,0 +1,25 @@
+# Green environment - idle (before deployment)
+replicaCount: 1  # Reduced replicas when idle
+
+image:
+  tag: "2.0.0"
+
+service:
+  type: ClusterIP
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+podLabels:
+  version: green
+  environment: green
+  status: idle
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9113"

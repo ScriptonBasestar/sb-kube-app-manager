@@ -19,7 +19,7 @@ examples/
 │   ├── 09-backup-restore/             # Velero 백업/복구
 │   ├── 10-database-cluster/           # PostgreSQL HA 클러스터
 │   └── 11-message-queue/              # RabbitMQ 메시징
-├── app-types/                         # 애플리케이션 타입별 예제 (8개)
+├── app-types/                         # 애플리케이션 타입별 예제 (9개)
 │   ├── 01-helm/                       # Helm 차트 배포
 │   ├── 02-yaml/                       # YAML 매니페스트 배포
 │   ├── 03-git/                        # Git 리포지토리 연동
@@ -27,11 +27,15 @@ examples/
 │   ├── 05-exec/                       # Exec 타입 (스크립트 실행)
 │   ├── 06-http/                       # HTTP 다운로드
 │   ├── 07-kustomize/                  # Kustomize (환경별 설정)
-│   └── 08-noop/                       # Noop (수동 작업 표현)
-├── advanced-features/                 # 고급 기능 예제 (6개)
+│   ├── 08-noop/                       # Noop (수동 작업 표현)
+│   └── 09-hook/                       # HookApp (v0.8.0+, Phase 4)
+├── advanced-features/                 # 고급 기능 예제 (9개)
 │   ├── 01-enabled-flag/               # 조건부 배포 (enabled)
 │   ├── 02-complex-dependencies/       # 복잡한 의존성 관리
 │   ├── 03-helm-customization/         # Helm 고급 기능
+│   ├── 04-helm-label-injection/       # Helm 라벨/어노테이션 자동 주입 (v0.7.1+)
+│   ├── 05-chart-removes/              # 차트 파일 제거 (v0.4.0+)
+│   ├── 06-llm-output-formats/         # LLM 친화적 출력 포맷 (v0.7.0+)
 │   ├── 04-multi-namespace/            # 멀티 네임스페이스 배포
 │   ├── 05-helm-hooks/                 # Helm Hooks (pre/post install)
 │   └── 06-progressive-delivery/       # Canary/Blue-Green 배포
@@ -71,13 +75,14 @@ examples/
 
 ## 📚 예제 카탈로그
 
-**총 38개 예제** | 8개 앱 타입 100% 커버리지 | 프로덕션 준비 완료
+**총 50+ 예제** | 9개 앱 타입 100% 커버리지 | 프로덕션 준비 완료
 
 | 카테고리 | 예제 수 | 설명 |
 |----------|---------|------|
-| **Use Cases** | 11 | 실전 시나리오 (인프라, 보안, 메시징) |
-| **App Types** | 8 | 모든 앱 타입 (helm, yaml, git, action, exec, http, kustomize, noop) |
-| **Advanced Features** | 6 | 고급 배포 기능 (멀티 NS, Hooks, Canary) |
+| **Use Cases** | 11 | 실전 시나리오 (인프라, 보안, 메시징) - [상세 가이드](use-cases/README.md) |
+| **App Types** | 9 | 모든 앱 타입 (helm, yaml, git, action, exec, http, kustomize, noop, hook) |
+| **Advanced Features** | 9 | 고급 배포 기능 (라벨 주입, 차트 정리, LLM 출력) |
+| **Hooks** | 6 | Hook 시스템 (Phase 1-4) - [상세 가이드](hooks/README.md) |
 | **Security** | 4 | 보안 베스트 프랙티스 |
 | **Integration** | 3 | Full-Stack, 마이크로서비스, 데이터 파이프라인 |
 | **Patterns** | 4 | 운영 패턴 (GitOps, DR, Multi-Cluster, Cost) |
@@ -112,6 +117,7 @@ examples/
 | [06-http](app-types/06-http/) | HTTP URL에서 파일 다운로드 | http |
 | [07-kustomize](app-types/07-kustomize/) | Kustomize base/overlay 패턴 (환경별 설정) | kustomize |
 | [08-noop](app-types/08-noop/) | 수동 작업을 의존성 체인에 표현 | noop |
+| [09-hook](app-types/09-hook/) | HookApp - 독립적인 Hook 앱 타입 (v0.8.0+) | hook |
 
 ### ⚡ Advanced Features (고급 기능)
 
@@ -120,9 +126,29 @@ examples/
 | [01-enabled-flag](advanced-features/01-enabled-flag/) | 조건부 배포 | enabled: true/false |
 | [02-complex-dependencies](advanced-features/02-complex-dependencies/) | 복잡한 의존성 체인 | depends_on 체인, 마이크로서비스 |
 | [03-helm-customization](advanced-features/03-helm-customization/) | Helm 고급 커스터마이징 | set_values, release_name, Values 병합 |
+| [04-helm-label-injection](advanced-features/04-helm-label-injection/) | Helm 라벨/어노테이션 자동 주입 (v0.7.1+) | commonLabels/commonAnnotations 자동 주입 |
+| [05-chart-removes](advanced-features/05-chart-removes/) | 차트 파일 제거 (v0.4.0+) | 불필요 파일 삭제, 15-30% 크기 감소 |
+| [06-llm-output-formats](advanced-features/06-llm-output-formats/) | LLM 친화적 출력 포맷 (v0.7.0+) | AI 에이전트 통합, 80-90% 토큰 절약 |
 | [04-multi-namespace](advanced-features/04-multi-namespace/) | 멀티 네임스페이스 배포 | Cross-namespace 통신, FQDN |
 | [05-helm-hooks](advanced-features/05-helm-hooks/) | Helm Hooks 활용 | pre/post install/delete hooks |
 | [06-progressive-delivery](advanced-features/06-progressive-delivery/) | 점진적 배포 전략 | Canary, Blue-Green, Traffic Split |
+
+### 🔗 Hooks (Hook 시스템)
+
+**상세 가이드**: [hooks/README.md](hooks/README.md)
+
+SBKube의 Hook 시스템 진화 과정 (Phase 1-4):
+
+| 예제 | Phase | 설명 | 주요 기능 |
+|------|-------|------|----------|
+| [hooks/](hooks/) | 1 | 기본 셸 명령어 Hooks | pre/post 명령어 실행 |
+| [hooks-manifests/](hooks-manifests/) | 1 | YAML 매니페스트 Hooks | pre_deploy_manifests |
+| [hooks-pre-deploy-tasks/](hooks-pre-deploy-tasks/) | 2 | Pre-deploy 작업 시스템 | 구조화된 Task 시스템 |
+| [hooks-phase3/](hooks-phase3/) | 3 | 고급 구조화 Tasks | manifests, inline, command 타입 |
+| [hooks-phase4/](hooks-phase4/) | 4 | HookApp 독립 앱 타입 (v0.8.0+) | Rollback, Validation 지원 |
+| [hooks-basic-all/](hooks-basic-all/) | All | 전체 Hook 타입 통합 예제 | Phase 1-3 통합 |
+
+**학습 경로**: Phase 1 → Phase 2 → Phase 3 → Phase 4 (HookApp)
 
 ### 🔐 Security (보안)
 
@@ -299,6 +325,38 @@ examples/
 - Non-root 실행
 - 읽기 전용 파일시스템
 
+### "Helm 라벨/어노테이션을 자동으로 주입하고 싶어요"
+→ [Advanced Feature: Helm Label Injection](advanced-features/04-helm-label-injection/)
+
+**학습 내용**:
+- commonLabels/commonAnnotations 자동 주입
+- 엄격한 스키마 차트에서 비활성화 (Authelia 등)
+- 대부분의 차트에서 기본 활성화 권장
+
+### "차트 크기를 줄이고 싶어요"
+→ [Advanced Feature: Chart Removes](advanced-features/05-chart-removes/)
+
+**학습 내용**:
+- 불필요한 파일 제거 (tests, docs, examples)
+- 15-30% 차트 크기 감소
+- 프로덕션 배포 최적화
+
+### "AI 에이전트 (Claude Code, ChatGPT)와 통합하고 싶어요"
+→ [Advanced Feature: LLM Output Formats](advanced-features/06-llm-output-formats/)
+
+**학습 내용**:
+- --format llm (80-90% 토큰 절약)
+- JSON/YAML 포맷 지원
+- CI/CD 파이프라인 통합
+
+### "배포 전/후에 스크립트나 설정을 실행하고 싶어요"
+→ [Hooks](hooks/) 또는 [app-types/09-hook](app-types/09-hook/)
+
+**학습 내용**:
+- Hook 시스템 진화 (Phase 1-4)
+- HookApp 독립 앱 타입 (v0.8.0+)
+- 상세 가이드: [hooks/README.md](hooks/README.md)
+
 ### "고급 기능을 사용하고 싶어요"
 → [Advanced Features](advanced-features/) 디렉토리
 
@@ -306,6 +364,9 @@ examples/
 - **조건부 배포**: [enabled-flag](advanced-features/01-enabled-flag/)
 - **복잡한 의존성**: [complex-dependencies](advanced-features/02-complex-dependencies/)
 - **Helm 커스터마이징**: [helm-customization](advanced-features/03-helm-customization/)
+- **라벨 자동 주입**: [helm-label-injection](advanced-features/04-helm-label-injection/)
+- **차트 최적화**: [chart-removes](advanced-features/05-chart-removes/)
+- **LLM 출력**: [llm-output-formats](advanced-features/06-llm-output-formats/)
 
 ## 🏗️ 예제 구조 이해하기
 

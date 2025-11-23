@@ -1,0 +1,10 @@
+# Prometheus Compact Values
+server:
+  persistentVolume:
+    enabled: false
+alertmanager:
+  enabled: false
+nodeExporter:
+  enabled: false
+pushgateway:
+  enabled: false

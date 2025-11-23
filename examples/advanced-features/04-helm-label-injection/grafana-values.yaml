@@ -1,0 +1,13 @@
+# Grafana Values
+# Minimal configuration for demonstration
+
+adminPassword: admin123
+
+service:
+  type: ClusterIP
+
+persistence:
+  enabled: false
+
+# commonLabels and commonAnnotations will be automatically injected by SBKube
+# from global_labels and global_annotations in config.yaml

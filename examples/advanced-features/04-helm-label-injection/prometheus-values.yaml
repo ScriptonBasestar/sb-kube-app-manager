@@ -1,0 +1,11 @@
+# Prometheus Values
+# Minimal configuration for demonstration
+
+server:
+  persistentVolume:
+    enabled: false
+
+alertmanager:
+  enabled: false
+
+# commonLabels and commonAnnotations will be automatically injected by SBKube

@@ -1,0 +1,6 @@
+# Grafana Minimal Values
+adminPassword: admin123
+service:
+  type: ClusterIP
+persistence:
+  enabled: false

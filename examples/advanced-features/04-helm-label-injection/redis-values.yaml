@@ -1,0 +1,22 @@
+# Redis Values
+# Minimal configuration for demonstration
+
+auth:
+  enabled: false
+
+master:
+  persistence:
+    enabled: false
+
+replica:
+  replicaCount: 0
+
+# NOTE: helm_label_injection is disabled for this app
+# If you need labels, add them manually here:
+#
+# commonLabels:
+#   environment: development
+#   managed-by: sbkube
+#   app: redis
+#
+# But be careful - some charts reject these fields!

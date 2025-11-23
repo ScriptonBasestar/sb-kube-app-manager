@@ -1,0 +1,10 @@
+# Redis Core-Only Values
+auth:
+  enabled: false
+master:
+  persistence:
+    enabled: false
+replica:
+  replicaCount: 0
+metrics:
+  enabled: false

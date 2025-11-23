@@ -1,0 +1,105 @@
+# Helm Label Injection Example
+#
+# SBKube v0.7.1+ automatically injects labels and annotations into Helm charts
+# via commonLabels and commonAnnotations in values. This example demonstrates:
+# - Default behavior (helm_label_injection: true)
+# - Disabled injection for charts with strict schema validation
+# - When to use each approach
+#
+# 실행 방법:
+#   sbkube apply --app-dir examples/advanced-features/04-helm-label-injection
+
+namespace: label-injection-demo
+
+# Global labels/annotations applied to all apps (if helm_label_injection: true)
+global_labels:
+  environment: development
+  managed-by: sbkube
+  team: platform
+
+global_annotations:
+  contact: platform-team@example.com
+  documentation: https://docs.example.com
+
+apps:
+  # ============================================================
+  # Example 1: Default Behavior (Label Injection Enabled)
+  # ============================================================
+  # SBKube automatically injects global_labels and global_annotations
+  # via commonLabels and commonAnnotations in Helm values
+  grafana:
+    type: helm
+    chart: grafana/grafana
+    version: "10.1.2"
+
+    # helm_label_injection: true (default)
+    # SBKube will add to values:
+    #   commonLabels:
+    #     environment: development
+    #     managed-by: sbkube
+    #     team: platform
+    #   commonAnnotations:
+    #     contact: platform-team@example.com
+    #     documentation: https://docs.example.com
+
+    values:
+      - grafana-values.yaml
+
+    # App-specific labels (merged with global labels)
+    labels:
+      app: grafana
+      component: monitoring
+
+    # App-specific annotations (merged with global annotations)
+    annotations:
+      description: "Grafana dashboard for metrics visualization"
+
+  # ============================================================
+  # Example 2: Disabled Label Injection (Strict Schema Charts)
+  # ============================================================
+  # Some charts have strict schema validation and reject unknown fields
+  # like commonLabels/commonAnnotations. For these charts, disable
+  # automatic injection and apply labels manually.
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: "18.0.0"
+
+    # Disable automatic label injection
+    # Use this for charts that:
+    # - Have strict schema validation (Authelia, some operators)
+    # - Don't support commonLabels/commonAnnotations
+    # - Require custom labeling strategy
+    helm_label_injection: false
+
+    values:
+      - redis-values.yaml
+
+    # These labels/annotations won't be automatically injected
+    # You need to add them manually in values file if needed
+    labels:
+      app: redis
+      component: cache
+
+    annotations:
+      description: "Redis cache for session storage"
+      schema-strict: "true"
+
+  # ============================================================
+  # Example 3: Mixed Approach
+  # ============================================================
+  # You can have both enabled and disabled apps in the same config
+  prometheus:
+    type: helm
+    chart: grafana/prometheus  # Actually prometheus-community, but using grafana for demo
+    version: "25.3.1"
+
+    # Default: helm_label_injection: true
+    # This chart supports commonLabels, so injection works fine
+
+    values:
+      - prometheus-values.yaml
+
+    labels:
+      app: prometheus
+      component: monitoring

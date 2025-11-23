@@ -1,0 +1,4 @@
+# NGINX Full Values (no removal)
+service:
+  type: ClusterIP
+replicaCount: 1

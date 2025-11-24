@@ -1,6 +1,6 @@
 # sbkube Makefile
 
-.PHONY: help install test test-unit test-integration test-performance test-coverage clean build check lint lint-fix lint-check lint-strict lint-strict-fix pre-commit-install pre-commit-run pre-commit-update clean-db clean-docker
+.PHONY: help install dev-setup test test-unit test-integration test-performance test-coverage clean build check lint lint-fix lint-check lint-strict lint-strict-fix pre-commit-install pre-commit-run pre-commit-update clean-db clean-docker
 
 # Default target
 help:
@@ -11,6 +11,7 @@ help:
 	@echo "  make install-dev      Install with dev dependencies (ruff, mypy, black)"
 	@echo "  make install-test     Install with test dependencies"
 	@echo "  make install-all      Install with all dependencies (dev + test)"
+	@echo "  make dev-setup        Create venv and install sbkube for local development"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test            Run all tests"
@@ -40,6 +41,9 @@ help:
 install:
 	uv pip install -e .
 
+install-system:
+	uv pip install -e . --system
+
 install-dev:
 	uv pip install -e . --group dev
 
@@ -48,6 +52,20 @@ install-test:
 
 install-all:
 	uv pip install -e . --group dev --group test
+
+dev-setup:
+	@echo "Creating Python virtual environment in .venv (if missing)..."
+	uv venv
+	@echo "Syncing project dependencies..."
+	uv sync
+	@echo "Installing sbkube in editable mode with dev + test dependencies..."
+	uv pip install -e . --group dev --group test
+	@echo ""
+	@echo "✅ Local development environment is ready."
+	@echo "To use 'sbkube', activate the virtual environment:"
+	@echo "  source .venv/bin/activate"
+	@echo "Then run:"
+	@echo "  sbkube version"
 
 # Testing
 test:

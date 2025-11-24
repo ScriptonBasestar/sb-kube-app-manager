@@ -10,8 +10,6 @@ Tests verify:
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from sbkube.commands.template import template_http_app, template_yaml_app
 from sbkube.models.config_model import HttpApp, YamlApp
 from sbkube.utils.output_manager import OutputManager
@@ -416,3 +414,185 @@ class TestTemplateHttpAppErrors:
         # Assert
         assert result is False
         output.print_error.assert_called()
+
+
+class TestManifestCleaning:
+    """Test automatic manifest metadata cleaning in template commands."""
+
+    def test_yaml_app_cleans_server_managed_fields(self, tmp_path: Path) -> None:
+        """Test that YAML app removes server-managed metadata fields."""
+        # Arrange
+        build_dir = tmp_path / "build"
+        build_dir.mkdir(exist_ok=True)
+
+        app_build_dir = build_dir / "my-app"
+        app_build_dir.mkdir(exist_ok=True)
+
+        # Create manifest with server-managed fields
+        manifest_with_metadata = """apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-config
+  managedFields:
+  - manager: kubectl
+    operation: Update
+  creationTimestamp: "2024-01-01T00:00:00Z"
+  resourceVersion: "12345"
+  uid: 123e4567-e89b-12d3-a456-426614174000
+data:
+  key: value
+status:
+  phase: Active
+"""
+        (app_build_dir / "config.yaml").write_text(manifest_with_metadata)
+
+        rendered_dir = tmp_path / "rendered"
+        rendered_dir.mkdir(exist_ok=True)
+
+        app = YamlApp(type="yaml", manifests=["config.yaml"])
+        output = MagicMock(spec=OutputManager)
+
+        # Act
+        result = template_yaml_app(
+            app_name="my-app",
+            app=app,
+            base_dir=tmp_path,
+            build_dir=build_dir,
+            app_config_dir=tmp_path / "config",
+            rendered_dir=rendered_dir,
+            output=output,
+        )
+
+        # Assert
+        assert result is True
+        rendered_file = rendered_dir / "my-app.yaml"
+        assert rendered_file.exists()
+
+        content = rendered_file.read_text()
+        # Verify server-managed fields removed
+        assert "managedFields" not in content
+        assert "creationTimestamp" not in content
+        assert "resourceVersion" not in content
+        assert "uid:" not in content
+        assert "status:" not in content
+
+        # Verify essential fields preserved
+        assert "test-config" in content
+        assert "key: value" in content
+
+    def test_http_app_cleans_yaml_files_only(self, tmp_path: Path) -> None:
+        """Test that HTTP app cleans YAML files but not other file types."""
+        # Arrange
+        build_dir = tmp_path / "build"
+        build_dir.mkdir(exist_ok=True)
+
+        app_build_dir = build_dir / "prometheus"
+        app_build_dir.mkdir(exist_ok=True)
+
+        # Create YAML with metadata
+        yaml_with_metadata = """apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  managedFields: []
+  resourceVersion: "12345"
+spec:
+  ports:
+  - port: 9090
+"""
+        (app_build_dir / "manifest.yaml").write_text(yaml_with_metadata)
+
+        # Create non-YAML file
+        (app_build_dir / "config.json").write_text('{"key": "value"}')
+
+        rendered_dir = tmp_path / "rendered"
+        rendered_dir.mkdir(exist_ok=True)
+
+        app = HttpApp(
+            type="http",
+            url="https://example.com/files.tar.gz",
+            dest="files.tar.gz",
+        )
+        output = MagicMock(spec=OutputManager)
+
+        # Act
+        result = template_http_app(
+            app_name="prometheus",
+            app=app,
+            base_dir=tmp_path,
+            build_dir=build_dir,
+            app_config_dir=tmp_path / "config",
+            rendered_dir=rendered_dir,
+            output=output,
+        )
+
+        # Assert
+        assert result is True
+
+        # Check YAML file cleaned
+        yaml_file = rendered_dir / "prometheus-manifest.yaml"
+        assert yaml_file.exists()
+        yaml_content = yaml_file.read_text()
+        assert "managedFields" not in yaml_content
+        assert "resourceVersion" not in yaml_content
+        assert "prometheus" in yaml_content
+
+        # Check non-YAML file untouched
+        json_file = rendered_dir / "prometheus-config.json"
+        assert json_file.exists()
+        assert json_file.read_text() == '{"key": "value"}'
+
+    def test_yaml_app_preserves_custom_metadata(self, tmp_path: Path) -> None:
+        """Test that custom metadata fields are preserved during cleaning."""
+        # Arrange
+        build_dir = tmp_path / "build"
+        build_dir.mkdir(exist_ok=True)
+
+        app_build_dir = build_dir / "my-app"
+        app_build_dir.mkdir(exist_ok=True)
+
+        manifest = """apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+  namespace: production
+  labels:
+    app: myapp
+    tier: backend
+  annotations:
+    prometheus.io/scrape: "true"
+  managedFields: []
+spec:
+  type: ClusterIP
+"""
+        (app_build_dir / "service.yaml").write_text(manifest)
+
+        rendered_dir = tmp_path / "rendered"
+        rendered_dir.mkdir(exist_ok=True)
+
+        app = YamlApp(type="yaml", manifests=["service.yaml"])
+        output = MagicMock(spec=OutputManager)
+
+        # Act
+        result = template_yaml_app(
+            app_name="my-app",
+            app=app,
+            base_dir=tmp_path,
+            build_dir=build_dir,
+            app_config_dir=tmp_path / "config",
+            rendered_dir=rendered_dir,
+            output=output,
+        )
+
+        # Assert
+        assert result is True
+        content = (rendered_dir / "my-app.yaml").read_text()
+
+        # Verify custom fields preserved
+        assert "namespace: production" in content
+        assert "app: myapp" in content
+        assert "tier: backend" in content
+        assert "prometheus.io/scrape" in content
+
+        # Verify server-managed fields removed
+        assert "managedFields" not in content

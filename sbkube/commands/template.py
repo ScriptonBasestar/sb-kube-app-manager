@@ -238,8 +238,12 @@ def template_yaml_app(
             output.print(f"  ✓ {yaml_file.name}", level="info")
 
     if combined_content:
+        # Clean server-managed metadata fields
+        cleaned_content = clean_manifest_metadata(combined_content)
+        output.print("  🧹 Cleaned server-managed metadata fields", level="info")
+
         output_file = rendered_dir / f"{app_name}.yaml"
-        output_file.write_text(combined_content, encoding="utf-8")
+        output_file.write_text(cleaned_content, encoding="utf-8")
         output.print_success(f"Rendered YAML saved: {output_file}")
         return True
 
@@ -289,9 +293,21 @@ def template_http_app(
         for source_file in source_files:
             if source_file.is_file():
                 dest_file = rendered_dir / f"{app_name}-{source_file.name}"
-                shutil.copy2(source_file, dest_file)
-                output.print(f"  ✓ {source_file.name} → {dest_file.name}", level="info")
 
+                # Clean YAML files before copying
+                if source_file.suffix in [".yaml", ".yml"]:
+                    content = source_file.read_text(encoding="utf-8")
+                    cleaned_content = clean_manifest_metadata(content)
+                    dest_file.write_text(cleaned_content, encoding="utf-8")
+                    output.print(
+                        f"  ✓ {source_file.name} → {dest_file.name} (cleaned)",
+                        level="info",
+                    )
+                else:
+                    shutil.copy2(source_file, dest_file)
+                    output.print(f"  ✓ {source_file.name} → {dest_file.name}", level="info")
+
+        output.print("  🧹 Cleaned YAML manifests", level="info")
         output.print_success("HTTP app files copied")
         return True
     # build 없으면 원본 다운로드 파일 사용
@@ -306,8 +322,18 @@ def template_http_app(
         return False
 
     dest_file = rendered_dir / f"{app_name}-{source_file.name}"
-    shutil.copy2(source_file, dest_file)
-    output.print_success(f"HTTP app file copied: {dest_file}")
+
+    # Clean YAML files before copying
+    if source_file.suffix in [".yaml", ".yml"]:
+        content = source_file.read_text(encoding="utf-8")
+        cleaned_content = clean_manifest_metadata(content)
+        dest_file.write_text(cleaned_content, encoding="utf-8")
+        output.print("  🧹 Cleaned server-managed metadata fields", level="info")
+        output.print_success(f"HTTP app file copied (cleaned): {dest_file}")
+    else:
+        shutil.copy2(source_file, dest_file)
+        output.print_success(f"HTTP app file copied: {dest_file}")
+
     return True
 
 

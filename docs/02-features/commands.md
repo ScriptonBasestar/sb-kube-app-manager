@@ -229,7 +229,15 @@ sbkube template --output-dir /tmp/out  # Custom output
 
 **Automatic Manifest Cleanup** (v0.7.0+):
 
-Template command automatically removes server-managed metadata fields that may cause deployment failures:
+Template command automatically removes server-managed metadata fields that may cause deployment failures.
+
+**Applies to**:
+
+- Helm apps (all rendered manifests)
+- YAML apps (all manifest files)
+- HTTP apps (YAML files only, non-YAML files unchanged)
+
+**Removed fields**:
 
 - `metadata.managedFields` (Server-Side Apply tracking)
 - `metadata.creationTimestamp` (auto-generated timestamp)

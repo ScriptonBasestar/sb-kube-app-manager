@@ -9,8 +9,6 @@ Tests verify:
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from sbkube.commands.build import build_http_app
 from sbkube.models.config_model import HttpApp
 from sbkube.utils.output_manager import OutputManager

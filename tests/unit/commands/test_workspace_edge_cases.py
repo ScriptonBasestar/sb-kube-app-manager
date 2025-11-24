@@ -8,14 +8,11 @@ Tests verify:
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import click
 import pytest
-from pydantic import ValidationError as PydanticValidationError
 
 from sbkube.commands.workspace import WorkspaceGraphCommand, WorkspaceValidateCommand
-from sbkube.exceptions import ConfigValidationError
 
 
 class TestWorkspaceFileLoadingErrors:

@@ -8,16 +8,11 @@ Tests verify:
 - Helper function behavior
 """
 
-from datetime import datetime
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import click
-import pytest
 from click.testing import CliRunner
 
 from sbkube.commands.rollback import (
-    _list_rollback_points,
     _print_rollback_result,
     _print_rollback_simulation,
     cmd,

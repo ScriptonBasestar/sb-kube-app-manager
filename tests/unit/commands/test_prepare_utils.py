@@ -10,8 +10,6 @@ Tests verify:
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from sbkube.commands.prepare import prepare_git_app, prepare_http_app
 from sbkube.models.config_model import GitApp, HttpApp
 from sbkube.utils.output_manager import OutputManager

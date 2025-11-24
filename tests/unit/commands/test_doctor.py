@@ -9,13 +9,11 @@ Tests verify:
 - Exit code behavior (0=success, 1=error, 2=warning)
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from sbkube.commands.doctor import cmd
-from sbkube.utils.diagnostic_system import DiagnosticLevel, DiagnosticResult
 
 
 class TestDoctorBasic:

@@ -377,7 +377,7 @@ class WorkspaceConfig(ConfigBaseModel):
             ValueError: 순환 의존성이 있는 경우
         """
         # In-degree 계산: 각 노드가 몇 개의 의존성을 가지는지
-        in_degree = {phase: 0 for phase in self.phases.keys()}
+        in_degree = dict.fromkeys(self.phases.keys(), 0)
         for phase_name, phase_config in self.phases.items():
             for dep in phase_config.depends_on:
                 in_degree[phase_name] = in_degree.get(phase_name, 0) + 1

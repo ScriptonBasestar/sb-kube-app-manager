@@ -1,12 +1,10 @@
 """Tests for validate command."""
 
-from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
 from click.testing import CliRunner
-from pydantic import ValidationError as PydanticValidationError
 
 from sbkube.cli import main
 

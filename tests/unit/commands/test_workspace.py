@@ -1,7 +1,7 @@
 """Workspace 명령어 테스트."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import click
 import pytest
@@ -16,7 +16,6 @@ from sbkube.commands.workspace import (
     init_cmd,
     validate_cmd,
 )
-from sbkube.exceptions import ConfigValidationError
 
 
 class TestWorkspaceValidateCommand:

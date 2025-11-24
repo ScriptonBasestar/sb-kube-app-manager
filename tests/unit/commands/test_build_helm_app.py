@@ -9,9 +9,7 @@ Tests verify:
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from sbkube.commands.build import build_helm_app
 from sbkube.models.config_model import HelmApp

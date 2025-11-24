@@ -8,8 +8,6 @@ Tests verify:
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from sbkube.commands.deploy import deploy_helm_app
 from sbkube.models.config_model import HelmApp
 from sbkube.utils.output_manager import OutputManager

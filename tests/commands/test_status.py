@@ -295,8 +295,9 @@ class TestStatusDependencyTree:
 
     def test_build_dependency_map(self) -> None:
         """Test _build_dependency_map() creates correct mapping."""
-        from sbkube.commands.status import _build_dependency_map
         from types import SimpleNamespace
+
+        from sbkube.commands.status import _build_dependency_map
 
         # Create app objects (function expects app.name and app.deps attributes)
         apps = [
@@ -315,8 +316,9 @@ class TestStatusDependencyTree:
 
     def test_build_dependency_map_empty(self) -> None:
         """Test _build_dependency_map() with no dependencies."""
-        from sbkube.commands.status import _build_dependency_map
         from types import SimpleNamespace
+
+        from sbkube.commands.status import _build_dependency_map
 
         apps = [
             SimpleNamespace(name="app1", deps=None),
@@ -354,8 +356,9 @@ class TestStatusDependencyTree:
 
     def test_find_root_apps(self) -> None:
         """Test _find_root_apps() identifies root apps."""
-        from sbkube.commands.status import _find_root_apps
         from types import SimpleNamespace
+
+        from sbkube.commands.status import _find_root_apps
 
         apps = [
             SimpleNamespace(name="app1", deps=None),
@@ -383,10 +386,11 @@ class TestStatusCacheData:
 
     def test_prepare_cache_data_structure(self) -> None:
         """Test _prepare_cache_data() returns raw status data."""
+        import tempfile
+        from pathlib import Path
+
         from sbkube.commands.status import _prepare_cache_data
         from sbkube.utils.cluster_cache import ClusterCache
-        from pathlib import Path
-        import tempfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = ClusterCache(

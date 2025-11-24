@@ -157,6 +157,9 @@ class SourceScheme(InheritableConfigModel):
         None  # Inline global values (merged with cluster_values_file)
     )
 
+    # Manifest cleanup settings (optional, v0.7.0+)
+    cleanup_metadata: bool = True  # Auto-remove server-managed metadata fields (default: True)
+
     # Repository configuration (optional)
     helm_repos: dict[str, HelmRepoScheme] = Field(default_factory=dict)
     oci_registries: dict[str, OciRepoScheme] = Field(default_factory=dict)

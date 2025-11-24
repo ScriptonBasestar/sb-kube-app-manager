@@ -39,6 +39,9 @@ kubeconfig_context: string           # Kubectl context name (required)
 cluster_values_file: string          # Path to cluster-level Helm values file
 global_values: dict                  # Inline global Helm values
 
+# Manifest cleanup settings (optional, v0.7.0+)
+cleanup_metadata: bool               # Auto-remove server-managed metadata (default: true)
+
 # App directory control (optional, v0.5.0+)
 app_dirs: [string]                   # Explicit list of app directories to deploy
 
@@ -192,6 +195,102 @@ Final values = deep_merge(cluster_values_file, global_values)
 
 - [examples/cluster-global-values/](../../examples/cluster-global-values/) - Complete example
 - [dict_merge.py](../../sbkube/utils/dict_merge.py) - Merge implementation
+
+______________________________________________________________________
+
+## 🧹 Manifest Metadata Cleanup (v0.7.0+)
+
+**New in v0.7.0**: Automatically remove server-managed metadata fields from rendered manifests.
+
+### cleanup_metadata (bool, optional)
+
+Controls automatic removal of Kubernetes server-managed metadata fields during the `template` stage.
+
+**Default**: `true` (recommended)
+
+```yaml
+cleanup_metadata: true  # Enable automatic cleanup (recommended)
+```
+
+**What gets removed**:
+
+When enabled, the following fields are automatically removed from all rendered manifests:
+
+- `metadata.managedFields` - Server-Side Apply field ownership tracking
+- `metadata.creationTimestamp` - Auto-generated creation timestamp
+- `metadata.resourceVersion` - Cluster-specific resource version
+- `metadata.uid` - Unique resource identifier
+- `metadata.generation` - Resource modification counter
+- `metadata.selfLink` - Deprecated API endpoint link (Kubernetes 1.20+)
+- `status` - Entire status section (managed by controllers)
+
+**Why this matters**:
+
+These fields are automatically managed by the Kubernetes API server and should not be included in user-provided manifests. Including them can cause deployment failures:
+
+```text
+Error: admission webhook denied the request: metadata.managedFields is not allowed
+Error: metadata.creationTimestamp is not allowed
+```
+
+**Common causes**:
+
+- Using `kubectl get -o yaml` output directly in chart templates
+- Copying existing resources as templates
+- Including server-managed fields in Kustomize patches
+
+**App type behavior**:
+
+- **Helm apps**: All rendered manifests cleaned
+- **YAML apps**: All manifest files cleaned
+- **HTTP apps**: Only YAML files (`.yaml`, `.yml`) cleaned, other files unchanged
+
+**When to disable**:
+
+```yaml
+cleanup_metadata: false  # Preserve all metadata fields
+```
+
+Use `false` only when:
+
+- Debugging deployment issues and need to inspect server-managed fields
+- Testing with pre-rendered manifests that include metadata
+- Special use cases requiring metadata preservation (rare)
+
+**Warning message**:
+
+When disabled, SBKube shows a warning:
+
+```
+⚠️  Manifest metadata cleanup is disabled
+```
+
+**Example - Standard usage (recommended)**:
+
+```yaml
+# sources.yaml
+cluster: production-k3s
+kubeconfig: ~/.kube/config
+kubeconfig_context: prod-cluster
+
+# cleanup_metadata defaults to true, no need to specify
+```
+
+**Example - Disable for debugging**:
+
+```yaml
+# sources.yaml
+cluster: development-k3s
+kubeconfig: ~/.kube/config
+kubeconfig_context: dev-cluster
+cleanup_metadata: false  # Disable for debugging
+```
+
+**See also**:
+
+- [docs/02-features/commands.md](../02-features/commands.md) - Template command documentation
+- [docs/07-troubleshooting/deployment-failures.md](../07-troubleshooting/deployment-failures.md) - ManifestMetadataError troubleshooting
+- [sbkube/utils/manifest_cleaner.py](../../sbkube/utils/manifest_cleaner.py) - Implementation
 
 ______________________________________________________________________
 

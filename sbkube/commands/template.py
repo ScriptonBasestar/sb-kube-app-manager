@@ -30,6 +30,7 @@ def template_helm_app(
     rendered_dir: Path,
     output: OutputManager,
     cluster_global_values: dict | None = None,
+    cleanup_metadata: bool = True,
 ) -> bool:
     """Helm 앱을 YAML로 렌더링 (helm template).
 
@@ -43,6 +44,7 @@ def template_helm_app(
         rendered_dir: 렌더링 결과 디렉토리
         output: OutputManager instance
         cluster_global_values: 클러스터 전역 values (선택, v0.7.0+)
+        cleanup_metadata: 서버 관리 메타데이터 자동 제거 여부 (기본: True, v0.7.0+)
 
     Returns:
         성공 여부
@@ -150,8 +152,12 @@ def template_helm_app(
             return False
 
         # 4. 렌더링된 YAML 정리 (managedFields 등 제거)
-        cleaned_yaml = clean_manifest_metadata(stdout)
-        output.print("  🧹 Cleaned server-managed metadata fields", level="info")
+        if cleanup_metadata:
+            cleaned_yaml = clean_manifest_metadata(stdout)
+            output.print("  🧹 Cleaned server-managed metadata fields", level="info")
+        else:
+            cleaned_yaml = stdout
+            output.print("  ⏭️  Skipped metadata cleanup (disabled)", level="info")
 
         # 5. 렌더링된 YAML 저장
         output_file = rendered_dir / f"{app_name}.yaml"
@@ -184,6 +190,7 @@ def template_yaml_app(
     app_config_dir: Path,
     rendered_dir: Path,
     output: OutputManager,
+    cleanup_metadata: bool = True,
 ) -> bool:
     """YAML 앱 렌더링 (빌드 디렉토리에서 복사).
 
@@ -195,6 +202,7 @@ def template_yaml_app(
         app_config_dir: 앱 설정 디렉토리
         rendered_dir: 렌더링 결과 디렉토리
         output: OutputManager instance
+        cleanup_metadata: 서버 관리 메타데이터 자동 제거 여부 (기본: True, v0.7.0+)
 
     Returns:
         성공 여부
@@ -239,8 +247,12 @@ def template_yaml_app(
 
     if combined_content:
         # Clean server-managed metadata fields
-        cleaned_content = clean_manifest_metadata(combined_content)
-        output.print("  🧹 Cleaned server-managed metadata fields", level="info")
+        if cleanup_metadata:
+            cleaned_content = clean_manifest_metadata(combined_content)
+            output.print("  🧹 Cleaned server-managed metadata fields", level="info")
+        else:
+            cleaned_content = combined_content
+            output.print("  ⏭️  Skipped metadata cleanup (disabled)", level="info")
 
         output_file = rendered_dir / f"{app_name}.yaml"
         output_file.write_text(cleaned_content, encoding="utf-8")
@@ -259,6 +271,7 @@ def template_http_app(
     app_config_dir: Path,
     rendered_dir: Path,
     output: OutputManager,
+    cleanup_metadata: bool = True,
 ) -> bool:
     """HTTP 앱 렌더링 (다운로드된 파일 복사).
 
@@ -270,6 +283,7 @@ def template_http_app(
         app_config_dir: 앱 설정 디렉토리
         rendered_dir: 렌더링 결과 디렉토리
         output: OutputManager instance
+        cleanup_metadata: 서버 관리 메타데이터 자동 제거 여부 (기본: True, v0.7.0+)
 
     Returns:
         성공 여부
@@ -297,17 +311,27 @@ def template_http_app(
                 # Clean YAML files before copying
                 if source_file.suffix in [".yaml", ".yml"]:
                     content = source_file.read_text(encoding="utf-8")
-                    cleaned_content = clean_manifest_metadata(content)
-                    dest_file.write_text(cleaned_content, encoding="utf-8")
-                    output.print(
-                        f"  ✓ {source_file.name} → {dest_file.name} (cleaned)",
-                        level="info",
-                    )
+                    if cleanup_metadata:
+                        cleaned_content = clean_manifest_metadata(content)
+                        dest_file.write_text(cleaned_content, encoding="utf-8")
+                        output.print(
+                            f"  ✓ {source_file.name} → {dest_file.name} (cleaned)",
+                            level="info",
+                        )
+                    else:
+                        dest_file.write_text(content, encoding="utf-8")
+                        output.print(
+                            f"  ✓ {source_file.name} → {dest_file.name}",
+                            level="info",
+                        )
                 else:
                     shutil.copy2(source_file, dest_file)
                     output.print(f"  ✓ {source_file.name} → {dest_file.name}", level="info")
 
-        output.print("  🧹 Cleaned YAML manifests", level="info")
+        if cleanup_metadata:
+            output.print("  🧹 Cleaned YAML manifests", level="info")
+        else:
+            output.print("  ⏭️  Skipped metadata cleanup (disabled)", level="info")
         output.print_success("HTTP app files copied")
         return True
     # build 없으면 원본 다운로드 파일 사용
@@ -326,10 +350,15 @@ def template_http_app(
     # Clean YAML files before copying
     if source_file.suffix in [".yaml", ".yml"]:
         content = source_file.read_text(encoding="utf-8")
-        cleaned_content = clean_manifest_metadata(content)
-        dest_file.write_text(cleaned_content, encoding="utf-8")
-        output.print("  🧹 Cleaned server-managed metadata fields", level="info")
-        output.print_success(f"HTTP app file copied (cleaned): {dest_file}")
+        if cleanup_metadata:
+            cleaned_content = clean_manifest_metadata(content)
+            dest_file.write_text(cleaned_content, encoding="utf-8")
+            output.print("  🧹 Cleaned server-managed metadata fields", level="info")
+            output.print_success(f"HTTP app file copied (cleaned): {dest_file}")
+        else:
+            dest_file.write_text(content, encoding="utf-8")
+            output.print("  ⏭️  Skipped metadata cleanup (disabled)", level="info")
+            output.print_success(f"HTTP app file copied: {dest_file}")
     else:
         shutil.copy2(source_file, dest_file)
         output.print_success(f"HTTP app file copied: {dest_file}")
@@ -487,8 +516,9 @@ def cmd(
             overall_success = False
             continue
 
-        # sources.yaml 로드 (cluster global values용, v0.7.0+)
+        # sources.yaml 로드 (cluster global values + cleanup_metadata용, v0.7.0+)
         cluster_global_values = None
+        cleanup_metadata = True  # Default value
         sources_file_path = APP_CONFIG_DIR / "sources.yaml"
         if sources_file_path.exists():
             try:
@@ -499,10 +529,16 @@ def cmd(
                 cluster_global_values = sources.get_merged_global_values(
                     sources_dir=APP_CONFIG_DIR
                 )
+                cleanup_metadata = sources.cleanup_metadata  # Get cleanup_metadata setting
                 if cluster_global_values:
                     output.print(
                         "[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]",
                         level="info",
+                    )
+                if not cleanup_metadata:
+                    output.print(
+                        "[yellow]⚠️  Manifest metadata cleanup is disabled[/yellow]",
+                        level="warning",
                     )
             except Exception as e:
                 output.print_warning(f"Failed to load cluster global values: {e}")
@@ -596,6 +632,7 @@ def cmd(
                         RENDERED_DIR,
                         output,
                         cluster_global_values=cluster_global_values,
+                        cleanup_metadata=cleanup_metadata,
                     )
                 elif isinstance(app, YamlApp):
                     success = template_yaml_app(
@@ -606,6 +643,7 @@ def cmd(
                         APP_CONFIG_DIR,
                         RENDERED_DIR,
                         output,
+                        cleanup_metadata=cleanup_metadata,
                     )
                 elif isinstance(app, HttpApp):
                     success = template_http_app(
@@ -616,6 +654,7 @@ def cmd(
                         APP_CONFIG_DIR,
                         RENDERED_DIR,
                         output,
+                        cleanup_metadata=cleanup_metadata,
                     )
                 else:
                     output.print(

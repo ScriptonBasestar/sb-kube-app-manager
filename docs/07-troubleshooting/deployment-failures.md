@@ -182,11 +182,60 @@ ______________________________________________________________________
 
 ## Helm 릴리스 에러
 
+### ManifestMetadataError (v0.7.0+)
+
+**증상**: Manifest에 서버 관리 메타데이터 필드 포함
+
+```text
+Error: admission webhook denied the request: metadata.managedFields is not allowed
+Error: metadata.creationTimestamp is not allowed
+```
+
+**원인**:
+
+- `kubectl get -o yaml` 출력을 그대로 차트에 포함
+- 기존 리소스를 복사해서 템플릿으로 사용
+- Kustomize 패치에 서버 관리 필드 포함
+
+**해결 방법**:
+
+**자동 해결 (v0.7.0+)**:
+
+SBKube는 `template` 명령어에서 자동으로 다음 필드를 제거합니다:
+
+- `metadata.managedFields`
+- `metadata.creationTimestamp`
+- `metadata.resourceVersion`
+- `metadata.uid`
+- `metadata.generation`
+- `metadata.selfLink`
+- `status` (전체 섹션)
+
+```bash
+# 자동 정리가 적용됩니다
+sbkube template --app-dir <app-dir>
+sbkube apply --app-dir <app-dir>
+```
+
+**수동 해결** (이전 버전):
+
+차트 템플릿에서 해당 필드를 제거:
+
+```bash
+# 문제가 되는 필드 확인
+grep -r "managedFields\|creationTimestamp\|resourceVersion" templates/
+
+# 또는 렌더링된 manifest 정리
+yq eval 'del(.metadata.managedFields, .metadata.creationTimestamp, .status)' manifest.yaml
+```
+
+______________________________________________________________________
+
 ### HelmReleaseError
 
 **증상**: Helm 배포 실패 또는 pending-install 상태
 
-```
+```text
 Error: INSTALLATION FAILED: release airflow failed
 Error: another operation (install/upgrade/rollback) is in progress
 ```

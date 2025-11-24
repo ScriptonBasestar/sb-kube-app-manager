@@ -227,6 +227,24 @@ sbkube template --output-dir /tmp/out  # Custom output
 
 **Creates**: `.sbkube/rendered/`
 
+**Automatic Manifest Cleanup** (v0.7.0+):
+
+Template command automatically removes server-managed metadata fields that may cause deployment failures:
+
+- `metadata.managedFields` (Server-Side Apply tracking)
+- `metadata.creationTimestamp` (auto-generated timestamp)
+- `metadata.resourceVersion` (cluster resource version)
+- `metadata.uid` (unique identifier)
+- `metadata.generation` (modification counter)
+- `metadata.selfLink` (deprecated API link)
+- `status` (entire section, managed by controllers)
+
+This prevents common errors like:
+
+```text
+Error: admission webhook denied the request: metadata.managedFields is not allowed
+```
+
 ______________________________________________________________________
 
 #### deploy

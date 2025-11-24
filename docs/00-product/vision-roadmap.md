@@ -60,6 +60,7 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
   - ✅ 토큰 사용량 80-90% 절감
   - 🔄 Phase 4-5: 고급 출력 포맷
 - 🔄 향상된 에러 처리 및 수정 제안
+  - [ ] Manifest metadata 자동 정리 (managedFields, creationTimestamp, resourceVersion)
 - 🔄 사전/사후 배포 검증 시스템 강화
 - 🔄 문서 개선 및 튜토리얼 추가
 

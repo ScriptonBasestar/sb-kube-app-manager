@@ -16,6 +16,7 @@ from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.common import run_command
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
+from sbkube.utils.manifest_cleaner import clean_manifest_metadata
 from sbkube.utils.output_manager import OutputManager
 
 
@@ -148,9 +149,13 @@ def template_helm_app(
                 output.print(f"  [red]STDERR:[/red] {stderr.strip()}", level="error")
             return False
 
-        # 4. 렌더링된 YAML 저장
+        # 4. 렌더링된 YAML 정리 (managedFields 등 제거)
+        cleaned_yaml = clean_manifest_metadata(stdout)
+        output.print("  🧹 Cleaned server-managed metadata fields", level="info")
+
+        # 5. 렌더링된 YAML 저장
         output_file = rendered_dir / f"{app_name}.yaml"
-        output_file.write_text(stdout, encoding="utf-8")
+        output_file.write_text(cleaned_yaml, encoding="utf-8")
         output.print_success(f"Rendered YAML saved: {output_file}")
         return True
 

@@ -1,0 +1,6 @@
+# Phase 3: Application Layer - Sources Configuration
+cluster: production-cluster
+kubeconfig: ~/.kube/config
+kubeconfig_context: production-cluster
+
+helm_repos: {}

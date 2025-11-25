@@ -1,0 +1,10 @@
+# Phase 2: Data Layer - Sources Configuration
+cluster: production-cluster
+kubeconfig: ~/.kube/config
+kubeconfig_context: production-cluster
+
+helm_repos:
+  cloudnative-pg:
+    url: https://cloudnative-pg.github.io/charts
+  bitnami:
+    url: https://charts.bitnami.com/bitnami

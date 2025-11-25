@@ -1,0 +1,11 @@
+# Phase 2 - PostgreSQL Database
+namespace: database
+
+apps:
+  postgresql:
+    type: helm
+    enabled: true
+    chart: cloudnative-pg/cloudnative-pg
+    version: "0.18.0"
+    values:
+      - values.yaml

@@ -1,0 +1,11 @@
+# Phase 1 - Network Infrastructure
+namespace: kube-system
+
+apps:
+  cilium:
+    type: helm
+    enabled: true
+    chart: cilium/cilium
+    version: "1.14.0"
+    values:
+      - values.yaml

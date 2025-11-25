@@ -1,0 +1,10 @@
+# Phase 3 - Backend Application
+namespace: apps
+
+apps:
+  backend:
+    type: yaml
+    enabled: true
+    manifests:
+      - deployment.yaml
+      - service.yaml

@@ -1,0 +1,8 @@
+# Phase 1: Infrastructure - Sources Configuration
+cluster: production-cluster
+kubeconfig: ~/.kube/config
+kubeconfig_context: production-cluster
+
+helm_repos:
+  cilium:
+    url: https://helm.cilium.io/

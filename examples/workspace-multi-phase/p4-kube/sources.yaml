@@ -1,0 +1,10 @@
+# Phase 4: Monitoring Layer - Sources Configuration
+cluster: production-cluster
+kubeconfig: ~/.kube/config
+kubeconfig_context: production-cluster
+
+helm_repos:
+  prometheus-community:
+    url: https://prometheus-community.github.io/helm-charts
+  grafana:
+    url: https://grafana.github.io/helm-charts

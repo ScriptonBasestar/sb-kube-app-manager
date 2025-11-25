@@ -29,6 +29,10 @@ from sbkube.models.deployment_state import (
     ResourceAction,
     ResourceInfo,
 )
+from sbkube.models.workspace_state import (  # noqa: F401
+    PhaseDeployment,
+    WorkspaceDeployment,
+)
 from sbkube.utils.logger import get_logger
 
 logger = get_logger()

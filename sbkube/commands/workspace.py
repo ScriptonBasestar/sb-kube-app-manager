@@ -12,6 +12,8 @@ from rich.tree import Tree
 
 from sbkube.exceptions import ConfigValidationError
 from sbkube.models.workspace_model import PhaseConfig, WorkspaceConfig
+from sbkube.state.database import DeploymentDatabase
+from sbkube.state.workspace_tracker import WorkspaceStateTracker
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.logger import logger, setup_logging_from_context
 
@@ -1176,3 +1178,252 @@ def status_cmd(
         phase=phase,
     )
     status_command.execute()
+
+
+class WorkspaceHistoryCommand:
+    """Workspace 배포 히스토리 조회 명령어."""
+
+    def __init__(
+        self,
+        workspace_name: str | None = None,
+        deployment_id: str | None = None,
+        limit: int = 10,
+    ) -> None:
+        """Initialize workspace history command.
+
+        Args:
+            workspace_name: 특정 workspace 이름으로 필터링
+            deployment_id: 특정 배포 ID 상세 조회
+            limit: 조회할 최대 배포 수
+
+        """
+        self.workspace_name = workspace_name
+        self.deployment_id = deployment_id
+        self.limit = limit
+        self.console = Console()
+        self.db = DeploymentDatabase()
+
+    def execute(self) -> None:
+        """Execute workspace history command."""
+        with self.db.get_session() as session:
+            tracker = WorkspaceStateTracker(session)
+
+            if self.deployment_id:
+                # 특정 배포 상세 조회
+                self._show_deployment_detail(tracker)
+            else:
+                # 배포 목록 조회
+                self._show_deployment_list(tracker)
+
+    def _show_deployment_list(self, tracker: WorkspaceStateTracker) -> None:
+        """Show workspace deployment history list."""
+        deployments = tracker.list_workspace_deployments(
+            workspace_name=self.workspace_name,
+            limit=self.limit,
+        )
+
+        if not deployments:
+            self.console.print(
+                Panel(
+                    "[yellow]배포 히스토리가 없습니다.[/yellow]",
+                    title="Workspace History",
+                )
+            )
+            return
+
+        # 테이블 생성
+        table = Table(title="Workspace Deployment History", show_lines=True)
+        table.add_column("ID", style="cyan", no_wrap=True)
+        table.add_column("Workspace", style="blue")
+        table.add_column("Environment", style="magenta")
+        table.add_column("Timestamp", style="green")
+        table.add_column("Status", style="bold")
+        table.add_column("Phases", justify="center")
+        table.add_column("Dry-Run", justify="center")
+
+        for d in deployments:
+            # 상태에 따른 색상
+            status_color = {
+                "success": "green",
+                "failed": "red",
+                "partially_failed": "yellow",
+                "in_progress": "cyan",
+                "pending": "white",
+                "cancelled": "dim",
+            }.get(d.status, "white")
+
+            phases_info = f"{d.completed_phases}/{d.total_phases}"
+            if d.failed_phases > 0:
+                phases_info += f" ([red]{d.failed_phases} failed[/red])"
+            if d.skipped_phases > 0:
+                phases_info += f" ([yellow]{d.skipped_phases} skipped[/yellow])"
+
+            table.add_row(
+                d.workspace_deployment_id[:12],
+                d.workspace_name,
+                d.environment or "-",
+                d.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                f"[{status_color}]{d.status}[/{status_color}]",
+                phases_info,
+                "✓" if d.dry_run else "-",
+            )
+
+        self.console.print(table)
+        self.console.print(
+            "\n[dim]Use 'sbkube workspace history --id <ID>' for details[/dim]"
+        )
+
+    def _show_deployment_detail(self, tracker: WorkspaceStateTracker) -> None:
+        """Show detailed information for a specific deployment."""
+        detail = tracker.get_workspace_deployment_detail(self.deployment_id)
+
+        if not detail:
+            self.console.print(
+                f"[red]배포를 찾을 수 없습니다: {self.deployment_id}[/red]"
+            )
+            raise click.Abort
+
+        # 상태 색상
+        status_color = {
+            "success": "green",
+            "failed": "red",
+            "partially_failed": "yellow",
+            "in_progress": "cyan",
+        }.get(detail.status, "white")
+
+        # 배포 정보 패널
+        info_lines = [
+            f"[bold]Workspace:[/bold] {detail.workspace_name}",
+            f"[bold]Environment:[/bold] {detail.environment or '-'}",
+            f"[bold]File:[/bold] {detail.workspace_file}",
+            f"[bold]Status:[/bold] [{status_color}]{detail.status}[/{status_color}]",
+            "",
+            f"[bold]Started:[/bold] {detail.timestamp.strftime('%Y-%m-%d %H:%M:%S')}",
+        ]
+
+        if detail.completed_at:
+            duration = (detail.completed_at - detail.timestamp).total_seconds()
+            info_lines.append(
+                f"[bold]Completed:[/bold] {detail.completed_at.strftime('%Y-%m-%d %H:%M:%S')} "
+                f"(duration: {int(duration)}s)"
+            )
+
+        if detail.error_message:
+            info_lines.append(f"[bold]Error:[/bold] [red]{detail.error_message}[/red]")
+
+        info_lines.extend([
+            "",
+            f"[bold]Phases:[/bold] {detail.completed_phases}/{detail.total_phases} completed",
+            f"[bold]Failed:[/bold] {detail.failed_phases}",
+            f"[bold]Skipped:[/bold] {detail.skipped_phases}",
+            f"[bold]Dry-Run:[/bold] {'Yes' if detail.dry_run else 'No'}",
+            f"[bold]Force:[/bold] {'Yes' if detail.force else 'No'}",
+        ])
+
+        if detail.sbkube_version:
+            info_lines.append(f"[bold]SBKube Version:[/bold] {detail.sbkube_version}")
+        if detail.operator:
+            info_lines.append(f"[bold]Operator:[/bold] {detail.operator}")
+
+        self.console.print(
+            Panel(
+                "\n".join(info_lines),
+                title=f"Deployment {detail.workspace_deployment_id}",
+            )
+        )
+
+        # Phase 테이블
+        if detail.phases:
+            table = Table(title="Phase Deployments", show_lines=True)
+            table.add_column("Order", justify="center", style="dim")
+            table.add_column("Phase", style="cyan")
+            table.add_column("Status", style="bold")
+            table.add_column("Duration", justify="right")
+            table.add_column("App Groups", justify="center")
+            table.add_column("Error")
+
+            for phase in detail.phases:
+                phase_status_color = {
+                    "success": "green",
+                    "failed": "red",
+                    "skipped": "yellow",
+                    "in_progress": "cyan",
+                    "pending": "dim",
+                }.get(phase.status, "white")
+
+                duration_str = f"{phase.duration_seconds}s" if phase.duration_seconds else "-"
+                app_groups_str = f"{phase.completed_app_groups}/{phase.total_app_groups}"
+
+                table.add_row(
+                    str(phase.execution_order),
+                    phase.phase_name,
+                    f"[{phase_status_color}]{phase.status}[/{phase_status_color}]",
+                    duration_str,
+                    app_groups_str,
+                    phase.error_message[:50] + "..." if phase.error_message and len(phase.error_message) > 50 else (phase.error_message or "-"),
+                )
+
+            self.console.print()
+            self.console.print(table)
+
+
+@workspace_group.command(name="history")
+@click.option(
+    "--workspace",
+    "-w",
+    type=str,
+    default=None,
+    help="특정 workspace 이름으로 필터링",
+)
+@click.option(
+    "--id",
+    "deployment_id",
+    type=str,
+    default=None,
+    help="특정 배포 ID 상세 조회",
+)
+@click.option(
+    "--limit",
+    "-n",
+    type=int,
+    default=10,
+    help="조회할 최대 배포 수 (기본: 10)",
+)
+@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@click.pass_context
+def history_cmd(
+    ctx: click.Context,
+    workspace: str | None,
+    deployment_id: str | None,
+    limit: int,
+    verbose: bool,
+    debug: bool,
+) -> None:
+    """Workspace 배포 히스토리를 조회합니다.
+
+    Examples:
+        # 최근 배포 목록 조회
+        sbkube workspace history
+
+        # 특정 workspace 배포 히스토리
+        sbkube workspace history --workspace my-workspace
+
+        # 특정 배포 상세 조회
+        sbkube workspace history --id abc123
+
+        # 최근 20개 조회
+        sbkube workspace history --limit 20
+
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
+    ctx.obj["debug"] = debug
+    setup_logging_from_context(ctx)
+
+    history_command = WorkspaceHistoryCommand(
+        workspace_name=workspace,
+        deployment_id=deployment_id,
+        limit=limit,
+    )
+    history_command.execute()

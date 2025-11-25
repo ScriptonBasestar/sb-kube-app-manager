@@ -9,11 +9,15 @@ import yaml
 from click.testing import CliRunner
 
 from sbkube.commands.workspace import (
+    WorkspaceDeployCommand,
     WorkspaceGraphCommand,
     WorkspaceInitCommand,
+    WorkspaceStatusCommand,
     WorkspaceValidateCommand,
+    deploy_cmd,
     graph_cmd,
     init_cmd,
+    status_cmd,
     validate_cmd,
 )
 
@@ -351,4 +355,326 @@ class TestWorkspaceInitCommand:
         )
 
         # Abort되므로 exit_code != 0
+        assert result.exit_code != 0
+
+
+class TestWorkspaceDeployCommand:
+    """WorkspaceDeployCommand 테스트."""
+
+    def _create_workspace_file(
+        self, tmp_path: Path, phases: dict | None = None
+    ) -> Path:
+        """Helper to create workspace.yaml for tests."""
+        workspace_file = tmp_path / "workspace.yaml"
+        default_phases = {
+            "p1-infra": {
+                "description": "Infrastructure",
+                "source": "p1-kube/sources.yaml",
+                "app_groups": ["a000_network"],
+            },
+            "p2-data": {
+                "description": "Data layer",
+                "source": "p2-kube/sources.yaml",
+                "app_groups": ["a100_postgres"],
+                "depends_on": ["p1-infra"],
+            },
+        }
+        workspace_config = {
+            "version": "1.0",
+            "metadata": {"name": "test-workspace", "environment": "test"},
+            "phases": phases or default_phases,
+        }
+        workspace_file.write_text(yaml.dump(workspace_config))
+        return workspace_file
+
+    def test_dry_run_mode(self, tmp_path: Path) -> None:
+        """DRY-RUN 모드 테스트."""
+        workspace_file = self._create_workspace_file(tmp_path)
+
+        cmd = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            dry_run=True,
+            skip_validation=True,
+        )
+        result = cmd.execute()
+
+        # Dry-run should succeed without actual deployment
+        assert result is True
+
+    def test_deploy_single_phase(self, tmp_path: Path) -> None:
+        """단일 Phase 배포 테스트."""
+        workspace_file = self._create_workspace_file(tmp_path)
+
+        cmd = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            phase="p1-infra",
+            dry_run=True,
+            skip_validation=True,
+        )
+        result = cmd.execute()
+
+        assert result is True
+        # Only p1-infra should be in results
+        assert "p1-infra" in cmd.phase_results
+
+    def test_deploy_missing_workspace_file(self, tmp_path: Path) -> None:
+        """workspace.yaml 파일 없음 테스트."""
+        workspace_file = tmp_path / "nonexistent.yaml"
+
+        cmd = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            dry_run=True,
+        )
+
+        with pytest.raises(click.Abort):
+            cmd.execute()
+
+    def test_deploy_invalid_phase_name(self, tmp_path: Path) -> None:
+        """존재하지 않는 Phase 지정 테스트."""
+        workspace_file = self._create_workspace_file(tmp_path)
+
+        cmd = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            phase="nonexistent-phase",
+            dry_run=True,
+        )
+
+        with pytest.raises(click.Abort):
+            cmd.execute()
+
+    def test_deploy_phase_order(self, tmp_path: Path) -> None:
+        """Phase 실행 순서 테스트."""
+        phases = {
+            "p1": {
+                "description": "First",
+                "source": "p1/sources.yaml",
+                "app_groups": ["app1"],
+            },
+            "p2": {
+                "description": "Second",
+                "source": "p2/sources.yaml",
+                "app_groups": ["app2"],
+                "depends_on": ["p1"],
+            },
+            "p3": {
+                "description": "Third",
+                "source": "p3/sources.yaml",
+                "app_groups": ["app3"],
+                "depends_on": ["p2"],
+            },
+        }
+        workspace_file = self._create_workspace_file(tmp_path, phases)
+
+        cmd = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            dry_run=True,
+            skip_validation=True,
+        )
+        # Execute in dry-run mode, then check results
+        cmd.execute()
+
+        # Check phase order from results - all phases should be in results
+        executed_phases = list(cmd.phase_results.keys())
+        # p1 must come before p2, p2 must come before p3
+        assert executed_phases.index("p1") < executed_phases.index("p2")
+        assert executed_phases.index("p2") < executed_phases.index("p3")
+
+    def test_deploy_circular_dependency(self, tmp_path: Path) -> None:
+        """순환 의존성 테스트."""
+        workspace_file = tmp_path / "workspace.yaml"
+        circular_config = {
+            "version": "1.0",
+            "metadata": {"name": "circular-deploy"},
+            "phases": {
+                "p1": {
+                    "description": "Phase 1",
+                    "source": "sources.yaml",
+                    "app_groups": ["app1"],
+                    "depends_on": ["p2"],
+                },
+                "p2": {
+                    "description": "Phase 2",
+                    "source": "sources.yaml",
+                    "app_groups": ["app2"],
+                    "depends_on": ["p1"],
+                },
+            },
+        }
+        workspace_file.write_text(yaml.dump(circular_config))
+
+        cmd = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            dry_run=True,
+        )
+
+        with pytest.raises(click.Abort):
+            cmd.execute()
+
+
+class TestWorkspaceStatusCommand:
+    """WorkspaceStatusCommand 테스트."""
+
+    def _create_workspace_file(self, tmp_path: Path) -> Path:
+        """Helper to create workspace.yaml for tests."""
+        workspace_file = tmp_path / "workspace.yaml"
+        workspace_config = {
+            "version": "1.0",
+            "metadata": {
+                "name": "status-test",
+                "description": "Test workspace",
+                "environment": "test",
+            },
+            "global": {
+                "kubeconfig": "~/.kube/config",
+                "context": "test-context",
+                "timeout": 300,
+            },
+            "phases": {
+                "p1-infra": {
+                    "description": "Infrastructure",
+                    "source": "p1-kube/sources.yaml",
+                    "app_groups": ["a000_network", "a001_storage"],
+                },
+                "p2-data": {
+                    "description": "Data layer",
+                    "source": "p2-kube/sources.yaml",
+                    "app_groups": ["a100_postgres"],
+                    "depends_on": ["p1-infra"],
+                },
+            },
+        }
+        workspace_file.write_text(yaml.dump(workspace_config))
+        return workspace_file
+
+    def test_status_success(self, tmp_path: Path) -> None:
+        """Status 명령어 성공 테스트."""
+        workspace_file = self._create_workspace_file(tmp_path)
+
+        cmd = WorkspaceStatusCommand(str(workspace_file))
+        # Should not raise
+        cmd.execute()
+
+    def test_status_missing_file(self, tmp_path: Path) -> None:
+        """workspace.yaml 파일 없음 테스트."""
+        workspace_file = tmp_path / "nonexistent.yaml"
+
+        cmd = WorkspaceStatusCommand(str(workspace_file))
+
+        with pytest.raises(click.Abort):
+            cmd.execute()
+
+    def test_status_invalid_workspace(self, tmp_path: Path) -> None:
+        """잘못된 workspace.yaml 테스트."""
+        workspace_file = tmp_path / "workspace.yaml"
+        invalid_config = {
+            "version": "1.0",
+            "metadata": {"name": "invalid"},
+            "phases": {},  # Empty phases - invalid
+        }
+        workspace_file.write_text(yaml.dump(invalid_config))
+
+        cmd = WorkspaceStatusCommand(str(workspace_file))
+
+        with pytest.raises(click.Abort):
+            cmd.execute()
+
+
+class TestWorkspaceDeployCLI:
+    """Workspace deploy CLI 테스트."""
+
+    def _create_workspace_file(self, tmp_path: Path) -> Path:
+        """Helper to create workspace.yaml for tests."""
+        workspace_file = tmp_path / "workspace.yaml"
+        workspace_config = {
+            "version": "1.0",
+            "metadata": {"name": "deploy-cli-test"},
+            "phases": {
+                "p1-infra": {
+                    "description": "Infrastructure",
+                    "source": "p1-kube/sources.yaml",
+                    "app_groups": ["a000_network"],
+                }
+            },
+        }
+        workspace_file.write_text(yaml.dump(workspace_config))
+        return workspace_file
+
+    def test_deploy_cli_dry_run(self, tmp_path: Path) -> None:
+        """workspace deploy --dry-run CLI 테스트."""
+        workspace_file = self._create_workspace_file(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            deploy_cmd,
+            [str(workspace_file), "--dry-run", "--skip-validation"],
+        )
+
+        assert result.exit_code == 0
+        assert "DRY-RUN" in result.output
+
+    def test_deploy_cli_missing_file(self, tmp_path: Path) -> None:
+        """workspace deploy 파일 없음 CLI 테스트."""
+        workspace_file = tmp_path / "nonexistent.yaml"
+
+        runner = CliRunner()
+        result = runner.invoke(deploy_cmd, [str(workspace_file)])
+
+        assert result.exit_code != 0
+        # Click's built-in file validation returns "does not exist"
+        assert (
+            "not found" in result.output.lower()
+            or "찾을 수 없습니다" in result.output
+            or "does not exist" in result.output.lower()
+        )
+
+    def test_deploy_cli_single_phase(self, tmp_path: Path) -> None:
+        """workspace deploy --phase CLI 테스트."""
+        workspace_file = self._create_workspace_file(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            deploy_cmd,
+            [str(workspace_file), "--phase", "p1-infra", "--dry-run", "--skip-validation"],
+        )
+
+        assert result.exit_code == 0
+
+
+class TestWorkspaceStatusCLI:
+    """Workspace status CLI 테스트."""
+
+    def _create_workspace_file(self, tmp_path: Path) -> Path:
+        """Helper to create workspace.yaml for tests."""
+        workspace_file = tmp_path / "workspace.yaml"
+        workspace_config = {
+            "version": "1.0",
+            "metadata": {"name": "status-cli-test", "environment": "test"},
+            "phases": {
+                "p1-infra": {
+                    "description": "Infrastructure",
+                    "source": "p1-kube/sources.yaml",
+                    "app_groups": ["a000_network"],
+                }
+            },
+        }
+        workspace_file.write_text(yaml.dump(workspace_config))
+        return workspace_file
+
+    def test_status_cli_success(self, tmp_path: Path) -> None:
+        """workspace status CLI 성공 테스트."""
+        workspace_file = self._create_workspace_file(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(status_cmd, [str(workspace_file)])
+
+        assert result.exit_code == 0
+        assert "Workspace Status" in result.output
+
+    def test_status_cli_missing_file(self, tmp_path: Path) -> None:
+        """workspace status 파일 없음 CLI 테스트."""
+        workspace_file = tmp_path / "nonexistent.yaml"
+
+        runner = CliRunner()
+        result = runner.invoke(status_cmd, [str(workspace_file)])
+
         assert result.exit_code != 0

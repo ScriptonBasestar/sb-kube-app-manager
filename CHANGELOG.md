@@ -8,6 +8,8 @@ ______________________________________________________________________
 
 ## [Unreleased]
 
+## [0.8.1] - 2025-11-25
+
 ### Added
 
 - **Documentation as Code**: Added optional `notes` field to all app types for documenting design decisions, deployment order, and operational information
@@ -16,6 +18,11 @@ ______________________________________________________________________
   - CLI: `sbkube status --show-notes` flag added (foundation for future UI enhancement)
   - Example: `examples/documentation-as-code/`
   - Fully backward compatible (optional field)
+
+### Fixed
+
+- **Test Infrastructure**: Fixed pytest module name collision by renaming duplicate test files in `tests/commands/` to use `_cli` suffix
+- **Test Mocking**: Fixed `test_prepare_helm_app_success` test to properly simulate helm chart extraction
 
 ## [0.8.0] - 2025-11-13
 

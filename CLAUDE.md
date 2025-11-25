@@ -45,8 +45,8 @@ ______________________________________________________________________
 
 - **Product**: SBKube - Kubernetes deployment automation CLI for k3s
 - **Tech Stack**: Python 3.12+, Click, Pydantic, SQLAlchemy, Rich
-- **Current Version**: v0.7.2 (개발 중 / Development)
-- **Stable Version**: v0.7.1
+- **Current Version**: v0.8.1
+- **Stable Version**: v0.8.0
 - **Architecture**: Monolithic Python CLI application
 - **Core Workflow**: `prepare → build → template → deploy` (or `sbkube apply`)
 
@@ -820,8 +820,8 @@ ______________________________________________________________________
 ## 7. Version Info
 
 - **Document Version**: 1.9
-- **Last Updated**: 2025-01-10
-- **Target SBKube Version**: v0.7.2 (dev), v0.7.1 (stable)
+- **Last Updated**: 2025-11-25
+- **Target SBKube Version**: v0.8.1
 - **Author**: archmagece@users.noreply.github.com
 
 ### Change History

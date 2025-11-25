@@ -1,0 +1,40 @@
+# config.yaml - Complete Workflow Example
+# Demonstrates a typical multi-app deployment with different app types
+
+namespace: complete-workflow
+
+apps:
+  # Helm chart from remote repository
+  redis:
+    type: helm
+    enabled: true
+    chart: bitnami/redis
+    version: "18.6.1"
+    values:
+      - values/redis.yaml
+    notes: |
+      Redis cache for the application.
+      Deployed first as other services depend on it.
+
+  # Another Helm chart
+  nginx:
+    type: helm
+    enabled: true
+    chart: bitnami/nginx
+    version: "15.14.0"
+    values:
+      - values/nginx.yaml
+    depends_on:
+      - redis
+    notes: |
+      Nginx web server.
+      Depends on Redis for session storage.
+
+  # YAML manifest type
+  configmap:
+    type: yaml
+    enabled: true
+    path: manifests/configmap.yaml
+    notes: |
+      Application configuration as ConfigMap.
+      Applied before main application deployment.

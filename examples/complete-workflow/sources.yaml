@@ -1,0 +1,12 @@
+# sources.yaml - Complete Workflow Example
+# This example demonstrates the full SBKube workflow (prepare → build → template → deploy)
+
+cluster: complete-workflow-demo
+kubeconfig: ~/.kube/config
+kubeconfig_context: default
+
+helm_repos:
+  bitnami:
+    url: https://charts.bitnami.com/bitnami
+  grafana:
+    url: https://grafana.github.io/helm-charts

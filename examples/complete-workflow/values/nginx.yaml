@@ -1,0 +1,16 @@
+# Nginx values for complete-workflow example
+# Minimal configuration for testing
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi

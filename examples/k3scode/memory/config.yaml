@@ -1,0 +1,13 @@
+# K3scode Memory Example
+# In-memory cache infrastructure deployment
+
+namespace: k3scode-memory
+
+apps:
+  - name: redis-cache
+    type: helm
+    specs:
+      chart: bitnami/redis
+      version: "20.0.0"
+      values:
+        - values/redis.yaml

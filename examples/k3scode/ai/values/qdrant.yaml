@@ -1,0 +1,21 @@
+# Qdrant vector database configuration
+# For AI/ML vector similarity search
+
+replicaCount: 1
+
+persistence:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+service:
+  type: ClusterIP
+  ports:
+    grpc: 6334
+    http: 6333

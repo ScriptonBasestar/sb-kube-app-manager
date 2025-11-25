@@ -1,0 +1,21 @@
+# Grafana configuration for DevOps visualization
+# Minimal setup for testing
+
+replicas: 1
+
+persistence:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+service:
+  type: ClusterIP
+  port: 80
+
+adminPassword: admin

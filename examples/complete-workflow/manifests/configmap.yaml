@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: complete-workflow
+data:
+  APP_NAME: "complete-workflow-demo"
+  LOG_LEVEL: "info"
+  REDIS_HOST: "redis-master"
+  REDIS_PORT: "6379"

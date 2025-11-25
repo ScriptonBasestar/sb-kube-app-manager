@@ -8,12 +8,10 @@ import pytest
 
 from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 
-pytestmark = pytest.mark.skip(reason="examples/k3scode directory does not exist")
-
-
 @pytest.mark.e2e
 @pytest.mark.integration
 @pytest.mark.requires_helm
+@pytest.mark.requires_k8s
 class TestK3scodeAIWorkflow:
     """Test k3scode AI application workflow."""
 
@@ -126,6 +124,7 @@ class TestK3scodeAIWorkflow:
 
 @pytest.mark.e2e
 @pytest.mark.requires_helm
+@pytest.mark.requires_k8s
 @pytest.mark.integration
 class TestK3scodeDevOpsWorkflow:
     """Test k3scode DevOps application workflow."""
@@ -224,6 +223,7 @@ class TestK3scodeDevOpsWorkflow:
 
 @pytest.mark.e2e
 @pytest.mark.requires_helm
+@pytest.mark.requires_k8s
 @pytest.mark.integration
 class TestK3scodeMemoryWorkflow:
     """Test k3scode Memory application workflow."""
@@ -265,6 +265,7 @@ class TestK3scodeMemoryWorkflow:
 
 @pytest.mark.e2e
 @pytest.mark.requires_helm
+@pytest.mark.requires_k8s
 @pytest.mark.integration
 class TestK3scodeRDBWorkflow:
     """Test k3scode RDB application workflow."""

@@ -12,7 +12,7 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 @pytest.mark.e2e
 @pytest.mark.slow
 @pytest.mark.requires_helm
-@pytest.mark.skip(reason="examples/complete-workflow directory does not exist")
+@pytest.mark.requires_k8s
 class TestCompleteWorkflow:
     """Test complete sbkube workflow with all phases."""
 

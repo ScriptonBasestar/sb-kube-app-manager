@@ -178,7 +178,8 @@ Practices** | [docs/05-best-practices/directory-structure.md](docs/05-best-pract
 [docs/02-features/llm-friendly-output.md](docs/02-features/llm-friendly-output.md) (--quiet mode) |
 [docs/05-best-practices/directory-structure.md](docs/05-best-practices/directory-structure.md) | | **Examples** |
 [examples/](examples/) | [docs/08-tutorials/README.md](docs/08-tutorials/README.md) | | **Installation** |
-[docs/01-getting-started/README.md](docs/01-getting-started/README.md) | [README.md](README.md) | | **Workspace Design** |
+[docs/01-getting-started/README.md](docs/01-getting-started/README.md) | [README.md](README.md) | | **Workspace Guide** |
+[docs/02-features/workspace-guide.md](docs/02-features/workspace-guide.md) | [examples/workspace-multi-phase/](examples/workspace-multi-phase/) | | **Workspace Design** |
 [docs/02-features/future/workspace-design.md](docs/02-features/future/workspace-design.md) | [docs/03-configuration/workspace-schema.md](docs/03-configuration/workspace-schema.md) | | **Workspace Schema** |
 [docs/03-configuration/workspace-schema.md](docs/03-configuration/workspace-schema.md) | [workspace-schema.yaml](docs/03-configuration/workspace-schema.yaml) | | **Workspace Roadmap** |
 [docs/02-features/future/workspace-roadmap.md](docs/02-features/future/workspace-roadmap.md) | [docs/00-product/vision-roadmap.md](docs/00-product/vision-roadmap.md) (v0.9.0) |

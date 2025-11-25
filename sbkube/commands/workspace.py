@@ -1,5 +1,7 @@
 """Workspace 명령어 구현."""
 
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -530,6 +532,7 @@ class WorkspaceDeployCommand:
 
     Multi-phase deployment를 실행합니다.
     Phase 의존성 순서대로 각 Phase를 배포합니다.
+    병렬 모드에서는 의존성이 없는 Phase들을 동시에 실행합니다.
     """
 
     def __init__(
@@ -539,6 +542,8 @@ class WorkspaceDeployCommand:
         dry_run: bool = False,
         force: bool = False,
         skip_validation: bool = False,
+        parallel: bool = False,
+        max_workers: int = 4,
     ) -> None:
         """Initialize workspace deploy command.
 
@@ -548,6 +553,8 @@ class WorkspaceDeployCommand:
             dry_run: 실제 배포 없이 시뮬레이션
             force: 이전 상태 무시하고 강제 배포
             skip_validation: 파일 존재 검증 건너뛰기
+            parallel: 병렬 실행 모드 (실험적)
+            max_workers: 최대 병렬 워커 수 (기본: 4)
 
         """
         self.workspace_file = Path(workspace_file)
@@ -556,8 +563,11 @@ class WorkspaceDeployCommand:
         self.dry_run = dry_run
         self.force = force
         self.skip_validation = skip_validation
+        self.parallel = parallel
+        self.max_workers = max_workers
         self.console = Console()
         self.phase_results: dict[str, dict[str, Any]] = {}
+        self._results_lock = threading.Lock()
 
     def execute(self) -> bool:
         """Execute workspace deployment.
@@ -579,6 +589,15 @@ class WorkspaceDeployCommand:
                 )
             )
 
+        if self.parallel:
+            self.console.print(
+                Panel(
+                    "[cyan]PARALLEL MODE[/cyan]: 독립적인 Phase들을 병렬로 실행합니다.\n"
+                    f"Max workers: {self.max_workers}",
+                    style="cyan",
+                )
+            )
+
         # 1. Workspace 로드 및 검증
         workspace = self._load_and_validate_workspace()
 
@@ -586,7 +605,10 @@ class WorkspaceDeployCommand:
         phase_order = self._get_execution_order(workspace)
 
         # 3. 배포 실행
-        success = self._execute_phases(workspace, phase_order)
+        if self.parallel and len(phase_order) > 1:
+            success = self._execute_phases_parallel(workspace, phase_order)
+        else:
+            success = self._execute_phases(workspace, phase_order)
 
         # 4. 결과 요약
         self._print_summary(workspace, phase_order)
@@ -783,6 +805,255 @@ class WorkspaceDeployCommand:
             self.console.print()  # 구분선
 
         return all_success
+
+    def _execute_phases_parallel(
+        self, workspace: WorkspaceConfig, phase_order: list[str]
+    ) -> bool:
+        """Execute phases in parallel where possible.
+
+        Phases with satisfied dependencies run concurrently.
+        Uses topological levels for parallel execution.
+
+        Args:
+            workspace: Workspace configuration
+            phase_order: Phase execution order (topologically sorted)
+
+        Returns:
+            bool: 전체 성공 여부
+        """
+        self.console.print(
+            f"\n[bold cyan]━━━ Parallel Deploying {len(phase_order)} Phase(s) ━━━[/bold cyan]"
+        )
+
+        # 1. Build dependency graph and calculate levels
+        levels = self._calculate_parallel_levels(workspace, phase_order)
+
+        self.console.print(f"Parallel execution levels: {len(levels)}")
+        for i, level in enumerate(levels):
+            self.console.print(f"  Level {i + 1}: {', '.join(level)}")
+        self.console.print()
+
+        all_success = True
+        global_on_failure = workspace.global_config.on_failure
+        completed_phases: set[str] = set()
+        failed_phases: set[str] = set()
+
+        # 2. Execute level by level
+        for level_idx, level_phases in enumerate(levels, 1):
+            self.console.print(
+                f"[bold magenta]━━━ Level {level_idx}/{len(levels)} "
+                f"({len(level_phases)} phase(s)) ━━━[/bold magenta]"
+            )
+
+            if len(level_phases) == 1:
+                # Single phase - execute sequentially
+                phase_name = level_phases[0]
+                success = self._execute_single_phase(
+                    phase_name, workspace, global_on_failure
+                )
+                if success:
+                    completed_phases.add(phase_name)
+                else:
+                    failed_phases.add(phase_name)
+                    all_success = False
+                    if global_on_failure == "stop":
+                        logger.warning("on_failure=stop: 배포를 중단합니다.")
+                        break
+            else:
+                # Multiple phases - execute in parallel
+                level_results = self._execute_level_parallel(
+                    level_phases, workspace, global_on_failure
+                )
+
+                for phase_name, success in level_results.items():
+                    if success:
+                        completed_phases.add(phase_name)
+                    else:
+                        failed_phases.add(phase_name)
+                        all_success = False
+
+                # Check if we should stop
+                if failed_phases and global_on_failure == "stop":
+                    logger.warning("on_failure=stop: 배포를 중단합니다.")
+                    break
+
+            self.console.print()
+
+        return all_success
+
+    def _calculate_parallel_levels(
+        self, workspace: WorkspaceConfig, phase_order: list[str]
+    ) -> list[list[str]]:
+        """Calculate parallel execution levels.
+
+        Phases in the same level have no dependencies on each other
+        and can be executed in parallel.
+
+        Args:
+            workspace: Workspace configuration
+            phase_order: Topologically sorted phase order
+
+        Returns:
+            List of levels, each containing phases that can run in parallel
+        """
+        levels: list[list[str]] = []
+        assigned: set[str] = set()
+
+        # Calculate in-degree for each phase
+        remaining = set(phase_order)
+
+        while remaining:
+            # Find phases with all dependencies satisfied
+            current_level = []
+            for phase_name in phase_order:
+                if phase_name not in remaining:
+                    continue
+
+                phase_config = workspace.phases[phase_name]
+                deps_satisfied = all(
+                    dep in assigned for dep in phase_config.depends_on
+                )
+
+                if deps_satisfied:
+                    current_level.append(phase_name)
+
+            if not current_level:
+                # Should not happen with valid topological sort
+                logger.warning("Could not find phases with satisfied dependencies")
+                break
+
+            levels.append(current_level)
+            for phase in current_level:
+                assigned.add(phase)
+                remaining.discard(phase)
+
+        return levels
+
+    def _execute_single_phase(
+        self,
+        phase_name: str,
+        workspace: WorkspaceConfig,
+        global_on_failure: str,
+    ) -> bool:
+        """Execute a single phase and update results.
+
+        Args:
+            phase_name: Phase name
+            workspace: Workspace configuration
+            global_on_failure: Global failure behavior
+
+        Returns:
+            bool: 배포 성공 여부
+        """
+        phase_config = workspace.phases[phase_name]
+
+        self.console.print(f"[bold yellow]Phase: {phase_name}[/bold yellow]")
+        self.console.print(f"  Description: {phase_config.description}")
+        self.console.print(f"  App Groups: {', '.join(phase_config.app_groups)}")
+
+        success = self._deploy_phase(phase_name, phase_config, workspace)
+
+        with self._results_lock:
+            self.phase_results[phase_name] = {
+                "success": success,
+                "app_groups": phase_config.app_groups,
+            }
+
+        if success:
+            logger.success(f"Phase '{phase_name}' 배포 완료")
+        else:
+            logger.error(f"Phase '{phase_name}' 배포 실패")
+
+        return success
+
+    def _execute_level_parallel(
+        self,
+        phases: list[str],
+        workspace: WorkspaceConfig,
+        global_on_failure: str,
+    ) -> dict[str, bool]:
+        """Execute multiple phases in parallel.
+
+        Args:
+            phases: List of phase names to execute
+            workspace: Workspace configuration
+            global_on_failure: Global failure behavior
+
+        Returns:
+            Dict mapping phase name to success status
+        """
+        results: dict[str, bool] = {}
+
+        self.console.print(
+            f"[cyan]Executing {len(phases)} phases in parallel: "
+            f"{', '.join(phases)}[/cyan]"
+        )
+
+        with ThreadPoolExecutor(max_workers=min(self.max_workers, len(phases))) as executor:
+            # Submit all phases
+            futures = {
+                executor.submit(
+                    self._deploy_phase_thread_safe,
+                    phase_name,
+                    workspace.phases[phase_name],
+                    workspace,
+                ): phase_name
+                for phase_name in phases
+            }
+
+            # Collect results
+            for future in as_completed(futures):
+                phase_name = futures[future]
+                try:
+                    success = future.result()
+                    results[phase_name] = success
+
+                    with self._results_lock:
+                        self.phase_results[phase_name] = {
+                            "success": success,
+                            "app_groups": workspace.phases[phase_name].app_groups,
+                        }
+
+                    if success:
+                        logger.success(f"Phase '{phase_name}' 배포 완료 (parallel)")
+                    else:
+                        logger.error(f"Phase '{phase_name}' 배포 실패 (parallel)")
+
+                except Exception as e:
+                    logger.error(f"Phase '{phase_name}' 실행 중 오류: {e}")
+                    results[phase_name] = False
+
+                    with self._results_lock:
+                        self.phase_results[phase_name] = {
+                            "success": False,
+                            "app_groups": workspace.phases[phase_name].app_groups,
+                            "error": str(e),
+                        }
+
+        return results
+
+    def _deploy_phase_thread_safe(
+        self,
+        phase_name: str,
+        phase_config: PhaseConfig,
+        workspace: WorkspaceConfig,
+    ) -> bool:
+        """Thread-safe wrapper for _deploy_phase.
+
+        Args:
+            phase_name: Phase name
+            phase_config: Phase configuration
+            workspace: Workspace configuration
+
+        Returns:
+            bool: 배포 성공 여부
+        """
+        # Note: Console output may interleave in parallel mode
+        # For dry-run, we just return True
+        if self.dry_run:
+            return True
+
+        return self._deploy_phase(phase_name, phase_config, workspace)
 
     def _deploy_phase(
         self,
@@ -1086,6 +1357,17 @@ class WorkspaceStatusCommand:
     is_flag=True,
     help="파일 존재 검증 건너뛰기",
 )
+@click.option(
+    "--parallel",
+    is_flag=True,
+    help="독립적인 Phase들을 병렬로 실행 (실험적)",
+)
+@click.option(
+    "--max-workers",
+    type=int,
+    default=4,
+    help="최대 병렬 워커 수 (기본: 4)",
+)
 @click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
@@ -1096,12 +1378,15 @@ def deploy_cmd(
     dry_run: bool,
     force: bool,
     skip_validation: bool,
+    parallel: bool,
+    max_workers: int,
     verbose: bool,
     debug: bool,
 ) -> None:
     """Workspace를 배포합니다.
 
     Phase 의존성 순서대로 각 Phase를 배포합니다.
+    --parallel 옵션 사용 시 의존성이 없는 Phase들을 동시에 실행합니다.
 
     Examples:
         # 전체 workspace 배포
@@ -1116,6 +1401,9 @@ def deploy_cmd(
         # 강제 재배포
         sbkube workspace deploy --force
 
+        # 병렬 실행 (실험적)
+        sbkube workspace deploy --parallel --max-workers 4
+
     """
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
@@ -1128,6 +1416,8 @@ def deploy_cmd(
         dry_run=dry_run,
         force=force,
         skip_validation=skip_validation,
+        parallel=parallel,
+        max_workers=max_workers,
     )
 
     success = deploy_command.execute()

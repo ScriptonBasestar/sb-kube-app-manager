@@ -678,3 +678,214 @@ class TestWorkspaceStatusCLI:
         result = runner.invoke(status_cmd, [str(workspace_file)])
 
         assert result.exit_code != 0
+
+
+class TestWorkspaceParallelExecution:
+    """Workspace 병렬 실행 테스트."""
+
+    def _create_workspace_file(
+        self, tmp_path: Path, phases: dict | None = None
+    ) -> Path:
+        """Helper to create workspace.yaml for tests."""
+        workspace_file = tmp_path / "workspace.yaml"
+        default_phases = {
+            "p1-infra": {
+                "description": "Infrastructure",
+                "source": "p1-kube/sources.yaml",
+                "app_groups": ["a000_network"],
+            },
+            "p2-data": {
+                "description": "Data layer",
+                "source": "p2-kube/sources.yaml",
+                "app_groups": ["a100_postgres"],
+                "depends_on": ["p1-infra"],
+            },
+            "p3-cache": {
+                "description": "Cache layer",
+                "source": "p3-kube/sources.yaml",
+                "app_groups": ["a200_redis"],
+                "depends_on": ["p1-infra"],
+            },
+        }
+        workspace_config = {
+            "version": "1.0",
+            "metadata": {"name": "parallel-test", "environment": "test"},
+            "phases": phases or default_phases,
+        }
+        workspace_file.write_text(yaml.dump(workspace_config))
+        return workspace_file
+
+    def test_parallel_dry_run_mode(self, tmp_path: Path) -> None:
+        """병렬 실행 DRY-RUN 모드 테스트."""
+        workspace_file = self._create_workspace_file(tmp_path)
+
+        cmd = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            dry_run=True,
+            skip_validation=True,
+            parallel=True,
+            max_workers=4,
+        )
+        result = cmd.execute()
+
+        # Dry-run should succeed without actual deployment
+        assert result is True
+        # All phases should be in results
+        assert len(cmd.phase_results) == 3
+
+    def test_parallel_level_calculation(self, tmp_path: Path) -> None:
+        """병렬 레벨 계산 테스트."""
+        # p1 -> p2, p3 (p2 and p3 can run in parallel)
+        phases = {
+            "p1": {
+                "description": "First",
+                "source": "p1/sources.yaml",
+                "app_groups": ["app1"],
+            },
+            "p2": {
+                "description": "Second",
+                "source": "p2/sources.yaml",
+                "app_groups": ["app2"],
+                "depends_on": ["p1"],
+            },
+            "p3": {
+                "description": "Third",
+                "source": "p3/sources.yaml",
+                "app_groups": ["app3"],
+                "depends_on": ["p1"],
+            },
+        }
+        workspace_file = self._create_workspace_file(tmp_path, phases)
+
+        cmd = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            dry_run=True,
+            skip_validation=True,
+            parallel=True,
+        )
+
+        # Load workspace
+        workspace = cmd._load_and_validate_workspace()
+        phase_order = workspace.get_phase_order()
+
+        # Calculate levels
+        levels = cmd._calculate_parallel_levels(workspace, phase_order)
+
+        # Level 0: p1 (no dependencies)
+        # Level 1: p2, p3 (both depend only on p1)
+        assert len(levels) == 2
+        assert levels[0] == ["p1"]
+        assert set(levels[1]) == {"p2", "p3"}
+
+    def test_parallel_cli_options(self, tmp_path: Path) -> None:
+        """workspace deploy --parallel CLI 옵션 테스트."""
+        workspace_file = self._create_workspace_file(tmp_path)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            deploy_cmd,
+            [
+                str(workspace_file),
+                "--dry-run",
+                "--skip-validation",
+                "--parallel",
+                "--max-workers",
+                "2",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "PARALLEL MODE" in result.output
+
+    def test_complex_dependency_levels(self, tmp_path: Path) -> None:
+        """복잡한 의존성 레벨 계산 테스트."""
+        # Diamond dependency pattern:
+        # p1 -> p2, p3
+        # p2, p3 -> p4
+        phases = {
+            "p1": {
+                "description": "Root",
+                "source": "p1/sources.yaml",
+                "app_groups": ["app1"],
+            },
+            "p2": {
+                "description": "Left branch",
+                "source": "p2/sources.yaml",
+                "app_groups": ["app2"],
+                "depends_on": ["p1"],
+            },
+            "p3": {
+                "description": "Right branch",
+                "source": "p3/sources.yaml",
+                "app_groups": ["app3"],
+                "depends_on": ["p1"],
+            },
+            "p4": {
+                "description": "Merge",
+                "source": "p4/sources.yaml",
+                "app_groups": ["app4"],
+                "depends_on": ["p2", "p3"],
+            },
+        }
+        workspace_file = self._create_workspace_file(tmp_path, phases)
+
+        cmd = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            dry_run=True,
+            skip_validation=True,
+            parallel=True,
+        )
+
+        workspace = cmd._load_and_validate_workspace()
+        phase_order = workspace.get_phase_order()
+        levels = cmd._calculate_parallel_levels(workspace, phase_order)
+
+        # Level 0: p1
+        # Level 1: p2, p3 (can run in parallel)
+        # Level 2: p4 (depends on both p2 and p3)
+        assert len(levels) == 3
+        assert levels[0] == ["p1"]
+        assert set(levels[1]) == {"p2", "p3"}
+        assert levels[2] == ["p4"]
+
+    def test_sequential_vs_parallel_results_consistency(self, tmp_path: Path) -> None:
+        """순차 vs 병렬 결과 일관성 테스트."""
+        phases = {
+            "p1": {
+                "description": "First",
+                "source": "p1/sources.yaml",
+                "app_groups": ["app1"],
+            },
+            "p2": {
+                "description": "Second",
+                "source": "p2/sources.yaml",
+                "app_groups": ["app2"],
+                "depends_on": ["p1"],
+            },
+        }
+        workspace_file = self._create_workspace_file(tmp_path, phases)
+
+        # Sequential execution
+        cmd_seq = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            dry_run=True,
+            skip_validation=True,
+            parallel=False,
+        )
+        result_seq = cmd_seq.execute()
+
+        # Parallel execution
+        cmd_par = WorkspaceDeployCommand(
+            workspace_file=str(workspace_file),
+            dry_run=True,
+            skip_validation=True,
+            parallel=True,
+        )
+        result_par = cmd_par.execute()
+
+        # Both should succeed
+        assert result_seq is True
+        assert result_par is True
+
+        # Both should have same phases in results
+        assert set(cmd_seq.phase_results.keys()) == set(cmd_par.phase_results.keys())

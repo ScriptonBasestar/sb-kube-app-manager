@@ -29,6 +29,14 @@ ______________________________________________________________________
 - **`version`** - CLI 현재 버전 표시
 - **`state`** - 배포 상태 관리 및 추적 *(신규)*
 
+### 🏗️ Workspace (Multi-Phase Deployment) *(v0.9.0 Preview)*
+
+- **`workspace validate`** - workspace.yaml 검증
+- **`workspace graph`** - Phase 의존성 그래프 출력
+- **`workspace deploy`** - 다단계 배포 실행
+- **`workspace status`** - Workspace 설정 조회
+- **`workspace init`** - workspace.yaml 템플릿 생성
+
 ### 💡 기본 사용법
 
 ```bash
@@ -177,4 +185,5 @@ sbkube rollback --deployment-id <id>
 ______________________________________________________________________
 
 *자세한 명령어 사용법은 [commands.md](commands.md)를 참조하세요.*\
-*애플리케이션 타입별 상세 설명은 [application-types.md](application-types.md)를 확인하세요.*
+*애플리케이션 타입별 상세 설명은 [application-types.md](application-types.md)를 확인하세요.*\
+*Multi-Phase 배포는 [workspace-guide.md](workspace-guide.md)를 참조하세요.*

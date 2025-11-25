@@ -1,0 +1,78 @@
+# Workspace Configuration Example
+# Multi-phase deployment with dependency ordering
+#
+# Usage:
+#   sbkube workspace validate workspace.yaml
+#   sbkube workspace graph workspace.yaml
+#   sbkube workspace deploy workspace.yaml --dry-run
+#   sbkube workspace status workspace.yaml
+
+version: "1.0"
+
+metadata:
+  name: production-deployment
+  description: "Production infrastructure multi-phase deployment"
+  environment: prod
+  tags:
+    - production
+    - multi-phase
+    - kubernetes
+
+# Global defaults applied to all phases
+global:
+  kubeconfig: ~/.kube/config
+  context: production-cluster
+  timeout: 600
+  on_failure: stop
+  helm_repos:
+    grafana:
+      url: https://grafana.github.io/helm-charts
+    bitnami:
+      url: https://charts.bitnami.com/bitnami
+
+# Phase definitions with dependencies
+phases:
+  # Phase 1: Infrastructure (no dependencies)
+  p1-infra:
+    description: "Network and storage infrastructure"
+    source: p1-kube/sources.yaml
+    app_groups:
+      - a000_network
+      - a001_storage
+    timeout: 900
+    on_failure: stop
+
+  # Phase 2: Data layer (depends on infrastructure)
+  p2-data:
+    description: "Database and caching layer"
+    source: p2-kube/sources.yaml
+    app_groups:
+      - a100_postgres
+      - a101_redis
+    depends_on:
+      - p1-infra
+    timeout: 600
+
+  # Phase 3: Application layer (depends on data layer)
+  p3-app:
+    description: "Application services"
+    source: p3-kube/sources.yaml
+    app_groups:
+      - a200_backend
+      - a201_frontend
+    depends_on:
+      - p2-data
+    timeout: 300
+    on_failure: continue
+
+  # Phase 4: Monitoring (depends on app layer)
+  p4-monitoring:
+    description: "Monitoring and observability"
+    source: p4-kube/sources.yaml
+    app_groups:
+      - a300_prometheus
+      - a301_grafana
+    depends_on:
+      - p3-app
+    env:
+      GRAFANA_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD}"

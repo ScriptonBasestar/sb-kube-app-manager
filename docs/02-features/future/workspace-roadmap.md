@@ -8,9 +8,9 @@ last_updated: 2025-01-13
 
 # Workspace Feature Implementation Plan
 
-**Status**: ✅ DESIGN RESOLVED - 구현 준비 완료
+**Status**: 🚧 IMPLEMENTATION IN PROGRESS - CLI 명령어 구현 완료
 **Created**: 2025-01-08
-**Last Updated**: 2025-01-13
+**Last Updated**: 2025-11-25
 **Design Review Completed**: 2025-01-13
 
 **관련 문서**:
@@ -210,27 +210,28 @@ Phase 3 (app): custom OCI registry
 - [ ] Phase별 sources 우선순위 규칙 정의
 - [ ] 테스트 추가 (phase-level source override)
 
-### Phase 2: CLI 명령어 (모델 확정 후)
-- [ ] `workspace init`: workspace.yaml 템플릿 생성
-- [ ] `workspace validate`: workspace.yaml 검증
-- [ ] `workspace graph`: Phase 의존성 시각화
-- [ ] CLI 통합 (cli.py)
+### Phase 2: CLI 명령어 ✅ COMPLETED (2025-11-25)
+- [x] `workspace init`: workspace.yaml 템플릿 생성
+- [x] `workspace validate`: workspace.yaml 검증
+- [x] `workspace graph`: Phase 의존성 시각화
+- [x] CLI 통합 (cli.py)
 
-### Phase 3: 배포 로직 (2-3일)
-- [ ] `workspace apply`: 전체 또는 특정 Phase 배포
-- [ ] Phase 순차 실행
-- [ ] Hook 통합 (workspace-level, phase-level)
-- [ ] 에러 핸들링
+### Phase 3: 배포 로직 ✅ COMPLETED (2025-11-25)
+- [x] `workspace deploy`: 전체 또는 특정 Phase 배포
+- [x] Phase 순차 실행 (Kahn's algorithm)
+- [x] `--dry-run`, `--phase`, `--force`, `--skip-validation` 옵션
+- [x] `on_failure` 모드: stop, continue, rollback
+- [x] 에러 핸들링
 
-### Phase 4: 상태 관리 (2-3일)
-- [ ] `PhaseState`, `WorkspaceState` 모델
-- [ ] `workspace status`: 배포 상태 조회
-- [ ] `workspace history`: 배포 히스토리
-- [ ] 데이터베이스 스키마 추가
+### Phase 4: 상태 관리 ✅ PARTIALLY COMPLETED (2025-11-25)
+- [ ] `PhaseState`, `WorkspaceState` 모델 (추후 구현)
+- [x] `workspace status`: Workspace 설정 조회
+- [ ] `workspace history`: 배포 히스토리 (추후 구현)
+- [ ] 데이터베이스 스키마 추가 (추후 구현)
 
-### Phase 5: 문서 및 예제 (1-2일)
+### Phase 5: 문서 및 예제 (진행 중)
 - [ ] `docs/02-features/workspace-guide.md`
-- [ ] `docs/03-configuration/workspace-schema.md`
+- [x] `docs/03-configuration/workspace-schema.md` (이미 존재)
 - [ ] `examples/workspace-example/`
 - [ ] PRODUCT.md, SPEC.md 업데이트
 
@@ -304,6 +305,6 @@ Phase 3 (app): custom OCI registry
 
 ---
 
-**상태**: 설계 재검토 대기 중
-**블로커**: Phase별 sources 참조 방식 미결정
-**다음 액션**: 실제 사용 케이스 조사 및 설계 재검토
+**상태**: 🚧 구현 진행 중 (Phase 2-4 완료)
+**블로커**: 없음
+**다음 액션**: 문서화 및 예제 추가 (Phase 5)

@@ -8,6 +8,18 @@ ______________________________________________________________________
 
 ## [Unreleased]
 
+### Added
+
+- **Workspace Multi-Phase Deployment** (v0.9.0 Preview):
+  - `sbkube workspace deploy`: Execute multi-phase deployments with dependency ordering
+    - Supports `--dry-run`, `--phase <name>`, `--force`, `--skip-validation` options
+    - Handles `on_failure` modes: stop, continue, rollback
+    - Uses Kahn's algorithm for topological sorting of phase dependencies
+  - `sbkube workspace status`: Display workspace configuration overview
+    - Shows metadata, global config, and phase dependency graph
+  - Full Pydantic model validation for workspace.yaml
+  - 30+ unit tests for workspace commands
+
 ## [0.8.1] - 2025-11-25
 
 ### Added

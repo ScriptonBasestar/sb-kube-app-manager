@@ -7,8 +7,8 @@ ______________________________________________________________________
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)](<>)
 [![Repo](https://img.shields.io/badge/GitHub-sb--kube--app--manager-blue?logo=github)](https://github.com/ScriptonBasestar/sb-kube-app-manager)
-[![Version](https://img.shields.io/badge/version-0.8.0-green)](CHANGELOG.md)
-[![Stable](https://img.shields.io/badge/stable-0.8.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.0-green)](CHANGELOG.md)
+[![Stable](https://img.shields.io/badge/stable-0.9.0-blue)](CHANGELOG.md)
 
 **SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML
 manifests, and Git repositories into a unified declarative configuration.
@@ -32,7 +32,7 @@ pip install sbkube
 
 # Verify installation
 sbkube version
-# Expected: 0.8.0
+# Expected: 0.9.0
 ```
 
 ### Basic Usage
@@ -78,58 +78,95 @@ Then deploy:
 sbkube apply --app-dir . --namespace production
 ```
 
-## 🎉 What's New in v0.8.0
+## 🎉 What's New in v0.9.0
+
+### Workspace: Multi-Phase Deployment Orchestration 🚀
+
+**Problem Solved**: Complex multi-cluster and multi-environment deployments with dependency ordering.
+
+```bash
+# Before: Manual multi-phase execution
+sbkube apply --app-dir config/infra
+sbkube apply --app-dir config/data    # Wait for infra...
+sbkube apply --app-dir config/apps    # Wait for data...
+
+# After v0.9.0: Unified workspace orchestration
+sbkube workspace deploy --workspace workspace.yaml
+# Automatic dependency resolution and parallel execution
+```
+
+**New Commands**:
+
+- `sbkube workspace validate` - Validate workspace.yaml configuration
+- `sbkube workspace graph` - Visualize phase dependency graph
+- `sbkube workspace deploy` - Execute multi-phase deployments
+- `sbkube workspace status` - Display workspace configuration overview
+- `sbkube workspace history` - View deployment history for phases
+
+**Configuration Example** (`workspace.yaml`):
+
+```yaml
+workspace:
+  name: production-cluster
+  description: Production environment deployment
+
+phases:
+  infra:
+    config_dir: ./config/infrastructure
+    description: Core infrastructure (networking, storage)
+
+  database:
+    config_dir: ./config/databases
+    depends_on: [infra]
+    description: Database layer
+
+  applications:
+    config_dir: ./config/apps
+    depends_on: [database]
+    description: Application services
+```
+
+**Key Features**:
+
+- Phase dependency resolution using Kahn's algorithm
+- Parallel execution of independent phases
+- Deployment state tracking per phase
+- Rollback support at workspace level
+
+**See**: [Workspace Guide](docs/02-features/workspace-guide.md)
+
+**Full Release Notes**: [CHANGELOG.md](CHANGELOG.md)
+
+______________________________________________________________________
+
+## 📋 Previous Release: v0.8.0
+
+<details>
+<summary>Chart Path Collision Prevention & PV/PVC Validation</summary>
 
 ### Chart Path Collision Prevention ⚠️ Breaking Change
 
-**Problem Solved**: Charts from different repos with the same name no longer collide.
+Charts from different repos with the same name no longer collide:
 
 ```bash
-# Before v0.7.x (collision risk)
-.sbkube/charts/redis/           # Which repo? Which version?
-
-# After v0.8.0 (no collision)
+# New structure
 .sbkube/charts/grafana/loki-5.0.0/        # Clear and unique
 .sbkube/charts/my-company/redis-1.0.0/    # Different repo
 ```
 
-**Migration Required**:
+### PV/PVC Validation for Manual Provisioning
+
+Early detection of missing PersistentVolumes:
 
 ```bash
-rm -rf .sbkube/charts && sbkube prepare --force
-```
-
-**See**: [Migration Guide](docs/MIGRATION_v0.8.0.md) (5-minute migration)
-
-### PV/PVC Validation for Manual Provisioning 🔍
-
-**Problem Solved**: Detect missing PersistentVolumes before deployment.
-
-```bash
-# Before v0.8.0: Silent failure
-sbkube apply
-# ✅ Deployment succeeded
-# ❌ PVC stuck in Pending (no guidance)
-
-# After v0.8.0: Early detection
 sbkube validate
 # ❌ 스토리지 검증 실패: postgresql PV 없음
 # 💡 PV 생성 방법 안내 제공
 ```
 
-**New Commands**:
+**See**: [v0.8.0 Release Notes](docs/RELEASE_v0.8.0.md)
 
-- `sbkube validate` - Now includes storage validation
-- `sbkube validate --skip-storage-check` - Skip storage validation
-- `sbkube validate --strict-storage-check` - Fail on missing PVs
-
-**See**:
-
-- [Storage Management Guide](docs/05-best-practices/storage-management.md)
-- [Storage Troubleshooting](docs/07-troubleshooting/storage-issues.md)
-- [Example: Manual PV](examples/storage-management/manual-pv-hostpath/)
-
-**Full Release Notes**: [RELEASE_v0.8.0.md](docs/RELEASE_v0.8.0.md)
+</details>
 
 ______________________________________________________________________
 
@@ -156,6 +193,7 @@ ______________________________________________________________________
 - 🔧 [Configuration](docs/03-configuration/) - 설정 파일 가이드
 - 📖 [Examples](examples/) - 다양한 배포 시나리오
 - 🔍 [Troubleshooting](docs/07-troubleshooting/) - 일반적인 문제 및 해결책
+- 🆕 [Workspace Guide](docs/02-features/workspace-guide.md) - 멀티-페이즈 배포 오케스트레이션
 
 ### 👨‍💻 Developer Resources
 

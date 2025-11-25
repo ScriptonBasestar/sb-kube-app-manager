@@ -1,8 +1,46 @@
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 import yaml
 from click.testing import CliRunner
+
+
+# ============================================================================
+# Environment Check Fixtures (for integration test stability)
+# ============================================================================
+
+
+def is_k8s_cluster_reachable():
+    """Check if a Kubernetes cluster is reachable."""
+    if shutil.which("kubectl") is None:
+        return False
+    try:
+        result = subprocess.run(
+            ["kubectl", "cluster-info"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+@pytest.fixture(autouse=True)
+def skip_if_k8s_unavailable(request) -> None:
+    """Auto-skip tests marked with requires_k8s if kubectl is not available or cluster is unreachable.
+
+    This fixture runs automatically for all tests and checks if the test
+    requires kubectl and a reachable cluster. If either is not available, the test is skipped.
+    """
+    if request.node.get_closest_marker("requires_k8s"):
+        if not is_k8s_cluster_reachable():
+            pytest.skip(
+                "Kubernetes cluster is not reachable. Ensure a cluster is running and kubeconfig is valid."
+            )
 
 
 @pytest.fixture(scope="session")

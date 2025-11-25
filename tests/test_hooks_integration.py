@@ -153,7 +153,7 @@ def test_prepare_with_hooks_dry_run(tmp_project) -> None:
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="Requires actual Kubernetes cluster even with --dry-run")
+@pytest.mark.requires_k8s
 def test_deploy_with_hooks_dry_run(tmp_project) -> None:
     """Deploy 명령어 hooks (dry-run 모드) 테스트."""
     project_dir, _config_dir = tmp_project
@@ -276,7 +276,7 @@ apps:
 
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="Requires actual Kubernetes cluster")
+@pytest.mark.requires_k8s
 def test_hooks_environment_variables(tmp_project) -> None:
     """훅에서 환경 변수 주입 테스트."""
     project_dir, config_dir = tmp_project

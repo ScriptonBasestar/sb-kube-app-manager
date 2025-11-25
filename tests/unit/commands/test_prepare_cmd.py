@@ -123,7 +123,26 @@ users:
         mock_resolve_cluster.return_value = ("/fake/kubeconfig", "test-context")
 
         # Mock run_command to simulate helm operations
-        mock_run_command.return_value = (0, "", "")
+        # The helm pull command creates a temp directory with extracted chart
+        # We need to simulate this by creating the expected directory structure
+        def run_command_side_effect(cmd, timeout=None):
+            # When helm pull is called, create the expected directory structure
+            if "helm" in cmd and "pull" in cmd:
+                # Find the --untardir argument to get the temp directory
+                for i, arg in enumerate(cmd):
+                    if arg == "--untardir" and i + 1 < len(cmd):
+                        temp_dir = tmp_path / cmd[i + 1].split(str(tmp_path) + "/")[1]
+                        # Create the temp directory with chart structure
+                        chart_dir = temp_dir / "redis"
+                        chart_dir.mkdir(parents=True, exist_ok=True)
+                        # Create a minimal Chart.yaml
+                        (chart_dir / "Chart.yaml").write_text(
+                            "apiVersion: v2\nname: redis\nversion: 17.0.0\n"
+                        )
+                        break
+            return (0, "", "")
+
+        mock_run_command.side_effect = run_command_side_effect
 
         # Run prepare
         result = runner.invoke(

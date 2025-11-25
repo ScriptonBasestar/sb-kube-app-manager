@@ -13,15 +13,16 @@ ______________________________________________________________________
 1. [문서 개요](#1-%EB%AC%B8%EC%84%9C-%EA%B0%9C%EC%9A%94)
 1. [시스템 아키텍처](#2-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98)
 1. [워크플로우 상세](#3-%EC%9B%8C%ED%81%AC%ED%94%8C%EB%A1%9C%EC%9A%B0-%EC%83%81%EC%84%B8)
-1. [데이터 모델 및 스키마](#4-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%AA%A8%EB%8D%B8-%EB%B0%8F-%EC%8A%A4%ED%82%A4%EB%A7%88)
-1. [API 및 명령어 명세](#5-api-%EB%B0%8F-%EB%AA%85%EB%A0%B9%EC%96%B4-%EB%AA%85%EC%84%B8)
-1. [상태 관리 시스템](#6-%EC%83%81%ED%83%9C-%EA%B4%80%EB%A6%AC-%EC%8B%9C%EC%8A%A4%ED%85%9C)
-1. [Hooks 시스템 구현](#7-hooks-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EA%B5%AC%ED%98%84)
-1. [검증 시스템](#8-%EA%B2%80%EC%A6%9D-%EC%8B%9C%EC%8A%A4%ED%85%9C)
-1. [기술 스택 및 의존성](#9-%EA%B8%B0%EC%88%A0-%EC%8A%A4%ED%83%9D-%EB%B0%8F-%EC%9D%98%EC%A1%B4%EC%84%B1)
-1. [에러 처리 및 예외](#10-%EC%97%90%EB%9F%AC-%EC%B2%98%EB%A6%AC-%EB%B0%8F-%EC%98%88%EC%99%B8)
-1. [성능 및 확장성](#11-%EC%84%B1%EB%8A%A5-%EB%B0%8F-%ED%99%95%EC%9E%A5%EC%84%B1)
-1. [보안 고려사항](#12-%EB%B3%B4%EC%95%88-%EA%B3%A0%EB%A0%A4%EC%82%AC%ED%95%AD)
+1. [Workspace 시스템](#4-workspace-%EC%8B%9C%EC%8A%A4%ED%85%9C) (v0.9.0 Preview)
+1. [데이터 모델 및 스키마](#5-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%AA%A8%EB%8D%B8-%EB%B0%8F-%EC%8A%A4%ED%82%A4%EB%A7%88)
+1. [API 및 명령어 명세](#6-api-%EB%B0%8F-%EB%AA%85%EB%A0%B9%EC%96%B4-%EB%AA%85%EC%84%B8)
+1. [상태 관리 시스템](#7-%EC%83%81%ED%83%9C-%EA%B4%80%EB%A6%AC-%EC%8B%9C%EC%8A%A4%ED%85%9C)
+1. [Hooks 시스템 구현](#8-hooks-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EA%B5%AC%ED%98%84)
+1. [검증 시스템](#9-%EA%B2%80%EC%A6%9D-%EC%8B%9C%EC%8A%A4%ED%85%9C)
+1. [기술 스택 및 의존성](#10-%EA%B8%B0%EC%88%A0-%EC%8A%A4%ED%83%9D-%EB%B0%8F-%EC%9D%98%EC%A1%B4%EC%84%B1)
+1. [에러 처리 및 예외](#11-%EC%97%90%EB%9F%AC-%EC%B2%98%EB%A6%AC-%EB%B0%8F-%EC%98%88%EC%99%B8)
+1. [성능 및 확장성](#12-%EC%84%B1%EB%8A%A5-%EB%B0%8F-%ED%99%95%EC%9E%A5%EC%84%B1)
+1. [보안 고려사항](#13-%EB%B3%B4%EC%95%88-%EA%B3%A0%EB%A0%A4%EC%82%AC%ED%95%AD)
 
 ______________________________________________________________________
 
@@ -46,10 +47,10 @@ ______________________________________________________________________
 
 ### 1.4 버전 정보
 
-- **문서 버전**: 2.0
-- **대상 SBKube 버전**: v0.7.0 (개발 중, 안정 버전: v0.6.0)
-- **마지막 업데이트**: 2025-01-06
-- **문서 상태**: v0.7.0 기능 포함 (일부 Unreleased)
+- **문서 버전**: 2.1
+- **대상 SBKube 버전**: v0.8.1 (안정 버전: v0.8.0, Preview: v0.9.0)
+- **마지막 업데이트**: 2025-11-25
+- **문서 상태**: v0.9.0 Workspace 기능 포함 (Preview)
 
 ______________________________________________________________________
 
@@ -439,9 +440,354 @@ def deploy_helm_app(app: AppConfig, namespace: str, dry_run: bool = False):
 
 ______________________________________________________________________
 
-## 4. 데이터 모델 및 스키마
+## 4. Workspace 시스템 (v0.9.0 Preview)
 
-### 4.1 config.yaml 스키마 (Pydantic)
+> **주의**: Workspace 기능은 v0.9.0 Preview 상태입니다. API가 변경될 수 있습니다.
+
+### 4.1 개요
+
+Workspace는 복잡한 다단계 배포를 Phase 기반으로 오케스트레이션합니다.
+
+**사용 사례**: Infrastructure → Data → Application → Monitoring 순서의 단계별 배포
+
+**계층 구조**:
+
+```
+Workspace (workspace.yaml)
+├── Phase 1 (infra)
+│   └── App Group: a000_network/
+├── Phase 2 (data)
+│   └── App Group: a100_postgres/
+└── Phase 3 (app)
+    └── App Group: a200_backend/
+```
+
+### 4.2 아키텍처
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│               Workspace Layer (v0.9.0)                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│   workspace.yaml                                            │
+│        ↓                                                    │
+│   WorkspaceConfig (Pydantic)                                │
+│        ↓                                                    │
+│   Phase Dependency Resolver (Kahn's Algorithm)              │
+│        ↓                                                    │
+│   ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐       │
+│   │ Phase 1 │→│ Phase 2 │→│ Phase 3 │→│ Phase 4 │       │
+│   │ (infra) │  │ (data)  │  │  (app)  │  │(monitor)│       │
+│   └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘       │
+│        ↓            ↓            ↓            ↓            │
+│   sources.yaml  sources.yaml  sources.yaml  sources.yaml   │
+│        ↓            ↓            ↓            ↓            │
+│   config.yaml   config.yaml   config.yaml   config.yaml    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+              ┌───────────────────────────────┐
+              │     Existing SBKube Layer      │
+              │   (prepare-build-template-deploy)│
+              └───────────────────────────────┘
+```
+
+### 4.3 workspace.yaml 스키마
+
+**Pydantic 모델**:
+
+```python
+# sbkube/models/workspace_model.py
+class PhaseConfig(BaseModel):
+    """Phase 설정"""
+    description: str
+    source: str  # sources.yaml 경로
+    app_groups: List[str]
+    depends_on: List[str] = []
+    timeout: Optional[int] = None
+    on_failure: str = "stop"  # stop | continue | rollback
+    env: Dict[str, str] = {}
+
+class WorkspaceMetadata(BaseModel):
+    """Workspace 메타데이터"""
+    name: str
+    description: Optional[str] = None
+    environment: Optional[str] = None
+    tags: List[str] = []
+
+class GlobalConfig(BaseModel):
+    """전역 설정"""
+    kubeconfig: Optional[str] = None
+    context: Optional[str] = None
+    timeout: int = 300
+    on_failure: str = "stop"
+    helm_repos: Dict[str, Dict[str, str]] = {}
+
+class WorkspaceConfig(BaseModel):
+    """workspace.yaml 전체 모델"""
+    version: str = "1.0"
+    metadata: WorkspaceMetadata
+    global_config: Optional[GlobalConfig] = Field(default=None, alias="global")
+    phases: Dict[str, PhaseConfig]
+```
+
+**YAML 예시**:
+
+```yaml
+version: "1.0"
+
+metadata:
+  name: production-deployment
+  environment: prod
+  tags: [production, multi-phase]
+
+global:
+  kubeconfig: ~/.kube/config
+  context: production-cluster
+  timeout: 600
+  on_failure: stop
+
+phases:
+  p1-infra:
+    description: "Infrastructure layer"
+    source: p1-kube/sources.yaml
+    app_groups:
+      - a000_network
+      - a001_storage
+    timeout: 900
+
+  p2-data:
+    description: "Data layer"
+    source: p2-kube/sources.yaml
+    app_groups:
+      - a100_postgres
+    depends_on:
+      - p1-infra
+
+  p3-app:
+    description: "Application layer"
+    source: p3-kube/sources.yaml
+    app_groups:
+      - a200_backend
+    depends_on:
+      - p2-data
+    on_failure: continue
+```
+
+### 4.4 Phase 의존성 해결
+
+**알고리즘**: Kahn's Algorithm (위상 정렬)
+
+```python
+def get_phase_order(self) -> List[str]:
+    """
+    Phase 실행 순서 계산 (위상 정렬)
+
+    1. 진입 차수(in-degree) 계산
+    2. 진입 차수 0인 노드부터 큐에 추가
+    3. 큐에서 꺼내면서 연결된 노드의 진입 차수 감소
+    4. 순환 의존성 검출 시 ValueError 발생
+    """
+    # 진입 차수 계산
+    in_degree = {name: 0 for name in self.phases}
+    for name, phase in self.phases.items():
+        for dep in phase.depends_on:
+            in_degree[name] += 1
+
+    # 위상 정렬
+    queue = deque([n for n, d in in_degree.items() if d == 0])
+    order = []
+
+    while queue:
+        current = queue.popleft()
+        order.append(current)
+
+        for name, phase in self.phases.items():
+            if current in phase.depends_on:
+                in_degree[name] -= 1
+                if in_degree[name] == 0:
+                    queue.append(name)
+
+    if len(order) != len(self.phases):
+        raise ValueError("Circular dependency detected")
+
+    return order
+```
+
+**순환 의존성 검출**: DFS 기반
+
+```python
+def validate_phase_dependencies(self) -> None:
+    """
+    순환 의존성 검출 (DFS)
+
+    1. 각 Phase에서 DFS 시작
+    2. 방문 중인 노드 재방문 시 순환 검출
+    3. 검출 시 관련 Phase 이름과 함께 예외 발생
+    """
+    visited = set()
+    rec_stack = set()
+
+    def dfs(phase_name: str) -> bool:
+        visited.add(phase_name)
+        rec_stack.add(phase_name)
+
+        phase = self.phases.get(phase_name)
+        if phase:
+            for dep in phase.depends_on:
+                if dep not in visited:
+                    if dfs(dep):
+                        return True
+                elif dep in rec_stack:
+                    return True
+
+        rec_stack.remove(phase_name)
+        return False
+
+    for phase_name in self.phases:
+        if phase_name not in visited:
+            if dfs(phase_name):
+                raise ValueError(f"Circular dependency detected involving phase '{phase_name}'")
+```
+
+### 4.5 병렬 실행 지원
+
+**독립 Phase 병렬 실행**:
+
+```python
+def deploy_phases_parallel(self, workspace: WorkspaceConfig):
+    """
+    독립적인 Phase들을 병렬로 실행
+
+    1. 의존성 없는 Phase들 그룹화
+    2. ThreadPoolExecutor로 병렬 실행
+    3. 모든 Phase 완료 후 다음 레벨로 진행
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    phase_order = workspace.get_phase_order()
+    completed = set()
+
+    while len(completed) < len(phase_order):
+        # 현재 실행 가능한 Phase들 (의존성 충족)
+        ready = [
+            p for p in phase_order
+            if p not in completed
+            and all(d in completed for d in workspace.phases[p].depends_on)
+        ]
+
+        # 병렬 실행
+        with ThreadPoolExecutor(max_workers=len(ready)) as executor:
+            futures = {
+                executor.submit(self._deploy_phase, workspace, p): p
+                for p in ready
+            }
+
+            for future in as_completed(futures):
+                phase_name = futures[future]
+                try:
+                    future.result()
+                    completed.add(phase_name)
+                except Exception as e:
+                    self._handle_phase_failure(workspace, phase_name, e)
+```
+
+### 4.6 CLI 명령어
+
+#### 4.6.1 workspace validate
+
+```bash
+sbkube workspace validate <workspace.yaml>
+
+검증 항목:
+  1. YAML 구문 검증
+  2. Pydantic 스키마 검증
+  3. Phase 의존성 검증
+  4. 순환 의존성 검출
+  5. sources.yaml 존재 확인 (선택)
+```
+
+#### 4.6.2 workspace graph
+
+```bash
+sbkube workspace graph <workspace.yaml>
+
+출력:
+  Phase 의존성 그래프 (Rich Tree)
+
+예시 출력:
+  Workspace: production-deployment
+  ├── p1-infra - Infrastructure layer
+  │   └── App Groups: a000_network, a001_storage
+  ├── p2-data - Data layer [depends: p1-infra]
+  │   └── App Groups: a100_postgres
+  └── p3-app - Application layer [depends: p2-data]
+      └── App Groups: a200_backend
+```
+
+#### 4.6.3 workspace deploy
+
+```bash
+sbkube workspace deploy <workspace.yaml> [옵션]
+
+옵션:
+  --dry-run              # 시뮬레이션 모드
+  --phase <name>         # 특정 Phase만 배포
+  --force                # 이전 상태 무시
+  --skip-validation      # sources.yaml 존재 확인 건너뛰기
+  --parallel             # 독립 Phase 병렬 실행
+
+실행 흐름:
+  1. workspace.yaml 로드 및 검증
+  2. Phase 실행 순서 계산
+  3. 각 Phase 순차 실행:
+     - sources.yaml 로드
+     - app_groups의 각 앱 그룹에 대해:
+       - config.yaml 로드
+       - prepare → build → template → deploy 실행
+  4. 실패 시 on_failure 정책 적용
+```
+
+#### 4.6.4 workspace status
+
+```bash
+sbkube workspace status <workspace.yaml>
+
+출력:
+  - Metadata (name, environment, tags)
+  - Global configuration
+  - Phase summary with dependencies
+```
+
+### 4.7 설계 결정 사항
+
+**1. Phase별 Sources 참조 (Override Approach)**:
+
+- 각 Phase는 독립적인 `sources.yaml` 참조
+- 관심사 분리: Orchestration (workspace) vs Targeting (sources)
+- 우선순위: App-level > Phase-level > Workspace-level
+
+**2. 단일 클러스터 순차 배포**:
+
+- v0.9.0은 동일 클러스터 내 순차 배포에 집중
+- 다중 클러스터는 v1.0+ 계획
+
+**3. 파일 네이밍**:
+
+- `workspace.yaml` 채택 (sources.yaml, config.yaml과 일관성)
+
+### 4.8 관련 문서
+
+- **[Workspace Guide](docs/02-features/workspace-guide.md)** - 사용자 가이드
+- **[Workspace Schema](docs/03-configuration/workspace-schema.md)** - 스키마 상세
+- **[Workspace Roadmap](docs/02-features/future/workspace-roadmap.md)** - 구현 계획
+- **[Example](examples/workspace-multi-phase/)** - 예제
+
+______________________________________________________________________
+
+## 5. 데이터 모델 및 스키마
+
+### 5.1 config.yaml 스키마 (Pydantic)
 
 **모델 정의**:
 
@@ -513,7 +859,7 @@ apps:
     removes: ["templates/ingress.yaml"]
 ```
 
-### 4.2 sources.yaml 스키마
+### 5.2 sources.yaml 스키마
 
 **모델 정의**:
 
@@ -546,7 +892,7 @@ git:
     ref: v1.0.0
 ```
 
-### 4.3 배포 상태 DB 스키마
+### 5.3 배포 상태 DB 스키마
 
 **SQLAlchemy 모델**:
 
@@ -574,11 +920,11 @@ class DeploymentHistory(Base):
 
 ______________________________________________________________________
 
-## 5. API 및 명령어 명세
+## 6. API 및 명령어 명세
 
-### 5.1 CLI 명령어 계약
+### 7.1 CLI 명령어 계약
 
-#### 5.1.1 전역 옵션
+#### 6.1.1 전역 옵션
 
 ```bash
 sbkube [전역옵션] <명령어> [명령어옵션]
@@ -674,7 +1020,7 @@ sbkube validate [TARGET_FILE] [옵션]
   sbkube validate --schema-type sources
 ```
 
-### 5.2 Python API (프로그래밍 방식)
+### 7.2 Python API (프로그래밍 방식)
 
 **명령어 직접 호출**:
 
@@ -703,9 +1049,9 @@ print(config.apps["redis"].chart)  # 'grafana/loki'
 
 ______________________________________________________________________
 
-## 6. 상태 관리 시스템
+## 7. 상태 관리 시스템
 
-### 6.1 배포 상태 추적
+### 7.1 배포 상태 추적
 
 **저장 정보**:
 
@@ -750,7 +1096,7 @@ class DeploymentTracker:
         return query.order_by(DeploymentHistory.timestamp.desc()).limit(limit).all()
 ```
 
-### 6.2 앱 그룹 의존성 검증
+### 7.2 앱 그룹 의존성 검증
 
 **목적**: `deps` 필드에 선언된 의존 앱 그룹이 배포되었는지 확인
 
@@ -784,7 +1130,7 @@ def validate_app_group_dependencies(config: Config, tracker: DeploymentTracker):
     return warnings
 ```
 
-### 6.3 롤백 지원
+### 7.3 롤백 지원
 
 **롤백 프로세스**:
 

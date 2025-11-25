@@ -11,10 +11,8 @@ from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 
 @pytest.mark.e2e
 @pytest.mark.requires_helm
+@pytest.mark.requires_k8s
 @pytest.mark.integration
-@pytest.mark.skip(
-    reason="Examples hardcode specific kubeconfig contexts (docker-desktop) which may not exist"
-)
 class TestPrepareExamples:
     """Test prepare command with various example configurations."""
 

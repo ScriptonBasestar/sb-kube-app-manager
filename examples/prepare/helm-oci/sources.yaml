@@ -3,7 +3,7 @@
 
 cluster: test-cluster
 kubeconfig: ~/.kube/config
-kubeconfig_context: docker-desktop
+kubeconfig_context: default
 
 # Standard Helm repositories
 helm_repos: {}

@@ -88,7 +88,7 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
 
 ## 중기 로드맵 (v0.9.x - v1.0.x)
 
-### v0.9.0 (2025 Q2 - 계획 중) 🟡
+### v0.9.0 (2025 Q2 - 구현 완료) ✅
 
 **목표**: Workspace 기능 (Multi-Phase Deployment)
 
@@ -97,10 +97,11 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
   - ✅ Phase-level sources 참조 (Override 방식)
   - ✅ 단일 클러스터 순차 배포
   - ✅ Repository 우선순위: App > Phase > Workspace
-- [ ] Pydantic 모델 구현 (WorkspaceConfig, PhaseConfig)
-- [ ] CLI 명령어 구현 (workspace validate/deploy/status)
-- [ ] Phase 의존성 해결 (Kahn's algorithm)
-- [ ] Workspace-level 상태 관리
+- ✅ Pydantic 모델 구현 (WorkspaceConfig, PhaseConfig) (2025-01-25)
+- ✅ CLI 명령어 구현 (workspace validate/deploy/status/graph/history) (2025-01-25)
+- ✅ Phase 의존성 해결 (Kahn's algorithm) (2025-01-25)
+- ✅ Workspace-level 상태 관리 (2025-01-25)
+- ✅ 병렬 Phase 실행 지원 (독립 Phase 동시 실행)
 
 **Use Case**: p1-kube, p2-kube, p3-kube처럼 단계별로 나뉜 프로젝트 구조 지원
 
@@ -168,9 +169,12 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
 
 ### 2025
 
-- 🟡 Q1: v0.7.0 LLM 친화적 출력 (진행 중)
-- Q2-Q3: v0.8.x Hooks 고도화 및 성능 최적화
-- Q4: v0.9.x 엔터프라이즈 기능 시작
+- ✅ Q1: v0.7.0 LLM 친화적 출력 (완료)
+- ✅ Q1: v0.8.0 Chart Path Collision Prevention (완료)
+- ✅ Q1: v0.8.1 Documentation as Code (완료)
+- ✅ Q1: v0.9.0 Workspace Multi-Phase Deployment (완료)
+- Q2-Q3: v0.9.x Hooks 고도화 및 성능 최적화
+- Q4: v1.0.x 엔터프라이즈 기능 시작
 
 ### 2026
 
@@ -235,4 +239,4 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-**문서 버전**: 1.2 **마지막 업데이트**: 2025-01-06 **담당자**: archmagece@users.noreply.github.com
+**문서 버전**: 1.3 **마지막 업데이트**: 2025-01-25 **담당자**: archmagece@users.noreply.github.com

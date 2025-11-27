@@ -35,6 +35,7 @@ class WorkspaceMetadata(ConfigBaseModel):
           tags:
             - production
             - multi-phase
+
     """
 
     name: Annotated[
@@ -82,6 +83,7 @@ class GlobalDefaults(ConfigBaseModel):
           helm_repos:
             grafana:
               url: https://grafana.github.io/helm-charts
+
     """
 
     kubeconfig: Annotated[
@@ -152,6 +154,7 @@ class PhaseConfig(ConfigBaseModel):
             - a001_storage
           depends_on: []
           timeout: 900
+
     """
 
     description: Annotated[
@@ -249,6 +252,7 @@ class WorkspaceConfig(ConfigBaseModel):
             source: p2-kube/sources.yaml
             app_groups: [a100_postgres]
             depends_on: [p1-infra]
+
     """
 
     version: Annotated[
@@ -308,7 +312,7 @@ class WorkspaceConfig(ConfigBaseModel):
             raise ValueError("phases must not be empty")
 
         # Phase 이름 검증
-        for phase_name in v.keys():
+        for phase_name in v:
             if not phase_name:
                 raise ValueError("phase name cannot be empty")
             # Phase 이름 패턴: alphanumeric + dash/underscore
@@ -375,6 +379,7 @@ class WorkspaceConfig(ConfigBaseModel):
 
         Raises:
             ValueError: 순환 의존성이 있는 경우
+
         """
         # In-degree 계산: 각 노드가 몇 개의 의존성을 가지는지
         in_degree = dict.fromkeys(self.phases.keys(), 0)
@@ -415,6 +420,7 @@ class WorkspaceConfig(ConfigBaseModel):
 
         Raises:
             KeyError: Phase가 존재하지 않는 경우
+
         """
         if phase_name not in self.phases:
             raise KeyError(f"Phase '{phase_name}' not found")
@@ -435,6 +441,7 @@ class WorkspaceConfig(ConfigBaseModel):
 
         Raises:
             KeyError: Phase가 존재하지 않는 경우
+
         """
         phase_config = self.get_phase_config(phase_name)
         source_path = workspace_dir / phase_config.source

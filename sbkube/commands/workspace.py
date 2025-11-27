@@ -410,7 +410,6 @@ class WorkspaceInitCommand:
 @click.group(name="workspace")
 def workspace_group() -> None:
     """Workspace 관리 명령어."""
-    pass
 
 
 @workspace_group.command(name="validate")
@@ -703,9 +702,8 @@ class WorkspaceDeployCommand:
 
                 # 의존성 Phase들도 포함 (자동)
                 return self._get_phase_with_dependencies(workspace, self.phase)
-            else:
-                # 전체 배포
-                return workspace.get_phase_order()
+            # 전체 배포
+            return workspace.get_phase_order()
         except ValueError as e:
             logger.error(f"Phase 실행 순서 계산 실패: {e}")
             raise click.Abort
@@ -795,7 +793,7 @@ class WorkspaceDeployCommand:
                 if on_failure == "stop":
                     logger.warning("on_failure=stop: 배포를 중단합니다.")
                     break
-                elif on_failure == "continue":
+                if on_failure == "continue":
                     logger.warning("on_failure=continue: 다음 Phase를 계속 진행합니다.")
                 elif on_failure == "rollback":
                     logger.warning("on_failure=rollback: 롤백 기능은 v1.1+에서 지원됩니다.")
@@ -820,6 +818,7 @@ class WorkspaceDeployCommand:
 
         Returns:
             bool: 전체 성공 여부
+
         """
         self.console.print(
             f"\n[bold cyan]━━━ Parallel Deploying {len(phase_order)} Phase(s) ━━━[/bold cyan]"
@@ -895,6 +894,7 @@ class WorkspaceDeployCommand:
 
         Returns:
             List of levels, each containing phases that can run in parallel
+
         """
         levels: list[list[str]] = []
         assigned: set[str] = set()
@@ -944,6 +944,7 @@ class WorkspaceDeployCommand:
 
         Returns:
             bool: 배포 성공 여부
+
         """
         phase_config = workspace.phases[phase_name]
 
@@ -981,6 +982,7 @@ class WorkspaceDeployCommand:
 
         Returns:
             Dict mapping phase name to success status
+
         """
         results: dict[str, bool] = {}
 
@@ -1047,6 +1049,7 @@ class WorkspaceDeployCommand:
 
         Returns:
             bool: 배포 성공 여부
+
         """
         # Note: Console output may interleave in parallel mode
         # For dry-run, we just return True
@@ -1162,7 +1165,7 @@ class WorkspaceDeployCommand:
             try:
                 result = subprocess.run(
                     cmd,
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     cwd=str(base_dir),
                 )

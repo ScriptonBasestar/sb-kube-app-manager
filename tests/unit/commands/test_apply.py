@@ -222,7 +222,6 @@ class TestApplyAppFiltering:
     @pytest.fixture
     def config_with_multiple_apps(self, base_dir, app_dir):
         """Create config with multiple apps and dependencies."""
-
         sources_file = app_dir / "sources.yaml"
         sources_file.write_text(
             yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
@@ -345,7 +344,6 @@ class TestApplyDependencyValidation:
     @pytest.fixture
     def config_with_deps(self, base_dir, app_dir):
         """Create config with app-group dependencies."""
-
         sources_file = app_dir / "sources.yaml"
         sources_file.write_text(
             yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
@@ -512,7 +510,6 @@ class TestApplyHooks:
     @pytest.fixture
     def config_with_hooks(self, base_dir, app_dir):
         """Create config with hooks."""
-
         sources_file = app_dir / "sources.yaml"
         sources_file.write_text(
             yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
@@ -628,7 +625,6 @@ class TestApplyErrorHandling:
     @pytest.fixture
     def invalid_config(self, base_dir, app_dir):
         """Create invalid config."""
-
         sources_file = app_dir / "sources.yaml"
         sources_file.write_text(
             yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
@@ -661,7 +657,6 @@ class TestApplyErrorHandling:
     @pytest.fixture
     def config_with_disabled_app(self, base_dir, app_dir):
         """Create config with disabled app."""
-
         sources_file = app_dir / "sources.yaml"
         sources_file.write_text(
             yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
@@ -721,7 +716,6 @@ class TestApplyProgressTracking:
     @pytest.fixture
     def basic_config(self, base_dir, app_dir):
         """Create basic config."""
-
         sources_file = app_dir / "sources.yaml"
         sources_file.write_text(
             yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})

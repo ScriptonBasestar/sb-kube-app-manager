@@ -179,7 +179,7 @@ class TestWorkspaceCLI:
     """Workspace CLI 명령어 테스트."""
 
     def test_validate_cli_success(self, tmp_path: Path) -> None:
-        """workspace validate CLI 성공 테스트."""
+        """Workspace validate CLI 성공 테스트."""
         workspace_file = tmp_path / "workspace.yaml"
         workspace_config = {
             "version": "1.0",
@@ -201,7 +201,7 @@ class TestWorkspaceCLI:
         assert "Workspace 검증 완료" in result.output
 
     def test_validate_cli_failure(self, tmp_path: Path) -> None:
-        """workspace validate CLI 실패 테스트."""
+        """Workspace validate CLI 실패 테스트."""
         workspace_file = tmp_path / "workspace.yaml"
         # 잘못된 구조
         invalid_config = {"version": "1.0", "metadata": {"name": "test"}, "phases": {}}
@@ -213,7 +213,7 @@ class TestWorkspaceCLI:
         assert result.exit_code != 0
 
     def test_graph_cli_success(self, tmp_path: Path) -> None:
-        """workspace graph CLI 성공 테스트."""
+        """Workspace graph CLI 성공 테스트."""
         workspace_file = tmp_path / "workspace.yaml"
         workspace_config = {
             "version": "1.0",
@@ -243,7 +243,7 @@ class TestWorkspaceCLI:
         assert "p2-data" in result.output
 
     def test_graph_cli_circular_dependency(self, tmp_path: Path) -> None:
-        """workspace graph CLI 순환 의존성 테스트."""
+        """Workspace graph CLI 순환 의존성 테스트."""
         workspace_file = tmp_path / "workspace.yaml"
         circular_config = {
             "version": "1.0",
@@ -333,7 +333,7 @@ class TestWorkspaceInitCommand:
         assert workspace["version"] == "1.0"
 
     def test_init_cli_non_interactive(self, tmp_path: Path) -> None:
-        """workspace init CLI 비대화형 모드 테스트."""
+        """Workspace init CLI 비대화형 모드 테스트."""
         output_file = tmp_path / "workspace.yaml"
 
         runner = CliRunner()
@@ -344,7 +344,7 @@ class TestWorkspaceInitCommand:
         assert "Workspace 파일 생성 완료" in result.output
 
     def test_init_cli_with_existing_file(self, tmp_path: Path) -> None:
-        """workspace init CLI 기존 파일 존재 시 테스트."""
+        """Workspace init CLI 기존 파일 존재 시 테스트."""
         output_file = tmp_path / "workspace.yaml"
         output_file.write_text("existing")
 
@@ -600,7 +600,7 @@ class TestWorkspaceDeployCLI:
         return workspace_file
 
     def test_deploy_cli_dry_run(self, tmp_path: Path) -> None:
-        """workspace deploy --dry-run CLI 테스트."""
+        """Workspace deploy --dry-run CLI 테스트."""
         workspace_file = self._create_workspace_file(tmp_path)
 
         runner = CliRunner()
@@ -613,7 +613,7 @@ class TestWorkspaceDeployCLI:
         assert "DRY-RUN" in result.output
 
     def test_deploy_cli_missing_file(self, tmp_path: Path) -> None:
-        """workspace deploy 파일 없음 CLI 테스트."""
+        """Workspace deploy 파일 없음 CLI 테스트."""
         workspace_file = tmp_path / "nonexistent.yaml"
 
         runner = CliRunner()
@@ -628,7 +628,7 @@ class TestWorkspaceDeployCLI:
         )
 
     def test_deploy_cli_single_phase(self, tmp_path: Path) -> None:
-        """workspace deploy --phase CLI 테스트."""
+        """Workspace deploy --phase CLI 테스트."""
         workspace_file = self._create_workspace_file(tmp_path)
 
         runner = CliRunner()
@@ -661,7 +661,7 @@ class TestWorkspaceStatusCLI:
         return workspace_file
 
     def test_status_cli_success(self, tmp_path: Path) -> None:
-        """workspace status CLI 성공 테스트."""
+        """Workspace status CLI 성공 테스트."""
         workspace_file = self._create_workspace_file(tmp_path)
 
         runner = CliRunner()
@@ -671,7 +671,7 @@ class TestWorkspaceStatusCLI:
         assert "Workspace Status" in result.output
 
     def test_status_cli_missing_file(self, tmp_path: Path) -> None:
-        """workspace status 파일 없음 CLI 테스트."""
+        """Workspace status 파일 없음 CLI 테스트."""
         workspace_file = tmp_path / "nonexistent.yaml"
 
         runner = CliRunner()
@@ -778,7 +778,7 @@ class TestWorkspaceParallelExecution:
         assert set(levels[1]) == {"p2", "p3"}
 
     def test_parallel_cli_options(self, tmp_path: Path) -> None:
-        """workspace deploy --parallel CLI 옵션 테스트."""
+        """Workspace deploy --parallel CLI 옵션 테스트."""
         workspace_file = self._create_workspace_file(tmp_path)
 
         runner = CliRunner()

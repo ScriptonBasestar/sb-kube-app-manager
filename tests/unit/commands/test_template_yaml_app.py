@@ -607,7 +607,6 @@ class TestCleanupMetadataOption:
 
     def test_helm_app_cleanup_disabled(self, tmp_path: Path) -> None:
         """Test that Helm app respects cleanup_metadata=False."""
-
         # This is a minimal test to verify the parameter is respected
         # Full integration testing would require actual Helm setup
         build_dir = tmp_path / "build"

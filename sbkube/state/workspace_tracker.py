@@ -39,6 +39,7 @@ def generate_workspace_deployment_id(
 
     Returns:
         Unique deployment ID (SHA256 hash prefix)
+
     """
     data = f"{workspace_name}:{workspace_file}:{timestamp.isoformat()}"
     return hashlib.sha256(data.encode()).hexdigest()[:16]
@@ -58,6 +59,7 @@ def generate_phase_deployment_id(
 
     Returns:
         Unique phase deployment ID (SHA256 hash prefix)
+
     """
     data = f"{workspace_deployment_id}:{phase_name}:{execution_order}"
     return hashlib.sha256(data.encode()).hexdigest()[:16]
@@ -74,6 +76,7 @@ class WorkspaceStateTracker:
 
         Args:
             session: SQLAlchemy database session
+
         """
         self.session = session
 
@@ -90,6 +93,7 @@ class WorkspaceStateTracker:
 
         Returns:
             Created WorkspaceDeployment record
+
         """
         timestamp = datetime.utcnow()
         deployment_id = generate_workspace_deployment_id(
@@ -132,6 +136,7 @@ class WorkspaceStateTracker:
 
         Returns:
             Created PhaseDeployment record
+
         """
         phase_id = generate_phase_deployment_id(
             workspace_deployment.workspace_deployment_id,
@@ -164,6 +169,7 @@ class WorkspaceStateTracker:
 
         Args:
             phase: Phase deployment to start
+
         """
         phase.status = PhaseDeploymentStatus.IN_PROGRESS.value
         phase.started_at = datetime.utcnow()
@@ -185,6 +191,7 @@ class WorkspaceStateTracker:
             success: Whether the phase succeeded
             error_message: Error message if failed
             completed_app_groups: Number of completed app groups
+
         """
         phase.completed_at = datetime.utcnow()
         phase.completed_app_groups = completed_app_groups
@@ -219,6 +226,7 @@ class WorkspaceStateTracker:
         Args:
             phase: Phase deployment to skip
             reason: Reason for skipping
+
         """
         phase.status = PhaseDeploymentStatus.SKIPPED.value
         phase.error_message = reason
@@ -239,6 +247,7 @@ class WorkspaceStateTracker:
             deployment: Workspace deployment to complete
             success: Whether the deployment succeeded
             error_message: Error message if failed
+
         """
         deployment.completed_at = datetime.utcnow()
 
@@ -268,6 +277,7 @@ class WorkspaceStateTracker:
 
         Returns:
             WorkspaceDeployment or None if not found
+
         """
         return (
             self.session.query(WorkspaceDeployment)
@@ -290,6 +300,7 @@ class WorkspaceStateTracker:
 
         Returns:
             List of workspace deployment summaries
+
         """
         query = self.session.query(WorkspaceDeployment)
 
@@ -328,6 +339,7 @@ class WorkspaceStateTracker:
 
         Returns:
             Detailed deployment info or None if not found
+
         """
         deployment = self.get_workspace_deployment(deployment_id)
         if not deployment:
@@ -382,6 +394,7 @@ class WorkspaceStateTracker:
 
         Returns:
             Latest WorkspaceDeployment or None
+
         """
         return (
             self.session.query(WorkspaceDeployment)

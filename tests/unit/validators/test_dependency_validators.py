@@ -799,7 +799,7 @@ class TestValuesCompatibilityValidator:
         assert result.level in [DiagnosticLevel.SUCCESS, DiagnosticLevel.WARNING, DiagnosticLevel.INFO, DiagnosticLevel.ERROR]
 
     def test_missing_values_file(self, mock_context: ValidationContext) -> None:
-        """values 파일이 없을 때 테스트."""
+        """Values 파일이 없을 때 테스트."""
         # Helm app with values file reference but file doesn't exist
         config_dir = Path(mock_context.base_dir) / mock_context.config_dir
         config_file = config_dir / "config.yaml"

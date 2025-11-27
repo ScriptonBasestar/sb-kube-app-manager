@@ -97,8 +97,7 @@ def _clean_metadata_dict(resource: dict[str, Any]) -> None:
         return
 
     # Remove top-level status (entire section)
-    if "status" in resource:
-        del resource["status"]
+    resource.pop("status", None)
 
     # Clean metadata section
     metadata = resource.get("metadata")

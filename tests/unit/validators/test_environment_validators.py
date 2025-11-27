@@ -46,7 +46,7 @@ class TestClusterResourceValidator:
     def test_kubectl_not_available(
         self, mock_run: MagicMock, mock_context: ValidationContext
     ) -> None:
-        """kubectl 명령어 실행 실패 테스트."""
+        """Kubectl 명령어 실행 실패 테스트."""
         mock_run.return_value = MagicMock(
             returncode=1,
             stderr="error: failed to connect",

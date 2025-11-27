@@ -227,7 +227,7 @@ class TestConfigStructureValidator:
         assert result.severity == ValidationSeverity.HIGH
 
     def test_app_name_not_string(self, mock_context: ValidationContext) -> None:
-        """app name이 문자열이 아닌 경우 테스트."""
+        """App name이 문자열이 아닌 경우 테스트."""
         config_dir = Path(mock_context.base_dir) / mock_context.config_dir
         config_file = config_dir / "config.yaml"
 

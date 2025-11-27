@@ -1,0 +1,38 @@
+# Help and default target
+
+.PHONY: help
+
+# Default target
+help:
+	@echo "sbkube Development Commands"
+	@echo ""
+	@echo "Installation:"
+	@echo "  make install          Install sbkube in development mode"
+	@echo "  make install-dev      Install with dev dependencies (ruff, mypy, black)"
+	@echo "  make install-test     Install with test dependencies"
+	@echo "  make install-all      Install with all dependencies (dev + test)"
+	@echo "  make dev-setup        Create venv and install sbkube for local development"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test            Run all tests"
+	@echo "  make test-unit       Run unit tests (tests/unit/)"
+	@echo "  make test-quick      Run fast unit tests (no E2E, no slow)"
+	@echo "  make test-unit-only  Run unit tests excluding E2E"
+	@echo "  make test-integration Run integration tests (tests/integration/)"
+	@echo "  make test-performance Run performance tests (tests/performance/)"
+	@echo "  make test-e2e        Run end-to-end tests (tests/e2e/)"
+	@echo "  make test-legacy     Run legacy tests (tests/legacy/)"
+	@echo "  make test-coverage   Run tests with coverage report"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  make check           Quick syntax + type check (fastest)"
+	@echo "  make lint            Run linters (ruff, mypy, bandit) - read-only"
+	@echo "  make lint-fix        Run linters with auto-fix"
+	@echo "  make lint-fix UNSAFE_FIXES=1  Run linters with unsafe auto-fix"
+	@echo "  make lint-check      Run linters with diff output (no auto-fix)"
+	@echo "  make lint-strict     Run strict linters for high quality standards"
+	@echo "  make lint-strict-fix Run strict linters with auto-fix"
+	@echo "  make lint-strict-fix UNSAFE_FIXES=1  Strict with unsafe auto-fix"
+	@echo ""
+	@echo "Cleanup:"
+	@echo "  make clean           Clean build artifacts and caches"

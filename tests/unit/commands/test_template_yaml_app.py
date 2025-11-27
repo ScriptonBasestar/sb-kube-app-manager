@@ -10,7 +10,11 @@ Tests verify:
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from sbkube.commands.template import template_helm_app, template_http_app, template_yaml_app
+from sbkube.commands.template import (
+    template_helm_app,
+    template_http_app,
+    template_yaml_app,
+)
 from sbkube.models.config_model import HelmApp, HttpApp, YamlApp
 from sbkube.utils.output_manager import OutputManager
 
@@ -603,7 +607,6 @@ class TestCleanupMetadataOption:
 
     def test_helm_app_cleanup_disabled(self, tmp_path: Path) -> None:
         """Test that Helm app respects cleanup_metadata=False."""
-        from sbkube.commands.template import template_helm_app
 
         # This is a minimal test to verify the parameter is respected
         # Full integration testing would require actual Helm setup

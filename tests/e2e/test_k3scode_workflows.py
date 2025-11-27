@@ -8,6 +8,7 @@ import pytest
 
 from tests.e2e.conftest import run_sbkube_command, verify_example_exists
 
+
 @pytest.mark.e2e
 @pytest.mark.integration
 @pytest.mark.requires_helm

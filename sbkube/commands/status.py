@@ -80,6 +80,11 @@ DEFAULT_CACHE_TTL_SECONDS = 300
     is_flag=True,
     help="Show application notes/descriptions in status output",
 )
+@click.option(
+    "--check-updates",
+    is_flag=True,
+    help="Check for available Helm chart updates",
+)
 @click.argument("app_group", required=False)
 @click.pass_context
 def cmd(
@@ -94,6 +99,7 @@ def cmd(
     deps: bool,
     health_check: bool,
     show_notes: bool,
+    check_updates: bool,
     app_group: str | None,
 ) -> None:
     r"""Display application and cluster status.
@@ -234,6 +240,15 @@ def cmd(
         health_check=health_check,
         show_notes=show_notes,
     )
+
+    # Check for updates if requested
+    if check_updates:
+        _display_update_check(
+            base_path=base_path,
+            sources=sources,
+            ctx=ctx,
+            output=output,
+        )
 
     output.finalize()
 
@@ -1076,3 +1091,42 @@ def _finalize_status_output(
     """Finalize structured output for LLM/JSON/YAML formats."""
     # Already added deployments via add_deployment() calls
     # This is a placeholder for any additional structured output finalization
+
+
+def _display_update_check(
+    base_path: Path,
+    sources,
+    ctx,
+    output: OutputManager,
+) -> None:
+    """Display chart update information integrated into status command."""
+    from sbkube.commands.check_updates import (
+        _check_sbkube_apps,
+        _display_updates,
+    )
+
+    output.print_section("\n🔄 Checking for Chart Updates")
+
+    try:
+        config_manager = ConfigManager(base_path=base_path)
+        config = config_manager.load_config()
+
+        if not config or not config.apps:
+            output.print("[dim]No applications configured[/dim]")
+            return
+
+        helm_repos = sources.helm_repos or {}
+        kubeconfig = ctx.obj.get("kubeconfig")
+        context_name = ctx.obj.get("context")
+        output_format = ctx.obj.get("format", "human")
+
+        # Check for updates
+        updates = _check_sbkube_apps(
+            config.apps, helm_repos, kubeconfig, context_name, output, output_format
+        )
+
+        # Display results
+        _display_updates(updates, output, output_format)
+
+    except Exception as e:
+        output.print_warning(f"[yellow]Could not check for updates: {e}[/yellow]")

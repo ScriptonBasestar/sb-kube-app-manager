@@ -35,7 +35,7 @@ Deploy to k3s cluster | --app, --dry-run | | **init** | 유틸리티 | Initializ
 --detailed, --check | | **status** ⭐ | 상태관리 | Check deployment status (v0.6.0+) | --by-group, --managed, --unhealthy | |
 **history** | 상태관리 | View deployment history (v0.6.0+) | --show, --diff, --values-diff | | **rollback** | 상태관리 |
 Rollback to previous revision (v0.6.0+) | --dry-run, --force | | **upgrade** | 관리 | Upgrade Helm releases | --app | |
-**delete** | 관리 | Delete deployed resources | --app, --dry-run, --skip-not-found | | **version** | 유틸리티 | Show version
+**delete** | 관리 | Delete deployed resources | --app, --dry-run, --skip-not-found | | **check-updates** ⭐ | 관리 | Check for available chart updates (v0.9.1+) | --all, --update-config | | **version** | 유틸리티 | Show version
 info | |
 
 ### 워크플로우별 명령어 조합
@@ -54,6 +54,11 @@ sbkube apply --profile production  # 2. 프로덕션 배포
 # 🐛 문제 해결
 sbkube doctor --detailed      # 상세 진단
 sbkube status --unhealthy     # 문제 리소스 확인
+
+# 🔄 업데이트 관리 (v0.9.1+)
+sbkube check-updates          # 사용 가능한 차트 업데이트 확인
+sbkube check-updates --update-config  # config.yaml 자동 업데이트
+sbkube status --check-updates # 상태 확인과 동시에 업데이트 체크
 
 # 🧹 정리 및 재배포
 sbkube delete --dry-run       # 삭제 대상 확인
@@ -291,6 +296,7 @@ sbkube deploy --app web   # Specific app
 - `--unhealthy`: Show only problematic resources
 - `--deps`: Visualize dependency tree (Phase 6)
 - `--health-check`: Detailed pod health (Phase 7)
+- `--check-updates`: Check for available chart updates (v0.9.1+)
 - `--refresh`: Force cache refresh
 - `--watch`: Auto-refresh every 10s
 
@@ -523,6 +529,70 @@ sbkube delete --dry-run        # Preview deletion
 sbkube delete --app nginx      # Delete specific app
 sbkube delete --skip-not-found # Ignore if not found
 ```
+
+______________________________________________________________________
+
+#### check-updates ⭐
+
+**Purpose**: Check for available Helm chart updates
+
+**Usage**: `sbkube check-updates [OPTIONS]`
+
+**Version**: Added in v0.9.1
+
+**Unique Options**:
+
+- `--all`: Check all Helm releases in cluster (not just sbkube-managed apps)
+- `--update-config`: Update config.yaml with latest versions (prompts for confirmation)
+
+**Features**:
+
+- Compares currently deployed chart versions with latest available in repositories
+- Semantic version comparison (identifies major/minor/patch updates)
+- Shows upgrade commands for easy updating
+- Can automatically update config.yaml with latest versions
+- Supports both sbkube-managed apps and all cluster Helm releases
+
+**Output Information**:
+
+- Current version → Latest version
+- Update type (Major 🔴 / Minor 🟡 / Patch 🟢)
+- Upgrade command suggestion
+- Summary of updates available
+
+**Examples**:
+
+```bash
+# Check sbkube-managed apps for updates
+sbkube check-updates
+
+# Check all Helm releases in cluster
+sbkube check-updates --all
+
+# Update config.yaml with latest versions (interactive)
+sbkube check-updates --update-config
+
+# Integrate with status command
+sbkube status --check-updates
+
+# LLM-friendly output
+sbkube check-updates --format llm
+```
+
+**Integration**:
+
+The `check-updates` functionality is also available as part of the `status` command:
+
+```bash
+# Check status and available updates in one command
+sbkube status --check-updates
+```
+
+**Version Comparison Logic**:
+
+- **Major update** (🔴): Breaking changes expected (e.g., 1.x.x → 2.x.x)
+- **Minor update** (🟡): New features, backward compatible (e.g., 1.0.x → 1.1.x)
+- **Patch update** (🟢): Bug fixes only (e.g., 1.0.0 → 1.0.1)
 
 ## Advanced Usage Patterns
 

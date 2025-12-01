@@ -347,9 +347,7 @@ ______________________________________________________________________
 
 ## 📚 관련 문서
 
-- [v0.8.0 마이그레이션 가이드](../08-tutorials/05-migrating-to-v080.md) - 전체 마이그레이션 절차
-- [RELEASE_v0.8.0.md](../RELEASE_v0.8.0.md) - 릴리스 노트
-- [Chart Path Refactoring](../10-modules/sbkube/CHART_PATH_REFACTORING_v080.md) - 기술 세부사항
+- [버전 마이그레이션 가이드](../08-tutorials/05-version-migration.md) - 버전 간 마이그레이션 절차
 - [CHANGELOG.md](../../CHANGELOG.md) - 변경 이력
 
 ______________________________________________________________________

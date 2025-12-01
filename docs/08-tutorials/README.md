@@ -267,7 +267,7 @@ uv tool install sbkube
 
 # 설치 확인
 sbkube --version
-# sbkube, version 0.4.7
+# sbkube, version 0.9.1
 ```
 
 ### 2. Kubernetes 클러스터
@@ -409,9 +409,10 @@ ______________________________________________________________________
 
 ### 예제 코드
 
-- [기본 예제](../../examples/basic/)
+- [기본 설정 예제](../../examples/basic-configs/)
+- [완전한 워크플로우](../../examples/complete-workflow/)
 - [K3s 코드 서버 예제](../../examples/k3scode/)
-- [고급 예제](../../examples/advanced-example/)
+- [고급 기능](../../examples/advanced-features/)
 
 ### 외부 자료
 

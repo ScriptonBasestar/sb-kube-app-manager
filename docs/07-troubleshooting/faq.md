@@ -284,7 +284,7 @@ sbkube apply
 
 **중요**: Kubernetes 클러스터의 실행 중인 앱은 영향 없음!
 
-**상세 가이드**: [마이그레이션 튜토리얼](../08-tutorials/05-migrating-to-v080.md)
+**상세 가이드**: [버전 마이그레이션 가이드](../08-tutorials/05-version-migration.md)
 
 ______________________________________________________________________
 
@@ -697,6 +697,6 @@ ______________________________________________________________________
 - [트러블슈팅 가이드](README.md)
 - [설정 스키마](../03-configuration/config-schema.md)
 - [명령어 참조](../02-features/commands.md)
-- [v0.8.0 마이그레이션 가이드](../08-tutorials/05-migrating-to-v080.md)
+- [버전 마이그레이션 가이드](../08-tutorials/05-version-migration.md)
 - [Chart 충돌 문제 해결](./chart-collision-issues.md)
 - [LLM 출력 활용 가이드](../08-tutorials/06-using-llm-output.md)

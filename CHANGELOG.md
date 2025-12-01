@@ -8,6 +8,92 @@ ______________________________________________________________________
 
 ## [Unreleased]
 
+## [0.9.1] - 2025-12-01
+
+### 🚀 New Features
+
+**Update Management System** (v0.9.1)
+
+- ✅ **NEW**: `sbkube check-updates` command - Check for available Helm chart updates
+  - Compares deployed chart versions with latest available versions
+  - Visual indicators: 🔴 major, 🟡 minor, 🟢 patch updates
+  - Supports semantic version comparison with pre-release and build metadata
+  - `--all` flag: Check all Helm releases (not just sbkube-managed apps)
+  - `--update-config` flag: Interactive config.yaml update with confirmation
+  - LLM-friendly output support via `--format llm`
+
+- ✅ **NEW**: `sbkube status --check-updates` integration
+  - Combined status and update checking in single command
+  - Displays current deployment status alongside available updates
+  - Streamlined workflow for regular maintenance checks
+
+- ✅ **NEW**: Version comparison utilities (`sbkube/utils/version_compare.py`)
+  - Semantic version comparison with OUTDATED/SAME/NEWER states
+  - Update type detection: major/minor/patch/pre-release
+  - Pre-release and build metadata handling
+  - Comprehensive test coverage (100%)
+
+- ✅ **NEW**: Enhanced Helm utilities (`sbkube/utils/helm_util.py`)
+  - `get_all_helm_releases()`: List all releases across namespaces
+  - `search_helm_chart()`: Query Helm repositories for charts
+  - `get_latest_chart_version()`: Fetch latest available version
+  - Error handling for repository queries
+
+**Usage Examples**:
+
+```bash
+# Check updates for sbkube-managed apps
+sbkube check-updates
+
+# Check all Helm releases in cluster
+sbkube check-updates --all
+
+# Interactive config.yaml update
+sbkube check-updates --update-config
+
+# Combined status and update check
+sbkube status --check-updates
+
+# LLM-friendly output
+sbkube --format llm check-updates
+```
+
+**Update Workflow**:
+
+```bash
+# 1. Check for updates
+sbkube check-updates
+
+# 2. Review changes and update config.yaml
+sbkube check-updates --update-config
+
+# 3. Apply updates
+sbkube apply
+```
+
+**Files Added**:
+
+- `sbkube/commands/check_updates.py` - Update checking command
+- `sbkube/utils/version_compare.py` - Version comparison utilities
+- `tests/unit/utils/test_version_compare.py` - Version comparison tests
+- `tests/unit/utils/test_helm_util.py` - Helm utilities tests
+
+**Files Modified**:
+
+- `sbkube/cli.py` - Registered check-updates command
+- `sbkube/commands/status.py` - Added --check-updates flag
+- `sbkube/utils/helm_util.py` - Enhanced with release and chart query functions
+- `pyproject.toml` - Added `packaging>=25.0` dependency
+- `docs/02-features/commands.md` - Documented check-updates command
+
+**Dependencies**:
+
+- Added `packaging>=25.0` for semantic version parsing
+
+**See Also**:
+
+- [commands.md](docs/02-features/commands.md) - Complete command reference
+
 ## [0.9.0] - 2025-01-25
 
 ### 🎉 Major Feature: Workspace Multi-Phase Deployment

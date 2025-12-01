@@ -111,6 +111,16 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
 - [workspace-schema.yaml](../03-configuration/workspace-schema.yaml) - Example schema
 - [workspace-roadmap.md](../02-features/future/workspace-roadmap.md) - Implementation plan
 
+### v0.9.1 (2025-12-01 - 릴리즈 완료) ✅
+
+**목표**: Update Management System
+
+- ✅ check-updates 명령어 (Helm 차트 업데이트 확인)
+- ✅ 시맨틱 버전 비교 (major/minor/patch)
+- ✅ status --check-updates 통합
+- ✅ 인터랙티브 config.yaml 업데이트 (--update-config)
+- ✅ Version comparison utilities (packaging 라이브러리)
+
 ### v0.9.x (2025 Q3-Q4)
 
 **목표**: 엔터프라이즈 기능 확장

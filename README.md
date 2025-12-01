@@ -7,8 +7,8 @@ ______________________________________________________________________
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/sbkube)](<>)
 [![Repo](https://img.shields.io/badge/GitHub-sb--kube--app--manager-blue?logo=github)](https://github.com/ScriptonBasestar/sb-kube-app-manager)
-[![Version](https://img.shields.io/badge/version-0.9.0-green)](CHANGELOG.md)
-[![Stable](https://img.shields.io/badge/stable-0.9.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.1-green)](CHANGELOG.md)
+[![Stable](https://img.shields.io/badge/stable-0.9.1-blue)](CHANGELOG.md)
 
 **SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML
 manifests, and Git repositories into a unified declarative configuration.
@@ -32,7 +32,7 @@ pip install sbkube
 
 # Verify installation
 sbkube version
-# Expected: 0.9.0
+# Expected: 0.9.1
 ```
 
 ### Basic Usage
@@ -77,6 +77,37 @@ Then deploy:
 ```bash
 sbkube apply --app-dir . --namespace production
 ```
+
+## 🎉 What's New in v0.9.1
+
+### Update Management System 🔄
+
+**Easy Chart Update Checking**: Automatically detect available Helm chart updates and optionally update your config.
+
+```bash
+# Check for updates
+sbkube check-updates
+
+# Example output:
+# 📊 Available Updates:
+#
+# grafana        6.50.0 → 7.0.0   🔴 major
+# redis          18.0.0 → 18.5.1  🟡 minor
+# nginx          1.2.3  → 1.2.4   🟢 patch
+
+# Interactive config.yaml update
+sbkube check-updates --update-config
+
+# Integrated with status command
+sbkube status --check-updates
+```
+
+**Key Features**:
+- 🔍 Semantic version comparison (major/minor/patch)
+- 🎨 Visual update indicators (🔴 🟡 🟢)
+- 🤖 LLM-friendly output support
+- ⚡ Interactive config.yaml updates
+- 📦 Check all Helm releases with `--all`
 
 ## 🎉 What's New in v0.9.0
 

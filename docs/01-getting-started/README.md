@@ -243,6 +243,24 @@ ______________________________________________________________________
 
 ## 🔄 Managing Applications
 
+### Check for Updates (v0.9.1+)
+
+```bash
+# Check for available chart updates
+sbkube check-updates
+
+# Example output:
+# 📊 Available Updates:
+# grafana  6.50.0 → 7.0.0  🔴 major
+# redis    18.0.0 → 18.5.1 🟡 minor
+
+# Interactive config.yaml update
+sbkube check-updates --update-config
+
+# Combined with status
+sbkube status --check-updates
+```
+
 ### Update Application
 
 ```bash

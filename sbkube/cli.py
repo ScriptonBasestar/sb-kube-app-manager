@@ -8,6 +8,7 @@ import click
 from sbkube.commands import (
     apply,
     build,
+    check_updates,
     delete,
     deploy,
     doctor,
@@ -43,7 +44,7 @@ class SbkubeGroup(click.Group):
         "핵심 워크플로우": ["prepare", "build", "template", "deploy"],
         "통합 명령어": ["apply"],
         "상태 관리": ["status", "history", "rollback"],
-        "업그레이드/삭제": ["upgrade", "delete"],
+        "업그레이드/삭제": ["upgrade", "delete", "check-updates"],
         "유틸리티": ["init", "validate", "doctor", "version"],
         "Workspace (v0.9.0 미리보기)": ["workspace"],
     }
@@ -235,6 +236,7 @@ main.add_command(rollback.cmd)
 main.add_command(init.cmd)
 main.add_command(upgrade.cmd)
 main.add_command(delete.cmd)
+main.add_command(check_updates.cmd)
 main.add_command(validate.cmd)
 main.add_command(version.cmd)
 main.add_command(doctor.cmd)

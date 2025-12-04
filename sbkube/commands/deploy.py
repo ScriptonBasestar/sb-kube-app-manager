@@ -25,7 +25,6 @@ from sbkube.models.config_model import (
     YamlApp,
 )
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
-from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 from sbkube.utils.app_labels import (
     build_helm_set_annotations,
     build_helm_set_labels,
@@ -46,8 +45,13 @@ from sbkube.utils.cluster_config import (
 )
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.helm_command_builder import (
+    HelmCommand,
+    HelmCommandBuilder,
+)
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
+from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 
 _CONNECTION_ERROR_KEYWORDS: tuple[str, ...] = (
     "connection refused",
@@ -221,8 +225,34 @@ def deploy_helm_app(
         chart_path = source_path
         console.print(f"  Using local chart: {chart_path}")
 
-    # Helm install/upgrade 명령어
-    cmd = ["helm", "upgrade", release_name, str(chart_path), "--install"]
+    # Helm install/upgrade 명령어 구성 (HelmCommandBuilder 사용)
+    helm_builder = (
+        HelmCommandBuilder(HelmCommand.UPGRADE)
+        .with_release_name(release_name)
+        .with_chart_path(chart_path)
+        .with_install_flag()
+        .with_namespace(namespace)
+        .with_create_namespace(app.create_namespace)
+        .with_wait(app.wait)
+        .with_atomic(app.atomic)
+        .with_timeout(app.timeout)
+        .with_cluster_global_values(cluster_global_values)
+    )
+
+    # Values 파일 추가
+    for values_file in app.values:
+        values_path = app_config_dir / values_file
+        if not values_path.exists():
+            console.print(f"[yellow]⚠️ Values file not found: {values_path}[/yellow]")
+        else:
+            helm_builder.with_values_file(values_path)
+
+    # --set 옵션 추가
+    helm_builder.with_set_values(app.set_values)
+
+    # Build the command
+    helm_result = helm_builder.build()
+    cmd = list(helm_result.command)  # Copy to allow modifications
 
     _update_progress("Checking namespace")
 
@@ -260,51 +290,11 @@ def deploy_helm_app(
                     output.print_error(
                         f"Failed to create namespace '{namespace}'", error=create_stderr
                     )
+                    helm_result.cleanup()
                     return False
 
-        cmd.extend(["--namespace", namespace])
-
-    if app.create_namespace:
-        cmd.append("--create-namespace")
-
-    if app.wait:
-        cmd.append("--wait")
-
-    if app.timeout:
-        cmd.extend(["--timeout", app.timeout])
-
-    if app.atomic:
-        cmd.append("--atomic")
-
-    # Cluster global values (v0.7.0+, 최하위 우선순위)
-    import tempfile
-
-    temp_cluster_values_file = None
     if cluster_global_values:
-        import yaml
-
         console.print("  [dim]Applying cluster global values...[/dim]")
-        # 임시 파일에 cluster global values 저장
-        temp_cluster_values_file = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False, encoding="utf-8"
-        )
-        yaml.dump(
-            cluster_global_values, temp_cluster_values_file, default_flow_style=False
-        )
-        temp_cluster_values_file.close()
-        cmd.extend(["--values", temp_cluster_values_file.name])
-
-    # Values 파일
-    for values_file in app.values:
-        values_path = app_config_dir / values_file
-        if not values_path.exists():
-            console.print(f"[yellow]⚠️ Values file not found: {values_path}[/yellow]")
-        else:
-            cmd.extend(["--values", str(values_path)])
-
-    # --set 옵션
-    for key, value in app.set_values.items():
-        cmd.extend(["--set", f"{key}={value}"])
 
     # Phase 2: Inject sbkube labels and annotations
     # Extract app-group from app_config_dir path
@@ -409,14 +399,8 @@ def deploy_helm_app(
         )
         raise  # Re-raise to allow outer handler to exit properly
     finally:
-        # 임시 파일 정리
-        if temp_cluster_values_file:
-            import os
-
-            try:
-                os.unlink(temp_cluster_values_file.name)
-            except Exception:
-                pass  # 정리 실패해도 무시
+        # 임시 파일 정리 (HelmCommandBuilder가 생성한 temp 파일)
+        helm_result.cleanup()
 
 
 def deploy_yaml_app(

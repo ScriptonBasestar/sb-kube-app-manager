@@ -14,11 +14,12 @@ import click
 from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig, YamlApp
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.common import run_command
-from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.helm_command_builder import build_helm_template_command
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.manifest_cleaner import clean_manifest_metadata
 from sbkube.utils.output_manager import OutputManager
+from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 
 
 def template_helm_app(
@@ -88,58 +89,41 @@ def template_helm_app(
         output.print_warning("Run 'sbkube prepare' and 'sbkube build' first")
         return False
 
-    # 2. helm template 명령어 구성
-    release_name = app.release_name or app_name
-    helm_cmd = ["helm", "template", release_name, str(chart_path)]
+    # 2. helm template 명령어 구성 (HelmCommandBuilder 사용)
+    helm_result = build_helm_template_command(
+        app=app,
+        app_name=app_name,
+        chart_path=chart_path,
+        app_config_dir=app_config_dir,
+        cluster_global_values=cluster_global_values,
+    )
 
-    # 네임스페이스 추가
-    if app.namespace:
-        helm_cmd.extend(["--namespace", app.namespace])
-
-    # 클러스터 전역 values 추가 (v0.7.0+, 최하위 우선순위)
-    import tempfile
-
-    temp_cluster_values_file = None
+    # 적용된 옵션 로깅
     if cluster_global_values:
-        import yaml
-
         output.print("  Applying cluster global values...", level="info")
-        # 임시 파일에 cluster global values 저장
-        temp_cluster_values_file = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False, encoding="utf-8"
-        )
-        yaml.dump(
-            cluster_global_values, temp_cluster_values_file, default_flow_style=False
-        )
-        temp_cluster_values_file.close()
-        helm_cmd.extend(["--values", temp_cluster_values_file.name])
         output.print(
             f"    ✓ cluster global values ({len(cluster_global_values)} keys)",
             level="info",
         )
-
-    # values 파일 추가
     if app.values:
         output.print(f"  Applying {len(app.values)} values files...", level="info")
         for values_file in app.values:
             values_path = app_config_dir / values_file
             if values_path.exists():
-                helm_cmd.extend(["--values", str(values_path)])
                 output.print(f"    ✓ {values_file}", level="info")
             else:
                 output.print_warning(f"Values file not found: {values_file}")
-
-    # --set 옵션 추가
     if app.set_values:
         output.print(f"  Applying {len(app.set_values)} set values...", level="info")
         for key, value in app.set_values.items():
-            helm_cmd.extend(["--set", f"{key}={value}"])
             output.print(f"    ✓ {key}={value}", level="info")
 
     # 3. helm template 실행
-    output.print(f"  $ {' '.join(helm_cmd)}", level="info")
+    output.print(f"  $ {' '.join(helm_result.command)}", level="info")
     try:
-        return_code, stdout, stderr = run_command(helm_cmd, check=False, timeout=60)
+        return_code, stdout, stderr = run_command(
+            helm_result.command, check=False, timeout=60
+        )
 
         if return_code != 0:
             output.print_error(
@@ -173,14 +157,8 @@ def template_helm_app(
         output.print(f"[grey]{traceback.format_exc()}[/grey]", level="error")
         return False
     finally:
-        # 임시 파일 정리
-        if temp_cluster_values_file:
-            import os
-
-            try:
-                os.unlink(temp_cluster_values_file.name)
-            except Exception:
-                pass  # 정리 실패해도 무시
+        # 임시 파일 정리 (HelmCommandBuilder가 생성한 temp 파일)
+        helm_result.cleanup()
 
 
 def template_yaml_app(

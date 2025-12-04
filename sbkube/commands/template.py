@@ -14,6 +14,7 @@ import click
 from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig, YamlApp
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.common import run_command
+from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.manifest_cleaner import clean_manifest_metadata
@@ -447,30 +448,13 @@ def cmd(
     except ValueError:
         raise click.Abort
 
-    # Find sources.yaml to determine .sbkube location
-    # (준비 단계와 동일한 로직: sources.yaml 위치 기준)
-    sources_file_path = None
-    if app_config_dirs:
-        # Start from first app config dir and search upwards
-        search_dir = app_config_dirs[0]
-        while search_dir != search_dir.parent:
-            candidate = search_dir / sources_file_name
-            if candidate.exists():
-                sources_file_path = candidate
-                break
-            search_dir = search_dir.parent
-
-    # .sbkube 작업 디렉토리는 sources.yaml이 있는 위치 기준
-    # (prepare, build 명령어와 동일한 로직)
-    if sources_file_path:
-        SOURCES_BASE_DIR = sources_file_path.parent
-        SBKUBE_WORK_DIR = SOURCES_BASE_DIR / ".sbkube"
-    else:
-        # Fallback to BASE_DIR if sources.yaml not found
-        SBKUBE_WORK_DIR = BASE_DIR / ".sbkube"
-
-    CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
-    BUILD_DIR = SBKUBE_WORK_DIR / "build"
+    # Resolve .sbkube directories using centralized utility (Phase 2 refactoring)
+    sbkube_dirs = resolve_sbkube_directories(
+        BASE_DIR, app_config_dirs, sources_file_name
+    )
+    SBKUBE_WORK_DIR = sbkube_dirs.sbkube_work_dir
+    CHARTS_DIR = sbkube_dirs.charts_dir
+    BUILD_DIR = sbkube_dirs.build_dir
 
     # rendered 디렉토리 결정
     if output_dir_name:

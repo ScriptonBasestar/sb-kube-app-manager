@@ -14,7 +14,12 @@ import click
 
 from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
+from sbkube.utils.chart_path_resolver import (
+    resolve_local_chart_path,
+    resolve_remote_chart_path,
+)
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
 
@@ -47,72 +52,19 @@ def build_helm_app(
     """
     output.print(f"[cyan]🔨 Building Helm app: {app_name}[/cyan]", level="info")
 
-    # 1. 소스 차트 경로 결정
+    # 1. 소스 차트 경로 결정 (Phase 2 refactoring: chart_path_resolver 사용)
     if app.is_remote_chart():
-        # Remote chart: charts/{repo}/{chart-name}-{version}/
-        source_path = app.get_chart_path(charts_dir)
-
-        if not source_path or not source_path.exists():
-            # Check for legacy paths (v0.7.1 and earlier)
-            chart_name = app.get_chart_name()
-
-            # Legacy v0.7.1: charts/{chart-name}/
-            legacy_v071_path = charts_dir / chart_name
-            # Legacy v0.7.0: charts/{chart-name}/{chart-name}/
-            legacy_v070_path = charts_dir / chart_name / chart_name
-
-            if legacy_v071_path.exists():
-                output.print_error(
-                    f"Chart found at legacy path (v0.7.1): {legacy_v071_path}",
-                    chart_path=str(legacy_v071_path),
-                )
-                output.print_warning(
-                    "This chart was downloaded with an older version of SBKube"
-                )
-                output.print(
-                    "[yellow]💡 Migration required (v0.8.0 path structure):[/yellow]"
-                )
-                output.print(f"   1. Remove old charts: rm -rf {charts_dir}")
-                output.print("   2. Re-download charts: sbkube prepare --force")
-                output.print(
-                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.8.0 migration)"
-                )
-            elif legacy_v070_path.exists():
-                output.print_error(
-                    f"Chart found at legacy path (v0.7.0): {legacy_v070_path}",
-                    chart_path=str(legacy_v070_path),
-                )
-                output.print_warning(
-                    "This chart was downloaded with a very old version of SBKube"
-                )
-                output.print("[yellow]💡 Migration required:[/yellow]")
-                output.print(f"   1. Remove old charts: rm -rf {charts_dir}")
-                output.print("   2. Re-download charts: sbkube prepare --force")
-                output.print(
-                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.8.0 migration)"
-                )
-            else:
-                output.print_error(
-                    f"Remote chart not found: {source_path}",
-                    chart_path=str(source_path),
-                )
-                output.print_warning("Run 'sbkube prepare' first")
+        # Remote chart: resolve using centralized utility
+        chart_result = resolve_remote_chart_path(app, charts_dir, output)
+        if not chart_result.found:
             return False
+        source_path = chart_result.chart_path
     else:
-        # Local chart: app_config_dir 기준
-        if app.chart.startswith("./"):
-            source_path = app_config_dir / app.chart[2:]
-        elif app.chart.startswith("/"):
-            source_path = Path(app.chart)
-        else:
-            source_path = app_config_dir / app.chart
-
-        if not source_path.exists():
-            output.print_error(
-                f"Local chart not found: {source_path}",
-                chart_path=str(source_path),
-            )
+        # Local chart: resolve using centralized utility
+        chart_result = resolve_local_chart_path(app, app_config_dir, output)
+        if not chart_result.found:
             return False
+        source_path = chart_result.chart_path
 
     # 2. 빌드 디렉토리로 복사
     dest_path = build_dir / app_name
@@ -428,34 +380,15 @@ def cmd(
     except ValueError:
         raise click.Abort
 
-    # Find sources.yaml to determine .sbkube location
-    # (준비 단계와 동일한 로직: sources.yaml 위치 기준)
-    sources_file_path = None
-    if app_config_dirs:
-        # Start from first app config dir and search upwards
-        search_dir = app_config_dirs[0]
-        while search_dir != search_dir.parent:
-            candidate = search_dir / sources_file_name
-            if candidate.exists():
-                sources_file_path = candidate
-                break
-            search_dir = search_dir.parent
-
-    # .sbkube 작업 디렉토리는 sources.yaml이 있는 위치 기준
-    # (prepare 명령어와 동일한 로직)
-    if sources_file_path:
-        SOURCES_BASE_DIR = sources_file_path.parent
-        SBKUBE_WORK_DIR = SOURCES_BASE_DIR / ".sbkube"
-    else:
-        # Fallback to BASE_DIR if sources.yaml not found
-        SBKUBE_WORK_DIR = BASE_DIR / ".sbkube"
-
-    CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
-    BUILD_DIR = SBKUBE_WORK_DIR / "build"
+    # Resolve .sbkube directories using centralized utility (Phase 2 refactoring)
+    sbkube_dirs = resolve_sbkube_directories(
+        BASE_DIR, app_config_dirs, sources_file_name
+    )
+    CHARTS_DIR = sbkube_dirs.charts_dir
+    BUILD_DIR = sbkube_dirs.build_dir
 
     # 작업 디렉토리 생성
-    SBKUBE_WORK_DIR.mkdir(parents=True, exist_ok=True)
-    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+    sbkube_dirs.ensure_directories()
 
     # 각 앱 그룹 처리
     overall_success = True

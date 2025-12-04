@@ -15,6 +15,7 @@ from sbkube.models.config_model import GitApp, HelmApp, HookApp, HttpApp, SBKube
 from sbkube.models.sources_model import SourceScheme
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.cli_check import check_helm_installed_or_exit
+from sbkube.utils.workspace_resolver import SbkubeDirectories
 from sbkube.utils.cluster_config import (
     ClusterConfigError,
     apply_cluster_config_to_command,
@@ -712,15 +713,23 @@ def cmd(
             continue
 
         # .sbkube 작업 디렉토리는 sources.yaml이 있는 위치 기준
+        # (Phase 2 refactoring: SbkubeDirectories 사용)
         SOURCES_BASE_DIR = sources_file_path.parent
-        SBKUBE_WORK_DIR = SOURCES_BASE_DIR / ".sbkube"
-        CHARTS_DIR = SBKUBE_WORK_DIR / "charts"
-        REPOS_DIR = SBKUBE_WORK_DIR / "repos"
+        sbkube_dirs = SbkubeDirectories(
+            base_dir=BASE_DIR,
+            sources_file=sources_file_path,
+            sources_base_dir=SOURCES_BASE_DIR,
+            sbkube_work_dir=SOURCES_BASE_DIR / ".sbkube",
+            charts_dir=SOURCES_BASE_DIR / ".sbkube" / "charts",
+            repos_dir=SOURCES_BASE_DIR / ".sbkube" / "repos",
+            build_dir=SOURCES_BASE_DIR / ".sbkube" / "build",
+            rendered_dir=SOURCES_BASE_DIR / ".sbkube" / "rendered",
+        )
+        CHARTS_DIR = sbkube_dirs.charts_dir
+        REPOS_DIR = sbkube_dirs.repos_dir
 
         # 디렉토리 생성
-        SBKUBE_WORK_DIR.mkdir(parents=True, exist_ok=True)
-        CHARTS_DIR.mkdir(parents=True, exist_ok=True)
-        REPOS_DIR.mkdir(parents=True, exist_ok=True)
+        sbkube_dirs.ensure_directories()
 
         # 설정 파일 로드
         if not config_file_path.exists():

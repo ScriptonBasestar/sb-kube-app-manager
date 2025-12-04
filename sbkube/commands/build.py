@@ -19,9 +19,15 @@ from sbkube.utils.chart_path_resolver import (
     resolve_remote_chart_path,
 )
 from sbkube.utils.file_loader import load_config_file
-from sbkube.utils.workspace_resolver import resolve_sbkube_directories
-from sbkube.utils.hook_executor import HookExecutor
+from sbkube.utils.hook_helpers import (
+    create_hook_executor,
+    execute_app_post_hook,
+    execute_app_pre_hook,
+    execute_global_post_hook,
+    execute_global_pre_hook,
+)
 from sbkube.utils.output_manager import OutputManager
+from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 
 
 def build_helm_app(
@@ -432,24 +438,17 @@ def cmd(
             # 모든 앱 빌드 (의존성 순서대로)
             apps_to_build = deployment_order
 
-        # Hook executor 초기화
-        hook_executor = HookExecutor(
+        # Hook executor 초기화 (Phase 3 refactoring: hook_helpers 사용)
+        hook_executor = create_hook_executor(
             base_dir=BASE_DIR,
-            work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
+            work_dir=APP_CONFIG_DIR,
             dry_run=dry_run,
         )
 
         # ========== 전역 pre-build 훅 실행 ==========
-        if config.hooks and "build" in config.hooks:
-            build_hooks = config.hooks["build"].model_dump()
-            if not hook_executor.execute_command_hooks(
-                hook_config=build_hooks,
-                hook_phase="pre",
-                command_name="build",
-            ):
-                output.print_error("Pre-build hook failed")
-                overall_success = False
-                continue
+        if not execute_global_pre_hook(hook_executor, config, "build", output):
+            overall_success = False
+            continue
 
         # 앱 빌드
         success_count = 0
@@ -466,21 +465,10 @@ def cmd(
                 )
                 continue
 
-            # ========== 앱별 pre-build 훅 실행 ==========
-            if hasattr(app, "hooks") and app.hooks:
-                app_hooks = app.hooks.model_dump()
-                if not hook_executor.execute_app_hook(
-                    app_name=app_name_iter,
-                    app_hooks=app_hooks,
-                    hook_type="pre_build",
-                    context={},
-                ):
-                    output.print_error(
-                        f"Pre-build hook failed for app: {app_name_iter}",
-                        app_name=app_name_iter,
-                    )
-                    build_failed = True
-                    continue
+            # ========== 앱별 pre-build 훅 실행 (Phase 3 refactoring) ==========
+            if not execute_app_pre_hook(hook_executor, app_name_iter, app, "build", output):
+                build_failed = True
+                continue
 
             success = False
 
@@ -527,43 +515,19 @@ def cmd(
                 )
                 success = True  # 건너뛰어도 성공으로 간주
 
-            # ========== 앱별 post-build 훅 실행 ==========
-            if hasattr(app, "hooks") and app.hooks:
-                app_hooks = app.hooks.model_dump()
-                if success:
-                    # 빌드 성공 시 post_build 훅 실행
-                    hook_executor.execute_app_hook(
-                        app_name=app_name_iter,
-                        app_hooks=app_hooks,
-                        hook_type="post_build",
-                        context={},
-                    )
-                else:
-                    build_failed = True
+            # ========== 앱별 post-build 훅 실행 (Phase 3 refactoring) ==========
+            if success:
+                execute_app_post_hook(hook_executor, app_name_iter, app, "build")
+            else:
+                build_failed = True
 
             if success:
                 success_count += 1
             else:
                 build_failed = True
 
-        # ========== 전역 post-build 훅 실행 ==========
-        if config.hooks and "build" in config.hooks:
-            build_hooks = config.hooks["build"].model_dump()
-
-            if build_failed:
-                # 빌드 실패 시 on_failure 훅 실행
-                hook_executor.execute_command_hooks(
-                    hook_config=build_hooks,
-                    hook_phase="on_failure",
-                    command_name="build",
-                )
-            else:
-                # 모든 빌드 성공 시 post 훅 실행
-                hook_executor.execute_command_hooks(
-                    hook_config=build_hooks,
-                    hook_phase="post",
-                    command_name="build",
-                )
+        # ========== 전역 post-build 훅 실행 (Phase 3 refactoring) ==========
+        execute_global_post_hook(hook_executor, config, "build", failed=build_failed)
 
         # 이 앱 그룹 결과 출력
         output.print_success(

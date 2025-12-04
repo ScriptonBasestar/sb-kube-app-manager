@@ -16,6 +16,7 @@ from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.logger import LogLevel, logger
 from sbkube.utils.output_formatter import OutputFormat, OutputFormatter
+from sbkube.utils.output_manager import OutputManager
 
 
 class EnhancedBaseCommand:
@@ -548,6 +549,220 @@ class EnhancedBaseCommand:
             hook_type=hook_type,
             context=context,
         )
+
+    # ========== Phase 1.3: Config Loading Utilities ==========
+
+    def load_and_validate_config_file(
+        self,
+        config_file_path: Path,
+        output: OutputManager | None = None,
+    ) -> SBKubeConfig | None:
+        """Load and validate SBKube configuration file with error handling.
+
+        This is a utility method to reduce duplicated config loading code
+        across commands. It handles file existence check, loading, parsing,
+        and error reporting.
+
+        Args:
+            config_file_path: Path to config file (config.yaml)
+            output: Optional OutputManager for error reporting
+
+        Returns:
+            Parsed SBKubeConfig or None on error
+
+        Example:
+            >>> config = self.load_and_validate_config_file(
+            ...     config_file_path=Path("redis/config.yaml"),
+            ...     output=output,
+            ... )
+            >>> if config is None:
+            ...     return False  # Error already printed
+
+        """
+        if not config_file_path.exists():
+            msg = f"Config file not found: {config_file_path}"
+            if output:
+                output.print_error(msg, config_path=str(config_file_path))
+            else:
+                logger.error(msg)
+            return None
+
+        if output:
+            output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        else:
+            logger.info(f"Loading config: {config_file_path}")
+
+        try:
+            config_data = load_config_file(str(config_file_path))
+            return SBKubeConfig(**config_data)
+        except Exception as e:
+            msg = f"Invalid config file: {e}"
+            if output:
+                output.print_error(msg, error=str(e))
+            else:
+                logger.error(msg)
+            return None
+
+    def load_and_validate_sources_file(
+        self,
+        sources_file_path: Path,
+        output: OutputManager | None = None,
+    ) -> SourceScheme | None:
+        """Load and validate sources configuration file with error handling.
+
+        This is a utility method to reduce duplicated sources loading code
+        across commands.
+
+        Args:
+            sources_file_path: Path to sources file (sources.yaml)
+            output: Optional OutputManager for error reporting
+
+        Returns:
+            Parsed SourceScheme or None on error
+
+        Example:
+            >>> sources = self.load_and_validate_sources_file(
+            ...     sources_file_path=Path("sources.yaml"),
+            ...     output=output,
+            ... )
+            >>> if sources is None:
+            ...     # sources.yaml not found or invalid - may be optional
+
+        """
+        if not sources_file_path or not sources_file_path.exists():
+            # sources.yaml is often optional, don't treat as error
+            return None
+
+        if output:
+            output.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
+        else:
+            logger.info(f"Loading sources: {sources_file_path}")
+
+        try:
+            sources_data = load_config_file(str(sources_file_path))
+            return SourceScheme(**sources_data)
+        except Exception as e:
+            msg = f"Invalid sources file: {e}"
+            if output:
+                output.print_error(msg, error=str(e))
+            else:
+                logger.error(msg)
+            return None
+
+    def resolve_cluster_configuration(
+        self,
+        cli_kubeconfig: str | None,
+        cli_context: str | None,
+        sources: SourceScheme | None,
+        output: OutputManager | None = None,
+        check_connectivity: bool = True,
+    ) -> tuple[str | None, str | None] | None:
+        """Resolve and validate cluster configuration.
+
+        Determines kubeconfig and context from CLI options, sources.yaml,
+        and environment variables. Optionally checks cluster connectivity.
+
+        Args:
+            cli_kubeconfig: CLI --kubeconfig option value
+            cli_context: CLI --context option value
+            sources: Loaded SourceScheme (may be None)
+            output: Optional OutputManager for error reporting
+            check_connectivity: Whether to verify cluster access
+
+        Returns:
+            Tuple of (kubeconfig, context) or None on error
+
+        Example:
+            >>> result = self.resolve_cluster_configuration(
+            ...     cli_kubeconfig=ctx.obj.get("kubeconfig"),
+            ...     cli_context=ctx.obj.get("context"),
+            ...     sources=sources,
+            ...     output=output,
+            ... )
+            >>> if result is None:
+            ...     return False
+            >>> kubeconfig, context = result
+
+        """
+        from sbkube.utils.cluster_config import (
+            ClusterConfigError,
+            resolve_cluster_config,
+        )
+
+        try:
+            kubeconfig, context = resolve_cluster_config(
+                cli_kubeconfig=cli_kubeconfig,
+                cli_context=cli_context,
+                sources=sources,
+            )
+        except ClusterConfigError as e:
+            if output:
+                output.print_error(str(e))
+            else:
+                logger.error(str(e))
+            return None
+
+        if check_connectivity:
+            from sbkube.utils.cli_check import check_cluster_connectivity_or_exit
+
+            try:
+                check_cluster_connectivity_or_exit(
+                    kubeconfig=kubeconfig,
+                    kubecontext=context,
+                )
+            except SystemExit:
+                # check_cluster_connectivity_or_exit calls sys.exit on failure
+                return None
+
+        return kubeconfig, context
+
+    def get_cluster_global_values(
+        self,
+        sources: SourceScheme | None,
+        sources_dir: Path,
+        output: OutputManager | None = None,
+    ) -> dict | None:
+        """Extract cluster global values from sources configuration.
+
+        Gets merged global values from sources.yaml which are applied
+        to all Helm deployments in the cluster.
+
+        Args:
+            sources: Loaded SourceScheme (may be None)
+            sources_dir: Directory containing sources.yaml (for resolving relative paths)
+            output: Optional OutputManager for info messages
+
+        Returns:
+            Merged global values dict or None if not configured
+
+        Example:
+            >>> cluster_values = self.get_cluster_global_values(
+            ...     sources=sources,
+            ...     sources_dir=APP_CONFIG_DIR,
+            ...     output=output,
+            ... )
+            >>> if cluster_values:
+            ...     helm_cmd.extend(["--values", cluster_values_file])
+
+        """
+        if not sources:
+            return None
+
+        try:
+            cluster_global_values = sources.get_merged_global_values(
+                sources_dir=sources_dir
+            )
+            if cluster_global_values and output:
+                output.print(
+                    "[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]"
+                )
+            return cluster_global_values
+        except Exception as e:
+            if output:
+                output.print_warning(f"Failed to load cluster global values: {e}")
+            else:
+                logger.warning(f"Failed to load cluster global values: {e}")
+            return None
 
 
 # Backward compatibility alias

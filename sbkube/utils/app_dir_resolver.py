@@ -55,7 +55,25 @@ def resolve_app_dirs(
 
     # 1. 명시적 --app-dir 옵션
     if app_config_dir_name:
-        return [base_dir / app_config_dir_name]
+        app_dir_path = base_dir / app_config_dir_name
+        if not app_dir_path.exists():
+            error_msg = f"App directory not found: {app_dir_path}"
+            console.print(f"[red]❌ {error_msg}[/red]")
+            available_dirs = find_all_app_dirs(base_dir, config_file_name)
+            if available_dirs:
+                console.print("[yellow]📂 Available app directories:[/yellow]")
+                for app_dir in available_dirs:
+                    console.print(f"  - {app_dir.name}/")
+            else:
+                console.print(
+                    "[yellow]💡 Tip: Create directories with config.yaml or omit --app-dir for auto-discovery[/yellow]"
+                )
+            raise ValueError(error_msg)
+        if not app_dir_path.is_dir():
+            error_msg = f"Not a directory: {app_dir_path}"
+            console.print(f"[red]❌ {error_msg}[/red]")
+            raise ValueError(error_msg)
+        return [app_dir_path]
 
     # 2. sources.yaml의 app_dirs 사용
     if sources_config and sources_config.app_dirs is not None:

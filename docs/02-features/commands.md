@@ -396,13 +396,31 @@ ______________________________________________________________________
 **Unique Options**:
 
 - `--list`: Show rollback candidates
+- `--scope {app|phase|all}`: Rollback scope (v0.11.0+)
+  - `app`: Rollback specific app(s) only (default)
+  - `phase`: Rollback all apps deployed in a specific phase
+  - `all`: Rollback entire deployment (all apps)
+- `--phase/-p`: Phase name to rollback (requires `--scope=phase`)
+- `--app/-a`: Specific app(s) to rollback (can be specified multiple times)
+- `--target`: Specific deployment ID to rollback to
 
 **Examples**:
 
 ```bash
-sbkube rollback --list                  # List candidates
-sbkube rollback dep_123 --dry-run       # Preview rollback
-sbkube rollback dep_123 --force         # Force rollback
+# List rollback candidates
+sbkube rollback --list --cluster prod --namespace kube-system
+
+# Rollback specific app only (scope=app, default)
+sbkube rollback dep_123 --app traefik --dry-run
+
+# Rollback entire phase (scope=phase)
+sbkube rollback dep_123 --scope phase --phase p1-infra
+
+# Rollback entire deployment (scope=all)
+sbkube rollback dep_123 --scope all
+
+# Force rollback (ignore warnings)
+sbkube rollback dep_123 --force
 ```
 
 **Replaces**: `sbkube state rollback` (deprecated)

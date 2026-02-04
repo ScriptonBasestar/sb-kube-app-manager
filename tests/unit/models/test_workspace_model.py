@@ -131,6 +131,129 @@ class TestPhaseConfig:
                 app_groups=["invalid group name"],
             )
 
+    def test_app_group_deps_valid(self) -> None:
+        """유효한 app_group_deps 테스트."""
+        phase = PhaseConfig(
+            description="Phase with deps",
+            source="sources.yaml",
+            app_groups=["network", "storage", "database"],
+            app_group_deps={
+                "database": ["storage"],
+                "storage": ["network"],
+            },
+        )
+
+        assert phase.app_group_deps == {
+            "database": ["storage"],
+            "storage": ["network"],
+        }
+
+    def test_app_group_deps_nonexistent_group(self) -> None:
+        """존재하지 않는 app_group 참조 테스트."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            PhaseConfig(
+                description="Invalid deps",
+                source="sources.yaml",
+                app_groups=["app1", "app2"],
+                app_group_deps={
+                    "nonexistent": ["app1"],  # nonexistent is not in app_groups
+                },
+            )
+
+        assert "non-existent" in str(exc_info.value).lower()
+
+    def test_app_group_deps_nonexistent_dependency(self) -> None:
+        """존재하지 않는 의존성 참조 테스트."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            PhaseConfig(
+                description="Invalid deps",
+                source="sources.yaml",
+                app_groups=["app1", "app2"],
+                app_group_deps={
+                    "app1": ["nonexistent"],  # nonexistent is not in app_groups
+                },
+            )
+
+        assert "non-existent" in str(exc_info.value).lower()
+
+    def test_app_group_deps_circular_dependency(self) -> None:
+        """순환 의존성 감지 테스트."""
+        with pytest.raises(ConfigValidationError) as exc_info:
+            PhaseConfig(
+                description="Circular deps",
+                source="sources.yaml",
+                app_groups=["app1", "app2", "app3"],
+                app_group_deps={
+                    "app1": ["app3"],
+                    "app2": ["app1"],
+                    "app3": ["app2"],  # Creates cycle: app1 -> app3 -> app2 -> app1
+                },
+            )
+
+        assert "circular" in str(exc_info.value).lower()
+
+    def test_get_app_group_order_no_deps(self) -> None:
+        """의존성 없을 때 모든 그룹 한 레벨로 반환."""
+        phase = PhaseConfig(
+            description="No deps",
+            source="sources.yaml",
+            app_groups=["app1", "app2", "app3"],
+        )
+
+        order = phase.get_app_group_order()
+
+        # All in one level (can run in parallel)
+        assert len(order) == 1
+        assert set(order[0]) == {"app1", "app2", "app3"}
+
+    def test_get_app_group_order_with_deps(self) -> None:
+        """의존성 있을 때 레벨별 순서 반환."""
+        phase = PhaseConfig(
+            description="With deps",
+            source="sources.yaml",
+            app_groups=["network", "storage", "database", "app"],
+            app_group_deps={
+                "storage": ["network"],
+                "database": ["storage"],
+                "app": ["database"],
+            },
+        )
+
+        order = phase.get_app_group_order()
+
+        # Should be 4 levels: network -> storage -> database -> app
+        assert len(order) == 4
+        assert order[0] == ["network"]
+        assert order[1] == ["storage"]
+        assert order[2] == ["database"]
+        assert order[3] == ["app"]
+
+    def test_get_app_group_order_parallel_groups(self) -> None:
+        """병렬 실행 가능한 그룹들의 레벨 구분 테스트."""
+        phase = PhaseConfig(
+            description="Parallel groups",
+            source="sources.yaml",
+            app_groups=["infra", "network", "storage", "db", "cache", "app"],
+            app_group_deps={
+                "network": ["infra"],
+                "storage": ["infra"],
+                "db": ["network", "storage"],
+                "cache": ["network"],
+                "app": ["db", "cache"],
+            },
+        )
+
+        order = phase.get_app_group_order()
+
+        # Level 0: infra (no deps)
+        # Level 1: network, storage (depend on infra)
+        # Level 2: db, cache (depend on level 1)
+        # Level 3: app (depends on db, cache)
+        assert order[0] == ["infra"]
+        assert set(order[1]) == {"network", "storage"}
+        assert set(order[2]) == {"db", "cache"}
+        assert order[3] == ["app"]
+
 
 class TestWorkspaceConfig:
     """WorkspaceConfig 테스트."""

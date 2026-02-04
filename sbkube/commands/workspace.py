@@ -559,6 +559,7 @@ class WorkspaceDeployCommand:
         force: bool = False,
         skip_validation: bool = False,
         parallel: bool = False,
+        parallel_apps: bool = False,
         max_workers: int = 4,
     ) -> None:
         """Initialize workspace deploy command.
@@ -569,7 +570,8 @@ class WorkspaceDeployCommand:
             dry_run: 실제 배포 없이 시뮬레이션
             force: 이전 상태 무시하고 강제 배포
             skip_validation: 파일 존재 검증 건너뛰기
-            parallel: 병렬 실행 모드 (실험적)
+            parallel: 병렬 실행 모드 (Phase 간 병렬)
+            parallel_apps: App group 병렬 실행 모드 (Phase 내 병렬)
             max_workers: 최대 병렬 워커 수 (기본: 4)
 
         """
@@ -580,6 +582,7 @@ class WorkspaceDeployCommand:
         self.force = force
         self.skip_validation = skip_validation
         self.parallel = parallel
+        self.parallel_apps = parallel_apps
         self.max_workers = max_workers
         self.console = Console()
         self.phase_results: dict[str, dict[str, Any]] = {}
@@ -616,6 +619,16 @@ class WorkspaceDeployCommand:
                     "[cyan]PARALLEL MODE[/cyan]: 독립적인 Phase들을 병렬로 실행합니다.\n"
                     f"Max workers: {self.max_workers}",
                     style="cyan",
+                )
+            )
+
+        if self.parallel_apps:
+            self.console.print(
+                Panel(
+                    "[magenta]PARALLEL-APPS MODE[/magenta]: Phase 내 App groups를 병렬로 실행합니다.\n"
+                    f"Max workers: {self.max_workers}\n"
+                    "app_group_deps로 의존성 정의 가능",
+                    style="magenta",
                 )
             )
 
@@ -1206,32 +1219,67 @@ class WorkspaceDeployCommand:
         try:
             from sbkube.commands.apply import ApplyCommand
 
-            # ApplyCommand 생성 및 실행
-            for app_group in phase_config.app_groups:
-                self.console.print(f"  Deploying app group: {app_group}")
-
-                apply_cmd = ApplyCommand(
-                    base_dir=str(base_dir),
-                    app_config_dir=app_group,
-                    source=source_path.name,
-                    dry_run=False,
-                    force=self.force,
-                    skip_prepare=False,
-                    skip_build=False,
+            # Parallel apps mode: execute app_groups in parallel within each level
+            if self.parallel_apps:
+                app_group_levels = phase_config.get_app_group_order()
+                self.console.print(
+                    f"  [magenta]Parallel mode: {len(app_group_levels)} levels[/magenta]"
                 )
 
-                # Apply 실행
-                result = apply_cmd.execute()
+                for level_idx, level_groups in enumerate(app_group_levels):
+                    if len(level_groups) > 1:
+                        self.console.print(
+                            f"  [cyan]Level {level_idx + 1}: "
+                            f"Deploying {len(level_groups)} app groups in parallel[/cyan]"
+                        )
+                        success, completed = self._deploy_app_groups_parallel(
+                            level_groups, base_dir, source_path
+                        )
+                        completed_app_groups += completed
+                        if not success:
+                            error_msg = f"Level {level_idx + 1} deployment failed"
+                            self._complete_phase_tracking(
+                                phase_name, False, error_msg, completed_app_groups
+                            )
+                            return False
+                    else:
+                        # Single app group - execute sequentially
+                        app_group = level_groups[0]
+                        self.console.print(f"  Deploying app group: {app_group}")
+                        if not self._deploy_single_app_group(app_group, base_dir, source_path):
+                            error_msg = f"App group '{app_group}' 배포 실패"
+                            self._complete_phase_tracking(
+                                phase_name, False, error_msg, completed_app_groups
+                            )
+                            return False
+                        completed_app_groups += 1
+            else:
+                # Sequential mode: ApplyCommand 생성 및 실행
+                for app_group in phase_config.app_groups:
+                    self.console.print(f"  Deploying app group: {app_group}")
 
-                if not result:
-                    error_msg = f"App group '{app_group}' 배포 실패"
-                    logger.error(error_msg)
-                    self._complete_phase_tracking(
-                        phase_name, False, error_msg, completed_app_groups
+                    apply_cmd = ApplyCommand(
+                        base_dir=str(base_dir),
+                        app_config_dir=app_group,
+                        source=source_path.name,
+                        dry_run=False,
+                        force=self.force,
+                        skip_prepare=False,
+                        skip_build=False,
                     )
-                    return False
 
-                completed_app_groups += 1
+                    # Apply 실행
+                    result = apply_cmd.execute()
+
+                    if not result:
+                        error_msg = f"App group '{app_group}' 배포 실패"
+                        logger.error(error_msg)
+                        self._complete_phase_tracking(
+                            phase_name, False, error_msg, completed_app_groups
+                        )
+                        return False
+
+                    completed_app_groups += 1
 
             self._complete_phase_tracking(phase_name, True, completed_app_groups=completed_app_groups)
             return True
@@ -1256,6 +1304,85 @@ class WorkspaceDeployCommand:
             logger.error(error_msg)
             self._complete_phase_tracking(phase_name, False, error_msg, completed_app_groups)
             return False
+
+    def _deploy_single_app_group(
+        self,
+        app_group: str,
+        base_dir: Path,
+        source_path: Path,
+    ) -> bool:
+        """Deploy a single app group.
+
+        Args:
+            app_group: App group name
+            base_dir: Base directory for deployment
+            source_path: Path to sources.yaml
+
+        Returns:
+            bool: True if successful
+
+        """
+        from sbkube.commands.apply import ApplyCommand
+
+        apply_cmd = ApplyCommand(
+            base_dir=str(base_dir),
+            app_config_dir=app_group,
+            source=source_path.name,
+            dry_run=False,
+            force=self.force,
+            skip_prepare=False,
+            skip_build=False,
+        )
+
+        return apply_cmd.execute()
+
+    def _deploy_app_groups_parallel(
+        self,
+        app_groups: list[str],
+        base_dir: Path,
+        source_path: Path,
+    ) -> tuple[bool, int]:
+        """Deploy multiple app groups in parallel.
+
+        Args:
+            app_groups: List of app group names
+            base_dir: Base directory for deployment
+            source_path: Path to sources.yaml
+
+        Returns:
+            Tuple of (all_success, completed_count)
+
+        """
+        results: dict[str, bool] = {}
+        completed_count = 0
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            future_to_group = {
+                executor.submit(
+                    self._deploy_single_app_group,
+                    app_group,
+                    base_dir,
+                    source_path,
+                ): app_group
+                for app_group in app_groups
+            }
+
+            for future in as_completed(future_to_group):
+                app_group = future_to_group[future]
+                try:
+                    result = future.result()
+                    results[app_group] = result
+                    if result:
+                        completed_count += 1
+                        logger.success(f"App group '{app_group}' 배포 완료 (parallel)")
+                    else:
+                        logger.error(f"App group '{app_group}' 배포 실패 (parallel)")
+                except Exception as e:
+                    results[app_group] = False
+                    logger.error(f"App group '{app_group}' 오류: {e}")
+
+        all_success = all(results.values())
+        return all_success, completed_count
 
     def _start_phase_tracking(self, phase_name: str) -> None:
         """Start tracking for a phase.
@@ -1554,7 +1681,12 @@ class WorkspaceStatusCommand:
 @click.option(
     "--parallel",
     is_flag=True,
-    help="독립적인 Phase들을 병렬로 실행 (실험적)",
+    help="독립적인 Phase들을 병렬로 실행",
+)
+@click.option(
+    "--parallel-apps",
+    is_flag=True,
+    help="Phase 내 App groups를 병렬로 실행 (app_group_deps로 의존성 정의)",
 )
 @click.option(
     "--max-workers",
@@ -1573,6 +1705,7 @@ def deploy_cmd(
     force: bool,
     skip_validation: bool,
     parallel: bool,
+    parallel_apps: bool,
     max_workers: int,
     verbose: bool,
     debug: bool,
@@ -1581,6 +1714,7 @@ def deploy_cmd(
 
     Phase 의존성 순서대로 각 Phase를 배포합니다.
     --parallel 옵션 사용 시 의존성이 없는 Phase들을 동시에 실행합니다.
+    --parallel-apps 옵션 사용 시 Phase 내 App groups를 병렬로 실행합니다.
 
     Examples:
         # 전체 workspace 배포
@@ -1595,8 +1729,14 @@ def deploy_cmd(
         # 강제 재배포
         sbkube workspace deploy --force
 
-        # 병렬 실행 (실험적)
+        # Phase 병렬 실행
         sbkube workspace deploy --parallel --max-workers 4
+
+        # App group 병렬 실행
+        sbkube workspace deploy --parallel-apps --max-workers 8
+
+        # 전체 병렬 (Phase + App groups)
+        sbkube workspace deploy --parallel --parallel-apps --max-workers 4
 
     """
     ctx.ensure_object(dict)
@@ -1611,6 +1751,7 @@ def deploy_cmd(
         force=force,
         skip_validation=skip_validation,
         parallel=parallel,
+        parallel_apps=parallel_apps,
         max_workers=max_workers,
     )
 

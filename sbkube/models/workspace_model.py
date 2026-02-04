@@ -209,6 +209,15 @@ class PhaseConfig(ConfigBaseModel):
         ),
     ] = {}
 
+    app_group_deps: Annotated[
+        dict[str, list[str]],
+        Field(
+            description="App group dependencies within this phase. "
+            "Format: {app_group: [depends_on_groups]}. "
+            "Groups without dependencies can run in parallel.",
+        ),
+    ] = {}
+
     @field_validator("app_groups")
     @classmethod
     def validate_app_groups(cls, v: list[str]) -> list[str]:
@@ -227,6 +236,103 @@ class PhaseConfig(ConfigBaseModel):
                 )
 
         return v
+
+    @model_validator(mode="after")
+    def validate_app_group_deps(self) -> "PhaseConfig":
+        """App group 의존성 검증.
+
+        1. 참조된 app_group이 app_groups에 존재하는지 확인
+        2. 순환 의존성 감지
+        """
+        if not self.app_group_deps:
+            return self
+
+        app_group_set = set(self.app_groups)
+
+        # 존재하지 않는 app_group 참조 확인
+        for group, deps in self.app_group_deps.items():
+            if group not in app_group_set:
+                raise ValueError(
+                    f"app_group_deps references non-existent app_group '{group}'"
+                )
+            for dep in deps:
+                if dep not in app_group_set:
+                    raise ValueError(
+                        f"app_group '{group}' depends on non-existent app_group '{dep}'"
+                    )
+
+        # 순환 의존성 감지 (DFS)
+        visited = set()
+        rec_stack = set()
+
+        def has_cycle(node: str) -> bool:
+            visited.add(node)
+            rec_stack.add(node)
+
+            for dep in self.app_group_deps.get(node, []):
+                if dep not in visited:
+                    if has_cycle(dep):
+                        return True
+                elif dep in rec_stack:
+                    return True
+
+            rec_stack.remove(node)
+            return False
+
+        for group in self.app_group_deps:
+            if group not in visited:
+                if has_cycle(group):
+                    raise ValueError(
+                        f"Circular dependency detected in app_group_deps involving '{group}'"
+                    )
+
+        return self
+
+    def get_app_group_order(self) -> list[list[str]]:
+        """App group 실행 순서를 레벨별로 반환.
+
+        의존성을 기반으로 병렬 실행 가능한 그룹들을 레벨로 구분합니다.
+
+        Returns:
+            레벨별 app_group 리스트. 같은 레벨의 그룹들은 병렬 실행 가능.
+
+        """
+        if not self.app_group_deps:
+            # 의존성이 없으면 모든 app_groups를 한 레벨로 (모두 병렬 가능)
+            return [self.app_groups]
+
+        # In-degree 계산
+        in_degree = {group: 0 for group in self.app_groups}
+        for group, deps in self.app_group_deps.items():
+            in_degree[group] = len(deps)
+
+        levels = []
+        remaining = set(self.app_groups)
+
+        while remaining:
+            # 현재 레벨: in_degree가 0인 그룹들
+            current_level = [
+                g for g in self.app_groups
+                if g in remaining and in_degree.get(g, 0) == 0
+            ]
+
+            if not current_level:
+                # 더 이상 처리할 수 없으면 나머지를 순차로
+                current_level = [g for g in self.app_groups if g in remaining]
+                levels.append(current_level)
+                break
+
+            levels.append(current_level)
+
+            # 처리된 그룹 제거 및 in_degree 갱신
+            for group in current_level:
+                remaining.remove(group)
+                # 이 그룹에 의존하는 다른 그룹들의 in_degree 감소
+                for other_group, deps in self.app_group_deps.items():
+                    if group in deps and other_group in remaining:
+                        in_degree[other_group] -= 1
+
+        return levels
 
 
 class WorkspaceConfig(ConfigBaseModel):

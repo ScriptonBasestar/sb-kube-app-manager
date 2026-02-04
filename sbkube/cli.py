@@ -14,6 +14,7 @@ from sbkube.commands import (
     doctor,
     history,
     init,
+    migrate,
     prepare,
     rollback,
     status,
@@ -45,7 +46,7 @@ class SbkubeGroup(click.Group):
         "통합 명령어": ["apply"],
         "상태 관리": ["status", "history", "rollback"],
         "업그레이드/삭제": ["upgrade", "delete", "check-updates"],
-        "유틸리티": ["init", "validate", "doctor", "version"],
+        "유틸리티": ["init", "validate", "doctor", "migrate", "version"],
         "Workspace (v0.9.0 미리보기)": ["workspace"],
     }
 
@@ -240,6 +241,7 @@ main.add_command(check_updates.cmd)
 main.add_command(validate.cmd)
 main.add_command(version.cmd)
 main.add_command(doctor.cmd)
+main.add_command(migrate.cmd)
 
 # Workspace 명령어 (v0.9.0 미리보기)
 main.add_command(workspace.workspace_group)

@@ -864,6 +864,11 @@ class YamlApp(ConfigBaseModel):
             - service.yaml
           namespace: custom-ns
 
+    Legacy format (deprecated):
+        my-app:
+          type: yaml
+          path: deployment.yaml
+
     """
 
     type: Literal["yaml"] = "yaml"
@@ -889,6 +894,20 @@ class YamlApp(ConfigBaseModel):
         default=None,
         description="Optional notes or description for this application",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_legacy_path(cls, data: Any) -> Any:
+        """Convert legacy 'path' field to 'manifests' for backward compatibility."""
+        if isinstance(data, dict):
+            # Convert legacy 'path' (string) to 'manifests' (list)
+            if "path" in data and "manifests" not in data:
+                path_value = data.pop("path")
+                if isinstance(path_value, str):
+                    data["manifests"] = [path_value]
+                elif isinstance(path_value, list):
+                    data["manifests"] = path_value
+        return data
 
     @field_validator("manifests")
     @classmethod

@@ -23,6 +23,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship
 
+from sbkube.utils.datetime_utils import utc_now
+
 Base = declarative_base()
 
 
@@ -57,7 +59,7 @@ class Deployment(Base):
 
     id = Column(Integer, primary_key=True)
     deployment_id = Column(String(64), unique=True, nullable=False, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=utc_now, nullable=False)
 
     # Deployment context
     cluster = Column(String(255), nullable=False)

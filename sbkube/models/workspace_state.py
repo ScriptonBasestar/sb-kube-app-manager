@@ -23,6 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from sbkube.models.deployment_state import Base
+from sbkube.utils.datetime_utils import utc_now
 
 
 class WorkspaceDeploymentStatus(str, Enum):
@@ -59,7 +60,7 @@ class WorkspaceDeployment(Base):
     workspace_deployment_id = Column(
         String(64), unique=True, nullable=False, index=True
     )
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime, default=utc_now, nullable=False)
     completed_at = Column(DateTime, nullable=True)
 
     # Workspace context

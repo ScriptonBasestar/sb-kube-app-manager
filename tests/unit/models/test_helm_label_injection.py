@@ -5,6 +5,11 @@ field correctly for charts with strict schema validation.
 """
 
 from sbkube.models.config_model import HelmApp
+from sbkube.utils.app_labels import (
+    KNOWN_INCOMPATIBLE_CHARTS,
+    get_label_injection_recommendation,
+    is_chart_label_injection_compatible,
+)
 
 
 class TestHelmLabelInjectionPydanticModel:
@@ -134,3 +139,65 @@ class TestHelmLabelInjectionPydanticModel:
         app = HelmApp(**config_dict)
         assert app.helm_label_injection is True
         assert app.chart == "grafana/grafana"
+
+
+class TestChartCompatibility:
+    """Test chart compatibility detection for label injection."""
+
+    def test_known_incompatible_charts_list_exists(self) -> None:
+        """Known incompatible charts list should exist and contain key charts."""
+        assert "traefik" in KNOWN_INCOMPATIBLE_CHARTS
+        assert "traefik/traefik" in KNOWN_INCOMPATIBLE_CHARTS
+        assert "authelia" in KNOWN_INCOMPATIBLE_CHARTS
+
+    def test_traefik_is_incompatible(self) -> None:
+        """Traefik chart should be detected as incompatible."""
+        assert is_chart_label_injection_compatible("traefik/traefik") is False
+        assert is_chart_label_injection_compatible("traefik") is False
+        assert is_chart_label_injection_compatible("Traefik/Traefik") is False  # case insensitive
+
+    def test_authelia_is_incompatible(self) -> None:
+        """Authelia chart should be detected as incompatible."""
+        assert is_chart_label_injection_compatible("authelia/authelia") is False
+        assert is_chart_label_injection_compatible("authelia") is False
+
+    def test_cilium_is_incompatible(self) -> None:
+        """Cilium chart should be detected as incompatible."""
+        assert is_chart_label_injection_compatible("cilium/cilium") is False
+        assert is_chart_label_injection_compatible("cilium") is False
+
+    def test_grafana_is_compatible(self) -> None:
+        """Grafana chart should be compatible (supports commonLabels)."""
+        assert is_chart_label_injection_compatible("grafana/grafana") is True
+        assert is_chart_label_injection_compatible("grafana") is True
+
+    def test_bitnami_redis_is_compatible(self) -> None:
+        """Bitnami Redis chart should be compatible."""
+        assert is_chart_label_injection_compatible("bitnami/redis") is True
+
+    def test_prometheus_is_compatible(self) -> None:
+        """Prometheus chart should be compatible."""
+        assert is_chart_label_injection_compatible("prometheus-community/prometheus") is True
+
+    def test_recommendation_for_incompatible_chart(self) -> None:
+        """Should return recommendation message for incompatible charts."""
+        recommendation = get_label_injection_recommendation("traefik/traefik")
+        assert recommendation is not None
+        assert "traefik" in recommendation.lower()
+        assert "strict schema" in recommendation.lower()
+
+    def test_no_recommendation_for_compatible_chart(self) -> None:
+        """Should return None for compatible charts."""
+        recommendation = get_label_injection_recommendation("grafana/grafana")
+        assert recommendation is None
+
+    def test_empty_chart_name(self) -> None:
+        """Empty chart name should be treated as compatible."""
+        assert is_chart_label_injection_compatible("") is True
+
+    def test_chart_name_extraction(self) -> None:
+        """Should extract chart name from repo/chart format."""
+        # Full path should work
+        assert is_chart_label_injection_compatible("traefik/traefik") is False
+        # Just chart name should also work
+        assert is_chart_label_injection_compatible("traefik") is False

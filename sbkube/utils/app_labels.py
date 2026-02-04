@@ -7,12 +7,104 @@ Features:
 - Dynamic label injection to YAML resources without modifying source files
 - Consistent label format across Helm and YAML deployments
 - Support for multi-document YAML files (---)
+- Auto-detection of incompatible Helm charts
 """
 
 import re
 from datetime import UTC, datetime
 
 import yaml
+
+# ============================================================================
+# Known Incompatible Charts
+# ============================================================================
+# These charts have strict schema validation and don't support
+# commonLabels/commonAnnotations. Label injection is automatically disabled.
+#
+# Format: "repo/chart" or just "chart" for any repo
+# Matching is case-insensitive and supports partial matches
+#
+# To add a new chart:
+#   1. Add to this list
+#   2. Test with: sbkube template --app-dir <path>
+#   3. Submit PR with chart name and reason
+
+KNOWN_INCOMPATIBLE_CHARTS: set[str] = {
+    # Traefik - strict values.schema.json validation
+    "traefik/traefik",
+    "traefik",
+    # Authelia - strict schema, custom labeling required
+    "authelia/authelia",
+    "authelia",
+    # Cilium - CNI with strict schema
+    "cilium/cilium",
+    "cilium",
+    # Linkerd - service mesh with strict CRD schema
+    "linkerd/linkerd2",
+    "linkerd2",
+    # Istio - service mesh with strict schema
+    "istio/istiod",
+    "istio/base",
+    "istiod",
+    # ArgoCD - GitOps tool with strict schema
+    "argo/argo-cd",
+    "argo-cd",
+}
+
+
+def is_chart_label_injection_compatible(chart: str) -> bool:
+    """Check if a Helm chart is compatible with label injection.
+
+    Args:
+        chart: Chart name in format "repo/chart" or just "chart"
+
+    Returns:
+        True if compatible (label injection should work),
+        False if known to be incompatible
+
+    Examples:
+        >>> is_chart_label_injection_compatible("grafana/grafana")
+        True
+        >>> is_chart_label_injection_compatible("traefik/traefik")
+        False
+        >>> is_chart_label_injection_compatible("traefik")
+        False
+
+    """
+    chart_lower = chart.lower().strip()
+
+    # Direct match
+    if chart_lower in KNOWN_INCOMPATIBLE_CHARTS:
+        return False
+
+    # Extract chart name (after last /)
+    chart_name = chart_lower.split("/")[-1] if "/" in chart_lower else chart_lower
+    if chart_name in KNOWN_INCOMPATIBLE_CHARTS:
+        return False
+
+    return True
+
+
+def get_label_injection_recommendation(chart: str) -> str | None:
+    """Get recommendation message for incompatible charts.
+
+    Args:
+        chart: Chart name
+
+    Returns:
+        Recommendation message if chart is incompatible, None otherwise
+
+    """
+    if is_chart_label_injection_compatible(chart):
+        return None
+
+    chart_name = chart.split("/")[-1] if "/" in chart else chart
+    return (
+        f"Chart '{chart}' has strict schema validation.\n"
+        f"  → Label injection automatically disabled.\n"
+        f"  → To manually enable: set helm_label_injection: true in config\n"
+        f"  → To add labels manually, use the chart's native labeling options"
+    )
 
 
 def extract_app_group_from_name(app_name: str) -> str | None:

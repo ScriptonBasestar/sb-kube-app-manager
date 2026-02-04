@@ -31,7 +31,9 @@ from sbkube.utils.app_labels import (
     build_sbkube_annotations,
     build_sbkube_labels,
     extract_app_group_from_name,
+    get_label_injection_recommendation,
     inject_labels_to_yaml,
+    is_chart_label_injection_compatible,
 )
 from sbkube.utils.cli_check import (
     check_cluster_connectivity_or_exit,
@@ -303,8 +305,21 @@ def deploy_helm_app(
         # Try parent directory (for nested apps)
         app_group = extract_app_group_from_name(app_config_dir.parent.name)
 
-    # Check if automatic label injection is enabled (default: True)
-    if app.helm_label_injection:
+    # Check chart compatibility and determine effective label injection setting
+    effective_label_injection = app.helm_label_injection
+    chart_name = app.chart
+
+    # Auto-disable for known incompatible charts (unless user explicitly set it)
+    if effective_label_injection and chart_name:
+        if not is_chart_label_injection_compatible(chart_name):
+            recommendation = get_label_injection_recommendation(chart_name)
+            if recommendation:
+                for line in recommendation.split("\n"):
+                    console.print(f"  [yellow]{line}[/yellow]")
+            effective_label_injection = False
+
+    # Check if automatic label injection is enabled
+    if effective_label_injection:
         if app_group:
             # Build labels
             labels = build_sbkube_labels(
@@ -331,9 +346,11 @@ def deploy_helm_app(
                 "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
             )
     else:
-        console.print(
-            "  [dim]Label injection disabled (helm_label_injection: false)[/dim]"
-        )
+        if not chart_name or is_chart_label_injection_compatible(chart_name):
+            # User explicitly disabled, not auto-disabled
+            console.print(
+                "  [dim]Label injection disabled (helm_label_injection: false)[/dim]"
+            )
         if app_group:
             console.print(
                 f"  [dim]App tracking will use State DB and name pattern (app-group={app_group})[/dim]"

@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
+from sbkube.utils.datetime_utils import utc_now
+
 
 class StepStatus(Enum):
     PENDING = "pending"
@@ -95,7 +97,7 @@ class ExecutionState:
     run_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     profile: str | None = None
     namespace: str | None = None
-    started_at: datetime = field(default_factory=datetime.utcnow)
+    started_at: datetime = field(default_factory=utc_now)
     completed_at: datetime | None = None
     status: StepStatus = StepStatus.IN_PROGRESS
     steps: dict[str, StepExecution] = field(default_factory=dict)

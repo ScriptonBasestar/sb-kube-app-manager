@@ -394,7 +394,23 @@ def deploy_helm_app(
             reason = _get_connection_error_reason(stdout, stderr)
             if reason:
                 raise KubernetesConnectionError(reason=reason)
-            output.print_error("Failed to deploy", error=stderr)
+
+            # Check for label injection related errors
+            error_lower = stderr.lower()
+            if any(
+                keyword in error_lower
+                for keyword in ("commonlabels", "commonannotations", "values.schema.json")
+            ):
+                label_hint = (
+                    f"\n\n💡 This error may be caused by label injection.\n"
+                    f"   The chart '{app.chart}' may have strict schema validation.\n"
+                    f"   Try adding to your config.yaml:\n"
+                    f"     {app_name}:\n"
+                    f"       helm_label_injection: false"
+                )
+                output.print_error("Failed to deploy", error=stderr + label_hint)
+            else:
+                output.print_error("Failed to deploy", error=stderr)
             return False
 
         if progress_tracker:

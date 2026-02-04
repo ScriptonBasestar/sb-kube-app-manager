@@ -83,6 +83,19 @@ sbkube workspace deploy workspace.yaml --phase p2-data --dry-run
 sbkube workspace status workspace.yaml
 ```
 
+### Parallel execution
+
+```bash
+# Execute independent phases in parallel
+sbkube workspace deploy workspace.yaml --parallel --max-workers 4
+
+# Execute app groups in parallel within each phase
+sbkube workspace deploy workspace.yaml --parallel-apps --max-workers 8
+
+# Full parallel (phases + app groups)
+sbkube workspace deploy workspace.yaml --parallel --parallel-apps --max-workers 4
+```
+
 ## Configuration Options
 
 ### Phase-level options
@@ -92,6 +105,7 @@ sbkube workspace status workspace.yaml
 | `source` | Path to sources.yaml for this phase | Required |
 | `app_groups` | List of app groups to deploy | Required |
 | `depends_on` | Phase dependencies (list) | `[]` |
+| `app_group_deps` | Dependencies between app groups within this phase | `{}` |
 | `timeout` | Phase timeout in seconds | Global default |
 | `on_failure` | Failure behavior: stop, continue, rollback | Global default |
 | `env` | Phase-level environment variables | `{}` |
@@ -113,3 +127,6 @@ sbkube workspace status workspace.yaml
 - **Failure Handling**: Configurable per-phase behavior on failure
 - **Dry-Run Mode**: Test deployments without making changes
 - **Single Phase Execution**: Deploy specific phases only
+- **Parallel Phases**: Execute independent phases concurrently (`--parallel`)
+- **Parallel App Groups**: Execute app groups in parallel within phases (`--parallel-apps`)
+- **App Group Dependencies**: Define execution order within phases via `app_group_deps`

@@ -6,6 +6,11 @@
 #   sbkube workspace graph workspace.yaml
 #   sbkube workspace deploy workspace.yaml --dry-run
 #   sbkube workspace status workspace.yaml
+#
+# Parallel execution:
+#   sbkube workspace deploy workspace.yaml --parallel              # Parallel phases
+#   sbkube workspace deploy workspace.yaml --parallel-apps         # Parallel app groups
+#   sbkube workspace deploy workspace.yaml --parallel --parallel-apps --max-workers 4
 
 version: "1.0"
 
@@ -39,6 +44,10 @@ phases:
     app_groups:
       - a000_network
       - a001_storage
+    # App group dependencies for parallel execution (--parallel-apps)
+    # Storage depends on network, so they execute in order
+    app_group_deps:
+      a001_storage: [a000_network]
     timeout: 900
     on_failure: stop
 
@@ -49,6 +58,8 @@ phases:
     app_groups:
       - a100_postgres
       - a101_redis
+    # Postgres and Redis are independent - can run in parallel
+    # No app_group_deps means all groups run in parallel with --parallel-apps
     depends_on:
       - p1-infra
     timeout: 600
@@ -60,6 +71,9 @@ phases:
     app_groups:
       - a200_backend
       - a201_frontend
+    # Frontend depends on backend API, execute in order
+    app_group_deps:
+      a201_frontend: [a200_backend]
     depends_on:
       - p2-data
     timeout: 300

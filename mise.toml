@@ -1,0 +1,17 @@
+# mise configuration for SBKube project
+# https://mise.jdx.dev/configuration.html
+
+[tools]
+python = "3.12"
+helm = "4.0.2"
+uv = "latest"
+kubectl = "latest"
+kustomize = "latest"
+
+[env]
+# Environment variables
+_.python.venv = { path = ".venv", create = true }
+
+[settings]
+# Automatically install missing tools
+experimental = true

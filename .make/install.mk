@@ -1,9 +1,12 @@
 # Installation targets
 
-.PHONY: install install-system install-dev install-test install-all
+.PHONY: install install-global install-system install-dev install-test install-all
 
 install:
 	uv pip install -e .
+
+install-global:
+	uv tool install . --force
 
 install-system:
 	uv pip install -e . --system

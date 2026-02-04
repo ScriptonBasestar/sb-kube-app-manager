@@ -413,18 +413,37 @@ def deploy_helm_app(
 
             # Check for label injection related errors
             error_lower = stderr.lower()
-            if any(
+            is_schema_error = any(
                 keyword in error_lower
-                for keyword in ("commonlabels", "commonannotations", "values.schema.json")
-            ):
-                label_hint = (
-                    f"\n\n💡 This error may be caused by label injection.\n"
-                    f"   The chart '{app.chart}' may have strict schema validation.\n"
-                    f"   Try adding to your config.yaml:\n"
-                    f"     {app_name}:\n"
-                    f"       helm_label_injection: false"
+                for keyword in (
+                    "commonlabels",
+                    "commonannotations",
+                    "values.schema.json",
+                    "additional properties",
+                    "not allowed",
                 )
-                output.print_error("Failed to deploy", error=stderr + label_hint)
+            )
+            if is_schema_error:
+                label_hint = (
+                    f"\n\n"
+                    f"{'─' * 60}\n"
+                    f"💡 Schema Validation Error Detected\n"
+                    f"{'─' * 60}\n"
+                    f"\n"
+                    f"원인: Chart '{app.chart}'의 JSON schema가 sbkube 자동 주입 필드를 거부\n"
+                    f"\n"
+                    f"해결책: config.yaml에 다음 추가\n"
+                    f"\n"
+                    f"  {app_name}:\n"
+                    f"    helm_label_injection: false  # strict schema 호환\n"
+                    f"\n"
+                    f"알려진 strict schema charts:\n"
+                    f"  - traefik/traefik (commonAnnotations 미지원)\n"
+                    f"  - jetstack/cert-manager (additionalProperties: false)\n"
+                    f"  - authelia/authelia (다른 필드명 사용)\n"
+                    f"{'─' * 60}"
+                )
+                output.print_error("Schema validation failed", error=stderr + label_hint)
             else:
                 output.print_error("Failed to deploy", error=stderr)
             return False

@@ -5,11 +5,11 @@ apps:
   verify-cluster:
     type: exec
     commands:
-      - echo "=== Phase 1: Infrastructure Verification ==="
+      - 'echo "=== Phase 1: Infrastructure Verification ==="'
       - kubectl version --client
       - kubectl cluster-info
       - kubectl get nodes
-      - echo "✅ Cluster verification completed"
+      - 'echo "✅ Cluster verification completed"'
 
   # Phase 2: 스토리지 준비
   setup-storage:
@@ -57,13 +57,13 @@ apps:
     depends_on:
       - postgresql
     commands:
-      - echo "=== Phase 5: Database Initialization ==="
+      - 'echo "=== Phase 5: Database Initialization ==="'
       - sleep 10  # DB가 완전히 시작될 때까지 대기
-      - kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql -n dependency-demo --timeout=120s
-      - echo "✅ Database is ready"
-      - echo "-- Initializing schema (simulated)"
-      - echo "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(100));" > /tmp/schema.sql
-      - echo "✅ Database initialization completed"
+      - 'kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql -n dependency-demo --timeout=120s'
+      - 'echo "✅ Database is ready"'
+      - 'echo "-- Initializing schema (simulated)"'
+      - 'echo "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(100));" > /tmp/schema.sql'
+      - 'echo "✅ Database initialization completed"'
 
   # Phase 6: 백엔드 API 배포
   backend-api:
@@ -100,13 +100,13 @@ apps:
     depends_on:
       - ingress
     commands:
-      - echo "=== Phase 9: Final Verification ==="
+      - 'echo "=== Phase 9: Final Verification ==="'
       - kubectl get all -n dependency-demo
-      - kubectl wait --for=condition=ready pod -l app=backend-api -n dependency-demo --timeout=120s
-      - kubectl wait --for=condition=ready pod -l app=frontend -n dependency-demo --timeout=120s
-      - echo "✅ All components deployed successfully"
+      - 'kubectl wait --for=condition=ready pod -l app=backend-api -n dependency-demo --timeout=120s'
+      - 'kubectl wait --for=condition=ready pod -l app=frontend -n dependency-demo --timeout=120s'
+      - 'echo "✅ All components deployed successfully"'
       - echo ""
-      - echo "Deployment Summary:"
+      - 'echo "Deployment Summary:"'
       - kubectl get pods -n dependency-demo -o wide
       - echo ""
       - kubectl get svc -n dependency-demo
@@ -118,6 +118,6 @@ apps:
     depends_on:
       - verify-deployment
     commands:
-      - echo "=== Setting up monitoring ==="
+      - 'echo "=== Setting up monitoring ==="'
       - kubectl apply -f manifests/monitoring/servicemonitor.yaml
-      - echo "✅ Monitoring configured"
+      - 'echo "✅ Monitoring configured"'

@@ -1,0 +1,25 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: docker-desktop
+  cluster: docker-desktop
+  helm_repos:
+    ingress-nginx:
+      url: https://kubernetes.github.io/ingress-nginx
+      insecure_skip_tls_verify: false
+apps:
+  nginx:
+    type: helm
+    chart: ingress-nginx/ingress-nginx
+    version: 4.11.0
+    values:
+    - values/nginx.yaml
+    overrides:
+    - templates/custom-configmap.yaml
+    - files/index.html
+    removes:
+    - templates/tests/
+    - templates/NOTES.txt
+    namespace: default

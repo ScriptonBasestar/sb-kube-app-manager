@@ -1,0 +1,31 @@
+apiVersion: sbkube/v1
+metadata:
+  name: production-deployment
+  description: Production infrastructure multi-phase deployment
+  environment: prod
+  tags:
+  - production
+  - multi-phase
+  - kubernetes
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: production-cluster
+phases:
+  p1-infra:
+    description: Network and storage infrastructure
+    source: p1-kube/sources.yaml
+  p2-data:
+    description: Database and caching layer
+    source: p2-kube/sources.yaml
+    depends_on:
+    - p1-infra
+  p3-app:
+    description: Application services
+    source: p3-kube/sources.yaml
+    depends_on:
+    - p2-data
+  p4-monitoring:
+    description: Monitoring and observability
+    source: p4-kube/sources.yaml
+    depends_on:
+    - p3-app

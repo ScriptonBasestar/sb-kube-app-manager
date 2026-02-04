@@ -1,0 +1,122 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  namespace: dependency-demo
+  helm_repos:
+    ot-helm:
+      url: https://ot-container-kit.github.io/helm-charts/
+      insecure_skip_tls_verify: false
+apps:
+  verify-cluster:
+    type: exec
+    commands:
+    - 'echo "=== Phase 1: Infrastructure Verification ==="'
+    - kubectl version --client
+    - kubectl cluster-info
+    - kubectl get nodes
+    - echo "✅ Cluster verification completed"
+  setup-storage:
+    type: action
+    actions:
+    - type: apply
+      path: manifests/storage/storageclass.yaml
+      namespace: null
+    - type: apply
+      path: manifests/storage/pvc.yaml
+      namespace: null
+    namespace: dependency-demo
+    depends_on:
+    - verify-cluster
+  postgresql:
+    type: helm
+    chart: prometheus-community/kube-state-metrics
+    version: 16.2.4
+    set_values:
+      auth.database: appdb
+      auth.username: appuser
+      auth.password: secret123
+      primary.persistence.existingClaim: postgres-pvc
+      primary.resources.requests.memory: 256Mi
+    namespace: dependency-demo
+    depends_on:
+    - setup-storage
+  redis:
+    type: helm
+    chart: ot-helm/redis
+    version: 0.15.10
+    set_values:
+      redisCluster.clusterSize: '1'
+      kubernetesConfig.image: redis:7.2
+      redisExporter.enabled: 'false'
+      kubernetesConfig.resources.requests.memory: 128Mi
+    namespace: dependency-demo
+    depends_on:
+    - verify-cluster
+  init-database:
+    type: exec
+    commands:
+    - 'echo "=== Phase 5: Database Initialization ==="'
+    - sleep 10
+    - kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql
+      -n dependency-demo --timeout=120s
+    - echo "✅ Database is ready"
+    - echo "-- Initializing schema (simulated)"
+    - echo "CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(100));"
+      > /tmp/schema.sql
+    - echo "✅ Database initialization completed"
+    depends_on:
+    - postgresql
+  backend-api:
+    type: yaml
+    manifests:
+    - manifests/backend/deployment.yaml
+    - manifests/backend/service.yaml
+    - manifests/backend/configmap.yaml
+    namespace: dependency-demo
+    depends_on:
+    - postgresql
+    - redis
+    - init-database
+  frontend:
+    type: yaml
+    manifests:
+    - manifests/frontend/deployment.yaml
+    - manifests/frontend/service.yaml
+    namespace: dependency-demo
+    depends_on:
+    - backend-api
+  ingress:
+    type: yaml
+    manifests:
+    - manifests/ingress.yaml
+    namespace: dependency-demo
+    depends_on:
+    - frontend
+  verify-deployment:
+    type: exec
+    commands:
+    - 'echo "=== Phase 9: Final Verification ==="'
+    - kubectl get all -n dependency-demo
+    - kubectl wait --for=condition=ready pod -l app=backend-api -n dependency-demo
+      --timeout=120s
+    - kubectl wait --for=condition=ready pod -l app=frontend -n dependency-demo --timeout=120s
+    - echo "✅ All components deployed successfully"
+    - echo ""
+    - echo "Deployment Summary:"
+    - kubectl get pods -n dependency-demo -o wide
+    - echo ""
+    - kubectl get svc -n dependency-demo
+    depends_on:
+    - ingress
+  setup-monitoring:
+    type: exec
+    commands:
+    - echo "=== Setting up monitoring ==="
+    - kubectl apply -f manifests/monitoring/servicemonitor.yaml
+    - echo "✅ Monitoring configured"
+    depends_on:
+    - verify-deployment
+    enabled: false

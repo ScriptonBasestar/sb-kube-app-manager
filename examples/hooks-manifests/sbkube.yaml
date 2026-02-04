@@ -1,0 +1,21 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  namespace: cert-manager
+  helm_repos:
+    jetstack:
+      url: https://charts.jetstack.io
+      insecure_skip_tls_verify: false
+apps:
+  cert-manager:
+    type: helm
+    chart: jetstack/cert-manager
+    version: v1.13.2
+    namespace: cert-manager
+    hooks:
+      post_deploy_manifests:
+      - manifests/issuers/cluster-issuer-letsencrypt-prd.yaml
+      - manifests/issuers/cluster-issuer-letsencrypt-stg.yaml

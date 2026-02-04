@@ -1,0 +1,90 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  namespace: cert-manager
+  helm_repos:
+    jetstack:
+      url: https://charts.jetstack.io
+      insecure_skip_tls_verify: false
+apps:
+  cert-manager:
+    type: helm
+    chart: jetstack/cert-manager
+    version: v1.13.2
+    namespace: cert-manager
+    hooks:
+      post_deploy_tasks:
+      - type: manifests
+        name: deploy-cluster-issuers
+        files:
+        - manifests/issuers/cluster-issuer-letsencrypt-prd.yaml
+        - manifests/issuers/cluster-issuer-letsencrypt-stg.yaml
+        validation:
+          kind: ClusterIssuer
+          wait_for_ready: true
+          timeout: 120
+          conditions:
+          - type: Ready
+            status: 'True'
+        dependency: null
+        rollback:
+          enabled: true
+          on_failure: always
+          commands:
+          - kubectl delete clusterissuer letsencrypt-prd --ignore-not-found=true
+          - kubectl delete clusterissuer letsencrypt-stg --ignore-not-found=true
+      - type: inline
+        name: create-wildcard-certificate
+        content:
+          apiVersion: cert-manager.io/v1
+          kind: Certificate
+          metadata:
+            name: wildcard-cert
+            namespace: default
+          spec:
+            secretName: wildcard-cert-tls
+            issuerRef:
+              name: letsencrypt-stg
+              kind: ClusterIssuer
+            dnsNames:
+            - '*.example.com'
+            - example.com
+        validation:
+          kind: Certificate
+          name: wildcard-cert
+          namespace: default
+          wait_for_ready: true
+          timeout: 300
+        dependency:
+          depends_on:
+          - deploy-cluster-issuers
+        rollback:
+          enabled: true
+          on_failure: always
+          commands:
+          - kubectl delete certificate wildcard-cert -n default --ignore-not-found=true
+          - kubectl delete secret wildcard-cert-tls -n default --ignore-not-found=true
+      - type: command
+        name: verify-dns-records
+        command: '# DNS TXT 레코드 확인 (ACME challenge)
+
+          dig +short _acme-challenge.example.com TXT @8.8.8.8 | grep -q "." && echo
+          "DNS record found" || exit 1'
+        retry:
+          max_attempts: 5
+          delay: 10
+        on_failure: warn
+        validation: null
+        dependency:
+          depends_on:
+          - create-wildcard-certificate
+          wait_for:
+          - kind: CertificateRequest
+            namespace: default
+            label_selector: acme.cert-manager.io/order-name
+            condition: Ready
+            timeout: 300
+        rollback: null

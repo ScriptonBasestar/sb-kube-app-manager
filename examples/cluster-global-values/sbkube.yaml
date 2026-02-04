@@ -1,0 +1,27 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  cluster: production-k3s
+  helm_repos:
+    grafana:
+      url: https://grafana.github.io/helm-charts
+      insecure_skip_tls_verify: false
+  cluster_values_file: cluster-values.yaml
+  global_values:
+    global:
+      environment: production
+      deployment_timestamp: '2025-01-06T10:00:00Z'
+apps:
+  nginx:
+    type: helm
+    chart: grafana/nginx
+    values:
+    - values/nginx-custom.yaml
+    namespace: default
+  redis:
+    type: helm
+    chart: grafana/loki
+    namespace: default

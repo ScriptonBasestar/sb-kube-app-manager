@@ -1,0 +1,26 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  namespace: infra
+  cluster: dev
+  helm_repos:
+    olm:
+      url: https://github.com/operator-framework/operator-lifecycle-manager.git
+      insecure_skip_tls_verify: false
+apps:
+  olm:
+    type: git
+    repo: olm
+    branch: master
+    namespace: infra
+  olm-operator:
+    type: yaml
+    manifests:
+    - ${repos.olm}/deploy/upstream/quickstart/crds.yaml
+    - ${repos.olm}/deploy/upstream/quickstart/olm.yaml
+    namespace: ''
+    depends_on:
+    - olm

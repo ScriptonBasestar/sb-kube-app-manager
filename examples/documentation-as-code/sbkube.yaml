@@ -1,0 +1,148 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: example-context
+  namespace: data
+  cluster: example-cluster
+  helm_repos:
+    vm:
+      url: https://victoriametrics.github.io/helm-charts/
+      insecure_skip_tls_verify: false
+    bitnami:
+      url: https://charts.bitnami.com/bitnami
+      insecure_skip_tls_verify: false
+    timescale:
+      url: https://charts.timescale.com
+      insecure_skip_tls_verify: false
+apps:
+  victoria-metrics:
+    type: helm
+    chart: vm/victoria-metrics-single
+    namespace: data
+    notes: 'High-performance Prometheus-compatible TSDB (selected 2025-01)
+
+
+      Why chosen:
+
+      - 20x faster than Prometheus
+
+      - 7x less storage space
+
+      - Full PromQL support
+
+      - Active development and community
+
+
+      Alternatives considered:
+
+      - Prometheus: Too slow for our 10M+ metrics/sec requirement
+
+      - Thanos: Added complexity, overkill for single cluster
+
+      - Cortex: Requires additional infrastructure
+
+
+      Deployment notes:
+
+      - Uses persistent volume (500GB)
+
+      - Retention: 90 days
+
+      - Contact: platform-team@company.com'
+  thanos:
+    type: helm
+    chart: bitnami/thanos
+    namespace: data
+    enabled: false
+    notes: 'Long-term storage for Prometheus (planned for Phase 6)
+
+
+      ⚠️  DEPLOYMENT ORDER: Deploy AFTER Prometheus is stable
+
+
+      Prerequisites:
+
+      - S3/GCS/Azure storage bucket configured
+
+      - Prometheus with Thanos sidecar enabled
+
+      - Network policy allowing cross-cluster queries
+
+
+      Why disabled:
+
+      - Not needed until multi-cluster deployment
+
+      - Requires object storage setup (pending)
+
+      - Estimated activation: Q2 2025
+
+
+      Migration plan:
+
+      1. Set up S3 bucket with lifecycle policies
+
+      2. Enable Thanos sidecar in Prometheus
+
+      3. Deploy Thanos Query + Store Gateway
+
+      4. Migrate historical data (estimated 2TB)'
+  timescaledb:
+    type: helm
+    chart: timescale/timescaledb-single
+    namespace: data
+    enabled: false
+    notes: 'PostgreSQL extension for time-series data (rejected 2025-01)
+
+
+      Evaluation results:
+
+      ✗ Requires PostgreSQL extension (operational overhead)
+
+      ✗ SQL overhead for pure time-series workloads
+
+      ✗ Complex query optimization needed
+
+      ✓ Good for hybrid workloads (time-series + relational)
+
+
+      Decision: Use VictoriaMetrics for metrics, PostgreSQL for app data
+
+
+      Keep disabled for reference - may reconsider for IoT project'
+  external-postgres:
+    type: noop
+    description: External PostgreSQL RDS instance
+    notes: 'Managed PostgreSQL database (AWS RDS)
+
+
+      Configuration:
+
+      - Instance: db.r6g.2xlarge (8 vCPU, 64GB RAM)
+
+      - Storage: 1TB gp3 (12000 IOPS)
+
+      - Multi-AZ: enabled
+
+      - Automated backups: 7 days retention
+
+
+      Access:
+
+      - Endpoint: prod-db.xxx.us-east-1.rds.amazonaws.com
+
+      - Port: 5432
+
+      - Security group: sg-xxxxx (allow from EKS cluster only)
+
+
+      Contacts:
+
+      - DBA team: dba@company.com
+
+      - On-call: oncall-db@pagerduty.com
+
+
+      DR procedure: docs/disaster-recovery/postgres-rds.md'

@@ -1,0 +1,60 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  namespace: advanced-overrides-demo
+  helm_repos:
+    grafana:
+      url: https://grafana.github.io/helm-charts
+      insecure_skip_tls_verify: false
+    prometheus-community:
+      url: https://prometheus-community.github.io/helm-charts
+      insecure_skip_tls_verify: false
+    ot-helm:
+      url: https://ot-container-kit.github.io/helm-charts/
+      insecure_skip_tls_verify: false
+apps:
+  grafana:
+    type: helm
+    chart: grafana/grafana
+    version: 10.1.2
+    values:
+    - grafana-values.yaml
+    overrides:
+    - templates/deployment.yaml
+    - templates/service.yaml
+    removes:
+    - templates/tests/
+    - templates/serviceaccount.yaml
+    set_values:
+      service.type: LoadBalancer
+      persistence.enabled: 'false'
+    namespace: advanced-overrides-demo
+  prometheus:
+    type: helm
+    chart: prometheus-community/prometheus
+    version: 25.28.0
+    values:
+    - prometheus-values.yaml
+    overrides:
+    - templates/server/deploy.yaml
+    - templates/server/pvc.yaml
+    removes:
+    - templates/pushgateway/
+    - templates/kube-state-metrics/
+    - templates/node-exporter/
+    set_values:
+      server.persistentVolume.enabled: 'true'
+      server.persistentVolume.size: 10Gi
+    namespace: advanced-overrides-demo
+  redis:
+    type: helm
+    chart: ot-helm/redis
+    version: 0.15.10
+    set_values:
+      redisCluster.clusterSize: '1'
+      kubernetesConfig.image: redis:7.2
+      redisExporter.enabled: 'false'
+    namespace: advanced-overrides-demo

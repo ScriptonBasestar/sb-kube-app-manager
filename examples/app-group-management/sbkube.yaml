@@ -1,0 +1,41 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  namespace: demo
+  cluster: demo-cluster
+  helm_repos:
+    cilium:
+      url: https://helm.cilium.io/
+      insecure_skip_tls_verify: false
+    cloudnative-pg:
+      url: https://cloudnative-pg.github.io/charts
+      insecure_skip_tls_verify: false
+apps:
+  app-000-infra-network:
+    type: helm
+    chart: cilium/cilium
+    version: 1.14.5
+    values:
+    - cilium.yaml
+    release_name: cilium
+    namespace: demo
+  app-010-data-postgresql:
+    type: helm
+    chart: cloudnative-pg/cloudnative-pg
+    version: 0.20.0
+    values:
+    - postgresql.yaml
+    release_name: cloudnative-pg
+    namespace: demo
+    depends_on:
+    - app-000-infra-network
+  app-020-app-backend:
+    type: yaml
+    manifests:
+    - manifests/backend
+    namespace: demo
+    depends_on:
+    - app-010-data-postgresql

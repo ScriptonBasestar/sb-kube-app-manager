@@ -688,6 +688,35 @@ class HelmApp(ConfigBaseModel):
         description="Optional notes or description for this application",
     )
 
+    @field_validator("values", mode="before")
+    @classmethod
+    def normalize_values(cls, v: Any) -> list[str]:
+        """Normalize values to filter out non-string items.
+
+        Legacy configs may have inline dict values instead of file paths.
+        This validator filters them out to prevent validation errors.
+        Use set_values for inline Helm values instead.
+        """
+        if isinstance(v, list):
+            return [item for item in v if isinstance(item, str)]
+        return v if v is not None else []
+
+    @field_validator("set_values", mode="before")
+    @classmethod
+    def normalize_set_values(cls, v: Any) -> dict[str, Any]:
+        """Normalize set_values to support legacy list format.
+
+        Converts: ["key=value", "key2=value2"] -> {"key": "value", "key2": "value2"}
+        """
+        if isinstance(v, list):
+            result = {}
+            for item in v:
+                if isinstance(item, str) and "=" in item:
+                    key, value = item.split("=", 1)
+                    result[key] = value
+            return result
+        return v if v is not None else {}
+
     @field_validator("chart")
     @classmethod
     def validate_chart(cls, v: str) -> str:

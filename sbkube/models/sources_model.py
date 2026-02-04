@@ -143,10 +143,24 @@ class SourceScheme(InheritableConfigModel):
     - Optional app directory specification (v0.5.0+)
     """
 
-    # Cluster targeting (required for deployment)
+    # Cluster targeting (required for deployment, optional with defaults for migration)
     cluster: str | None = None  # Cluster identifier (documentation purpose, optional)
-    kubeconfig: str  # Kubeconfig file path (required)
-    kubeconfig_context: str  # Kubectl context name (required)
+    kubeconfig: str = "~/.kube/config"  # Kubeconfig file path (default for legacy compat)
+    kubeconfig_context: str = "default"  # Kubectl context name (default for legacy compat)
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_legacy_fields(cls, data: Any) -> Any:
+        """Convert legacy field names for backward compatibility.
+
+        Handles:
+        - repos -> helm_repos (legacy field name)
+        """
+        if isinstance(data, dict):
+            # Convert 'repos' to 'helm_repos' (legacy field name)
+            if "repos" in data and "helm_repos" not in data:
+                data["helm_repos"] = data.pop("repos")
+        return data
 
     # App directory control (optional, v0.5.0+)
     app_dirs: list[str] | None = None  # Explicit list of app directories to deploy
@@ -195,10 +209,22 @@ class SourceScheme(InheritableConfigModel):
     @field_validator("helm_repos", mode="before")
     @classmethod
     def normalize_helm_repos(cls, v: Any) -> dict[str, Any]:
-        """Normalize helm_repos to support string shorthand format.
+        """Normalize helm_repos to support multiple input formats.
 
-        Converts: {"grafana": "https://..."} -> {"grafana": {"url": "https://..."}}
+        Supports:
+        - Dict with URL string: {"grafana": "https://..."} -> {"grafana": {"url": "https://..."}}
+        - Dict with config: {"grafana": {"url": "https://...", ...}} -> unchanged
+        - Legacy list format: [{"name": "grafana", "url": "..."}] -> {"grafana": {"url": "..."}}
         """
+        # Handle legacy list format (convert to dict)
+        if isinstance(v, list):
+            normalized = {}
+            for item in v:
+                if isinstance(item, dict) and "name" in item:
+                    name = item.pop("name")
+                    normalized[name] = item
+            return normalized
+
         if not isinstance(v, dict):
             return v
 
@@ -441,7 +467,12 @@ class SourceScheme(InheritableConfigModel):
     @field_validator("cluster_values_file")
     @classmethod
     def validate_cluster_values_file(cls, v: str | None) -> str | None:
-        """Validate cluster_values_file path if specified."""
+        """Validate cluster_values_file path if specified.
+
+        Note: File existence is only checked for absolute paths.
+        Relative paths are validated at runtime when the actual
+        base directory is known (e.g., during deployment).
+        """
         if v is None:
             return None
 
@@ -453,14 +484,16 @@ class SourceScheme(InheritableConfigModel):
         # Expand user home directory
         expanded_path = os.path.expanduser(v)
 
-        # Check if file exists
-        if not os.path.exists(expanded_path):
-            msg = f"cluster_values_file not found: {v}"
-            raise ValueError(msg)
+        # Only check existence for absolute paths
+        # Relative paths are validated at runtime with proper base directory
+        if os.path.isabs(expanded_path):
+            if not os.path.exists(expanded_path):
+                msg = f"cluster_values_file not found: {v}"
+                raise ValueError(msg)
 
-        if not os.path.isfile(expanded_path):
-            msg = f"cluster_values_file is not a file: {v}"
-            raise ValueError(msg)
+            if not os.path.isfile(expanded_path):
+                msg = f"cluster_values_file is not a file: {v}"
+                raise ValueError(msg)
 
         return v
 

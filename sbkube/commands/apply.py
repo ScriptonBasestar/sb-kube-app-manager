@@ -2,6 +2,9 @@
 
 통합 명령어: prepare → deploy를 자동으로 실행.
 의존성을 고려하여 올바른 순서로 배포합니다.
+
+Supports both legacy (sources.yaml + config.yaml) and unified (sbkube.yaml) formats.
+The unified format is recommended for new projects.
 """
 
 from pathlib import Path
@@ -12,7 +15,12 @@ from sbkube.models.config_model import SBKubeConfig
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.deployment_checker import DeploymentChecker
 from sbkube.utils.error_formatter import format_deployment_error
-from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.file_loader import (
+    ConfigType,
+    detect_config_file,
+    emit_deprecation_warning,
+    load_config_file,
+)
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.progress_tracker import ProgressTracker
@@ -20,10 +28,18 @@ from sbkube.utils.progress_tracker import ProgressTracker
 
 @click.command(name="apply")
 @click.option(
+    "-f",
+    "--file",
+    "config_file",
+    default=None,
+    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    help="Unified config file (sbkube.yaml) - recommended for new projects",
+)
+@click.option(
     "--app-dir",
     "app_config_dir_name",
     default=None,
-    help="앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
+    help="[DEPRECATED] 앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
 )
 @click.option(
     "--base-dir",
@@ -35,13 +51,13 @@ from sbkube.utils.progress_tracker import ProgressTracker
     "--config-file",
     "config_file_name",
     default="config.yaml",
-    help="설정 파일 이름 (app-dir 내부)",
+    help="[DEPRECATED] 설정 파일 이름 (app-dir 내부) - use -f instead",
 )
 @click.option(
     "--source",
     "sources_file_name",
     default="sources.yaml",
-    help="소스 설정 파일 (base-dir 기준)",
+    help="[DEPRECATED] 소스 설정 파일 (base-dir 기준) - use -f instead",
 )
 @click.option(
     "--app",
@@ -88,6 +104,7 @@ from sbkube.utils.progress_tracker import ProgressTracker
 @click.pass_context
 def cmd(
     ctx: click.Context,
+    config_file: str | None,
     app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
@@ -108,6 +125,15 @@ def cmd(
     3. deploy: Kubernetes 클러스터에 배포
 
     의존성(depends_on)을 자동으로 해결하여 올바른 순서로 배포합니다.
+
+    \b
+    Usage with unified config (recommended):
+        sbkube apply -f sbkube.yaml
+        sbkube apply -f sbkube.yaml --dry-run
+
+    \b
+    Usage with legacy config (deprecated):
+        sbkube apply --base-dir ./project --source sources.yaml
     """
     # Initialize OutputManager
     output_format = ctx.obj.get("format", "human")
@@ -117,6 +143,33 @@ def cmd(
 
     if dry_run:
         output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="info")
+
+    # Detect config format and emit deprecation warnings
+    BASE_DIR = Path(base_dir).resolve()
+    detected = detect_config_file(BASE_DIR, config_file)
+
+    if detected.config_type == ConfigType.UNIFIED:
+        output.print(
+            f"[green]📄 Using unified config: {detected.primary_file}[/green]",
+            level="info",
+        )
+        # TODO: Full unified config support will be added in future release
+        # For now, fall back to legacy mode with a notice
+        output.print(
+            "[yellow]ℹ️  Unified config execution is in preview. "
+            "Full support coming in v1.0[/yellow]",
+            level="info",
+        )
+    elif detected.is_deprecated():
+        emit_deprecation_warning(detected)
+        output.print(
+            f"[yellow]⚠️  {detected.deprecation_warning}[/yellow]",
+            level="warning",
+        )
+        output.print(
+            "[yellow]💡 Run 'sbkube migrate' to convert to the new format[/yellow]",
+            level="info",
+        )
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()

@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## type: User Guide audience: End User, Developer topics: [migration, upgrade, breaking-changes] llm_priority: medium last_updated: 2025-01-06
+## type: User Guide audience: End User, Developer topics: [migration, upgrade, breaking-changes] llm_priority: medium last_updated: 2025-02-04
 
 # SBKube Migration Guide
 
@@ -10,11 +10,35 @@ ______________________________________________________________________
 
 ## TL;DR
 
-- **Current Version**: v0.7.1
-- **Latest Stable**: v0.7.0
-- **Major Changes**: v0.7.1 (cluster global values, error handling), v0.7.0 (LLM output), v0.6 (state management)
-- **Migration Tool**: `sbkube validate` checks compatibility
-- **Related**: [Config Schema](config-schema.md), [sources-schema.md](sources-schema.md)
+- **Current Version**: v0.10.0
+- **Latest Stable**: v0.10.0
+- **Major Changes**: v0.10.0 (unified config), v0.9.0 (workspace), v0.7.1 (cluster global values)
+- **Migration Tool**: `sbkube migrate` converts legacy configs to unified format
+- **Recommended Format**: `sbkube.yaml` (unified config)
+- **Related**: [Unified Config Schema](unified-config-schema.md), [Config Schema](config-schema.md)
+
+> **⚠️ Important**: Starting with v0.10.0, the legacy configuration format (`sources.yaml` + `config.yaml`)
+> is deprecated. Use `sbkube migrate` to convert to the new unified format (`sbkube.yaml`).
+
+______________________________________________________________________
+
+## Quick Migration (v0.10.0+)
+
+Convert your legacy configuration to the new unified format:
+
+```bash
+# Preview migration (dry-run)
+sbkube migrate --dry-run
+
+# Migrate current directory
+sbkube migrate
+
+# Migrate from specific directory
+sbkube migrate -s ./my-project -o ./my-project/sbkube.yaml
+
+# Force overwrite existing file
+sbkube migrate -o sbkube.yaml --force
+```
 
 ______________________________________________________________________
 
@@ -23,6 +47,8 @@ ______________________________________________________________________
 - [Overview](#overview)
 - [General Migration Process](#general-migration-process)
 - [Version-Specific Guides](#version-specific-guides)
+  - [Migration to v0.10.0 (Unified Config)](#migration-to-v0100)
+  - [Migration to v0.9.0 (Workspace)](#migration-to-v090)
   - [Migration to v0.7.1](#migration-to-v071)
   - [Migration to v0.7.0](#migration-to-v070)
   - [Migration to v0.6.1](#migration-to-v061)
@@ -41,10 +67,16 @@ breaking changes that require configuration migration.
 
 ### Version History
 
-| Version | Release Date | Major Changes | |---------|--------------|---------------| | v0.7.1 | 2025-01-06 | Cluster
-global values, helm_label_injection, error handling | | v0.7.0 | 2025-01-03 | LLM output integration | | v0.6.1 |
-2025-01-03 | Enhanced error handling | | v0.6.0 | 2024-12-15 | State management, helm format | | v0.5.0 | 2024-11-01 |
-Working directory consolidation | | v0.4.x | 2024-09-01 | Initial stable release |
+| Version | Release Date | Major Changes |
+|---------|--------------|---------------|
+| v0.10.0 | 2025-02-04 | Unified config (sbkube.yaml), recursive executor, rollback_scope |
+| v0.9.0 | 2025-01-20 | Workspace support, multi-phase deployment |
+| v0.7.1 | 2025-01-06 | Cluster global values, helm_label_injection, error handling |
+| v0.7.0 | 2025-01-03 | LLM output integration |
+| v0.6.1 | 2025-01-03 | Enhanced error handling |
+| v0.6.0 | 2024-12-15 | State management, helm format |
+| v0.5.0 | 2024-11-01 | Working directory consolidation |
+| v0.4.x | 2024-09-01 | Initial stable release |
 
 ______________________________________________________________________
 
@@ -118,6 +150,125 @@ ______________________________________________________________________
 ______________________________________________________________________
 
 ## Version-Specific Guides
+
+### Migration to v0.10.0
+
+**Release Date**: 2025-02-04
+**Type**: Major Release
+**Breaking Changes**: Configuration format (backward compatible with warnings)
+
+#### What's New
+
+- **Unified Configuration**: Single `sbkube.yaml` file replaces `sources.yaml` + `config.yaml`
+- **Recursive Executor**: Support for nested phases with settings inheritance
+- **Rollback Scope**: Control rollback at app, phase, or deployment level
+- **Migration Tool**: `sbkube migrate` command for automatic conversion
+
+#### Migration Steps
+
+**1. Run the Migration Tool**
+
+```bash
+# Preview the migration (recommended first)
+sbkube migrate --dry-run
+
+# Perform the migration
+sbkube migrate -o sbkube.yaml
+
+# Or specify source directory
+sbkube migrate -s ./my-config -o ./my-config/sbkube.yaml
+```
+
+**2. Review the Generated File**
+
+The migration tool converts:
+- `sources.yaml` settings → `settings` section
+- `config.yaml` apps → `apps` section
+- `workspace.yaml` phases → `phases` section
+
+**3. Verify the Configuration**
+
+```bash
+sbkube validate -f sbkube.yaml
+```
+
+**4. Test with Dry-Run**
+
+```bash
+sbkube apply -f sbkube.yaml --dry-run
+```
+
+**5. Remove Legacy Files (Optional)**
+
+After verifying the migration:
+```bash
+# Backup first
+mkdir legacy-backup
+mv sources.yaml config.yaml legacy-backup/
+
+# Or for workspace format
+mv workspace.yaml legacy-backup/
+```
+
+#### Configuration Mapping
+
+| Legacy Format | Unified Format |
+|---------------|----------------|
+| `sources.yaml` | `settings:` section |
+| `config.yaml` | `apps:` section |
+| `workspace.yaml` | `metadata:` + `phases:` sections |
+| `helm_repos:` (list) | `settings.helm_repos:` (dict) |
+| `repos:` | `settings.helm_repos:` |
+
+#### New Features in v0.10.0
+
+**1. Settings Inheritance**
+
+```yaml
+settings:
+  namespace: default  # Global default
+
+phases:
+  p1-prod:
+    settings:
+      namespace: production  # Phase override
+    apps:
+      nginx:
+        namespace: nginx-ns  # App override (highest priority)
+```
+
+**2. Rollback Scope**
+
+```yaml
+settings:
+  on_failure: rollback
+  rollback_scope: phase  # app | phase | all
+```
+
+**3. Execution Order**
+
+```yaml
+settings:
+  execution_order: apps_first  # apps_first | phases_first
+```
+
+______________________________________________________________________
+
+### Migration to v0.9.0
+
+**Release Date**: 2025-01-20
+**Type**: Feature Release
+**Breaking Changes**: None
+
+#### What's New
+
+- **Workspace Support**: Multi-phase deployment orchestration
+- **Parallel Execution**: Execute phases and apps in parallel
+- **App Group Dependencies**: Define dependencies between app groups
+
+See [Workspace Guide](../02-features/workspace-guide.md) for details.
+
+______________________________________________________________________
 
 ### Migration to v0.7.1
 

@@ -1,0 +1,46 @@
+apiVersion: sbkube/v1
+metadata:
+  name: converted
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  namespace: complete-workflow
+  cluster: complete-workflow-demo
+  helm_repos:
+    bitnami:
+      url: https://charts.bitnami.com/bitnami
+      insecure_skip_tls_verify: false
+    grafana:
+      url: https://grafana.github.io/helm-charts
+      insecure_skip_tls_verify: false
+apps:
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: 18.6.1
+    values:
+    - values/redis.yaml
+    namespace: complete-workflow
+    notes: 'Redis cache for the application.
+
+      Deployed first as other services depend on it.'
+  nginx:
+    type: helm
+    chart: bitnami/nginx
+    version: 15.14.0
+    values:
+    - values/nginx.yaml
+    namespace: complete-workflow
+    depends_on:
+    - redis
+    notes: 'Nginx web server.
+
+      Depends on Redis for session storage.'
+  configmap:
+    type: yaml
+    manifests:
+    - manifests/configmap.yaml
+    namespace: complete-workflow
+    notes: 'Application configuration as ConfigMap.
+
+      Applied before main application deployment.'

@@ -18,37 +18,41 @@ import yaml
 # ============================================================================
 # Known Incompatible Charts
 # ============================================================================
-# These charts have strict schema validation and don't support
-# commonLabels/commonAnnotations. Label injection is automatically disabled.
+# These charts don't fully support commonLabels/commonAnnotations injection.
+# Label injection is automatically disabled for these charts.
+#
+# Incompatibility reasons:
+#   - NO_COMMON_ANNOTATIONS: supports commonLabels but not commonAnnotations
+#   - DIFFERENT_NAMING: uses 'labels'/'annotations' instead of 'commonLabels'/'commonAnnotations'
+#   - STRICT_SCHEMA: additionalProperties: false rejects unknown fields
 #
 # Format: "repo/chart" or just "chart" for any repo
 # Matching is case-insensitive and supports partial matches
 #
 # To add a new chart:
-#   1. Add to this list
+#   1. Add to this list with reason
 #   2. Test with: sbkube template --app-dir <path>
 #   3. Submit PR with chart name and reason
+#
+# Sources:
+#   - https://github.com/traefik/traefik-helm-chart (NO_COMMON_ANNOTATIONS)
+#   - https://github.com/authelia/chartrepo (DIFFERENT_NAMING: uses 'labels')
+#   - https://github.com/cert-manager/cert-manager/issues/7668 (STRICT_SCHEMA)
 
 KNOWN_INCOMPATIBLE_CHARTS: set[str] = {
-    # Traefik - strict values.schema.json validation
+    # Traefik - supports commonLabels but NOT commonAnnotations
+    # https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
     "traefik/traefik",
     "traefik",
-    # Authelia - strict schema, custom labeling required
+    # Authelia - uses 'labels'/'annotations' instead of 'commonLabels'/'commonAnnotations'
+    # https://github.com/authelia/chartrepo/blob/master/charts/authelia/values.yaml
     "authelia/authelia",
     "authelia",
-    # Cilium - CNI with strict schema
-    "cilium/cilium",
-    "cilium",
-    # Linkerd - service mesh with strict CRD schema
-    "linkerd/linkerd2",
-    "linkerd2",
-    # Istio - service mesh with strict schema
-    "istio/istiod",
-    "istio/base",
-    "istiod",
-    # ArgoCD - GitOps tool with strict schema
-    "argo/argo-cd",
-    "argo-cd",
+    # cert-manager - strict schema with additionalProperties: false
+    # https://github.com/cert-manager/cert-manager/issues/7668
+    "cert-manager/cert-manager",
+    "cert-manager",
+    "jetstack/cert-manager",
 }
 
 
@@ -100,7 +104,7 @@ def get_label_injection_recommendation(chart: str) -> str | None:
 
     chart_name = chart.split("/")[-1] if "/" in chart else chart
     return (
-        f"Chart '{chart}' has strict schema validation.\n"
+        f"Chart '{chart}' may not support commonLabels/commonAnnotations.\n"
         f"  → Label injection automatically disabled.\n"
         f"  → To manually enable: set helm_label_injection: true in config\n"
         f"  → To add labels manually, use the chart's native labeling options"

@@ -161,10 +161,11 @@ class TestChartCompatibility:
         assert is_chart_label_injection_compatible("authelia/authelia") is False
         assert is_chart_label_injection_compatible("authelia") is False
 
-    def test_cilium_is_incompatible(self) -> None:
-        """Cilium chart should be detected as incompatible."""
-        assert is_chart_label_injection_compatible("cilium/cilium") is False
-        assert is_chart_label_injection_compatible("cilium") is False
+    def test_cert_manager_is_incompatible(self) -> None:
+        """cert-manager chart should be detected as incompatible."""
+        assert is_chart_label_injection_compatible("cert-manager/cert-manager") is False
+        assert is_chart_label_injection_compatible("cert-manager") is False
+        assert is_chart_label_injection_compatible("jetstack/cert-manager") is False
 
     def test_grafana_is_compatible(self) -> None:
         """Grafana chart should be compatible (supports commonLabels)."""
@@ -184,7 +185,7 @@ class TestChartCompatibility:
         recommendation = get_label_injection_recommendation("traefik/traefik")
         assert recommendation is not None
         assert "traefik" in recommendation.lower()
-        assert "strict schema" in recommendation.lower()
+        assert "commonlabels" in recommendation.lower() or "label injection" in recommendation.lower()
 
     def test_no_recommendation_for_compatible_chart(self) -> None:
         """Should return None for compatible charts."""

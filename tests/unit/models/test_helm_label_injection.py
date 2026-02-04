@@ -202,3 +202,69 @@ class TestChartCompatibility:
         assert is_chart_label_injection_compatible("traefik/traefik") is False
         # Just chart name should also work
         assert is_chart_label_injection_compatible("traefik") is False
+
+
+class TestSourcesConfiguration:
+    """Test sources.yaml configuration for label injection."""
+
+    def test_extra_incompatible_charts(self) -> None:
+        """Should treat extra_incompatible charts as incompatible."""
+        # Without extra, my-custom-chart is compatible
+        assert is_chart_label_injection_compatible("my-custom-chart") is True
+
+        # With extra, my-custom-chart becomes incompatible
+        assert is_chart_label_injection_compatible(
+            "my-custom-chart",
+            extra_incompatible=["my-custom-chart"],
+        ) is False
+
+    def test_force_compatible_overrides_builtin(self) -> None:
+        """force_compatible should override built-in incompatible list."""
+        # Traefik is normally incompatible
+        assert is_chart_label_injection_compatible("traefik") is False
+
+        # But force_compatible overrides it
+        assert is_chart_label_injection_compatible(
+            "traefik",
+            force_compatible=["traefik"],
+        ) is True
+
+    def test_force_compatible_overrides_extra_incompatible(self) -> None:
+        """force_compatible should override extra_incompatible."""
+        # my-chart is in extra_incompatible
+        assert is_chart_label_injection_compatible(
+            "my-chart",
+            extra_incompatible=["my-chart"],
+        ) is False
+
+        # But force_compatible overrides it
+        assert is_chart_label_injection_compatible(
+            "my-chart",
+            extra_incompatible=["my-chart"],
+            force_compatible=["my-chart"],
+        ) is True
+
+    def test_case_insensitive_matching(self) -> None:
+        """Matching should be case-insensitive."""
+        assert is_chart_label_injection_compatible(
+            "My-Custom-Chart",
+            extra_incompatible=["my-custom-chart"],
+        ) is False
+
+        assert is_chart_label_injection_compatible(
+            "TRAEFIK",
+            force_compatible=["traefik"],
+        ) is True
+
+    def test_repo_chart_format_in_extra_list(self) -> None:
+        """Should handle repo/chart format in extra lists."""
+        assert is_chart_label_injection_compatible(
+            "myrepo/mychart",
+            extra_incompatible=["myrepo/mychart"],
+        ) is False
+
+        # Just chart name should also match
+        assert is_chart_label_injection_compatible(
+            "mychart",
+            extra_incompatible=["myrepo/mychart"],
+        ) is False

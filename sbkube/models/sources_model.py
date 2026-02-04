@@ -160,6 +160,17 @@ class SourceScheme(InheritableConfigModel):
     # Manifest cleanup settings (optional, v0.7.0+)
     cleanup_metadata: bool = True  # Auto-remove server-managed metadata fields (default: True)
 
+    # Label injection settings (optional, v0.9.1+)
+    incompatible_charts: list[str] = Field(
+        default_factory=list,
+        description="Additional charts that don't support commonLabels/commonAnnotations. "
+        "These charts will have label injection automatically disabled.",
+    )
+    force_label_injection: list[str] = Field(
+        default_factory=list,
+        description="Charts to force enable label injection, overriding built-in incompatible list.",
+    )
+
     # Repository configuration (optional)
     helm_repos: dict[str, HelmRepoScheme] = Field(default_factory=dict)
     oci_registries: dict[str, OciRepoScheme] = Field(default_factory=dict)

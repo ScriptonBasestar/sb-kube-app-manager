@@ -56,11 +56,17 @@ KNOWN_INCOMPATIBLE_CHARTS: set[str] = {
 }
 
 
-def is_chart_label_injection_compatible(chart: str) -> bool:
+def is_chart_label_injection_compatible(
+    chart: str,
+    extra_incompatible: list[str] | None = None,
+    force_compatible: list[str] | None = None,
+) -> bool:
     """Check if a Helm chart is compatible with label injection.
 
     Args:
         chart: Chart name in format "repo/chart" or just "chart"
+        extra_incompatible: Additional charts to treat as incompatible (from sources.yaml)
+        force_compatible: Charts to force as compatible, overriding built-in list
 
     Returns:
         True if compatible (label injection should work),
@@ -71,43 +77,68 @@ def is_chart_label_injection_compatible(chart: str) -> bool:
         True
         >>> is_chart_label_injection_compatible("traefik/traefik")
         False
-        >>> is_chart_label_injection_compatible("traefik")
-        False
+        >>> is_chart_label_injection_compatible("traefik", force_compatible=["traefik"])
+        True
 
     """
     chart_lower = chart.lower().strip()
-
-    # Direct match
-    if chart_lower in KNOWN_INCOMPATIBLE_CHARTS:
-        return False
-
-    # Extract chart name (after last /)
     chart_name = chart_lower.split("/")[-1] if "/" in chart_lower else chart_lower
-    if chart_name in KNOWN_INCOMPATIBLE_CHARTS:
+
+    # Build force compatible set (case-insensitive)
+    force_set: set[str] = set()
+    if force_compatible:
+        for c in force_compatible:
+            c_lower = c.lower().strip()
+            force_set.add(c_lower)
+            # Also add just the chart name
+            if "/" in c_lower:
+                force_set.add(c_lower.split("/")[-1])
+
+    # Check force compatible first (highest priority)
+    if chart_lower in force_set or chart_name in force_set:
+        return True
+
+    # Build incompatible set from built-in + extra
+    incompatible_set = set(KNOWN_INCOMPATIBLE_CHARTS)
+    if extra_incompatible:
+        for c in extra_incompatible:
+            c_lower = c.lower().strip()
+            incompatible_set.add(c_lower)
+            # Also add just the chart name
+            if "/" in c_lower:
+                incompatible_set.add(c_lower.split("/")[-1])
+
+    # Check incompatible
+    if chart_lower in incompatible_set or chart_name in incompatible_set:
         return False
 
     return True
 
 
-def get_label_injection_recommendation(chart: str) -> str | None:
+def get_label_injection_recommendation(
+    chart: str,
+    extra_incompatible: list[str] | None = None,
+    force_compatible: list[str] | None = None,
+) -> str | None:
     """Get recommendation message for incompatible charts.
 
     Args:
         chart: Chart name
+        extra_incompatible: Additional charts to treat as incompatible
+        force_compatible: Charts to force as compatible
 
     Returns:
         Recommendation message if chart is incompatible, None otherwise
 
     """
-    if is_chart_label_injection_compatible(chart):
+    if is_chart_label_injection_compatible(chart, extra_incompatible, force_compatible):
         return None
 
-    chart_name = chart.split("/")[-1] if "/" in chart else chart
     return (
         f"Chart '{chart}' may not support commonLabels/commonAnnotations.\n"
         f"  → Label injection automatically disabled.\n"
         f"  → To manually enable: set helm_label_injection: true in config\n"
-        f"  → To add labels manually, use the chart's native labeling options"
+        f"  → Or add to force_label_injection in sources.yaml"
     )
 
 

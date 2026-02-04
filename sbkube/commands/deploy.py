@@ -103,6 +103,8 @@ def deploy_helm_app(
     operator: str | None = None,
     progress_tracker: Any = None,
     cluster_global_values: dict | None = None,
+    incompatible_charts: list[str] | None = None,
+    force_label_injection: list[str] | None = None,
 ) -> bool:
     """Helm 앱 배포 (install/upgrade).
 
@@ -121,6 +123,8 @@ def deploy_helm_app(
         operator: 배포자 이름 (Phase 2)
         progress_tracker: ProgressTracker 인스턴스 (Phase 2)
         cluster_global_values: 클러스터 전역 values (선택, v0.7.0+)
+        incompatible_charts: 추가 비호환 chart 목록 (sources.yaml에서)
+        force_label_injection: 강제 호환 chart 목록 (sources.yaml에서)
 
     Returns:
         성공 여부
@@ -309,10 +313,18 @@ def deploy_helm_app(
     effective_label_injection = app.helm_label_injection
     chart_name = app.chart
 
-    # Auto-disable for known incompatible charts (unless user explicitly set it)
+    # Auto-disable for known incompatible charts (unless user explicitly set it or forced)
     if effective_label_injection and chart_name:
-        if not is_chart_label_injection_compatible(chart_name):
-            recommendation = get_label_injection_recommendation(chart_name)
+        if not is_chart_label_injection_compatible(
+            chart_name,
+            extra_incompatible=incompatible_charts,
+            force_compatible=force_label_injection,
+        ):
+            recommendation = get_label_injection_recommendation(
+                chart_name,
+                extra_incompatible=incompatible_charts,
+                force_compatible=force_label_injection,
+            )
             if recommendation:
                 for line in recommendation.split("\n"):
                     console.print(f"  [yellow]{line}[/yellow]")
@@ -346,7 +358,11 @@ def deploy_helm_app(
                 "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
             )
     else:
-        if not chart_name or is_chart_label_injection_compatible(chart_name):
+        if not chart_name or is_chart_label_injection_compatible(
+            chart_name,
+            extra_incompatible=incompatible_charts,
+            force_compatible=force_label_injection,
+        ):
             # User explicitly disabled, not auto-disabled
             console.print(
                 "  [dim]Label injection disabled (helm_label_injection: false)[/dim]"
@@ -1283,6 +1299,8 @@ def cmd(
                         context,
                         dry_run,
                         cluster_global_values=cluster_global_values,
+                        incompatible_charts=sources.incompatible_charts if sources else None,
+                        force_label_injection=sources.force_label_injection if sources else None,
                     )
                 elif isinstance(app, YamlApp):
                     # apps_config를 딕셔너리로 변환 (Pydantic 모델 → dict)

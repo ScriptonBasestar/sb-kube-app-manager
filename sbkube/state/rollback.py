@@ -477,6 +477,38 @@ class RollbackManager:
             # Clean up temporary file
             Path(temp_file).unlink(missing_ok=True)
 
+    def get_phase_apps(
+        self,
+        deployment_id: str,
+        phase_name: str | None,
+    ) -> list[str]:
+        """Get apps deployed in a specific phase.
+
+        Args:
+            deployment_id: Deployment ID to look up
+            phase_name: Phase name to filter apps by
+
+        Returns:
+            List of app names belonging to the phase
+
+        """
+        if not phase_name:
+            return []
+
+        deployment = self.db.get_deployment(deployment_id)
+        if not deployment:
+            logger.warning(f"Deployment not found: {deployment_id}")
+            return []
+
+        # Filter apps by app_group (which stores phase info)
+        phase_apps = []
+        for app in deployment.apps:
+            app_group = app.get("app_group") or app.get("phase")
+            if app_group == phase_name:
+                phase_apps.append(app["name"])
+
+        return phase_apps
+
     def list_rollback_points(
         self,
         cluster: str,

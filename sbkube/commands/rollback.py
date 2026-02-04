@@ -4,10 +4,16 @@ This command performs rollback operations on deployments, restoring
 applications to previous states.
 
 Replaces: sbkube state rollback, sbkube state rollback_points
+
+Scope options (v0.11.0+):
+- app: Rollback single app (default, existing behavior)
+- phase: Rollback all apps deployed in a specific phase
+- all: Rollback entire deployment (all apps)
 """
 
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import click
 
@@ -15,6 +21,10 @@ from sbkube.exceptions import RollbackError
 from sbkube.models.deployment_state import RollbackRequest
 from sbkube.state.rollback import RollbackManager
 from sbkube.utils.logger import logger
+
+
+# Type alias for rollback scope
+RollbackScope = Literal["app", "phase", "all"]
 
 
 @click.command(name="rollback")
@@ -25,6 +35,17 @@ from sbkube.utils.logger import logger
     "-a",
     multiple=True,
     help="Specific app(s) to rollback (can be specified multiple times)",
+)
+@click.option(
+    "--scope",
+    type=click.Choice(["app", "phase", "all"]),
+    default="app",
+    help="Rollback scope: app (single), phase (all apps in phase), all (entire deployment)",
+)
+@click.option(
+    "--phase",
+    "-p",
+    help="Phase name to rollback (requires --scope=phase)",
 )
 @click.option(
     "--dry-run",
@@ -49,6 +70,8 @@ def cmd(
     deployment_id: str | None,
     target: str | None,
     app: tuple,
+    scope: RollbackScope,
+    phase: str | None,
     dry_run: bool,
     force: bool,
     list_points: bool,
@@ -64,6 +87,12 @@ def cmd(
     state, either completely or for specific apps only.
 
     \b
+    Scope options (v0.11.0+):
+        app   - Rollback specific app(s) only (default)
+        phase - Rollback all apps deployed in a specific phase
+        all   - Rollback entire deployment (all apps)
+
+    \b
     Examples:
         # Rollback a specific deployment
         sbkube rollback dep_20250131_143022
@@ -74,8 +103,14 @@ def cmd(
         # Rollback to a specific target
         sbkube rollback dep_20250131_143022 --target dep_20250130_095510
 
-        # Rollback specific apps only
+        # Rollback specific apps only (scope=app, default)
         sbkube rollback dep_20250131_143022 --app traefik --app coredns
+
+        # Rollback entire phase (scope=phase)
+        sbkube rollback dep_20250131_143022 --scope phase --phase p1-infra
+
+        # Rollback entire deployment (scope=all)
+        sbkube rollback dep_20250131_143022 --scope all
 
         # List available rollback points
         sbkube rollback --list --cluster production --namespace kube-system
@@ -99,17 +134,43 @@ def cmd(
             logger.info("Use --list to see available rollback points")
             raise click.Abort
 
+        # Validate scope-specific options
+        if scope == "phase" and not phase:
+            logger.error("--phase is required when using --scope=phase")
+            raise click.Abort
+
+        if scope == "app" and not app:
+            logger.warning(
+                "No apps specified with --scope=app. "
+                "Use --app or --scope=all to rollback all apps."
+            )
+
+        # Resolve apps based on scope
+        app_names = _resolve_apps_for_scope(
+            scope=scope,
+            apps=list(app) if app else None,
+            phase_name=phase,
+            deployment_id=deployment_id,
+            rollback_manager=rollback_manager,
+        )
+
         # Create rollback request
         request = RollbackRequest(
             deployment_id=deployment_id,
             target_deployment_id=target,
-            app_names=list(app) if app else None,
+            app_names=app_names,
             dry_run=dry_run,
             force=force,
         )
 
+        scope_desc = {
+            "app": f"apps: {app_names}" if app_names else "all apps",
+            "phase": f"phase '{phase}'",
+            "all": "entire deployment",
+        }
         logger.info(
-            f"{'DRY RUN: ' if dry_run else ''}Rolling back deployment: {deployment_id}"
+            f"{'DRY RUN: ' if dry_run else ''}"
+            f"Rolling back {scope_desc[scope]} from deployment: {deployment_id}"
         )
 
         # Perform rollback
@@ -117,9 +178,9 @@ def cmd(
 
         # Display results
         if dry_run:
-            _print_rollback_simulation(result)
+            _print_rollback_simulation(result, scope)
         else:
-            _print_rollback_result(result)
+            _print_rollback_result(result, scope)
 
     except RollbackError as e:
         logger.error(f"Rollback failed: {e}")
@@ -127,6 +188,47 @@ def cmd(
     except Exception as e:
         logger.error(f"Unexpected error during rollback: {e}")
         raise click.Abort
+
+
+def _resolve_apps_for_scope(
+    scope: RollbackScope,
+    apps: list[str] | None,
+    phase_name: str | None,
+    deployment_id: str,
+    rollback_manager: RollbackManager,
+) -> list[str] | None:
+    """Resolve app names based on rollback scope.
+
+    Args:
+        scope: Rollback scope (app, phase, all)
+        apps: Explicitly specified apps (for scope=app)
+        phase_name: Phase name (for scope=phase)
+        deployment_id: Deployment ID to look up
+        rollback_manager: Rollback manager instance
+
+    Returns:
+        List of app names to rollback, or None for all apps
+
+    """
+    if scope == "app":
+        return apps if apps else None
+
+    if scope == "all":
+        return None  # None means all apps
+
+    if scope == "phase":
+        # Get apps deployed in the specified phase
+        # This requires looking up phase metadata from deployment history
+        phase_apps = rollback_manager.get_phase_apps(deployment_id, phase_name)
+        if not phase_apps:
+            logger.warning(
+                f"No apps found for phase '{phase_name}' in deployment {deployment_id}"
+            )
+            return []
+        logger.info(f"Phase '{phase_name}' contains {len(phase_apps)} apps: {phase_apps}")
+        return phase_apps
+
+    return None
 
 
 def _list_rollback_points(
@@ -169,12 +271,24 @@ def _list_rollback_points(
         )
 
 
-def _print_rollback_simulation(result) -> None:
-    """Print rollback simulation results."""
-    logger.heading("Rollback Simulation")
+def _print_rollback_simulation(result, scope: RollbackScope = "app") -> None:
+    """Print rollback simulation results.
+
+    Args:
+        result: Rollback simulation result
+        scope: Rollback scope for display
+
+    """
+    scope_labels = {
+        "app": "App-level",
+        "phase": "Phase-level",
+        "all": "Full deployment",
+    }
+    logger.heading(f"Rollback Simulation ({scope_labels.get(scope, scope)})")
 
     click.echo(f"Current: {result['current_deployment']}")
     click.echo(f"Target: {result['target_deployment']}")
+    click.echo(f"Scope: {scope}")
     click.echo(f"\nPlanned Actions ({len(result['actions'])} total):")
 
     for action in result["actions"]:
@@ -194,14 +308,26 @@ def _print_rollback_simulation(result) -> None:
             )
 
 
-def _print_rollback_result(result) -> None:
-    """Print rollback execution results."""
-    if result["success"]:
-        logger.success("Rollback completed successfully")
-    else:
-        logger.error("Rollback completed with errors")
+def _print_rollback_result(result, scope: RollbackScope = "app") -> None:
+    """Print rollback execution results.
 
-    click.echo("\nRollback Summary:")
+    Args:
+        result: Rollback execution result
+        scope: Rollback scope for display
+
+    """
+    scope_labels = {
+        "app": "App-level",
+        "phase": "Phase-level",
+        "all": "Full deployment",
+    }
+
+    if result["success"]:
+        logger.success(f"Rollback completed successfully ({scope_labels.get(scope, scope)})")
+    else:
+        logger.error(f"Rollback completed with errors ({scope_labels.get(scope, scope)})")
+
+    click.echo(f"\nRollback Summary (scope={scope}):")
     click.echo(f"  Successful: {len(result['rollbacks'])}")
     click.echo(f"  Failed: {len(result['errors'])}")
 

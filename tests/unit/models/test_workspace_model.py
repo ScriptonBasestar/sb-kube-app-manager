@@ -56,7 +56,7 @@ class TestGlobalDefaults:
         defaults = GlobalDefaults()
 
         assert defaults.kubeconfig is None
-        assert defaults.context is None
+        assert defaults.kubeconfig_context is None
         assert defaults.helm_repos == {}
         assert defaults.timeout == 600
         assert defaults.on_failure == "stop"
@@ -65,16 +65,16 @@ class TestGlobalDefaults:
         """커스텀 값 테스트."""
         defaults = GlobalDefaults(
             kubeconfig="~/.kube/config",
-            context="prod-cluster",
+            kubeconfig_context="prod-cluster",
             timeout=900,
             on_failure="rollback",
             helm_repos={
-                "grafana": {"url": "https://grafana.github.io/helm-charts"}
+                "grafana": "https://grafana.github.io/helm-charts"
             },
         )
 
         assert defaults.kubeconfig == "~/.kube/config"
-        assert defaults.context == "prod-cluster"
+        assert defaults.kubeconfig_context == "prod-cluster"
         assert defaults.timeout == 900
         assert defaults.on_failure == "rollback"
         assert "grafana" in defaults.helm_repos
@@ -114,13 +114,15 @@ class TestPhaseConfig:
         assert phase.env == {}
 
     def test_empty_app_groups(self) -> None:
-        """빈 app_groups 테스트."""
-        with pytest.raises(ConfigValidationError):
-            PhaseConfig(
-                description="Invalid phase",
-                source="sources.yaml",
-                app_groups=[],
-            )
+        """빈 app_groups 테스트 - 계층적 구조에서는 허용됨."""
+        # Empty app_groups is allowed (will be auto-discovered from source)
+        phase = PhaseConfig(
+            description="Hierarchical phase",
+            source="ph1_infra/sbkube.yaml",
+            app_groups=[],
+        )
+        assert phase.app_groups == []
+        assert phase.enabled is True  # Default enabled
 
     def test_invalid_app_group_name(self) -> None:
         """잘못된 app_group 이름 테스트."""
@@ -284,20 +286,19 @@ class TestWorkspaceConfig:
         assert "p1-infra" in workspace.phases
         assert "p2-data" in workspace.phases
 
-    def test_invalid_version_format(self) -> None:
-        """잘못된 버전 형식 테스트."""
-        with pytest.raises(ConfigValidationError):
-            WorkspaceConfig(
-                version="1",  # 잘못된 형식
-                metadata=WorkspaceMetadata(name="test"),
-                phases={
-                    "p1": PhaseConfig(
-                        description="Test",
-                        source="sources.yaml",
-                        app_groups=["app1"],
-                    )
-                },
-            )
+    def test_api_version_default(self) -> None:
+        """apiVersion 기본값 테스트."""
+        workspace = WorkspaceConfig(
+            metadata=WorkspaceMetadata(name="test"),
+            phases={
+                "p1": PhaseConfig(
+                    description="Test",
+                    source="sources.yaml",
+                )
+            },
+        )
+        # Default apiVersion
+        assert workspace.api_version == "sbkube/v1"
 
     def test_empty_phases(self) -> None:
         """빈 phases 테스트."""
@@ -425,28 +426,33 @@ class TestWorkspaceConfig:
         expected = (workspace_dir / "p1-kube" / "sources.yaml").resolve()
         assert source_path == expected
 
-    def test_global_field_alias(self) -> None:
-        """'global' 필드 alias 테스트."""
+    def test_settings_field(self) -> None:
+        """'settings' 필드 테스트."""
         workspace_dict = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {"name": "test"},
-            "global": {
+            "settings": {
                 "kubeconfig": "~/.kube/config",
+                "kubeconfig_context": "prod-cluster",
                 "timeout": 900,
+                "helm_repos": {
+                    "grafana": "https://grafana.github.io/helm-charts"
+                },
             },
             "phases": {
                 "p1": {
                     "description": "Test",
                     "source": "sources.yaml",
-                    "app_groups": ["app1"],
                 }
             },
         }
 
         workspace = WorkspaceConfig(**workspace_dict)
 
-        assert workspace.global_config.kubeconfig == "~/.kube/config"
-        assert workspace.global_config.timeout == 900
+        assert workspace.settings.kubeconfig == "~/.kube/config"
+        assert workspace.settings.kubeconfig_context == "prod-cluster"
+        assert workspace.settings.timeout == 900
+        assert "grafana" in workspace.settings.helm_repos
 
     def test_complex_dependency_graph(self) -> None:
         """복잡한 의존성 그래프 테스트."""

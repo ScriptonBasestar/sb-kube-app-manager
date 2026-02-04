@@ -153,11 +153,33 @@ def cmd(
             f"[green]📄 Using unified config: {detected.primary_file}[/green]",
             level="info",
         )
-        # TODO: Full unified config support will be added in future release
-        # For now, fall back to legacy mode with a notice
+        # Load config to check if it has phases (workspace mode)
+        config_data = load_config_file(str(detected.primary_file))
+        if "phases" in config_data:
+            # Workspace mode: delegate to WorkspaceDeployCommand
+            output.print(
+                "[cyan]🔄 Detected multi-phase workspace configuration[/cyan]",
+                level="info",
+            )
+            from sbkube.commands.workspace import WorkspaceDeployCommand
+
+            workspace_cmd = WorkspaceDeployCommand(
+                workspace_file=str(detected.primary_file),
+                phase=None,  # Deploy all phases
+                dry_run=dry_run,
+                force=False,
+                skip_validation=False,
+                parallel=False,
+                parallel_apps=False,
+                max_workers=4,
+            )
+            success = workspace_cmd.execute()
+            if not success:
+                raise click.Abort
+            return
+        # Single app group mode with unified config - continue with normal flow
         output.print(
-            "[yellow]ℹ️  Unified config execution is in preview. "
-            "Full support coming in v1.0[/yellow]",
+            "[cyan]📦 Single app group mode (no phases)[/cyan]",
             level="info",
         )
     elif detected.is_deprecated():

@@ -702,7 +702,7 @@ class WorkspaceDeployCommand:
                     execution_order=order,
                     depends_on=phase_config.depends_on,
                     app_groups=phase_config.app_groups,
-                    on_failure_action=phase_config.on_failure or workspace.global_config.on_failure,
+                    on_failure_action=phase_config.on_failure or workspace.settings.on_failure,
                 )
                 tracker.add_phase_deployment(workspace_deployment, phase_data)
 
@@ -883,10 +883,23 @@ class WorkspaceDeployCommand:
         self.console.print(f"Execution order: {' → '.join(phase_order)}\n")
 
         all_success = True
-        global_on_failure = workspace.global_config.on_failure
+        global_on_failure = workspace.settings.on_failure
 
         for i, phase_name in enumerate(phase_order, 1):
             phase_config = workspace.phases[phase_name]
+
+            # Skip disabled phases
+            if not phase_config.enabled:
+                self.console.print(
+                    f"[yellow]⏭️  Phase {i}/{len(phase_order)}: {phase_name} (disabled)[/yellow]"
+                )
+                self.phase_results[phase_name] = {
+                    "success": True,
+                    "skipped": True,
+                    "app_groups": phase_config.app_groups,
+                }
+                continue
+
             on_failure = phase_config.on_failure or global_on_failure
 
             self.console.print(
@@ -954,7 +967,7 @@ class WorkspaceDeployCommand:
         self.console.print()
 
         all_success = True
-        global_on_failure = workspace.global_config.on_failure
+        global_on_failure = workspace.settings.on_failure
         completed_phases: set[str] = set()
         failed_phases: set[str] = set()
 
@@ -1068,6 +1081,19 @@ class WorkspaceDeployCommand:
 
         """
         phase_config = workspace.phases[phase_name]
+
+        # Skip disabled phases
+        if not phase_config.enabled:
+            self.console.print(
+                f"[yellow]⏭️  Phase: {phase_name} (disabled)[/yellow]"
+            )
+            with self._results_lock:
+                self.phase_results[phase_name] = {
+                    "success": True,
+                    "skipped": True,
+                    "app_groups": phase_config.app_groups,
+                }
+            return True
 
         self.console.print(f"[bold yellow]Phase: {phase_name}[/bold yellow]")
         self.console.print(f"  Description: {phase_config.description}")
@@ -1520,31 +1546,37 @@ class WorkspaceDeployCommand:
 
         success_count = 0
         fail_count = 0
+        skipped_count = 0
 
         for phase_name in phase_order:
             if phase_name in self.phase_results:
                 result = self.phase_results[phase_name]
-                status = "[green]✓ Success[/green]" if result["success"] else "[red]✗ Failed[/red]"
-                groups = ", ".join(result["app_groups"])
+                groups = ", ".join(result["app_groups"]) if result["app_groups"] else "-"
 
-                if result["success"]:
+                if result.get("skipped"):
+                    status = "[yellow]⏭ Skipped[/yellow]"
+                    skipped_count += 1
+                elif result["success"]:
+                    status = "[green]✓ Success[/green]"
                     success_count += 1
                 else:
+                    status = "[red]✗ Failed[/red]"
                     fail_count += 1
             else:
-                status = "[dim]- Skipped[/dim]"
+                status = "[dim]- Not run[/dim]"
                 phase_config = workspace.phases[phase_name]
-                groups = ", ".join(phase_config.app_groups)
+                groups = ", ".join(phase_config.app_groups) if phase_config.app_groups else "-"
 
             table.add_row(phase_name, status, groups)
 
         self.console.print(table)
 
         # 전체 결과
-        total = success_count + fail_count
+        total = success_count + fail_count + skipped_count
         if fail_count == 0:
+            skipped_msg = f" ({skipped_count} skipped)" if skipped_count > 0 else ""
             self.console.print(
-                f"\n[bold green]✅ Workspace deployment completed: {success_count}/{total} phases succeeded[/bold green]"
+                f"\n[bold green]✅ Workspace deployment completed: {success_count}/{total} phases succeeded{skipped_msg}[/bold green]"
             )
         else:
             self.console.print(

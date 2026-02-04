@@ -1,10 +1,10 @@
 """Workspace Configuration Models for Multi-Phase Deployment.
 
-이 모듈은 workspace.yaml의 Pydantic 모델을 정의합니다.
+이 모듈은 sbkube.yaml (unified format)의 Pydantic 모델을 정의합니다.
 Phase 기반 다단계 배포를 지원합니다.
 
 Schema Version: 1.0
-Target SBKube Version: v0.9.0
+Target SBKube Version: v0.10.0
 
 Related Documentation:
 - User Guide: docs/03-configuration/workspace-schema.md
@@ -19,6 +19,19 @@ from pydantic import Field, field_validator, model_validator
 
 from .base_model import ConfigBaseModel
 
+
+# ============================================================================
+# Git Repository Model
+# ============================================================================
+
+
+class GitRepoConfig(ConfigBaseModel):
+    """Git repository configuration."""
+
+    url: str
+    branch: str = "main"
+    tag: str | None = None
+
 # ============================================================================
 # Workspace Models
 # ============================================================================
@@ -32,6 +45,7 @@ class WorkspaceMetadata(ConfigBaseModel):
           name: production-deployment
           description: "Production infrastructure deployment"
           environment: prod
+          version: "1.0.0"
           tags:
             - production
             - multi-phase
@@ -60,6 +74,13 @@ class WorkspaceMetadata(ConfigBaseModel):
         ),
     ] = None
 
+    version: Annotated[
+        str | None,
+        Field(
+            description="Workspace version (e.g., 1.0.0)",
+        ),
+    ] = None
+
     tags: Annotated[
         list[str],
         Field(
@@ -69,20 +90,19 @@ class WorkspaceMetadata(ConfigBaseModel):
 
 
 class GlobalDefaults(ConfigBaseModel):
-    """Workspace 전역 기본값.
+    """Workspace 전역 기본값 (settings 섹션).
 
     모든 Phase에 적용되는 기본 설정입니다.
     Phase-level 설정으로 오버라이드 가능합니다.
 
     Examples:
-        global:
+        settings:
           kubeconfig: ~/.kube/config
-          context: production-cluster
+          kubeconfig_context: production-cluster
           timeout: 600
           on_failure: stop
           helm_repos:
-            grafana:
-              url: https://grafana.github.io/helm-charts
+            grafana: https://grafana.github.io/helm-charts
 
     """
 
@@ -93,24 +113,39 @@ class GlobalDefaults(ConfigBaseModel):
         ),
     ] = None
 
-    context: Annotated[
+    kubeconfig_context: Annotated[
         str | None,
         Field(
             description="Default kubectl context for all phases",
         ),
     ] = None
 
-    helm_repos: Annotated[
-        dict[str, dict[str, Any]],
+    # Alias for backward compatibility
+    context: Annotated[
+        str | None,
         Field(
-            description="Global Helm repository definitions",
+            description="Alias for kubeconfig_context (deprecated)",
+        ),
+    ] = None
+
+    helm_repos: Annotated[
+        dict[str, str],
+        Field(
+            description="Global Helm repository definitions (name: url)",
         ),
     ] = {}
 
     oci_registries: Annotated[
-        dict[str, dict[str, Any]],
+        dict[str, str],
         Field(
-            description="Global OCI registry configurations",
+            description="Global OCI registry configurations (name: url)",
+        ),
+    ] = {}
+
+    git_repos: Annotated[
+        dict[str, GitRepoConfig | dict[str, Any]],
+        Field(
+            description="Global Git repository definitions",
         ),
     ] = {}
 
@@ -126,7 +161,7 @@ class GlobalDefaults(ConfigBaseModel):
         Field(
             default=600,
             ge=1,
-            le=3600,
+            le=7200,
             description="Default timeout for operations (seconds)",
         ),
     ] = 600
@@ -140,20 +175,41 @@ class GlobalDefaults(ConfigBaseModel):
     ] = "stop"
 
 
+class PhaseSettings(ConfigBaseModel):
+    """Phase-specific settings (optional override)."""
+
+    timeout: Annotated[
+        int | None,
+        Field(
+            ge=1,
+            le=7200,
+            description="Phase-specific timeout (overrides global)",
+        ),
+    ] = None
+
+    on_failure: Annotated[
+        Literal["stop", "continue", "rollback"] | None,
+        Field(
+            description="Phase-specific failure behavior (overrides global)",
+        ),
+    ] = None
+
+
 class PhaseConfig(ConfigBaseModel):
     """Phase 설정.
 
     단일 Phase의 배포 설정을 정의합니다.
+    source는 하위 sbkube.yaml 파일을 가리킵니다 (계층적 구조).
 
     Examples:
-        p1-infra:
+        ph1-infra:
           description: "Network and storage infrastructure"
-          source: p1-kube/sources.yaml
-          app_groups:
-            - a000_network
-            - a001_storage
+          source: ph1_infra/sbkube.yaml
+          enabled: true
+          settings:
+            timeout: 1200
+            on_failure: stop
           depends_on: []
-          timeout: 900
 
     """
 
@@ -167,17 +223,24 @@ class PhaseConfig(ConfigBaseModel):
     source: Annotated[
         str,
         Field(
-            description="Path to sources.yaml (relative to workspace.yaml)",
+            description="Path to phase sbkube.yaml (relative to workspace root)",
         ),
     ]
 
+    enabled: Annotated[
+        bool,
+        Field(
+            description="Whether this phase is enabled (default: true)",
+        ),
+    ] = True
+
+    # app_groups is optional - if not provided, will be auto-discovered from source
     app_groups: Annotated[
         list[str],
         Field(
-            min_length=1,
-            description="List of app groups to deploy in this phase",
+            description="List of app groups to deploy (optional, auto-discovered if not set)",
         ),
-    ]
+    ] = []
 
     depends_on: Annotated[
         list[str],
@@ -186,11 +249,19 @@ class PhaseConfig(ConfigBaseModel):
         ),
     ] = []
 
+    settings: Annotated[
+        PhaseSettings | None,
+        Field(
+            description="Phase-specific settings",
+        ),
+    ] = None
+
+    # Flat fields for backward compatibility
     timeout: Annotated[
         int | None,
         Field(
             ge=1,
-            le=3600,
+            le=7200,
             description="Phase-specific timeout (overrides global)",
         ),
     ] = None
@@ -218,12 +289,26 @@ class PhaseConfig(ConfigBaseModel):
         ),
     ] = {}
 
+    @model_validator(mode="after")
+    def merge_settings(self) -> "PhaseConfig":
+        """Merge nested settings into flat fields."""
+        if self.settings:
+            if self.settings.timeout and not self.timeout:
+                self.timeout = self.settings.timeout
+            if self.settings.on_failure and not self.on_failure:
+                self.on_failure = self.settings.on_failure
+        return self
+
     @field_validator("app_groups")
     @classmethod
     def validate_app_groups(cls, v: list[str]) -> list[str]:
-        """앱 그룹 이름 검증."""
+        """앱 그룹 이름 검증.
+
+        Empty list is allowed - app_groups will be auto-discovered from source.
+        """
+        # Empty list is OK - will auto-discover from source
         if not v:
-            raise ValueError("app_groups must not be empty")
+            return v
 
         for group in v:
             if not group:
@@ -244,7 +329,8 @@ class PhaseConfig(ConfigBaseModel):
         1. 참조된 app_group이 app_groups에 존재하는지 확인
         2. 순환 의존성 감지
         """
-        if not self.app_group_deps:
+        # Skip validation if app_group_deps is empty or app_groups is empty
+        if not self.app_group_deps or not self.app_groups:
             return self
 
         app_group_set = set(self.app_groups)
@@ -336,38 +422,48 @@ class PhaseConfig(ConfigBaseModel):
 
 
 class WorkspaceConfig(ConfigBaseModel):
-    """Workspace 설정.
+    """Workspace 설정 (sbkube.yaml unified format).
 
     Multi-phase deployment 설정의 최상위 모델입니다.
 
     Examples:
-        version: "1.0"
+        apiVersion: sbkube/v1
         metadata:
           name: production-deployment
           environment: prod
-        global:
+          version: "1.0.0"
+        settings:
           kubeconfig: ~/.kube/config
-          context: production-cluster
+          kubeconfig_context: production-cluster
+          helm_repos:
+            grafana: https://grafana.github.io/helm-charts
         phases:
-          p1-infra:
+          ph1-infra:
             description: "Infrastructure"
-            source: p1-kube/sources.yaml
-            app_groups: [a000_network]
-          p2-data:
+            source: ph1_infra/sbkube.yaml
+            depends_on: []
+          ph2-data:
             description: "Data layer"
-            source: p2-kube/sources.yaml
-            app_groups: [a100_postgres]
-            depends_on: [p1-infra]
+            source: ph2_data/sbkube.yaml
+            depends_on: [ph1-infra]
 
     """
 
-    version: Annotated[
+    api_version: Annotated[
         str,
         Field(
-            description="Workspace schema version",
-            pattern=r"^\d+\.\d+$",
+            alias="apiVersion",
+            description="API version (sbkube/v1)",
         ),
-    ]
+    ] = "sbkube/v1"
+
+    # Legacy version field (optional, prefer metadata.version)
+    version: Annotated[
+        str | None,
+        Field(
+            description="Schema version (legacy, use metadata.version instead)",
+        ),
+    ] = None
 
     metadata: Annotated[
         WorkspaceMetadata,
@@ -376,13 +472,21 @@ class WorkspaceConfig(ConfigBaseModel):
         ),
     ]
 
-    global_config: Annotated[
+    # Support both "settings" and "global" (legacy)
+    settings: Annotated[
         GlobalDefaults,
         Field(
-            alias="global",
-            description="Global defaults for all phases",
+            description="Global settings for all phases",
         ),
     ] = GlobalDefaults()
+
+    global_config: Annotated[
+        GlobalDefaults | None,
+        Field(
+            alias="global",
+            description="Global defaults (legacy, use 'settings' instead)",
+        ),
+    ] = None
 
     phases: Annotated[
         dict[str, PhaseConfig],
@@ -392,23 +496,24 @@ class WorkspaceConfig(ConfigBaseModel):
         ),
     ]
 
-    @field_validator("version")
-    @classmethod
-    def validate_version(cls, v: str) -> str:
-        """버전 검증."""
-        if not v:
-            raise ValueError("version is required")
-
-        # 버전 형식: "1.0", "2.3" 등
-        parts = v.split(".")
-        if len(parts) != 2:
-            raise ValueError("version must be in format 'major.minor' (e.g., '1.0')")
-
-        major, minor = parts
-        if not major.isdigit() or not minor.isdigit():
-            raise ValueError("version must contain only digits")
-
-        return v
+    @model_validator(mode="after")
+    def merge_global_to_settings(self) -> "WorkspaceConfig":
+        """Merge legacy 'global' into 'settings'."""
+        if self.global_config and not self.settings.kubeconfig:
+            # Copy global_config values to settings if not already set
+            if self.global_config.kubeconfig:
+                self.settings.kubeconfig = self.global_config.kubeconfig
+            if self.global_config.kubeconfig_context:
+                self.settings.kubeconfig_context = self.global_config.kubeconfig_context
+            if self.global_config.context:
+                self.settings.kubeconfig_context = self.global_config.context
+            if self.global_config.helm_repos:
+                self.settings.helm_repos = self.global_config.helm_repos
+            if self.global_config.timeout != 600:
+                self.settings.timeout = self.global_config.timeout
+            if self.global_config.on_failure != "stop":
+                self.settings.on_failure = self.global_config.on_failure
+        return self
 
     @field_validator("phases")
     @classmethod

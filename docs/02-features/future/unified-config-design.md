@@ -241,26 +241,87 @@ sbkube migrate  # workspace.yaml + sources.yaml → sbkube.yaml
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| **Cluster** |
 | `kubeconfig` | string | - | Kubeconfig file path |
 | `kubeconfig_context` | string | - | Kubectl context name |
 | `namespace` | string | `default` | Default namespace |
+| **Label Injection** |
 | `helm_label_injection` | bool | `true` | Enable label injection |
 | `incompatible_charts` | list | `[]` | Charts to disable injection |
 | `force_label_injection` | list | `[]` | Override incompatible list |
+| **Deployment** |
 | `dry_run` | bool | `false` | Dry-run mode |
 | `wait` | bool | `true` | Wait for resources ready |
 | `timeout` | string | `5m` | Deployment timeout |
 | `atomic` | bool | `false` | Atomic deployment |
+| **Execution** |
+| `execution_order` | string | `apps_first` | `apps_first` or `phases_first` |
 | `parallel` | bool | `false` | Parallel phase execution |
+| `parallel_apps` | bool | `false` | Parallel app execution within phase |
 | `max_workers` | int | `4` | Max parallel workers |
-| `on_failure` | string | `stop` | Failure handling |
+| **Failure Handling** |
+| `on_failure` | string | `stop` | `stop`, `continue`, or `rollback` |
+| `rollback_scope` | string | `app` | `app`, `phase`, or `all` |
 
-## Open Questions
+## Design Decisions
 
-1. **apps + phases 실행 순서**: apps 먼저? phases 먼저? 설정 가능?
-2. **Phase 내 app 병렬 실행**: `parallel_apps` 옵션 필요?
-3. **Cross-phase 의존성**: Phase A의 app이 Phase B의 app에 의존?
-4. **롤백 범위**: 전체 롤백? Phase 단위? App 단위?
+### 1. apps + phases 실행 순서
+**결정**: 설정 가능 (`execution_order`), 기본값 `apps_first`
+
+```yaml
+settings:
+  execution_order: apps_first  # apps_first | phases_first
+```
+
+- `apps_first` (기본): 현재 레벨 apps 실행 → phases 실행
+- `phases_first`: phases 먼저 실행 → 현재 레벨 apps 실행
+
+### 2. Phase 내 app 병렬 실행
+**결정**: `parallel_apps` 옵션 지원, 기본값 `false`
+
+```yaml
+settings:
+  parallel_apps: true   # Phase 내 apps 병렬 실행
+  max_workers: 4        # 최대 병렬 워커 수
+```
+
+### 3. Cross-phase 의존성
+**결정**: Phase 간 의존성만 지원 (단순)
+
+```yaml
+phases:
+  infra:
+    source: ./infra
+  services:
+    source: ./services
+    depends_on: [infra]  # Phase 간 의존성만
+```
+
+복잡한 의존성이 필요한 경우 → 순차적 phase로 분리:
+```yaml
+phases:
+  step1:
+    source: ./step1
+  step2:
+    source: ./step2
+    depends_on: [step1]
+  step3:
+    source: ./step3
+    depends_on: [step2]
+```
+
+### 4. 롤백 범위
+**결정**: 선택 가능 (`rollback_scope`), 기본값 `app`
+
+```yaml
+settings:
+  rollback_scope: app  # app | phase | all
+  on_failure: rollback  # stop | continue | rollback
+```
+
+- `app` (기본): 실패한 app만 롤백
+- `phase`: 실패한 phase 전체 롤백
+- `all`: 전체 배포 롤백
 
 ## References
 

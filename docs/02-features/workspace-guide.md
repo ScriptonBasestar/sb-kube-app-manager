@@ -4,7 +4,7 @@ ______________________________________________________________________
 
 # SBKube Workspace Guide
 
-> **주의**: 이 기능은 v0.9.0 Preview 상태입니다. 프로덕션 사용 전 충분히 테스트하세요.
+> **주의**: 이 기능은 v0.9.1 Preview 상태입니다. 프로덕션 사용 전 충분히 테스트하세요.
 
 Workspace enables multi-phase deployment orchestration for complex Kubernetes environments. Deploy infrastructure,
 data layers, and applications in proper dependency order with a single command.
@@ -12,7 +12,7 @@ data layers, and applications in proper dependency order with a single command.
 ## TL;DR
 
 - **Purpose**: Orchestrate multi-phase deployments with dependency ordering
-- **Version**: v0.9.0 (Preview)
+- **Version**: v0.9.1 (Preview)
 - **Key Commands**: `workspace validate`, `workspace graph`, `workspace deploy`, `workspace status`
 - **Config File**: `workspace.yaml`
 - **Related**:
@@ -146,6 +146,15 @@ sbkube workspace deploy workspace.yaml --force
 
 # Skip validation
 sbkube workspace deploy workspace.yaml --skip-validation
+
+# Parallel phase execution
+sbkube workspace deploy workspace.yaml --parallel --max-workers 4
+
+# Parallel app-group execution within phases
+sbkube workspace deploy workspace.yaml --parallel-apps --max-workers 8
+
+# Full parallel (phases + app-groups)
+sbkube workspace deploy workspace.yaml --parallel --parallel-apps --max-workers 4
 ```
 
 **Options**:
@@ -155,6 +164,9 @@ sbkube workspace deploy workspace.yaml --skip-validation
 | `--phase <name>` | Deploy only the specified phase |
 | `--force` | Force deployment, ignoring previous state |
 | `--skip-validation` | Skip sources.yaml file existence check |
+| `--parallel` | Execute independent phases in parallel |
+| `--parallel-apps` | Execute app groups in parallel within each phase |
+| `--max-workers <n>` | Maximum parallel workers (default: 4) |
 
 ### workspace status
 
@@ -204,6 +216,7 @@ phases:         # Required: Phase definitions
     source: string          # Required: Path to sources.yaml
     app_groups: [string]    # Required: App groups to deploy
     depends_on: [string]    # Optional: Phase dependencies
+    app_group_deps: {}      # Optional: Dependencies between app groups
     timeout: int            # Optional: Phase-specific timeout
     on_failure: string      # Optional: Phase-specific behavior
     env: {}                 # Optional: Environment variables
@@ -229,6 +242,63 @@ phases:
 ```
 
 **Execution order**: p1-infra → p2-data → p3-app
+
+### Parallel Execution
+
+Workspace supports two levels of parallel execution:
+
+#### Phase-Level Parallelism (`--parallel`)
+
+Independent phases (no mutual dependencies) execute concurrently:
+
+```yaml
+phases:
+  p1-infra:
+    app_groups: [network]
+  p2-monitoring:        # Independent of p1
+    app_groups: [prometheus]
+  p3-app:
+    depends_on: [p1-infra]  # Waits for p1
+```
+
+With `--parallel`, p1-infra and p2-monitoring run simultaneously.
+
+#### App-Group Parallelism (`--parallel-apps`)
+
+Within a phase, app groups can run in parallel based on `app_group_deps`:
+
+```yaml
+phases:
+  p1-infra:
+    app_groups:
+      - network
+      - storage
+      - database
+      - cache
+    app_group_deps:
+      storage: [network]      # storage depends on network
+      database: [storage]     # database depends on storage
+      cache: [network]        # cache depends on network (not storage)
+```
+
+**Execution with `--parallel-apps`**:
+```
+Level 0: network          ← runs first
+Level 1: storage, cache   ← run in parallel (both depend on network)
+Level 2: database         ← runs last (depends on storage)
+```
+
+Groups without dependencies run in the first level. Groups at the same level can run concurrently.
+
+#### Combined Parallelism
+
+Use both options for maximum parallelism:
+
+```bash
+sbkube workspace deploy workspace.yaml --parallel --parallel-apps --max-workers 8
+```
+
+This executes independent phases in parallel, and within each phase, executes app groups in parallel based on their dependencies.
 
 ### Failure Handling
 
@@ -355,10 +425,10 @@ phases:
 
 ## Limitations
 
-- **v0.9.0 Preview**: API may change before stable release
+- **v0.9.1 Preview**: API may change before stable release
 - **Single Cluster**: Currently supports one cluster per workspace
-- **No Parallel Phases**: Phases execute sequentially (parallel planned for v1.0)
 - **No State Persistence**: Deployment history not yet tracked in database
+- **Parallel Execution**: Requires careful dependency configuration to avoid race conditions
 
 ## See Also
 

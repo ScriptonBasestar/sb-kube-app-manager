@@ -9,7 +9,7 @@ import os
 import subprocess
 import uuid
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -351,7 +351,7 @@ class DeploymentTracker:
 
     def _generate_deployment_id(self) -> str:
         """Generate unique deployment ID."""
-        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
         return f"dep-{timestamp}-{unique_id}"
 

@@ -14,10 +14,27 @@ from rich.tree import Tree
 
 from sbkube.exceptions import ConfigValidationError
 from sbkube.models.workspace_model import PhaseConfig, WorkspaceConfig
+from sbkube.models.workspace_state import (
+    PhaseDeploymentCreate,
+    WorkspaceDeploymentCreate,
+)
 from sbkube.state.database import DeploymentDatabase
 from sbkube.state.workspace_tracker import WorkspaceStateTracker
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.logger import logger, setup_logging_from_context
+
+
+# SBKube version for tracking
+def _get_sbkube_version() -> str:
+    """Get SBKube version safely."""
+    try:
+        from importlib.metadata import version
+        return version("sbkube")
+    except Exception:
+        return "unknown"
+
+
+SBKUBE_VERSION = _get_sbkube_version()
 
 
 class WorkspaceValidateCommand:
@@ -568,6 +585,11 @@ class WorkspaceDeployCommand:
         self.phase_results: dict[str, dict[str, Any]] = {}
         self._results_lock = threading.Lock()
 
+        # State tracking
+        self.db = DeploymentDatabase()
+        self.workspace_deployment_id: str | None = None
+        self.phase_names: list[str] = []
+
     def execute(self) -> bool:
         """Execute workspace deployment.
 
@@ -603,16 +625,102 @@ class WorkspaceDeployCommand:
         # 2. Phase 실행 순서 계산
         phase_order = self._get_execution_order(workspace)
 
-        # 3. 배포 실행
-        if self.parallel and len(phase_order) > 1:
-            success = self._execute_phases_parallel(workspace, phase_order)
-        else:
-            success = self._execute_phases(workspace, phase_order)
+        # 3. State tracking 시작
+        self._start_deployment_tracking(workspace, phase_order)
 
-        # 4. 결과 요약
+        # 4. 배포 실행
+        try:
+            if self.parallel and len(phase_order) > 1:
+                success = self._execute_phases_parallel(workspace, phase_order)
+            else:
+                success = self._execute_phases(workspace, phase_order)
+
+            # 5. State tracking 완료
+            self._complete_deployment_tracking(success)
+        except Exception as e:
+            # 예외 발생 시에도 tracking 완료
+            self._complete_deployment_tracking(False, str(e))
+            raise
+
+        # 6. 결과 요약
         self._print_summary(workspace, phase_order)
 
         return success
+
+    def _start_deployment_tracking(
+        self, workspace: WorkspaceConfig, phase_order: list[str]
+    ) -> None:
+        """Start deployment state tracking.
+
+        Args:
+            workspace: Workspace configuration
+            phase_order: Phase execution order
+
+        """
+        with self.db.get_session() as session:
+            tracker = WorkspaceStateTracker(session)
+
+            # Create workspace deployment record
+            create_data = WorkspaceDeploymentCreate(
+                workspace_name=workspace.metadata.name,
+                workspace_file=str(self.workspace_file),
+                environment=workspace.metadata.environment,
+                dry_run=self.dry_run,
+                force=self.force,
+                target_phase=self.phase,
+                workspace_config=workspace.model_dump(),
+            )
+
+            workspace_deployment = tracker.start_workspace_deployment(
+                create_data, sbkube_version=SBKUBE_VERSION
+            )
+
+            # Store only the ID to avoid detached instance issues
+            self.workspace_deployment_id = workspace_deployment.workspace_deployment_id
+            self.phase_names = list(phase_order)
+
+            # Create phase deployment records
+            for order, phase_name in enumerate(phase_order, 1):
+                phase_config = workspace.phases[phase_name]
+                phase_data = PhaseDeploymentCreate(
+                    phase_name=phase_name,
+                    phase_description=phase_config.description,
+                    source_path=phase_config.source,
+                    execution_order=order,
+                    depends_on=phase_config.depends_on,
+                    app_groups=phase_config.app_groups,
+                    on_failure_action=phase_config.on_failure or workspace.global_config.on_failure,
+                )
+                tracker.add_phase_deployment(workspace_deployment, phase_data)
+
+            logger.verbose(
+                f"Started workspace deployment: {self.workspace_deployment_id}"
+            )
+
+    def _complete_deployment_tracking(
+        self, success: bool, error_message: str | None = None
+    ) -> None:
+        """Complete deployment state tracking.
+
+        Args:
+            success: Whether the deployment succeeded
+            error_message: Error message if failed
+
+        """
+        if not self.workspace_deployment_id:
+            return
+
+        with self.db.get_session() as session:
+            tracker = WorkspaceStateTracker(session)
+
+            # Get fresh deployment object from database
+            deployment = tracker.get_workspace_deployment(self.workspace_deployment_id)
+            if deployment:
+                tracker.complete_workspace_deployment(deployment, success, error_message)
+                logger.verbose(
+                    f"Completed workspace deployment: {deployment.workspace_deployment_id} "
+                    f"(success={success})"
+                )
 
     def _load_and_validate_workspace(self) -> WorkspaceConfig:
         """Load and validate workspace configuration.
@@ -1078,15 +1186,23 @@ class WorkspaceDeployCommand:
         source_path = self.workspace_dir / phase_config.source
         base_dir = source_path.parent
 
+        # Start phase tracking
+        self._start_phase_tracking(phase_name)
+
         if self.dry_run:
             self.console.print("  [yellow]🔍 [DRY-RUN] sbkube apply[/yellow]")
             self.console.print(f"     --base-dir {base_dir}")
             self.console.print(f"     --source {source_path.name}")
             for group in phase_config.app_groups:
                 self.console.print(f"     --app-dir {group}")
+            # Complete phase tracking (dry-run is always success)
+            self._complete_phase_tracking(
+                phase_name, True, completed_app_groups=len(phase_config.app_groups)
+            )
             return True
 
         # 실제 배포: sbkube apply 명령 호출
+        completed_app_groups = 0
         try:
             from sbkube.commands.apply import ApplyCommand
 
@@ -1108,19 +1224,94 @@ class WorkspaceDeployCommand:
                 result = apply_cmd.execute()
 
                 if not result:
-                    logger.error(f"App group '{app_group}' 배포 실패")
+                    error_msg = f"App group '{app_group}' 배포 실패"
+                    logger.error(error_msg)
+                    self._complete_phase_tracking(
+                        phase_name, False, error_msg, completed_app_groups
+                    )
                     return False
 
+                completed_app_groups += 1
+
+            self._complete_phase_tracking(phase_name, True, completed_app_groups=completed_app_groups)
             return True
 
         except ImportError:
             # ApplyCommand가 없는 경우 subprocess로 실행
-            return self._deploy_phase_subprocess(
+            result = self._deploy_phase_subprocess(
                 phase_name, phase_config, base_dir, source_path
             )
+            # For subprocess, we assume all or nothing
+            if result:
+                self._complete_phase_tracking(
+                    phase_name, True, completed_app_groups=len(phase_config.app_groups)
+                )
+            else:
+                self._complete_phase_tracking(
+                    phase_name, False, "Subprocess deployment failed"
+                )
+            return result
         except Exception as e:
-            logger.error(f"Phase '{phase_name}' 배포 중 오류: {e}")
+            error_msg = f"Phase '{phase_name}' 배포 중 오류: {e}"
+            logger.error(error_msg)
+            self._complete_phase_tracking(phase_name, False, error_msg, completed_app_groups)
             return False
+
+    def _start_phase_tracking(self, phase_name: str) -> None:
+        """Start tracking for a phase.
+
+        Args:
+            phase_name: Phase name
+
+        """
+        if phase_name not in self.phase_names:
+            return
+
+        if not self.workspace_deployment_id:
+            return
+
+        with self.db.get_session() as session:
+            tracker = WorkspaceStateTracker(session)
+            # Get fresh deployment object from database
+            deployment = tracker.get_workspace_deployment(self.workspace_deployment_id)
+            if deployment:
+                for phase in deployment.phase_deployments:
+                    if phase.phase_name == phase_name:
+                        tracker.start_phase(phase)
+                        break
+
+    def _complete_phase_tracking(
+        self,
+        phase_name: str,
+        success: bool,
+        error_message: str | None = None,
+        completed_app_groups: int = 0,
+    ) -> None:
+        """Complete tracking for a phase.
+
+        Args:
+            phase_name: Phase name
+            success: Whether the phase succeeded
+            error_message: Error message if failed
+            completed_app_groups: Number of completed app groups
+
+        """
+        if phase_name not in self.phase_names:
+            return
+
+        if not self.workspace_deployment_id:
+            return
+
+        with self.db.get_session() as session:
+            tracker = WorkspaceStateTracker(session)
+            deployment = tracker.get_workspace_deployment(self.workspace_deployment_id)
+            if deployment:
+                for phase in deployment.phase_deployments:
+                    if phase.phase_name == phase_name:
+                        tracker.complete_phase(
+                            phase, success, error_message, completed_app_groups
+                        )
+                        break
 
     def _deploy_phase_subprocess(
         self,
@@ -1720,3 +1911,182 @@ def history_cmd(
         limit=limit,
     )
     history_command.execute()
+
+
+class WorkspaceCleanupCommand:
+    """Workspace 배포 히스토리 정리 명령어."""
+
+    def __init__(
+        self,
+        max_age_days: int = 30,
+        keep_per_workspace: int = 10,
+        deployment_id: str | None = None,
+        dry_run: bool = False,
+    ) -> None:
+        """Initialize workspace cleanup command.
+
+        Args:
+            max_age_days: 이 일수보다 오래된 배포 삭제
+            keep_per_workspace: workspace당 유지할 최소 배포 수
+            deployment_id: 특정 배포 ID 삭제
+            dry_run: 실제 삭제 없이 시뮬레이션
+
+        """
+        self.max_age_days = max_age_days
+        self.keep_per_workspace = keep_per_workspace
+        self.deployment_id = deployment_id
+        self.dry_run = dry_run
+        self.console = Console()
+        self.db = DeploymentDatabase()
+
+    def execute(self) -> int:
+        """Execute workspace cleanup command.
+
+        Returns:
+            Number of deployments deleted (or would be deleted in dry-run)
+
+        """
+        logger.heading("Workspace History Cleanup")
+
+        if self.dry_run:
+            self.console.print(
+                Panel(
+                    "[yellow]DRY-RUN MODE[/yellow]: 실제 삭제가 실행되지 않습니다.",
+                    style="yellow",
+                )
+            )
+
+        with self.db.get_session() as session:
+            tracker = WorkspaceStateTracker(session)
+
+            if self.deployment_id:
+                # 특정 배포 삭제
+                return self._delete_specific(tracker)
+            # 자동 정리
+            return self._cleanup_stale(tracker)
+
+    def _delete_specific(self, tracker: WorkspaceStateTracker) -> int:
+        """Delete a specific deployment."""
+        deployment = tracker.get_workspace_deployment(self.deployment_id)
+
+        if not deployment:
+            self.console.print(
+                f"[red]배포를 찾을 수 없습니다: {self.deployment_id}[/red]"
+            )
+            return 0
+
+        self.console.print(f"삭제 대상: {deployment.workspace_deployment_id}")
+        self.console.print(f"  Workspace: {deployment.workspace_name}")
+        self.console.print(f"  Timestamp: {deployment.timestamp}")
+        self.console.print(f"  Status: {deployment.status}")
+
+        if self.dry_run:
+            self.console.print("\n[yellow]DRY-RUN: 삭제되지 않았습니다.[/yellow]")
+            return 1
+
+        if tracker.delete_deployment(self.deployment_id):
+            logger.success(f"배포 삭제 완료: {self.deployment_id}")
+            return 1
+        return 0
+
+    def _cleanup_stale(self, tracker: WorkspaceStateTracker) -> int:
+        """Clean up stale deployments."""
+        self.console.print("정리 기준:")
+        self.console.print(f"  - {self.max_age_days}일 이상 오래된 배포")
+        self.console.print(f"  - workspace당 최근 {self.keep_per_workspace}개 유지")
+        self.console.print("  - 1일 이상 된 in_progress 상태 배포")
+
+        if self.dry_run:
+            # Dry-run: 삭제될 항목 미리보기
+            from sbkube.models.workspace_state import (
+                WorkspaceDeployment,
+            )
+
+            cutoff_date = tracker.session.query(WorkspaceDeployment).first()
+            if not cutoff_date:
+                self.console.print("\n[dim]정리할 배포가 없습니다.[/dim]")
+                return 0
+
+            # 실제 cleanup 로직을 시뮬레이션
+            self.console.print("\n[yellow]DRY-RUN: 삭제되지 않았습니다.[/yellow]")
+            self.console.print("[dim]실제 삭제하려면 --dry-run 옵션을 제거하세요.[/dim]")
+            return 0
+
+        deleted = tracker.cleanup_stale_deployments(
+            max_age_days=self.max_age_days,
+            keep_per_workspace=self.keep_per_workspace,
+        )
+
+        if deleted > 0:
+            logger.success(f"{deleted}개의 배포 기록이 정리되었습니다.")
+        else:
+            self.console.print("[dim]정리할 배포가 없습니다.[/dim]")
+
+        return deleted
+
+
+@workspace_group.command(name="cleanup")
+@click.option(
+    "--max-age",
+    type=int,
+    default=30,
+    help="이 일수보다 오래된 배포 삭제 (기본: 30)",
+)
+@click.option(
+    "--keep",
+    type=int,
+    default=10,
+    help="workspace당 유지할 최소 배포 수 (기본: 10)",
+)
+@click.option(
+    "--id",
+    "deployment_id",
+    type=str,
+    default=None,
+    help="특정 배포 ID 삭제",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="실제 삭제 없이 시뮬레이션",
+)
+@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@click.pass_context
+def cleanup_cmd(
+    ctx: click.Context,
+    max_age: int,
+    keep: int,
+    deployment_id: str | None,
+    dry_run: bool,
+    verbose: bool,
+    debug: bool,
+) -> None:
+    """오래된 배포 히스토리를 정리합니다.
+
+    Examples:
+        # 기본 정리 (30일 이상, workspace당 10개 유지)
+        sbkube workspace cleanup
+
+        # 커스텀 설정
+        sbkube workspace cleanup --max-age 7 --keep 5
+
+        # 특정 배포 삭제
+        sbkube workspace cleanup --id abc123
+
+        # Dry-run 모드
+        sbkube workspace cleanup --dry-run
+
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
+    ctx.obj["debug"] = debug
+    setup_logging_from_context(ctx)
+
+    cleanup_command = WorkspaceCleanupCommand(
+        max_age_days=max_age,
+        keep_per_workspace=keep,
+        deployment_id=deployment_id,
+        dry_run=dry_run,
+    )
+    cleanup_command.execute()

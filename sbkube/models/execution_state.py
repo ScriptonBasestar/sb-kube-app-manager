@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -29,12 +29,12 @@ class StepExecution:
     def start(self) -> None:
         """단계 시작."""
         self.status = StepStatus.IN_PROGRESS
-        self.started_at = datetime.utcnow()
+        self.started_at = datetime.now(UTC)
 
     def complete(self, output: str | None = None) -> None:
         """단계 완료."""
         self.status = StepStatus.COMPLETED
-        self.completed_at = datetime.utcnow()
+        self.completed_at = datetime.now(UTC)
         if self.started_at:
             self.duration = (self.completed_at - self.started_at).total_seconds()
         if output:
@@ -43,7 +43,7 @@ class StepExecution:
     def fail(self, error: str) -> None:
         """단계 실패."""
         self.status = StepStatus.FAILED
-        self.completed_at = datetime.utcnow()
+        self.completed_at = datetime.now(UTC)
         if self.started_at:
             self.duration = (self.completed_at - self.started_at).total_seconds()
         self.error = error
@@ -139,12 +139,12 @@ class ExecutionState:
     def complete(self) -> None:
         """전체 실행 완료."""
         self.status = StepStatus.COMPLETED
-        self.completed_at = datetime.utcnow()
+        self.completed_at = datetime.now(UTC)
 
     def fail(self) -> None:
         """전체 실행 실패."""
         self.status = StepStatus.FAILED
-        self.completed_at = datetime.utcnow()
+        self.completed_at = datetime.now(UTC)
 
     def to_dict(self) -> dict[str, Any]:
         """딕셔너리로 변환."""

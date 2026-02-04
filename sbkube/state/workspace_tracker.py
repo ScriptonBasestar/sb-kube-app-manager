@@ -20,6 +20,7 @@ from sbkube.models.workspace_state import (
     WorkspaceDeploymentStatus,
     WorkspaceDeploymentSummary,
 )
+from sbkube.utils.datetime_utils import utc_now as _utc_now
 from sbkube.utils.logger import get_logger
 
 logger = get_logger()
@@ -95,7 +96,7 @@ class WorkspaceStateTracker:
             Created WorkspaceDeployment record
 
         """
-        timestamp = datetime.utcnow()
+        timestamp = _utc_now()
         deployment_id = generate_workspace_deployment_id(
             create_data.workspace_name,
             create_data.workspace_file,
@@ -172,7 +173,7 @@ class WorkspaceStateTracker:
 
         """
         phase.status = PhaseDeploymentStatus.IN_PROGRESS.value
-        phase.started_at = datetime.utcnow()
+        phase.started_at = _utc_now()
         self.session.commit()
 
         logger.verbose(f"Started phase: {phase.phase_name}")
@@ -193,7 +194,7 @@ class WorkspaceStateTracker:
             completed_app_groups: Number of completed app groups
 
         """
-        phase.completed_at = datetime.utcnow()
+        phase.completed_at = _utc_now()
         phase.completed_app_groups = completed_app_groups
 
         if phase.started_at:
@@ -249,7 +250,7 @@ class WorkspaceStateTracker:
             error_message: Error message if failed
 
         """
-        deployment.completed_at = datetime.utcnow()
+        deployment.completed_at = _utc_now()
 
         if success:
             deployment.status = WorkspaceDeploymentStatus.SUCCESS.value
@@ -272,16 +273,28 @@ class WorkspaceStateTracker:
     ) -> WorkspaceDeployment | None:
         """Get workspace deployment by ID.
 
+        Supports both full ID and partial ID (prefix) matching.
+
         Args:
-            deployment_id: Workspace deployment ID
+            deployment_id: Workspace deployment ID (full or prefix)
 
         Returns:
             WorkspaceDeployment or None if not found
 
         """
-        return (
+        # Try exact match first
+        result = (
             self.session.query(WorkspaceDeployment)
             .filter(WorkspaceDeployment.workspace_deployment_id == deployment_id)
+            .first()
+        )
+        if result:
+            return result
+
+        # Try prefix match (for short IDs like "0f7e960de806")
+        return (
+            self.session.query(WorkspaceDeployment)
+            .filter(WorkspaceDeployment.workspace_deployment_id.startswith(deployment_id))
             .first()
         )
 
@@ -402,3 +415,80 @@ class WorkspaceStateTracker:
             .order_by(WorkspaceDeployment.timestamp.desc())
             .first()
         )
+
+    def cleanup_stale_deployments(
+        self,
+        max_age_days: int = 30,
+        keep_per_workspace: int = 10,
+    ) -> int:
+        """Clean up old and stale workspace deployment records.
+
+        Args:
+            max_age_days: Remove deployments older than this many days
+            keep_per_workspace: Keep at least this many recent deployments per workspace
+
+        Returns:
+            Number of deployments deleted
+
+        """
+        from datetime import timedelta
+
+        cutoff_date = _utc_now() - timedelta(days=max_age_days)
+        deleted_count = 0
+
+        # Get all workspace names
+        workspace_names = (
+            self.session.query(WorkspaceDeployment.workspace_name)
+            .distinct()
+            .all()
+        )
+
+        for (workspace_name,) in workspace_names:
+            # Get deployments for this workspace, ordered by timestamp
+            deployments = (
+                self.session.query(WorkspaceDeployment)
+                .filter(WorkspaceDeployment.workspace_name == workspace_name)
+                .order_by(WorkspaceDeployment.timestamp.desc())
+                .all()
+            )
+
+            # Keep the most recent ones, delete old ones
+            for i, deployment in enumerate(deployments):
+                should_delete = False
+
+                # Delete if older than cutoff and not in the keep count
+                if i >= keep_per_workspace and deployment.timestamp < cutoff_date:
+                    should_delete = True
+
+                # Delete stale in_progress records (older than 1 day)
+                if (
+                    deployment.status == WorkspaceDeploymentStatus.IN_PROGRESS.value
+                    and deployment.timestamp < _utc_now() - timedelta(days=1)
+                ):
+                    should_delete = True
+
+                if should_delete:
+                    self.session.delete(deployment)
+                    deleted_count += 1
+
+        self.session.commit()
+        logger.verbose(f"Cleaned up {deleted_count} stale workspace deployments")
+        return deleted_count
+
+    def delete_deployment(self, deployment_id: str) -> bool:
+        """Delete a specific workspace deployment.
+
+        Args:
+            deployment_id: Workspace deployment ID (full or prefix)
+
+        Returns:
+            True if deleted, False if not found
+
+        """
+        deployment = self.get_workspace_deployment(deployment_id)
+        if deployment:
+            self.session.delete(deployment)
+            self.session.commit()
+            logger.verbose(f"Deleted workspace deployment: {deployment_id}")
+            return True
+        return False

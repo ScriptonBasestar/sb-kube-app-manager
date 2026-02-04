@@ -22,7 +22,6 @@ from sbkube.commands import (
     upgrade,
     validate,
     version,
-    workspace,
 )
 from sbkube.exceptions import (
     CliToolExecutionError,
@@ -47,7 +46,6 @@ class SbkubeGroup(click.Group):
         "상태 관리": ["status", "history", "rollback"],
         "업그레이드/삭제": ["upgrade", "delete", "check-updates"],
         "유틸리티": ["init", "validate", "doctor", "migrate", "version"],
-        "Workspace (v0.9.0 미리보기)": ["workspace"],
     }
 
     # 카테고리별 이모지
@@ -57,7 +55,6 @@ class SbkubeGroup(click.Group):
         "상태 관리": "📊",
         "업그레이드/삭제": "🔧",
         "유틸리티": "🛠️",
-        "Workspace (v0.9.0 미리보기)": "🚀",
     }
 
     def format_commands(
@@ -242,9 +239,6 @@ main.add_command(validate.cmd)
 main.add_command(version.cmd)
 main.add_command(doctor.cmd)
 main.add_command(migrate.cmd)
-
-# Workspace 명령어 (v0.9.0 미리보기)
-main.add_command(workspace.workspace_group)
 
 
 def main_with_exception_handling() -> None:

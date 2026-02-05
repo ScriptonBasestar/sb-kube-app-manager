@@ -1,6 +1,7 @@
 """Enhanced error formatting for SBKube.
 
 에러를 사용자 친화적인 형태로 포맷팅하여 출력합니다.
+기본: 간결한 출력 / verbose: 상세 출력
 """
 
 from rich.console import Console
@@ -18,6 +19,7 @@ def format_deployment_error(
     step_number: int,
     total_steps: int,
     console: Console | None = None,
+    verbose: bool = False,
 ) -> None:
     """배포 에러를 포맷팅하여 출력합니다.
 
@@ -28,26 +30,17 @@ def format_deployment_error(
         step_number: 단계 번호 (1, 2, 3)
         total_steps: 전체 단계 수
         console: Rich Console 인스턴스 (None이면 새로 생성)
+        verbose: 상세 출력 여부 (기본 False)
 
     """
     if console is None:
         console = Console()
 
     error_message = str(error)
-
-    # 에러 분류
     classification = ErrorClassifier.classify(error_message, context=step)
+    guide = get_error_suggestions(classification["category"])
 
-    # 단계 아이콘 매핑
-    step_icons = {
-        "prepare": "📦",
-        "build": "🔨",
-        "deploy": "🚀",
-        "load_config": "📄",
-    }
-    step_icon = step_icons.get(step, "⚙️")
-
-    # 심각도 색상 매핑
+    # 심각도 색상
     severity_colors = {
         "critical": "bold red",
         "high": "red",
@@ -57,104 +50,154 @@ def format_deployment_error(
     }
     severity_color = severity_colors.get(classification["severity"], "red")
 
-    # 기본 에러 메시지
-    console.print()
-    console.print(f"[{severity_color}]❌ 배포 실패: {app_name}[/{severity_color}]")
-    console.print(
-        f"[dim]({step_number}/{total_steps} 단계에서 실패)[/dim]", style="dim"
-    )
+    # ============================================================
+    # 기본 출력 (항상 표시) - 3줄로 핵심만
+    # ============================================================
     console.print()
 
-    # 실패 단계 표시
-    console.print(f"[bold cyan]📍 실패 단계:[/bold cyan] {step_icon} {step.title()}")
+    # 1줄: 앱 이름 + 에러 타입
+    error_type = classification["category"] if classification["is_classified"] else "UnknownError"
+    console.print(f"[{severity_color}]❌ {app_name}[/{severity_color}] [{step}] {error_type}")
 
-    # 에러 타입 표시
-    if classification["is_classified"]:
-        console.print(
-            f"[bold cyan]🔍 에러 타입:[/bold cyan] {classification['category']}"
-        )
-    else:
-        console.print("[bold cyan]🔍 에러 타입:[/bold cyan] 알 수 없음 (일반 에러)")
-
-    # 상세 에러 내용 (축약)
-    truncated_error = (
-        error_message
-        if len(error_message) < 200
-        else error_message[:200] + "... (생략)"
-    )
-    console.print(f"[bold cyan]💬 상세 내용:[/bold cyan] {truncated_error}")
-
-    # 데이터베이스 에러일 경우 추가 정보
-    if "Database" in classification["category"]:
-        db_details = ErrorClassifier.extract_db_details(error_message)
-        if any(db_details.values()):
-            console.print()
-            console.print("[bold cyan]🗄️  데이터베이스 정보:[/bold cyan]")
-            if db_details["db_type"]:
-                console.print(f"  • DB 종류: {db_details['db_type']}")
-            if db_details["user"]:
-                console.print(f"  • 사용자: {db_details['user']}")
-            if db_details["host"]:
-                console.print(f"  • 호스트: {db_details['host']}")
-            if db_details["port"]:
-                console.print(f"  • 포트: {db_details['port']}")
-
-    # Helm 에러일 경우 추가 정보
-    if "Helm" in classification["category"]:
-        helm_details = ErrorClassifier.extract_helm_details(error_message)
-        if any(helm_details.values()):
-            console.print()
-            console.print("[bold cyan]⎈ Helm 정보:[/bold cyan]")
-            if helm_details["release_name"]:
-                console.print(f"  • Release: {helm_details['release_name']}")
-            if helm_details["namespace"]:
-                console.print(f"  • Namespace: {helm_details['namespace']}")
-            if helm_details["chart"]:
-                console.print(f"  • Chart: {helm_details['chart']}")
-
-    # ERROR_GUIDE에서 해결 방법 가져오기
-    guide = get_error_suggestions(classification["category"])
-
+    # 2줄: 핵심 원인 (guide title 또는 에러 메시지 첫 80자)
     if guide:
+        console.print(f"   [yellow]→ {guide['title']}[/yellow]")
+    else:
+        short_msg = error_message[:80] + "..." if len(error_message) > 80 else error_message
+        console.print(f"   [dim]→ {short_msg}[/dim]")
+
+    # 3줄: 빠른 해결 명령어
+    if guide and guide.get("quick_fix"):
+        console.print(f"   [green]⚡ {guide['quick_fix']}[/green]")
+
+    # verbose 힌트
+    if not verbose:
+        console.print(f"   [dim](상세: --verbose 또는 -v)[/dim]")
         console.print()
-        console.print(f"[bold yellow]💡 {guide['title']}[/bold yellow]")
-        console.print()
+        return
+
+    # ============================================================
+    # Verbose 출력 (--verbose 옵션)
+    # ============================================================
+    console.print()
+    console.print("[dim]─" * 50 + "[/dim]")
+
+    # 상세 에러 내용
+    truncated_error = (
+        error_message if len(error_message) < 300 else error_message[:300] + "..."
+    )
+    console.print(f"[bold]상세:[/bold] {truncated_error}")
+    console.print()
+
+    # 타입별 추가 정보 추출 및 표시
+    _print_extracted_details(console, classification, error_message)
+
+    # 해결 방법 가이드
+    if guide:
         console.print("[bold]📋 해결 방법:[/bold]")
         for suggestion in guide["suggestions"]:
             console.print(f"  • {suggestion}")
 
         if guide["commands"]:
             console.print()
-            console.print("[bold]🔧 유용한 명령어:[/bold]")
+            console.print("[bold]🔧 명령어:[/bold]")
             for cmd, desc in guide["commands"].items():
                 console.print(f"  • [cyan]sbkube {cmd}[/cyan]: {desc}")
 
-        if guide["quick_fix"]:
-            console.print()
-            console.print(
-                f"[bold green]⚡ 빠른 해결:[/bold green] [cyan]{guide['quick_fix']}[/cyan]"
-            )
+        if guide.get("doc_link"):
+            console.print(f"\n[dim]📚 {guide['doc_link']}[/dim]")
 
-        if guide["doc_link"]:
+        # 예제 코드 (verbose에서만)
+        if guide.get("example_fix"):
             console.print()
-            console.print(f"[dim]📚 자세한 내용: {guide['doc_link']}[/dim]")
+            console.print("[bold magenta]📝 예시:[/bold magenta]")
+            for line in guide["example_fix"].strip().split("\n"):
+                if line.strip().startswith("#"):
+                    console.print(f"[dim]{line}[/dim]")
+                else:
+                    console.print(f"[cyan]{line}[/cyan]")
     else:
-        # 가이드가 없는 경우 기본 제안
-        console.print()
-        console.print("[bold yellow]💡 일반적인 해결 방법:[/bold yellow]")
-        console.print("  • 전체 에러 로그 확인")
-        console.print("  • [cyan]sbkube doctor[/cyan]: 시스템 진단")
-        console.print(
-            "  • [cyan]kubectl get pods,svc -n <namespace>[/cyan]: 리소스 확인"
-        )
+        console.print("[bold]📋 일반 해결:[/bold]")
+        console.print("  • sbkube doctor")
+        console.print("  • kubectl get pods,events -n <namespace>")
 
     console.print()
+
+
+def _print_extracted_details(
+    console: Console,
+    classification: dict,
+    error_message: str,
+) -> None:
+    """에러 타입별 추출된 상세 정보를 출력합니다."""
+
+    category = classification["category"]
+
+    # Database 에러
+    if "Database" in category:
+        details = ErrorClassifier.extract_db_details(error_message)
+        if any(details.values()):
+            info_parts = []
+            if details["db_type"]:
+                info_parts.append(f"DB={details['db_type']}")
+            if details["user"]:
+                info_parts.append(f"user={details['user']}")
+            if details["host"]:
+                info_parts.append(f"host={details['host']}")
+            if details["port"]:
+                info_parts.append(f"port={details['port']}")
+            console.print(f"[cyan]🗄️  {' | '.join(info_parts)}[/cyan]")
+            console.print()
+
+    # Helm 에러
+    if "Helm" in category:
+        details = ErrorClassifier.extract_helm_details(error_message)
+        if any(details.values()):
+            info_parts = []
+            if details["release_name"]:
+                info_parts.append(f"release={details['release_name']}")
+            if details["namespace"]:
+                info_parts.append(f"ns={details['namespace']}")
+            if details["chart"]:
+                info_parts.append(f"chart={details['chart']}")
+            console.print(f"[cyan]⎈ {' | '.join(info_parts)}[/cyan]")
+            console.print()
+
+    # StorageClass 에러
+    if "Storage" in category:
+        details = ErrorClassifier.extract_storage_details(error_message)
+        if any(details.values()):
+            info_parts = []
+            if details["storageclass"]:
+                info_parts.append(f"[red]sc={details['storageclass']}[/red]")
+            if details["pvc_name"]:
+                info_parts.append(f"pvc={details['pvc_name']}")
+            if details["namespace"]:
+                info_parts.append(f"ns={details['namespace']}")
+            console.print(f"[cyan]💾 {' | '.join(info_parts)}[/cyan]")
+            console.print("[yellow]   💡 K3s: 'local-path' 사용 (standard 아님)[/yellow]")
+            console.print()
+
+    # Webhook 에러
+    if "Webhook" in category:
+        details = ErrorClassifier.extract_webhook_details(error_message)
+        if any(details.values()):
+            info_parts = []
+            if details["webhook_type"]:
+                info_parts.append(f"type={details['webhook_type']}")
+            if details["webhook_name"]:
+                info_parts.append(f"name={details['webhook_name']}")
+            if details["conflicting_manager"]:
+                info_parts.append(f"conflict={details['conflicting_manager']}")
+            console.print(f"[cyan]🔗 {' | '.join(info_parts)}[/cyan]")
+            console.print()
 
 
 def format_simple_error(
     error: Exception,
     context: str | None = None,
     console: Console | None = None,
+    verbose: bool = False,
 ) -> None:
     """간단한 에러 메시지 출력 (배포 외 일반 에러).
 
@@ -162,6 +205,7 @@ def format_simple_error(
         error: 발생한 예외
         context: 에러 발생 컨텍스트 (옵션)
         console: Rich Console 인스턴스
+        verbose: 상세 출력 여부
 
     """
     if console is None:
@@ -169,24 +213,30 @@ def format_simple_error(
 
     error_message = str(error)
     classification = ErrorClassifier.classify(error_message, context=context)
+    guide = get_error_suggestions(classification["category"])
 
     severity_color = "red" if classification["severity"] == "high" else "yellow"
 
+    # 기본 출력
     console.print()
-    console.print(f"[{severity_color}]❌ 에러 발생[/{severity_color}]")
-    if context:
-        console.print(f"[dim]컨텍스트: {context}[/dim]")
+    error_type = classification["category"] if classification["is_classified"] else "Error"
+    console.print(f"[{severity_color}]❌ {error_type}[/{severity_color}]")
 
-    console.print(f"[bold]메시지:[/bold] {error_message}")
-
-    # ERROR_GUIDE 조회
-    guide = get_error_suggestions(classification["category"])
     if guide and guide.get("quick_fix"):
-        console.print()
-        console.print(
-            f"[bold green]⚡ 빠른 해결:[/bold green] [cyan]{guide['quick_fix']}[/cyan]"
-        )
+        console.print(f"   [green]⚡ {guide['quick_fix']}[/green]")
 
+    if not verbose:
+        short_msg = error_message[:80] + "..." if len(error_message) > 80 else error_message
+        console.print(f"   [dim]{short_msg}[/dim]")
+        console.print()
+        return
+
+    # Verbose
+    console.print(f"\n[bold]메시지:[/bold] {error_message}")
+    if guide:
+        console.print(f"\n[yellow]💡 {guide['title']}[/yellow]")
+        for suggestion in guide["suggestions"][:3]:  # 상위 3개만
+            console.print(f"  • {suggestion}")
     console.print()
 
 

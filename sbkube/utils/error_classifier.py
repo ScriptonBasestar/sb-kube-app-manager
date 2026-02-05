@@ -12,6 +12,76 @@ class ErrorClassifier:
 
     # 에러 패턴 정의 (우선순위 순)
     PATTERNS: ClassVar[list[dict[str, Any]]] = [
+        # StorageClass/PVC Errors (우선순위 높음 - 자주 발생)
+        {
+            "category": "StorageClassNotFoundError",
+            "patterns": [
+                r"storageclass.*not found",
+                r'storageclass\.storage\.k8s\.io ".*" not found',
+                r"no persistent volumes available",
+                r"waiting for a volume to be created",
+                r"persistentvolumeclaim.*pending",
+                r"unbound immediate PersistentVolumeClaims",
+            ],
+            "severity": "high",
+            "phase": "deploy",
+        },
+        # Helm Repo Not Registered Errors
+        {
+            "category": "HelmRepoNotRegisteredError",
+            "patterns": [
+                r"repo.*has not been added",
+                r"failed to fetch.*not found",
+                r'repository ".*" not found',
+                r"helm repo add.*first",
+                r"failed to download.*404",
+                r"looks like.*is not a valid chart repository",
+            ],
+            "severity": "medium",
+            "phase": "prepare",
+        },
+        # Schema Validation Errors (Helm values)
+        {
+            "category": "SchemaValidationError",
+            "patterns": [
+                r"values don't meet the specifications",
+                r"additional properties.*not allowed",
+                r"values\.schema\.json",
+                r"additionalProperties.*false",
+                r"does not validate against.*schema",
+                r"field not declared in schema",
+            ],
+            "severity": "medium",
+            "phase": "deploy",
+        },
+        # Webhook Conflict Errors
+        {
+            "category": "WebhookConflictError",
+            "patterns": [
+                r"conflict.*mutatingwebhook",
+                r"conflict.*validatingwebhook",
+                r"admission webhook.*denied",
+                r"webhook.*already exists",
+                r"conflict with.*using admissionregistration",
+                r"server-side apply conflict",
+            ],
+            "severity": "high",
+            "phase": "deploy",
+        },
+        # Deployment Timeout Errors
+        {
+            "category": "DeploymentTimeoutError",
+            "patterns": [
+                r"timed out waiting",
+                r"timeout expired",
+                r"deadline exceeded",
+                r"context deadline exceeded",
+                r"wait.*timeout",
+                r"exceeded.*timeout",
+            ],
+            "severity": "high",
+            "phase": "deploy",
+        },
         # Database Authentication Errors
         {
             "category": "DatabaseAuthenticationError",
@@ -274,5 +344,106 @@ class ErrorClassifier:
         )
         if chart_match:
             result["chart"] = chart_match.group(1)
+
+        return result
+
+    @classmethod
+    def extract_storage_details(cls, error_message: str) -> dict[str, str | None]:
+        """StorageClass/PVC 에러에서 상세 정보를 추출합니다.
+
+        Args:
+            error_message: 에러 메시지
+
+        Returns:
+            {
+                "storageclass": "standard" | None,
+                "pvc_name": "data-vault-0" | None,
+                "namespace": "devsec" | None,
+                "requested_size": "10Gi" | None
+            }
+
+        """
+        result: dict[str, str | None] = {
+            "storageclass": None,
+            "pvc_name": None,
+            "namespace": None,
+            "requested_size": None,
+        }
+
+        # StorageClass 추출
+        sc_match = re.search(
+            r'storageclass[:\s\.]+"?([^"\s]+)"?', error_message, re.IGNORECASE
+        )
+        if sc_match:
+            result["storageclass"] = sc_match.group(1)
+        else:
+            # 다른 패턴 시도: storageClass: "standard"
+            sc_match2 = re.search(
+                r'storageClass[:\s]+"?([^"\s]+)"?', error_message
+            )
+            if sc_match2:
+                result["storageclass"] = sc_match2.group(1)
+
+        # PVC 이름 추출
+        pvc_match = re.search(
+            r'(?:pvc|persistentvolumeclaim)[:\s/"]*([^"\s/]+)', error_message, re.IGNORECASE
+        )
+        if pvc_match:
+            result["pvc_name"] = pvc_match.group(1)
+
+        # Namespace 추출
+        ns_match = re.search(
+            r'namespace[:\s]+"?([^"\s]+)"?', error_message, re.IGNORECASE
+        )
+        if ns_match:
+            result["namespace"] = ns_match.group(1)
+
+        # Size 추출
+        size_match = re.search(r'(\d+(?:Gi|Mi|Ti))', error_message, re.IGNORECASE)
+        if size_match:
+            result["requested_size"] = size_match.group(1)
+
+        return result
+
+    @classmethod
+    def extract_webhook_details(cls, error_message: str) -> dict[str, str | None]:
+        """Webhook 충돌 에러에서 상세 정보를 추출합니다.
+
+        Args:
+            error_message: 에러 메시지
+
+        Returns:
+            {
+                "webhook_name": "vault-agent-injector-cfg" | None,
+                "webhook_type": "mutating" | "validating" | None,
+                "conflicting_manager": "vault-k8s" | None
+            }
+
+        """
+        result: dict[str, str | None] = {
+            "webhook_name": None,
+            "webhook_type": None,
+            "conflicting_manager": None,
+        }
+
+        # Webhook 타입 감지
+        if "mutating" in error_message.lower():
+            result["webhook_type"] = "mutating"
+        elif "validating" in error_message.lower():
+            result["webhook_type"] = "validating"
+
+        # Webhook 이름 추출
+        webhook_match = re.search(
+            r'(?:webhook|configuration)[:\s/"]*([^"\s,]+)', error_message, re.IGNORECASE
+        )
+        if webhook_match:
+            result["webhook_name"] = webhook_match.group(1)
+
+        # 충돌 관리자 추출
+        conflict_match = re.search(
+            r'conflict with "([^"]+)"', error_message, re.IGNORECASE
+        )
+        if conflict_match:
+            result["conflicting_manager"] = conflict_match.group(1)
 
         return result

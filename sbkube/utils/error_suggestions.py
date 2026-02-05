@@ -7,6 +7,153 @@ from typing import Any
 
 # 에러 타입별 가이드 데이터베이스
 ERROR_GUIDE: dict[str, dict[str, Any]] = {
+    "StorageClassNotFoundError": {
+        "title": "StorageClass가 존재하지 않거나 PVC가 Pending 상태입니다",
+        "suggestions": [
+            "클러스터의 StorageClass 확인 → kubectl get storageclass",
+            "K3s 기본값은 'local-path' (standard 아님!)",
+            "values.yaml에서 storageClass 수정 필요",
+            "PVC 상태 확인 → kubectl get pvc -n <namespace>",
+            "기존 PVC 삭제 후 재배포 필요할 수 있음",
+        ],
+        "commands": {
+            "doctor": "시스템 진단 및 StorageClass 확인",
+        },
+        "doc_link": "docs/07-troubleshooting/storage-issues.md",
+        "quick_fix": "kubectl get storageclass",
+        "auto_recoverable": False,
+        "example_fix": """
+# values.yaml 수정 예시 (K3s):
+dataStorage:
+  storageClass: "local-path"  # "standard" → "local-path"
+
+# PVC 재생성:
+kubectl delete pvc <pvc-name> -n <namespace>
+sbkube apply --app-dir <app-dir>
+""",
+    },
+    "HelmRepoNotRegisteredError": {
+        "title": "Helm 리포지토리가 로컬에 등록되지 않았습니다",
+        "suggestions": [
+            "등록된 repo 목록 확인 → helm repo list",
+            "sbkube.yaml의 helm_repos 섹션 확인",
+            "수동으로 repo 추가 → helm repo add <name> <url>",
+            "repo 업데이트 → helm repo update",
+        ],
+        "commands": {
+            "prepare": "소스 준비 (repo 등록 시도)",
+            "validate": "설정 파일 유효성 검사",
+        },
+        "doc_link": "docs/03-configuration/helm-repos.md",
+        "quick_fix": "helm repo list && helm repo update",
+        "auto_recoverable": True,
+        "example_fix": """
+# sbkube.yaml에 helm_repos 추가:
+settings:
+  helm_repos:
+    hashicorp: https://helm.releases.hashicorp.com
+    bitnami: https://charts.bitnami.com/bitnami
+
+# 또는 수동 추가:
+helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo update
+""",
+    },
+    "SchemaValidationError": {
+        "title": "Helm 차트 스키마 검증 실패",
+        "suggestions": [
+            "values.yaml의 필드명이 차트 스키마와 일치하는지 확인",
+            "차트 버전 업데이트로 스키마가 변경되었을 수 있음",
+            "helm show values <chart>로 허용된 필드 확인",
+            "label injection 비활성화 시도 (sbkube 자동 주입 필드 거부 시)",
+        ],
+        "commands": {
+            "validate": "설정 파일 유효성 검사",
+        },
+        "doc_link": "docs/07-troubleshooting/schema-validation.md",
+        "quick_fix": None,
+        "auto_recoverable": False,
+        "example_fix": """
+# 스키마 오류 해결 방법:
+
+# 1. 허용되지 않는 필드 제거
+# 오류: "additional properties 'username_attribute' not allowed"
+# → values.yaml에서 해당 필드 제거 또는 올바른 필드명으로 변경
+
+# 2. sbkube label injection 비활성화 (strict schema charts):
+apps:
+  my-app:
+    helm_label_injection: false
+
+# 3. 차트 스키마 확인:
+helm show values <repo>/<chart> | head -100
+""",
+    },
+    "WebhookConflictError": {
+        "title": "Webhook 리소스 충돌이 발생했습니다",
+        "suggestions": [
+            "기존 webhook 확인 → kubectl get mutatingwebhookconfigurations",
+            "충돌하는 webhook 삭제 후 재배포",
+            "helm uninstall 후 clean install 시도",
+            "Server-Side Apply 충돌일 수 있음",
+        ],
+        "commands": {
+            "delete": "애플리케이션 삭제 후 재배포",
+        },
+        "doc_link": "docs/07-troubleshooting/webhook-conflicts.md",
+        "quick_fix": "kubectl get mutatingwebhookconfigurations",
+        "auto_recoverable": False,
+        "example_fix": """
+# Webhook 충돌 해결:
+
+# 1. 기존 webhook 확인:
+kubectl get mutatingwebhookconfigurations
+kubectl get validatingwebhookconfigurations
+
+# 2. 충돌하는 webhook 삭제:
+kubectl delete mutatingwebhookconfiguration <webhook-name>
+
+# 3. Helm release 완전 삭제 후 재설치:
+helm uninstall <release> -n <namespace>
+sbkube apply --app-dir <app-dir>
+""",
+    },
+    "DeploymentTimeoutError": {
+        "title": "배포 시간 초과",
+        "suggestions": [
+            "Pod 상태 확인 → kubectl get pods -n <namespace>",
+            "Pod 이벤트 확인 → kubectl describe pod <pod> -n <namespace>",
+            "리소스 부족일 수 있음 → kubectl top nodes",
+            "이미지 풀 실패일 수 있음 → ImagePullBackOff 확인",
+            "timeout 값 증가 고려 (무거운 앱)",
+        ],
+        "commands": {
+            "doctor": "시스템 진단",
+            "status": "배포 상태 확인",
+        },
+        "doc_link": "docs/07-troubleshooting/timeout-issues.md",
+        "quick_fix": "kubectl get pods -n <namespace> -o wide",
+        "auto_recoverable": False,
+        "example_fix": """
+# Timeout 문제 진단:
+
+# 1. Pod 상태 확인:
+kubectl get pods -n <namespace>
+kubectl describe pod <pod-name> -n <namespace>
+
+# 2. 이벤트 확인 (최근 문제 파악):
+kubectl get events -n <namespace> --sort-by='.lastTimestamp' | tail -20
+
+# 3. 노드 리소스 확인:
+kubectl top nodes
+kubectl top pods -n <namespace>
+
+# 4. Timeout 증가 (sbkube.yaml):
+apps:
+  heavy-app:
+    timeout: "10m"  # 기본 5m → 10m
+""",
+    },
     "ConfigFileNotFoundError": {
         "title": "설정 파일을 찾을 수 없습니다",
         "suggestions": [

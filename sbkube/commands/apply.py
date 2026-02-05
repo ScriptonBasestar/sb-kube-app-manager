@@ -45,6 +45,7 @@ class ApplyCommand:
         parallel: bool = False,
         skip_prepare: bool = False,
         skip_build: bool = False,
+        inherited_settings: dict | None = None,
     ) -> None:
         """Initialize ApplyCommand.
 
@@ -58,6 +59,8 @@ class ApplyCommand:
             parallel: Parallel deployment
             skip_prepare: Skip prepare step
             skip_build: Skip build step
+            inherited_settings: Settings inherited from parent workspace/phase
+                (helm_repos, oci_registries, git_repos)
 
         """
         self.config_file = config_file
@@ -69,6 +72,7 @@ class ApplyCommand:
         self.parallel = parallel
         self.skip_prepare = skip_prepare
         self.skip_build = skip_build
+        self.inherited_settings = inherited_settings or {}
 
     def execute(self) -> bool:
         """Execute apply command.
@@ -154,11 +158,29 @@ class ApplyCommand:
         # Create a dummy click context for command invocation
         import click
 
+        # Merge inherited settings with local settings (local takes precedence)
+        merged_helm_repos = {**self.inherited_settings.get("helm_repos", {})}
+        merged_oci_registries = {**self.inherited_settings.get("oci_registries", {})}
+        merged_git_repos = {**self.inherited_settings.get("git_repos", {})}
+
+        if settings:
+            if settings.helm_repos:
+                merged_helm_repos.update(settings.helm_repos)
+            if settings.oci_registries:
+                merged_oci_registries.update(settings.oci_registries)
+            if settings.git_repos:
+                merged_git_repos.update(settings.git_repos)
+
         ctx = click.Context(click.Command("apply"))
         ctx.obj = {
             "format": "human",
             "kubeconfig": settings.kubeconfig if settings else None,
             "context": settings.kubeconfig_context if settings else None,
+            "inherited_settings": {
+                "helm_repos": merged_helm_repos,
+                "oci_registries": merged_oci_registries,
+                "git_repos": merged_git_repos,
+            },
         }
 
         try:
@@ -675,12 +697,12 @@ def cmd(
         # Process apps using the existing flow (skip directory scanning)
         # Set up paths for the unified config location
         APP_CONFIG_DIR = detected.primary_file.parent
-        current_app_dir = "."
+        current_app_dir = APP_CONFIG_DIR.name
 
         overall_success = _execute_apps_deployment(
             ctx=ctx,
             config=config,
-            base_dir=str(BASE_DIR),
+            base_dir=str(APP_CONFIG_DIR.parent),
             app_config_dir=APP_CONFIG_DIR,
             current_app_dir=current_app_dir,
             config_file_name="sbkube.yaml",

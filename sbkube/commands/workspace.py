@@ -1334,12 +1334,20 @@ class WorkspaceDeployCommand:
                     # Deploy apps using ApplyCommand
                     from sbkube.commands.apply import ApplyCommand
 
+                    # Build inherited settings from workspace
+                    inherited_settings = {
+                        "helm_repos": workspace.settings.helm_repos or {},
+                        "oci_registries": workspace.settings.oci_registries or {},
+                        "git_repos": workspace.settings.git_repos or {},
+                    }
+
                     try:
                         apply_cmd = ApplyCommand(
                             config_file=str(source_path),
                             dry_run=self.dry_run,
                             force=self.force,
                             parallel=self.parallel_apps,
+                            inherited_settings=inherited_settings,
                         )
                         success = apply_cmd.execute()
                         self._complete_phase_tracking(
@@ -1398,6 +1406,14 @@ class WorkspaceDeployCommand:
 
         # 실제 배포: sbkube apply 명령 호출
         completed_app_groups = 0
+
+        # Build inherited settings from workspace
+        inherited_settings = {
+            "helm_repos": workspace.settings.helm_repos or {},
+            "oci_registries": workspace.settings.oci_registries or {},
+            "git_repos": workspace.settings.git_repos or {},
+        }
+
         try:
             from sbkube.commands.apply import ApplyCommand
 
@@ -1422,7 +1438,7 @@ class WorkspaceDeployCommand:
                             f"Deploying {len(level_groups)} app groups in parallel[/cyan]"
                         )
                         success, completed = self._deploy_app_groups_parallel(
-                            level_groups, base_dir, source_path
+                            level_groups, base_dir, source_path, inherited_settings
                         )
                         completed_app_groups += completed
                         if not success:
@@ -1435,7 +1451,7 @@ class WorkspaceDeployCommand:
                         # Single app group - execute sequentially
                         app_group = level_groups[0]
                         self.console.print(f"  Deploying app group: {app_group}")
-                        if not self._deploy_single_app_group(app_group, base_dir, source_path):
+                        if not self._deploy_single_app_group(app_group, base_dir, source_path, inherited_settings):
                             error_msg = f"App group '{app_group}' 배포 실패"
                             self._complete_phase_tracking(
                                 phase_name, False, error_msg, completed_app_groups
@@ -1455,6 +1471,7 @@ class WorkspaceDeployCommand:
                         force=self.force,
                         skip_prepare=False,
                         skip_build=False,
+                        inherited_settings=inherited_settings,
                     )
 
                     # Apply 실행
@@ -1499,6 +1516,7 @@ class WorkspaceDeployCommand:
         app_group: str,
         base_dir: Path,
         source_path: Path,
+        inherited_settings: dict | None = None,
     ) -> bool:
         """Deploy a single app group.
 
@@ -1506,6 +1524,7 @@ class WorkspaceDeployCommand:
             app_group: App group name
             base_dir: Base directory for deployment
             source_path: Path to sources.yaml
+            inherited_settings: Settings inherited from parent workspace
 
         Returns:
             bool: True if successful
@@ -1521,6 +1540,7 @@ class WorkspaceDeployCommand:
             force=self.force,
             skip_prepare=False,
             skip_build=False,
+            inherited_settings=inherited_settings,
         )
 
         return apply_cmd.execute()
@@ -1530,6 +1550,7 @@ class WorkspaceDeployCommand:
         app_groups: list[str],
         base_dir: Path,
         source_path: Path,
+        inherited_settings: dict | None = None,
     ) -> tuple[bool, int]:
         """Deploy multiple app groups in parallel.
 
@@ -1537,6 +1558,7 @@ class WorkspaceDeployCommand:
             app_groups: List of app group names
             base_dir: Base directory for deployment
             source_path: Path to sources.yaml
+            inherited_settings: Settings inherited from parent workspace
 
         Returns:
             Tuple of (all_success, completed_count)
@@ -1552,6 +1574,7 @@ class WorkspaceDeployCommand:
                     app_group,
                     base_dir,
                     source_path,
+                    inherited_settings,
                 ): app_group
                 for app_group in app_groups
             }

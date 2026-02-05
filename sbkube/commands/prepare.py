@@ -210,6 +210,8 @@ def prepare_helm_app(
     context: str | None = None,
     force: bool = False,
     dry_run: bool = False,
+    helm_repos: dict | None = None,
+    oci_registries: dict | None = None,
 ) -> bool:
     """Helm 앱 준비 (chart pull).
 
@@ -241,14 +243,24 @@ def prepare_helm_app(
     repo_name = app.get_repo_name()
     chart_name = app.get_chart_name()
 
-    # sources.yaml에서 repo URL 찾기
-    if not sources_file.exists():
+    # sources.yaml에서 repo URL 찾기 (passed parameters take precedence)
+    if helm_repos is not None:
+        helm_sources = helm_repos
+    elif not sources_file.exists():
         output.print_error(f"sources.yaml not found: {sources_file}")
         return False
+    else:
+        sources = load_config_file(sources_file)
+        helm_sources = sources.get("helm_repos", {})
 
-    sources = load_config_file(sources_file)
-    helm_sources = sources.get("helm_repos", {})
-    oci_sources = sources.get("oci_registries", {})
+    if oci_registries is not None:
+        oci_sources = oci_registries
+    elif sources_file.exists():
+        if 'sources' not in locals():
+            sources = load_config_file(sources_file)
+        oci_sources = sources.get("oci_registries", {})
+    else:
+        oci_sources = {}
 
     # OCI 레지스트리 체크 (우선순위)
     if repo_name in oci_sources:
@@ -489,6 +501,7 @@ def prepare_git_app(
     output: OutputManager,
     force: bool = False,
     dry_run: bool = False,
+    git_repos: dict | None = None,
 ) -> bool:
     """Git 앱 준비 (repo clone).
 
@@ -508,13 +521,15 @@ def prepare_git_app(
     """
     output.print(f"[cyan]📦 Preparing Git app: {app_name}[/cyan]")
 
-    # sources.yaml에서 repo URL 찾기
-    if not sources_file.exists():
+    # sources.yaml에서 repo URL 찾기 (passed parameters take precedence)
+    if git_repos is not None:
+        git_sources = git_repos
+    elif not sources_file.exists():
         output.print_error(f"sources.yaml not found: {sources_file}")
         return False
-
-    sources = load_config_file(sources_file)
-    git_sources = sources.get("git_repos", {})
+    else:
+        sources = load_config_file(sources_file)
+        git_sources = sources.get("git_repos", {})
 
     # app.repo가 alias인지 URL인지 판단
     if (
@@ -710,37 +725,29 @@ def cmd(
                 "http_proxy", "https_proxy", "no_proxy",
             }
 
-            # 상위 디렉토리의 sbkube.yaml에서 설정 상속 (cluster settings)
+            # Get inherited settings from context (passed from parent workspace/phase)
+            # No parent scanning - settings must be explicitly passed or defined locally
+            inherited_settings = ctx.obj.get("inherited_settings", {})
+
+            # Start with inherited settings
             merged_settings: dict = {}
-            current_dir = sources_file_path.parent
-            parent_configs = []
 
-            # 상위 디렉토리에서 sbkube.yaml 찾기 (최대 5레벨)
-            for _ in range(5):
-                parent_dir = current_dir.parent
-                if parent_dir == current_dir:  # Root reached
-                    break
-                parent_config = parent_dir / "sbkube.yaml"
-                if parent_config.exists():
-                    parent_configs.append(parent_config)
-                current_dir = parent_dir
+            # Apply inherited helm_repos, oci_registries, git_repos
+            if inherited_settings.get("helm_repos"):
+                merged_settings["helm_repos"] = dict(inherited_settings["helm_repos"])
+            if inherited_settings.get("oci_registries"):
+                merged_settings["oci_registries"] = dict(inherited_settings["oci_registries"])
+            if inherited_settings.get("git_repos"):
+                merged_settings["git_repos"] = dict(inherited_settings["git_repos"])
 
-            # 상위 설정을 먼저 적용 (가장 상위부터)
-            for parent_config in reversed(parent_configs):
-                try:
-                    parent_data = load_config_file(parent_config)
-                    if parent_data.get("apiVersion", "").startswith("sbkube/"):
-                        parent_settings = parent_data.get("settings", {})
-                        for k, v in parent_settings.items():
-                            if k in source_scheme_fields:
-                                merged_settings[k] = v
-                except Exception:
-                    pass  # 상위 설정 로드 실패는 무시
-
-            # 현재 설정으로 오버라이드
+            # Override with local settings (local takes precedence)
             for k, v in full_settings.items():
                 if k in source_scheme_fields:
-                    merged_settings[k] = v
+                    if k in ("helm_repos", "oci_registries", "git_repos") and k in merged_settings:
+                        # Merge dict fields: inherited + local (local wins on conflict)
+                        merged_settings[k].update(v)
+                    else:
+                        merged_settings[k] = v
 
             settings_data = merged_settings
         else:
@@ -920,6 +927,8 @@ def cmd(
                     context,
                     force,
                     dry_run,
+                    helm_repos=sources.helm_repos,
+                    oci_registries=sources.oci_registries,
                 )
             elif isinstance(app, GitApp):
                 success = prepare_git_app(
@@ -931,6 +940,7 @@ def cmd(
                     output,
                     force,
                     dry_run,
+                    git_repos=sources.git_repos,
                 )
             elif isinstance(app, HttpApp):
                 success = prepare_http_app(

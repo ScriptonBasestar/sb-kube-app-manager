@@ -32,7 +32,7 @@ class TestPrepareExamples:
         project_root = examples_dir.parent
         sources_file = example_dir / "sources.yaml"
 
-        # Run prepare command
+        # Run prepare command (--skip-preflight for test isolation)
         result = run_sbkube_command(
             runner,
             [
@@ -43,6 +43,7 @@ class TestPrepareExamples:
                 str(project_root),
                 "--source",
                 str(sources_file.relative_to(project_root)),
+                "--skip-preflight",
             ],
             debug_info={
                 "example_dir": example_dir,

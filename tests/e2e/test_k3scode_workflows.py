@@ -39,7 +39,7 @@ class TestK3scodeAIWorkflow:
         result = run_sbkube_command(
             runner,
             [
-                "prepare",
+                "prepare", "--skip-preflight",
                 "--app-dir",
                 str(ai_dir.relative_to(project_root)),
                 "--base-dir",
@@ -91,7 +91,7 @@ class TestK3scodeAIWorkflow:
         run_sbkube_command(
             runner,
             [
-                "prepare",
+                "prepare", "--skip-preflight",
                 "--app-dir",
                 str(ai_dir.relative_to(project_root)),
                 "--base-dir",
@@ -152,7 +152,7 @@ class TestK3scodeDevOpsWorkflow:
         result = run_sbkube_command(
             runner,
             [
-                "prepare",
+                "prepare", "--skip-preflight",
                 "--app-dir",
                 str(devops_dir.relative_to(project_root)),
                 "--base-dir",
@@ -191,7 +191,7 @@ class TestK3scodeDevOpsWorkflow:
         run_sbkube_command(
             runner,
             [
-                "prepare",
+                "prepare", "--skip-preflight",
                 "--app-dir",
                 str(devops_dir.relative_to(project_root)),
                 "--base-dir",
@@ -249,7 +249,7 @@ class TestK3scodeMemoryWorkflow:
         result = run_sbkube_command(
             runner,
             [
-                "prepare",
+                "prepare", "--skip-preflight",
                 "--app-dir",
                 str(memory_dir.relative_to(project_root)),
                 "--base-dir",
@@ -290,7 +290,7 @@ class TestK3scodeRDBWorkflow:
         result = run_sbkube_command(
             runner,
             [
-                "prepare",
+                "prepare", "--skip-preflight",
                 "--app-dir",
                 str(rdb_dir.relative_to(project_root)),
                 "--base-dir",

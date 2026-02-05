@@ -5,6 +5,7 @@
 - git 타입: 리포지토리 clone
 """
 
+import json
 import shutil
 import uuid
 from pathlib import Path
@@ -12,7 +13,7 @@ from pathlib import Path
 import click
 
 from sbkube.models.config_model import GitApp, HelmApp, HookApp, HttpApp, SBKubeConfig
-from sbkube.models.sources_model import SourceScheme
+from sbkube.models.sources_model import HelmRepoScheme, SourceScheme
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.utils.workspace_resolver import SbkubeDirectories
@@ -42,6 +43,110 @@ def parse_helm_chart(chart: str) -> tuple[str, str]:
         msg = f"Invalid chart format: {chart}. Expected 'repo/chart'"
         raise ValueError(msg)
     return parts[0], parts[1]
+
+
+def preflight_check_helm_repos(
+    config: SBKubeConfig,
+    helm_sources: dict,
+    output: OutputManager,
+    apps_to_prepare: list[str] | None = None,
+) -> tuple[bool, list[str]]:
+    """배포 전 Helm 저장소 사전 검증.
+
+    모든 앱에서 필요한 helm repo가 정의되어 있고,
+    로컬에 등록되어 있는지 확인합니다.
+
+    Args:
+        config: SBKubeConfig 인스턴스
+        helm_sources: sources의 helm_repos 딕셔너리
+        output: OutputManager 인스턴스
+        apps_to_prepare: 준비할 앱 목록 (None이면 모든 활성 앱)
+
+    Returns:
+        (success, issues): 검증 성공 여부와 발견된 문제 목록
+    """
+    issues: list[str] = []
+    required_repos: dict[str, list[str]] = {}  # repo_name -> [app_names]
+
+    # 1. 필요한 helm repo 수집
+    target_apps = apps_to_prepare or list(config.apps.keys())
+    for app_name in target_apps:
+        app = config.apps.get(app_name)
+        if not app or not app.enabled:
+            continue
+
+        if not isinstance(app, HelmApp):
+            continue
+
+        # OCI 차트는 건너뛰기 (oci:// 로 시작)
+        if app.chart and app.chart.startswith("oci://"):
+            continue
+
+        try:
+            repo_name, _ = parse_helm_chart(app.chart)
+            if repo_name not in required_repos:
+                required_repos[repo_name] = []
+            required_repos[repo_name].append(app_name)
+        except ValueError:
+            issues.append(f"앱 '{app_name}': 잘못된 chart 형식 - '{app.chart}'")
+
+    if not required_repos:
+        return True, []
+
+    # 2. sources에 정의 확인
+    missing_in_sources: list[str] = []
+    for repo_name in required_repos:
+        if repo_name not in helm_sources:
+            apps_using = ", ".join(required_repos[repo_name])
+            missing_in_sources.append(repo_name)
+            issues.append(
+                f"Helm repo '{repo_name}'가 sources에 정의되지 않음 (사용 앱: {apps_using})"
+            )
+
+    # 3. 로컬 helm repo 목록 확인
+    return_code, stdout, stderr = run_command(["helm", "repo", "list", "-o", "json"])
+    local_repos: set[str] = set()
+    if return_code == 0 and stdout:
+        try:
+            import json
+            repo_list = json.loads(stdout)
+            local_repos = {r.get("name", "") for r in repo_list}
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    missing_locally: list[str] = []
+    for repo_name in required_repos:
+        if repo_name not in missing_in_sources and repo_name not in local_repos:
+            missing_locally.append(repo_name)
+
+    # 4. 결과 출력
+    if missing_in_sources or missing_locally:
+        output.print_section("⚠️  Helm 저장소 사전 검증 실패")
+
+        if missing_in_sources:
+            output.print_error(f"sources에 정의되지 않은 저장소: {', '.join(missing_in_sources)}")
+            output.print("   helm_repos에 다음을 추가하세요:")
+            for repo in missing_in_sources:
+                output.print(f"     {repo}: https://example.com/charts")
+
+        if missing_locally:
+            output.print_warning(f"로컬에 등록되지 않은 저장소: {', '.join(missing_locally)}")
+            output.print("   다음 명령어로 추가하세요:")
+            for repo in missing_locally:
+                if repo in helm_sources:
+                    repo_config = helm_sources[repo]
+                    if isinstance(repo_config, HelmRepoScheme):
+                        url = repo_config.url
+                    elif isinstance(repo_config, dict):
+                        url = repo_config.get("url", "URL_UNKNOWN")
+                    else:
+                        url = str(repo_config)
+                    output.print(f"     helm repo add {repo} {url}")
+
+        return False, issues
+
+    output.print("✅ Helm 저장소 사전 검증 통과")
+    return True, []
 
 
 def prepare_oci_chart(
@@ -300,16 +405,23 @@ def prepare_helm_app(
         )
         return False
 
-    # helm_repos는 dict 형태: {url: ..., username: ..., password: ...} 또는 단순 URL string
+    # helm_repos는 HelmRepoScheme, dict, 또는 단순 URL string 형태
     repo_config = helm_sources[repo_name]
-    if isinstance(repo_config, dict):
+    if isinstance(repo_config, HelmRepoScheme):
+        # Pydantic 모델 (v0.10.0+)
+        repo_url = repo_config.url
+    elif isinstance(repo_config, dict):
+        # dict 형태: {url: ..., username: ..., password: ...}
         repo_url = repo_config.get("url")
         if not repo_url:
             output.print_error(f"Missing 'url' for Helm repo: {repo_name}")
             return False
+    elif hasattr(repo_config, "url"):
+        # 기타 url 속성을 가진 객체
+        repo_url = repo_config.url
     else:
         # 구버전 호환: 단순 URL string
-        repo_url = repo_config
+        repo_url = str(repo_config)
 
     if dry_run:
         output.print(
@@ -326,7 +438,12 @@ def prepare_helm_app(
         return_code, stdout, stderr = run_command(cmd)
 
         if return_code != 0:
-            output.print_warning(f"Failed to add repo (might already exist): {stderr}")
+            # "already exists" 에러는 무시, 그 외는 상세 출력
+            if "already exists" in stderr.lower():
+                output.print(f"    ℹ️  Repo '{repo_name}' already exists, updating...")
+            else:
+                output.print_error(f"Failed to add repo '{repo_name}': {stderr}")
+                return False
 
         # Helm repo 업데이트
         output.print(f"  Updating Helm repo: {repo_name}")
@@ -644,6 +761,12 @@ def prepare_git_app(
     default=False,
     help="Dry-run 모드 (실제 리소스를 다운로드하지 않음)",
 )
+@click.option(
+    "--skip-preflight",
+    is_flag=True,
+    default=False,
+    help="Helm 저장소 사전 검증을 건너뜀",
+)
 @click.pass_context
 def cmd(
     ctx: click.Context,
@@ -654,6 +777,7 @@ def cmd(
     app_name: str | None,
     force: bool,
     dry_run: bool,
+    skip_preflight: bool,
 ) -> None:
     """SBKube prepare 명령어.
 
@@ -866,6 +990,21 @@ def cmd(
         else:
             # 모든 앱 준비 (의존성 순서대로)
             apps_to_prepare = deployment_order
+
+        # ========== Preflight: Helm 저장소 사전 검증 ==========
+        if skip_preflight:
+            output.print("ℹ️  Helm 저장소 사전 검증 건너뜀 (--skip-preflight)")
+        else:
+            preflight_ok, preflight_issues = preflight_check_helm_repos(
+                config=config,
+                helm_sources=sources.helm_repos,
+                output=output,
+                apps_to_prepare=apps_to_prepare,
+            )
+            if not preflight_ok:
+                output.print_error("Helm 저장소 사전 검증 실패. 위 안내에 따라 저장소를 추가하세요.")
+                overall_success = False
+                continue
 
         # Hook executor 초기화
         hook_executor = HookExecutor(

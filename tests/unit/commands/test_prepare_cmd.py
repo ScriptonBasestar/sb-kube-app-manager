@@ -45,7 +45,7 @@ class TestPrepareCommandBasic:
         config_dir.mkdir(parents=True, exist_ok=True)
 
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
         )
 
         assert result.exit_code != 0
@@ -144,9 +144,9 @@ users:
 
         mock_run_command.side_effect = run_command_side_effect
 
-        # Run prepare
+        # Run prepare (skip preflight to avoid helm repo list mock requirement)
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
         )
 
         # Assert
@@ -203,7 +203,7 @@ cluster: test-cluster
 
         # Run prepare
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
         )
 
         # Assert
@@ -260,7 +260,7 @@ cluster: test-cluster
 
         # Run prepare
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
         )
 
         # Assert
@@ -331,7 +331,7 @@ contexts:
         # Mock cluster config resolution
         mock_resolve_cluster.return_value = ("/fake/kubeconfig", "test-context")
 
-        # Run prepare with --dry-run
+        # Run prepare with --dry-run (and --skip-preflight to avoid helm repo list)
         result = runner.invoke(
             main,
             [
@@ -341,6 +341,7 @@ contexts:
                 "--app-dir",
                 "config",
                 "--dry-run",
+                "--skip-preflight",
             ],
         )
 
@@ -405,7 +406,7 @@ current-context: test-context
 
         # Run prepare
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
         )
 
         # Assert - should skip disabled app

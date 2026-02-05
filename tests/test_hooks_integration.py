@@ -138,7 +138,7 @@ def test_prepare_with_hooks_dry_run(tmp_project) -> None:
     result = runner.invoke(
         cli,
         [
-            "prepare",
+            "prepare", "--skip-preflight",
             "--base-dir",
             str(project_dir),
             "--app-dir",
@@ -263,7 +263,7 @@ apps:
     result = runner.invoke(
         cli,
         [
-            "prepare",
+            "prepare", "--skip-preflight",
             "--base-dir",
             str(project_dir),
             "--app-dir",
@@ -351,7 +351,7 @@ apps:
     result = runner.invoke(
         cli,
         [
-            "prepare",
+            "prepare", "--skip-preflight",
             "--base-dir",
             str(project_dir),
             "--app-dir",

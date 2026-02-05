@@ -40,7 +40,7 @@ class TestCompleteWorkflow:
         result = run_sbkube_command(
             runner,
             [
-                "prepare",
+                "prepare", "--skip-preflight",
                 "--app-dir",
                 str(example_dir.relative_to(project_root)),
                 "--base-dir",
@@ -79,7 +79,7 @@ class TestCompleteWorkflow:
         run_sbkube_command(
             runner,
             [
-                "prepare",
+                "prepare", "--skip-preflight",
                 "--app-dir",
                 str(example_dir.relative_to(project_root)),
                 "--base-dir",
@@ -130,7 +130,7 @@ class TestCompleteWorkflow:
         run_sbkube_command(
             runner,
             [
-                "prepare",
+                "prepare", "--skip-preflight",
                 "--app-dir",
                 str(example_dir.relative_to(project_root)),
                 "--base-dir",

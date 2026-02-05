@@ -447,6 +447,7 @@ def _execute_apps_deployment(
                         app_config_dir_name=current_app_dir,
                         base_dir=base_dir,
                         config_file_name=config_file_name,
+                        sources_file_name=sources_file_name,
                         app_name=app_name_iter,
                         dry_run=dry_run,
                     )
@@ -477,6 +478,7 @@ def _execute_apps_deployment(
                     app_config_dir_name=current_app_dir,
                     base_dir=base_dir,
                     config_file_name=config_file_name,
+                    sources_file_name=sources_file_name,
                     app_name=app_name_iter,
                     dry_run=dry_run,
                 )

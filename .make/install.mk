@@ -6,7 +6,8 @@ install:
 	uv pip install -e .
 
 install-global:
-	uv tool install . --force
+	uv cache clean sbkube --force 2>/dev/null || true
+	uv tool install . --force --reinstall
 
 install-system:
 	uv pip install -e . --system

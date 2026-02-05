@@ -563,6 +563,7 @@ class WorkspaceDeployCommand:
         parallel: bool = False,
         parallel_apps: bool = False,
         max_workers: int = 4,
+        inherited_settings: dict | None = None,
     ) -> None:
         """Initialize workspace deploy command.
 
@@ -575,6 +576,7 @@ class WorkspaceDeployCommand:
             parallel: 병렬 실행 모드 (Phase 간 병렬)
             parallel_apps: App group 병렬 실행 모드 (Phase 내 병렬)
             max_workers: 최대 병렬 워커 수 (기본: 4)
+            inherited_settings: Settings inherited from parent workspace
 
         """
         self.workspace_file = Path(workspace_file)
@@ -586,6 +588,7 @@ class WorkspaceDeployCommand:
         self.parallel = parallel
         self.parallel_apps = parallel_apps
         self.max_workers = max_workers
+        self.inherited_settings = inherited_settings or {}
         self.console = Console()
         self.phase_results: dict[str, dict[str, Any]] = {}
         self._results_lock = threading.Lock()
@@ -1273,6 +1276,24 @@ class WorkspaceDeployCommand:
                     # Start phase tracking for this phase
                     self._start_phase_tracking(phase_name)
 
+                    # Build inherited settings to pass to nested workspace
+                    nested_inherited_settings = {
+                        "helm_repos": {
+                            **self.inherited_settings.get("helm_repos", {}),
+                            **(workspace.settings.helm_repos or {}),
+                        },
+                        "oci_registries": {
+                            **self.inherited_settings.get("oci_registries", {}),
+                            **(workspace.settings.oci_registries or {}),
+                        },
+                        "git_repos": {
+                            **self.inherited_settings.get("git_repos", {}),
+                            **(workspace.settings.git_repos or {}),
+                        },
+                        "kubeconfig": workspace.settings.kubeconfig or self.inherited_settings.get("kubeconfig"),
+                        "kubeconfig_context": workspace.settings.kubeconfig_context or self.inherited_settings.get("kubeconfig_context"),
+                    }
+
                     # Create nested deployer
                     nested_deployer = WorkspaceDeployCommand(
                         workspace_file=str(source_path),
@@ -1282,6 +1303,7 @@ class WorkspaceDeployCommand:
                         dry_run=self.dry_run,
                         force=self.force,
                         skip_validation=True,  # Already validated parent
+                        inherited_settings=nested_inherited_settings,
                     )
 
                     # Execute nested workspace
@@ -1334,11 +1356,22 @@ class WorkspaceDeployCommand:
                     # Deploy apps using ApplyCommand
                     from sbkube.commands.apply import ApplyCommand
 
-                    # Build inherited settings from workspace
+                    # Build inherited settings: merge parent's inherited with current workspace
                     inherited_settings = {
-                        "helm_repos": workspace.settings.helm_repos or {},
-                        "oci_registries": workspace.settings.oci_registries or {},
-                        "git_repos": workspace.settings.git_repos or {},
+                        "helm_repos": {
+                            **self.inherited_settings.get("helm_repos", {}),
+                            **(workspace.settings.helm_repos or {}),
+                        },
+                        "oci_registries": {
+                            **self.inherited_settings.get("oci_registries", {}),
+                            **(workspace.settings.oci_registries or {}),
+                        },
+                        "git_repos": {
+                            **self.inherited_settings.get("git_repos", {}),
+                            **(workspace.settings.git_repos or {}),
+                        },
+                        "kubeconfig": workspace.settings.kubeconfig or self.inherited_settings.get("kubeconfig"),
+                        "kubeconfig_context": workspace.settings.kubeconfig_context or self.inherited_settings.get("kubeconfig_context"),
                     }
 
                     try:
@@ -1407,11 +1440,22 @@ class WorkspaceDeployCommand:
         # 실제 배포: sbkube apply 명령 호출
         completed_app_groups = 0
 
-        # Build inherited settings from workspace
+        # Build inherited settings: merge parent's inherited with current workspace
         inherited_settings = {
-            "helm_repos": workspace.settings.helm_repos or {},
-            "oci_registries": workspace.settings.oci_registries or {},
-            "git_repos": workspace.settings.git_repos or {},
+            "helm_repos": {
+                **self.inherited_settings.get("helm_repos", {}),
+                **(workspace.settings.helm_repos or {}),
+            },
+            "oci_registries": {
+                **self.inherited_settings.get("oci_registries", {}),
+                **(workspace.settings.oci_registries or {}),
+            },
+            "git_repos": {
+                **self.inherited_settings.get("git_repos", {}),
+                **(workspace.settings.git_repos or {}),
+            },
+            "kubeconfig": workspace.settings.kubeconfig or self.inherited_settings.get("kubeconfig"),
+            "kubeconfig_context": workspace.settings.kubeconfig_context or self.inherited_settings.get("kubeconfig_context"),
         }
 
         try:

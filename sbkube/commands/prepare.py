@@ -732,6 +732,12 @@ def cmd(
             # Start with inherited settings
             merged_settings: dict = {}
 
+            # Apply inherited kubeconfig settings
+            if inherited_settings.get("kubeconfig"):
+                merged_settings["kubeconfig"] = inherited_settings["kubeconfig"]
+            if inherited_settings.get("kubeconfig_context"):
+                merged_settings["kubeconfig_context"] = inherited_settings["kubeconfig_context"]
+
             # Apply inherited helm_repos, oci_registries, git_repos
             if inherited_settings.get("helm_repos"):
                 merged_settings["helm_repos"] = dict(inherited_settings["helm_repos"])

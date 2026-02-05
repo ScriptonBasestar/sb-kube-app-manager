@@ -163,6 +163,10 @@ class ApplyCommand:
         merged_oci_registries = {**self.inherited_settings.get("oci_registries", {})}
         merged_git_repos = {**self.inherited_settings.get("git_repos", {})}
 
+        # Kubeconfig: local settings take precedence over inherited
+        merged_kubeconfig = self.inherited_settings.get("kubeconfig")
+        merged_kubeconfig_context = self.inherited_settings.get("kubeconfig_context")
+
         if settings:
             if settings.helm_repos:
                 merged_helm_repos.update(settings.helm_repos)
@@ -170,16 +174,22 @@ class ApplyCommand:
                 merged_oci_registries.update(settings.oci_registries)
             if settings.git_repos:
                 merged_git_repos.update(settings.git_repos)
+            if settings.kubeconfig:
+                merged_kubeconfig = settings.kubeconfig
+            if settings.kubeconfig_context:
+                merged_kubeconfig_context = settings.kubeconfig_context
 
         ctx = click.Context(click.Command("apply"))
         ctx.obj = {
             "format": "human",
-            "kubeconfig": settings.kubeconfig if settings else None,
-            "context": settings.kubeconfig_context if settings else None,
+            "kubeconfig": merged_kubeconfig,
+            "context": merged_kubeconfig_context,
             "inherited_settings": {
                 "helm_repos": merged_helm_repos,
                 "oci_registries": merged_oci_registries,
                 "git_repos": merged_git_repos,
+                "kubeconfig": merged_kubeconfig,
+                "kubeconfig_context": merged_kubeconfig_context,
             },
         }
 

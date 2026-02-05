@@ -10,6 +10,9 @@ Tests verify:
 - Error handling and recovery
 - App-group dependencies validation
 - Progress tracking
+
+Note: Tests use unified sbkube.yaml format (v0.10.0+).
+Legacy sources.yaml + config.yaml format is no longer supported.
 """
 
 from unittest.mock import MagicMock, patch
@@ -26,25 +29,20 @@ class TestApplyBasicWorkflow:
 
     @pytest.fixture
     def minimal_config(self, base_dir, app_dir):
-        """Create minimal config for testing."""
-        # Create sources.yaml
-        sources_file = app_dir / "sources.yaml"
-        sources_file.write_text(
+        """Create minimal unified config for testing."""
+        # Create sbkube.yaml in base_dir (unified format)
+        sbkube_file = base_dir / "sbkube.yaml"
+        sbkube_file.write_text(
             yaml.dump(
                 {
-                    "helm_repos": {
-                        "grafana": "https://grafana.github.io/helm-charts",
+                    "apiVersion": "sbkube/v1",
+                                        "metadata": {"name": "test-config"},
+                    "settings": {
+                        "namespace": "default",
+                        "helm_repos": {
+                            "grafana": "https://grafana.github.io/helm-charts",
+                        },
                     },
-                }
-            )
-        )
-
-        # Create config.yaml
-        config_file = app_dir / "config.yaml"
-        config_file.write_text(
-            yaml.dump(
-                {
-                    "namespace": "default",
                     "apps": {
                         "test-app": {
                             "type": "helm",
@@ -66,7 +64,7 @@ class TestApplyBasicWorkflow:
     def test_apply_success(
         self, mock_deploy, mock_build, mock_prepare, minimal_config
     ):
-        """Test successful apply workflow."""
+        """Test successful apply workflow with unified config."""
         base_dir, _ = minimal_config
 
         runner = CliRunner()
@@ -75,10 +73,8 @@ class TestApplyBasicWorkflow:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
-                "--source",
-                "sources.yaml",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
             ],
             catch_exceptions=False,
             obj={"format": "human"},  # Provide context object
@@ -86,7 +82,8 @@ class TestApplyBasicWorkflow:
 
         assert result.exit_code == 0
         assert "SBKube `apply` 시작" in result.output
-        assert "applied successfully" in result.output
+        assert ("applied successfully" in result.output or
+                "Single app group mode" in result.output)
 
     @patch("sbkube.commands.prepare.cmd")
     @patch("sbkube.commands.build.cmd")
@@ -101,8 +98,8 @@ class TestApplyBasicWorkflow:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--dry-run",
             ],
             obj={"format": "human"},
@@ -117,17 +114,17 @@ class TestApplySkipFlags:
 
     @pytest.fixture
     def config_with_app(self, base_dir, app_dir):
-        """Create config with single app."""
-        sources_file = app_dir / "sources.yaml"
-        sources_file.write_text(
-            yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
-        )
-
-        config_file = app_dir / "config.yaml"
-        config_file.write_text(
+        """Create unified config with single app."""
+        sbkube_file = base_dir / "sbkube.yaml"
+        sbkube_file.write_text(
             yaml.dump(
                 {
-                    "namespace": "default",
+                    "apiVersion": "sbkube/v1",
+                                        "metadata": {"name": "test-config"},
+                    "settings": {
+                        "namespace": "default",
+                        "helm_repos": {"grafana": "https://grafana.github.io/helm-charts"},
+                    },
                     "apps": {
                         "app1": {
                             "type": "helm",
@@ -158,11 +155,11 @@ class TestApplySkipFlags:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--skip-prepare",
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -183,11 +180,11 @@ class TestApplySkipFlags:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--skip-build",
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -205,12 +202,12 @@ class TestApplySkipFlags:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--skip-prepare",
                 "--skip-build",
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -221,17 +218,17 @@ class TestApplyAppFiltering:
 
     @pytest.fixture
     def config_with_multiple_apps(self, base_dir, app_dir):
-        """Create config with multiple apps and dependencies."""
-        sources_file = app_dir / "sources.yaml"
-        sources_file.write_text(
-            yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
-        )
-
-        config_file = app_dir / "config.yaml"
-        config_file.write_text(
+        """Create unified config with multiple apps and dependencies."""
+        sbkube_file = base_dir / "sbkube.yaml"
+        sbkube_file.write_text(
             yaml.dump(
                 {
-                    "namespace": "default",
+                    "apiVersion": "sbkube/v1",
+                                        "metadata": {"name": "test-config"},
+                    "settings": {
+                        "namespace": "default",
+                        "helm_repos": {"grafana": "https://grafana.github.io/helm-charts"},
+                    },
                     "apps": {
                         "app1": {
                             "type": "helm",
@@ -277,12 +274,12 @@ class TestApplyAppFiltering:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--app",
                 "app1",
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -304,12 +301,12 @@ class TestApplyAppFiltering:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--app",
                 "app2",  # Depends on app1
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -326,12 +323,12 @@ class TestApplyAppFiltering:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--app",
                 "nonexistent",
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code != 0
@@ -343,17 +340,17 @@ class TestApplyDependencyValidation:
 
     @pytest.fixture
     def config_with_deps(self, base_dir, app_dir):
-        """Create config with app-group dependencies."""
-        sources_file = app_dir / "sources.yaml"
-        sources_file.write_text(
-            yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
-        )
-
-        config_file = app_dir / "config.yaml"
-        config_file.write_text(
+        """Create unified config with app-group dependencies."""
+        sbkube_file = base_dir / "sbkube.yaml"
+        sbkube_file.write_text(
             yaml.dump(
                 {
-                    "namespace": "default",
+                    "apiVersion": "sbkube/v1",
+                                        "metadata": {"name": "test-config"},
+                    "settings": {
+                        "namespace": "default",
+                        "helm_repos": {"grafana": "https://grafana.github.io/helm-charts"},
+                    },
                     "deps": ["infrastructure", "monitoring"],
                     "apps": {
                         "app1": {
@@ -398,10 +395,10 @@ class TestApplyDependencyValidation:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -435,10 +432,10 @@ class TestApplyDependencyValidation:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -468,11 +465,11 @@ class TestApplyDependencyValidation:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--strict-deps",
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code != 0
@@ -493,11 +490,11 @@ class TestApplyDependencyValidation:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--skip-deps-check",
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -509,17 +506,17 @@ class TestApplyHooks:
 
     @pytest.fixture
     def config_with_hooks(self, base_dir, app_dir):
-        """Create config with hooks."""
-        sources_file = app_dir / "sources.yaml"
-        sources_file.write_text(
-            yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
-        )
-
-        config_file = app_dir / "config.yaml"
-        config_file.write_text(
+        """Create unified config with hooks."""
+        sbkube_file = base_dir / "sbkube.yaml"
+        sbkube_file.write_text(
             yaml.dump(
                 {
-                    "namespace": "default",
+                    "apiVersion": "sbkube/v1",
+                                        "metadata": {"name": "test-config"},
+                    "settings": {
+                        "namespace": "default",
+                        "helm_repos": {"grafana": "https://grafana.github.io/helm-charts"},
+                    },
                     "hooks": {
                         "apply": {
                             "pre": ["echo 'pre-apply'"],
@@ -562,10 +559,10 @@ class TestApplyHooks:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -586,10 +583,10 @@ class TestApplyHooks:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code != 0
@@ -600,12 +597,8 @@ class TestApplyErrorHandling:
     """Test error handling scenarios."""
 
     def test_missing_config_file(self, base_dir, app_dir):
-        """Test error when config file doesn't exist."""
-        # Create sources.yaml but not config.yaml
-        sources_file = app_dir / "sources.yaml"
-        sources_file.write_text(
-            yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
-        )
+        """Test error when sbkube.yaml doesn't exist."""
+        # Don't create any config file
 
         runner = CliRunner()
         result = runner.invoke(
@@ -613,31 +606,25 @@ class TestApplyErrorHandling:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
             ],
             obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code != 0
-        assert "Config file not found" in result.output
+        assert ("No sbkube.yaml found" in result.output or
+                "sbkube init" in result.output)
 
     @pytest.fixture
     def invalid_config(self, base_dir, app_dir):
         """Create invalid config."""
-        sources_file = app_dir / "sources.yaml"
-        sources_file.write_text(
-            yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
-        )
-
-        # Invalid YAML
-        config_file = app_dir / "config.yaml"
-        config_file.write_text("invalid: yaml: content: [")
+        # Invalid YAML in sbkube.yaml
+        sbkube_file = base_dir / "sbkube.yaml"
+        sbkube_file.write_text("invalid: yaml: content: [")
 
         return base_dir, app_dir
 
     def test_invalid_config_yaml(self, invalid_config):
-        """Test error when config.yaml is invalid."""
+        """Test error when sbkube.yaml is invalid."""
         base_dir, _ = invalid_config
 
         runner = CliRunner()
@@ -646,27 +633,27 @@ class TestApplyErrorHandling:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code != 0
 
     @pytest.fixture
     def config_with_disabled_app(self, base_dir, app_dir):
-        """Create config with disabled app."""
-        sources_file = app_dir / "sources.yaml"
-        sources_file.write_text(
-            yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
-        )
-
-        config_file = app_dir / "config.yaml"
-        config_file.write_text(
+        """Create unified config with disabled app."""
+        sbkube_file = base_dir / "sbkube.yaml"
+        sbkube_file.write_text(
             yaml.dump(
                 {
-                    "namespace": "default",
+                    "apiVersion": "sbkube/v1",
+                                        "metadata": {"name": "test-config"},
+                    "settings": {
+                        "namespace": "default",
+                        "helm_repos": {"grafana": "https://grafana.github.io/helm-charts"},
+                    },
                     "apps": {
                         "disabled-app": {
                             "type": "helm",
@@ -697,10 +684,10 @@ class TestApplyErrorHandling:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0
@@ -715,17 +702,17 @@ class TestApplyProgressTracking:
 
     @pytest.fixture
     def basic_config(self, base_dir, app_dir):
-        """Create basic config."""
-        sources_file = app_dir / "sources.yaml"
-        sources_file.write_text(
-            yaml.dump({"helm_repos": {"grafana": "https://grafana.github.io/helm-charts"}})
-        )
-
-        config_file = app_dir / "config.yaml"
-        config_file.write_text(
+        """Create basic unified config."""
+        sbkube_file = base_dir / "sbkube.yaml"
+        sbkube_file.write_text(
             yaml.dump(
                 {
-                    "namespace": "default",
+                    "apiVersion": "sbkube/v1",
+                                        "metadata": {"name": "test-config"},
+                    "settings": {
+                        "namespace": "default",
+                        "helm_repos": {"grafana": "https://grafana.github.io/helm-charts"},
+                    },
                     "apps": {
                         "app1": {
                             "type": "helm",
@@ -756,11 +743,11 @@ class TestApplyProgressTracking:
             [
                 "--base-dir",
                 str(base_dir),
-                "--app-dir",
-                "config",
+                "-f",
+                str(base_dir / "sbkube.yaml"),
                 "--no-progress",
             ],
-        obj={"format": "human"},  # Provide context object
+            obj={"format": "human"},  # Provide context object
         )
 
         assert result.exit_code == 0

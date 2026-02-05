@@ -693,8 +693,62 @@ def cmd(
 
         # sources.yaml 로드 및 클러스터 설정 해석
         sources_data = load_config_file(sources_file_path)
+
+        # 통합 sbkube.yaml 포맷 감지 (apiVersion이 sbkube/로 시작)
+        api_version = sources_data.get("apiVersion", "")
+        if api_version.startswith("sbkube/"):
+            # 통합 포맷: settings 섹션에서 SourceScheme 필드만 추출
+            full_settings = sources_data.get("settings", {})
+            output.print(f"[cyan]📄 Unified format detected (apiVersion: {api_version})[/cyan]")
+
+            # SourceScheme에서 허용하는 필드만 추출
+            source_scheme_fields = {
+                "cluster", "kubeconfig", "kubeconfig_context",
+                "app_dirs", "cluster_values_file", "global_values",
+                "cleanup_metadata", "incompatible_charts", "force_label_injection",
+                "helm_repos", "oci_registries", "git_repos",
+                "http_proxy", "https_proxy", "no_proxy",
+            }
+
+            # 상위 디렉토리의 sbkube.yaml에서 설정 상속 (cluster settings)
+            merged_settings: dict = {}
+            current_dir = sources_file_path.parent
+            parent_configs = []
+
+            # 상위 디렉토리에서 sbkube.yaml 찾기 (최대 5레벨)
+            for _ in range(5):
+                parent_dir = current_dir.parent
+                if parent_dir == current_dir:  # Root reached
+                    break
+                parent_config = parent_dir / "sbkube.yaml"
+                if parent_config.exists():
+                    parent_configs.append(parent_config)
+                current_dir = parent_dir
+
+            # 상위 설정을 먼저 적용 (가장 상위부터)
+            for parent_config in reversed(parent_configs):
+                try:
+                    parent_data = load_config_file(parent_config)
+                    if parent_data.get("apiVersion", "").startswith("sbkube/"):
+                        parent_settings = parent_data.get("settings", {})
+                        for k, v in parent_settings.items():
+                            if k in source_scheme_fields:
+                                merged_settings[k] = v
+                except Exception:
+                    pass  # 상위 설정 로드 실패는 무시
+
+            # 현재 설정으로 오버라이드
+            for k, v in full_settings.items():
+                if k in source_scheme_fields:
+                    merged_settings[k] = v
+
+            settings_data = merged_settings
+        else:
+            # 레거시 포맷: 전체 데이터가 SourceScheme
+            settings_data = sources_data
+
         try:
-            sources = SourceScheme(**sources_data)
+            sources = SourceScheme(**settings_data)
         except Exception as e:
             output.print_error(f"Invalid sources file: {e}")
             overall_success = False
@@ -732,13 +786,52 @@ def cmd(
         sbkube_dirs.ensure_directories()
 
         # 설정 파일 로드
-        if not config_file_path.exists():
-            output.print_error(f"Config file not found: {config_file_path}")
-            overall_success = False
-            continue
+        # 통합 포맷인 경우, 동일 파일에서 apps 로드
+        if api_version.startswith("sbkube/"):
+            apps_data = sources_data.get("apps", {})
+            if not apps_data:
+                output.print_warning(f"No apps found in: {sources_file_path}")
+                continue
 
-        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
-        config_data = load_config_file(config_file_path)
+            # namespace 상속 처리 (parent → current)
+            merged_namespace = "default"
+            current_dir = sources_file_path.parent
+            parent_configs = []
+            for _ in range(5):
+                parent_dir = current_dir.parent
+                if parent_dir == current_dir:
+                    break
+                parent_config = parent_dir / "sbkube.yaml"
+                if parent_config.exists():
+                    parent_configs.append(parent_config)
+                current_dir = parent_dir
+
+            for parent_config in reversed(parent_configs):
+                try:
+                    parent_data = load_config_file(parent_config)
+                    if parent_data.get("apiVersion", "").startswith("sbkube/"):
+                        parent_ns = parent_data.get("settings", {}).get("namespace")
+                        if parent_ns:
+                            merged_namespace = parent_ns
+                except Exception:
+                    pass
+
+            # 현재 config의 namespace로 오버라이드
+            current_namespace = sources_data.get("settings", {}).get("namespace")
+            if current_namespace:
+                merged_namespace = current_namespace
+
+            config_data = {"apps": apps_data, "namespace": merged_namespace}
+            output.print(f"[cyan]📄 Loading apps from unified config: {sources_file_path}[/cyan]")
+        else:
+            # 레거시 포맷: 별도 config.yaml 로드
+            if not config_file_path.exists():
+                output.print_error(f"Config file not found: {config_file_path}")
+                overall_success = False
+                continue
+
+            output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+            config_data = load_config_file(config_file_path)
 
         try:
             config = SBKubeConfig(**config_data)

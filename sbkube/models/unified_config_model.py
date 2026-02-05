@@ -334,6 +334,30 @@ class PhaseReference(ConfigBaseModel):
         ),
     ] = []
 
+    # Phase enabled state
+    enabled: Annotated[
+        bool,
+        Field(
+            description="Whether this phase is enabled (default: true)",
+        ),
+    ] = True
+
+    # Failure handling for this phase
+    on_failure: Annotated[
+        Literal["stop", "continue", "rollback"] | None,
+        Field(
+            description="Phase-specific failure behavior (overrides global)",
+        ),
+    ] = None
+
+    # App groups list (for auto-discovery tracking)
+    app_groups: Annotated[
+        list[str],
+        Field(
+            description="List of app groups to deploy (optional, auto-discovered if not set)",
+        ),
+    ] = []
+
     # Settings override for this phase
     settings: Annotated[
         UnifiedSettings | None,
@@ -373,6 +397,51 @@ class PhaseReference(ConfigBaseModel):
             raise ValueError(msg)
 
         return self
+
+    def get_app_group_order(self) -> list[list[str]]:
+        """Get app group execution order by levels.
+
+        Groups in the same level can run in parallel.
+
+        Returns:
+            List of levels, each containing app groups that can run in parallel.
+
+        """
+        if not self.app_group_deps:
+            # No dependencies - all app_groups can run in parallel
+            return [self.app_groups] if self.app_groups else []
+
+        # Calculate in-degree for each group
+        in_degree = {group: 0 for group in self.app_groups}
+        for group, deps in self.app_group_deps.items():
+            in_degree[group] = len(deps)
+
+        levels = []
+        remaining = set(self.app_groups)
+
+        while remaining:
+            # Current level: groups with in_degree == 0
+            current_level = [
+                g for g in self.app_groups
+                if g in remaining and in_degree.get(g, 0) == 0
+            ]
+
+            if not current_level:
+                # Can't process more - add remaining sequentially
+                current_level = [g for g in self.app_groups if g in remaining]
+                levels.append(current_level)
+                break
+
+            levels.append(current_level)
+
+            # Remove processed groups and update in_degree
+            for group in current_level:
+                remaining.remove(group)
+                for other_group, deps in self.app_group_deps.items():
+                    if group in deps and other_group in remaining:
+                        in_degree[other_group] -= 1
+
+        return levels
 
 
 # ============================================================================
@@ -461,6 +530,14 @@ class UnifiedConfig(ConfigBaseModel):
             description="App group dependencies",
         ),
     ] = []
+
+    # Global hooks for commands (same level as hooks in SBKubeConfig)
+    hooks: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Global command hooks (e.g., hooks.apply.pre, hooks.deploy.post)",
+        ),
+    ] = None
 
     @field_validator("metadata", mode="before")
     @classmethod
@@ -577,102 +654,3 @@ class UnifiedConfig(ConfigBaseModel):
             return None
 
         return (base_dir / phase.source).resolve()
-
-    @classmethod
-    def from_legacy_files(
-        cls,
-        sources_path: Path | None = None,
-        config_path: Path | None = None,
-        workspace_path: Path | None = None,
-    ) -> "UnifiedConfig":
-        """Create UnifiedConfig from legacy configuration files.
-
-        This method supports backward compatibility by converting legacy
-        files (sources.yaml, config.yaml, workspace.yaml) to the unified format.
-
-        Args:
-            sources_path: Path to sources.yaml
-            config_path: Path to config.yaml
-            workspace_path: Path to workspace.yaml
-
-        Returns:
-            UnifiedConfig instance
-
-        """
-        from sbkube.models.config_model import SBKubeConfig
-        from sbkube.models.sources_model import SourceScheme
-        from sbkube.models.workspace_model import WorkspaceConfig
-
-        settings_data: dict[str, Any] = {}
-        apps_data: dict[str, AppConfig] = {}
-        phases_data: dict[str, PhaseReference] = {}
-        metadata_data: dict[str, Any] = {"name": "converted"}
-
-        # Load sources.yaml
-        if sources_path and sources_path.exists():
-            sources = SourceScheme.from_yaml(sources_path)
-            settings_data.update({
-                "kubeconfig": sources.kubeconfig,
-                "kubeconfig_context": sources.kubeconfig_context,
-                "cluster": sources.cluster,
-                "helm_repos": {
-                    k: v.model_dump() for k, v in sources.helm_repos.items()
-                },
-                "oci_registries": {
-                    k: v.model_dump() for k, v in sources.oci_registries.items()
-                },
-                "git_repos": {
-                    k: v.model_dump() for k, v in sources.git_repos.items()
-                },
-                "incompatible_charts": sources.incompatible_charts,
-                "force_label_injection": sources.force_label_injection,
-                "cluster_values_file": sources.cluster_values_file,
-                "global_values": sources.global_values,
-                "cleanup_metadata": sources.cleanup_metadata,
-                "http_proxy": sources.http_proxy,
-                "https_proxy": sources.https_proxy,
-                "no_proxy": sources.no_proxy,
-            })
-
-        # Load config.yaml
-        if config_path and config_path.exists():
-            config = SBKubeConfig.from_yaml(config_path)
-            settings_data["namespace"] = config.namespace
-            apps_data = config.apps
-
-        # Load workspace.yaml
-        if workspace_path and workspace_path.exists():
-            workspace = WorkspaceConfig.from_yaml(workspace_path)
-            metadata_data = {
-                "name": workspace.metadata.name,
-                "description": workspace.metadata.description,
-                "environment": workspace.metadata.environment,
-                "tags": workspace.metadata.tags,
-            }
-
-            # Convert global config
-            global_cfg = workspace.global_config
-            settings_data.update({
-                "kubeconfig": global_cfg.kubeconfig or settings_data.get("kubeconfig"),
-                "kubeconfig_context": (
-                    global_cfg.context or settings_data.get("kubeconfig_context")
-                ),
-                "timeout": global_cfg.timeout,
-                "on_failure": global_cfg.on_failure,
-            })
-
-            # Convert phases
-            for phase_name, phase_cfg in workspace.phases.items():
-                phases_data[phase_name] = PhaseReference(
-                    description=phase_cfg.description,
-                    source=phase_cfg.source,
-                    depends_on=phase_cfg.depends_on,
-                    app_group_deps=phase_cfg.app_group_deps,
-                )
-
-        return cls(
-            metadata=metadata_data,
-            settings=UnifiedSettings(**settings_data),
-            apps=apps_data,
-            phases=phases_data,
-        )

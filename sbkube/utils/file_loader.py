@@ -1,5 +1,4 @@
 import os
-import warnings
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -9,7 +8,6 @@ import toml
 import yaml
 
 from sbkube.exceptions import ConfigFileNotFoundError, FileOperationError
-from sbkube.utils.logger import logger
 
 
 # ============================================================================
@@ -21,8 +19,6 @@ class ConfigType(Enum):
     """Type of configuration detected."""
 
     UNIFIED = "unified"  # sbkube.yaml (v0.10.0+)
-    WORKSPACE = "workspace"  # workspace.yaml (v0.9.x)
-    LEGACY = "legacy"  # sources.yaml + config.yaml (v0.8.x and earlier)
     UNKNOWN = "unknown"  # No configuration found
 
 
@@ -37,23 +33,17 @@ class DetectedConfig:
     deprecation_warning: str | None = None
 
     def is_deprecated(self) -> bool:
-        """Check if detected config format is deprecated."""
-        return self.config_type in (ConfigType.WORKSPACE, ConfigType.LEGACY)
+        """Check if detected config format is deprecated.
+
+        Note: Only UNIFIED format is supported now, so always returns False.
+        """
+        return False
 
 
 # File detection priority order
 CONFIG_FILE_PRIORITY = [
     ("sbkube.yaml", ConfigType.UNIFIED),
     ("sbkube.yml", ConfigType.UNIFIED),
-    ("workspace.yaml", ConfigType.WORKSPACE),
-    ("workspace.yml", ConfigType.WORKSPACE),
-]
-
-LEGACY_FILES = [
-    "sources.yaml",
-    "sources.yml",
-    "config.yaml",
-    "config.yml",
 ]
 
 
@@ -61,13 +51,11 @@ def detect_config_file(
     search_dir: Path | str | None = None,
     explicit_file: Path | str | None = None,
 ) -> DetectedConfig:
-    """Detect configuration file with priority ordering.
+    """Detect configuration file.
 
     Priority order:
     1. Explicit file (if provided)
     2. sbkube.yaml/yml (unified format)
-    3. workspace.yaml/yml (multi-phase)
-    4. sources.yaml/yml + config.yaml/yml (legacy)
 
     Args:
         search_dir: Directory to search in (default: current directory)
@@ -86,75 +74,23 @@ def detect_config_file(
             explicit_path = base_dir / explicit_path
 
         if explicit_path.exists():
-            config_type = _determine_config_type(explicit_path)
-            warning = None
-            if config_type == ConfigType.WORKSPACE:
-                warning = (
-                    "workspace.yaml format is deprecated. "
-                    "Migrate to sbkube.yaml for v1.0 compatibility."
-                )
-            elif config_type == ConfigType.LEGACY:
-                warning = (
-                    "sources.yaml + config.yaml format is deprecated. "
-                    "Migrate to sbkube.yaml for v1.0 compatibility."
-                )
-
             return DetectedConfig(
-                config_type=config_type,
+                config_type=ConfigType.UNIFIED,
                 primary_file=explicit_path,
                 secondary_files=[],
                 base_dir=explicit_path.parent,
-                deprecation_warning=warning,
             )
 
     # Search for config files in priority order
     for filename, config_type in CONFIG_FILE_PRIORITY:
         config_path = base_dir / filename
         if config_path.exists():
-            warning = None
-            if config_type == ConfigType.WORKSPACE:
-                warning = (
-                    "workspace.yaml format is deprecated. "
-                    "Migrate to sbkube.yaml for v1.0 compatibility."
-                )
-
             return DetectedConfig(
                 config_type=config_type,
                 primary_file=config_path,
                 secondary_files=[],
                 base_dir=base_dir,
-                deprecation_warning=warning,
             )
-
-    # Check for legacy files
-    legacy_files = []
-    for filename in LEGACY_FILES:
-        file_path = base_dir / filename
-        if file_path.exists():
-            legacy_files.append(file_path)
-
-    if legacy_files:
-        # Find primary (sources.yaml preferred)
-        primary = None
-        for f in legacy_files:
-            if "sources" in f.name:
-                primary = f
-                break
-        if not primary:
-            primary = legacy_files[0]
-
-        secondary = [f for f in legacy_files if f != primary]
-
-        return DetectedConfig(
-            config_type=ConfigType.LEGACY,
-            primary_file=primary,
-            secondary_files=secondary,
-            base_dir=base_dir,
-            deprecation_warning=(
-                "sources.yaml + config.yaml format is deprecated. "
-                "Migrate to sbkube.yaml for v1.0 compatibility."
-            ),
-        )
 
     # No config found
     return DetectedConfig(
@@ -172,17 +108,13 @@ def _determine_config_type(file_path: Path) -> ConfigType:
         file_path: Path to config file
 
     Returns:
-        ConfigType enum value
+        ConfigType enum value (UNIFIED or UNKNOWN)
 
     """
     name = file_path.name.lower()
 
     if name.startswith("sbkube"):
         return ConfigType.UNIFIED
-    if name.startswith("workspace"):
-        return ConfigType.WORKSPACE
-    if name.startswith("sources") or name.startswith("config"):
-        return ConfigType.LEGACY
 
     # Check content for apiVersion
     try:
@@ -192,24 +124,10 @@ def _determine_config_type(file_path: Path) -> ConfigType:
                 api_version = content.get("apiVersion", "")
                 if api_version.startswith("sbkube/"):
                     return ConfigType.UNIFIED
-                if "phases" in content and "metadata" in content:
-                    return ConfigType.WORKSPACE
     except Exception:
         pass
 
     return ConfigType.UNKNOWN
-
-
-def emit_deprecation_warning(detected: DetectedConfig) -> None:
-    """Emit deprecation warning if applicable.
-
-    Args:
-        detected: Detected configuration result
-
-    """
-    if detected.deprecation_warning:
-        warnings.warn(detected.deprecation_warning, DeprecationWarning, stacklevel=2)
-        logger.warning(f"⚠️  {detected.deprecation_warning}")
 
 
 def resolve_path(base: Path, relative: str) -> Path:

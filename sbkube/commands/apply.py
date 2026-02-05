@@ -3,11 +3,11 @@
 통합 명령어: prepare → deploy를 자동으로 실행.
 의존성을 고려하여 올바른 순서로 배포합니다.
 
-Supports both legacy (sources.yaml + config.yaml) and unified (sbkube.yaml) formats.
-The unified format is recommended for new projects.
+Supports unified sbkube.yaml format only.
 """
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
@@ -18,12 +18,484 @@ from sbkube.utils.error_formatter import format_deployment_error
 from sbkube.utils.file_loader import (
     ConfigType,
     detect_config_file,
-    emit_deprecation_warning,
     load_config_file,
 )
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.progress_tracker import ProgressTracker
+
+if TYPE_CHECKING:
+    pass
+
+
+class ApplyCommand:
+    """Programmatic interface for apply command.
+
+    Used by workspace.py to deploy apps from a unified config file.
+    """
+
+    def __init__(
+        self,
+        config_file: str | None = None,
+        base_dir: str = ".",
+        app_config_dir: str | None = None,
+        source: str = "sbkube.yaml",
+        dry_run: bool = False,
+        force: bool = False,
+        parallel: bool = False,
+        skip_prepare: bool = False,
+        skip_build: bool = False,
+    ) -> None:
+        """Initialize ApplyCommand.
+
+        Args:
+            config_file: Path to unified config file (sbkube.yaml)
+            base_dir: Base directory for legacy mode
+            app_config_dir: App config directory for legacy mode
+            source: Source file name (sbkube.yaml or sources.yaml)
+            dry_run: Dry run mode
+            force: Force deployment
+            parallel: Parallel deployment
+            skip_prepare: Skip prepare step
+            skip_build: Skip build step
+
+        """
+        self.config_file = config_file
+        self.base_dir = base_dir
+        self.app_config_dir = app_config_dir
+        self.source = source
+        self.dry_run = dry_run
+        self.force = force
+        self.parallel = parallel
+        self.skip_prepare = skip_prepare
+        self.skip_build = skip_build
+
+    def execute(self) -> bool:
+        """Execute apply command.
+
+        Returns:
+            bool: True if successful
+
+        """
+        from rich.console import Console
+
+        from sbkube.models.unified_config_model import UnifiedConfig
+
+        console = Console()
+        output = OutputManager(format_type="human")
+
+        # Determine which config file to use
+        if self.config_file:
+            config_path = Path(self.config_file)
+        else:
+            # Legacy mode - look for sbkube.yaml in base_dir/app_config_dir
+            if self.app_config_dir:
+                config_path = Path(self.base_dir) / self.app_config_dir / self.source
+            else:
+                config_path = Path(self.base_dir) / self.source
+
+        if not config_path.exists():
+            console.print(f"[red]❌ Config file not found: {config_path}[/red]")
+            return False
+
+        # Load config
+        try:
+            data = load_config_file(str(config_path))
+            if data is None:
+                console.print(f"[red]❌ Empty config file: {config_path}[/red]")
+                return False
+
+            # Try unified config first
+            if "apiVersion" in data and data.get("apiVersion", "").startswith("sbkube/"):
+                unified_config = UnifiedConfig(**data)
+
+                # Get namespace from settings (required for SBKubeConfig)
+                namespace = unified_config.settings.namespace or "default"
+
+                # Convert to SBKubeConfig for deployment
+                config = SBKubeConfig(
+                    namespace=namespace,
+                    apps=unified_config.apps,
+                    deps=unified_config.deps,
+                    hooks=unified_config.hooks,
+                )
+
+                # Get settings from unified config
+                settings = unified_config.settings
+
+            else:
+                # Legacy format - try SBKubeConfig directly
+                config = SBKubeConfig(**data)
+                settings = None
+
+        except Exception as e:
+            console.print(f"[red]❌ Failed to parse config: {e}[/red]")
+            return False
+
+        # Get enabled apps
+        enabled_apps = config.get_enabled_apps()
+        if not enabled_apps:
+            console.print("[yellow]⚠️  No enabled apps found[/yellow]")
+            return True
+
+        if self.dry_run:
+            console.print(
+                f"[yellow]🔍 [DRY-RUN] Would deploy {len(enabled_apps)} app(s)[/yellow]"
+            )
+            return True
+
+        # Execute deployment
+        # For unified config, the base_dir is the parent of config file's directory
+        # and app_config_dir is the directory containing sbkube.yaml
+        app_config_dir = config_path.parent
+        base_dir = str(app_config_dir.parent)  # Parent of app config dir
+        current_app_dir = app_config_dir.name  # Just the directory name
+
+        # Create a dummy click context for command invocation
+        import click
+
+        ctx = click.Context(click.Command("apply"))
+        ctx.obj = {
+            "format": "human",
+            "kubeconfig": settings.kubeconfig if settings else None,
+            "context": settings.kubeconfig_context if settings else None,
+        }
+
+        try:
+            success = _execute_apps_deployment(
+                ctx=ctx,
+                config=config,
+                base_dir=base_dir,
+                app_config_dir=app_config_dir,
+                current_app_dir=current_app_dir,
+                config_file_name=config_path.name,
+                sources_file_name=config_path.name,  # Use same file for sources
+                app_name=None,
+                dry_run=self.dry_run,
+                skip_prepare=self.skip_prepare,
+                skip_build=self.skip_build,
+                skip_deps_check=self.force,
+                strict_deps=False,
+                no_progress=False,
+                output=output,
+            )
+            return success
+        except Exception as e:
+            console.print(f"[red]❌ Deployment failed: {e}[/red]")
+            return False
+
+
+def _execute_apps_deployment(
+    ctx: click.Context,
+    config: SBKubeConfig,
+    base_dir: str,
+    app_config_dir: Path,
+    current_app_dir: str,
+    config_file_name: str,
+    sources_file_name: str,
+    app_name: str | None,
+    dry_run: bool,
+    skip_prepare: bool,
+    skip_build: bool,
+    skip_deps_check: bool,
+    strict_deps: bool,
+    no_progress: bool,
+    output: OutputManager,
+) -> bool:
+    """Execute app deployment for unified config without phases.
+
+    Args:
+        ctx: Click context
+        config: SBKubeConfig with apps
+        base_dir: Base directory
+        app_config_dir: App config directory
+        current_app_dir: Current app directory relative to base
+        config_file_name: Config file name
+        sources_file_name: Sources file name
+        app_name: Specific app to deploy (None for all)
+        dry_run: Dry run mode
+        skip_prepare: Skip prepare step
+        skip_build: Skip build step
+        skip_deps_check: Skip dependency check
+        strict_deps: Strict dependency mode
+        no_progress: Disable progress tracking
+        output: Output manager
+
+    Returns:
+        bool: True if deployment succeeded
+
+    """
+    from sbkube.commands.build import cmd as build_cmd
+    from sbkube.commands.deploy import cmd as deploy_cmd
+    from sbkube.commands.prepare import cmd as prepare_cmd
+
+    BASE_DIR = Path(base_dir).resolve()
+    APP_CONFIG_DIR = app_config_dir
+    overall_success = True
+
+    # deps (app-group dependencies) 배포 상태 검증
+    if config.deps and not skip_deps_check:
+        output.print(
+            "[cyan]🔍 Checking app-group dependencies...[/cyan]", level="info"
+        )
+        deployment_checker = DeploymentChecker(
+            base_dir=BASE_DIR,
+            namespace=None,
+        )
+
+        dep_check_result = deployment_checker.check_dependencies(
+            deps=config.deps,
+            namespace=None,
+        )
+
+        if not dep_check_result["all_deployed"]:
+            output.print_warning(
+                f"⚠️  {len(dep_check_result['missing'])} dependencies not deployed:",
+                missing_count=len(dep_check_result["missing"]),
+            )
+            for dep in dep_check_result["missing"]:
+                _, status_msg = dep_check_result["details"][dep]
+                output.print(f"  - {dep} ({status_msg})", level="warning")
+
+            if strict_deps:
+                output.print_error(
+                    "Deployment aborted due to missing dependencies (--strict-deps mode)",
+                )
+                return False
+            output.print(
+                "\n[yellow]⚠️  Continuing deployment despite missing dependencies (non-blocking mode)[/yellow]",
+                level="warning",
+            )
+        else:
+            output.print_success(
+                f"All {len(config.deps)} dependencies are deployed:",
+                deps_count=len(config.deps),
+            )
+    elif config.deps and skip_deps_check:
+        output.print_warning(
+            f"Skipping dependency check ({len(config.deps)} deps declared)",
+            deps_count=len(config.deps),
+        )
+
+    # Hook executor 초기화
+    hook_executor = HookExecutor(
+        base_dir=BASE_DIR,
+        work_dir=APP_CONFIG_DIR,
+        dry_run=dry_run,
+    )
+
+    # 글로벌 pre-apply 훅 실행
+    if config.hooks and "apply" in config.hooks:
+        apply_hooks = config.hooks["apply"].model_dump()
+        output.print(
+            "[cyan]🪝 Executing global pre-apply hooks...[/cyan]", level="info"
+        )
+        if not hook_executor.execute_command_hooks(apply_hooks, "pre", "apply"):
+            output.print_error("Pre-apply hook failed")
+            return False
+
+    # 배포 순서 출력
+    deployment_order = config.get_deployment_order()
+    output.print(
+        "\n[cyan]📋 Deployment order (based on dependencies):[/cyan]", level="info"
+    )
+    for idx, app in enumerate(deployment_order, 1):
+        app_config = config.apps[app]
+        deps = getattr(app_config, "depends_on", [])
+        deps_str = f" [depends on: {', '.join(deps)}]" if deps else ""
+        output.print(f"  {idx}. {app} ({app_config.type}){deps_str}", level="info")
+
+    # 적용할 앱 필터링
+    if app_name:
+        if app_name not in config.apps:
+            output.print_error(f"App not found: {app_name}", app_name=app_name)
+            return False
+
+        apps_to_apply = []
+        visited: set[str] = set()
+
+        def collect_dependencies(name: str) -> None:
+            if name in visited:
+                return
+            visited.add(name)
+            app_cfg = config.apps[name]
+            if hasattr(app_cfg, "depends_on"):
+                for dep in app_cfg.depends_on:
+                    collect_dependencies(dep)
+            apps_to_apply.append(name)
+
+        collect_dependencies(app_name)
+        output.print(
+            f"\n[yellow]ℹ️  Including dependencies: {', '.join(apps_to_apply)}[/yellow]",
+            level="info",
+        )
+    else:
+        apps_to_apply = deployment_order
+
+    # Progress tracking setup
+    console = output.get_console()
+    progress_tracker = ProgressTracker(
+        console=console, disable=(dry_run or no_progress)
+    )
+
+    failed = False
+    try:
+        for app_name_iter in apps_to_apply:
+            app_config = config.apps[app_name_iter]
+
+            if not app_config.enabled:
+                output.print(
+                    f"[yellow]⏭️  Skipping disabled app: {app_name_iter}[/yellow]",
+                    level="info",
+                )
+                output.add_deployment(
+                    name=app_name_iter,
+                    namespace=getattr(app_config, "namespace", "default"),
+                    status="skipped",
+                )
+                continue
+
+            output.print_section(f"{app_name_iter} ({app_config.type})")
+
+            total_steps = 3
+            if skip_prepare:
+                total_steps -= 1
+            if skip_build:
+                total_steps -= 1
+
+            use_progress = not no_progress and not dry_run
+
+            with progress_tracker.track_task(
+                f"Deploying {app_name_iter}", total=total_steps
+            ) as task_id:
+                # Step 1: Prepare
+                if not skip_prepare:
+                    if use_progress:
+                        progress_tracker.update(
+                            task_id, description=f"📦 Prepare {app_name_iter}"
+                        )
+                    else:
+                        output.print(
+                            f"[cyan]📦 Step 1: Prepare {app_name_iter}[/cyan]",
+                            level="info",
+                        )
+
+                    prepare_ctx = click.Context(prepare_cmd, parent=ctx)
+                    prepare_ctx.obj = ctx.obj
+                    prepare_ctx.invoke(
+                        prepare_cmd,
+                        app_config_dir_name=current_app_dir,
+                        base_dir=base_dir,
+                        config_file_name=config_file_name,
+                        sources_file_name=sources_file_name,
+                        app_name=app_name_iter,
+                        force=False,
+                        dry_run=dry_run,
+                    )
+                    if use_progress:
+                        progress_tracker.update(task_id, advance=1)
+
+                # Step 2: Build
+                if not skip_build:
+                    step_number = 2 if not skip_prepare else 1
+                    if use_progress:
+                        progress_tracker.update(
+                            task_id, description=f"🔨 Build {app_name_iter}"
+                        )
+                    else:
+                        output.print(
+                            f"[cyan]🔨 Step {step_number}: Build {app_name_iter}[/cyan]",
+                            level="info",
+                        )
+
+                    build_ctx = click.Context(build_cmd, parent=ctx)
+                    build_ctx.obj = ctx.obj
+                    build_ctx.invoke(
+                        build_cmd,
+                        app_config_dir_name=current_app_dir,
+                        base_dir=base_dir,
+                        config_file_name=config_file_name,
+                        app_name=app_name_iter,
+                        dry_run=dry_run,
+                    )
+                    if use_progress:
+                        progress_tracker.update(task_id, advance=1)
+
+                # Step 3: Deploy
+                step_number = 3
+                if skip_prepare:
+                    step_number -= 1
+                if skip_build:
+                    step_number -= 1
+
+                if use_progress:
+                    progress_tracker.update(
+                        task_id, description=f"🚀 Deploy {app_name_iter}"
+                    )
+                else:
+                    output.print(
+                        f"[cyan]🚀 Step {step_number}: Deploy {app_name_iter}[/cyan]",
+                        level="info",
+                    )
+
+                deploy_ctx = click.Context(deploy_cmd, parent=ctx)
+                deploy_ctx.obj = ctx.obj
+                deploy_ctx.invoke(
+                    deploy_cmd,
+                    app_config_dir_name=current_app_dir,
+                    base_dir=base_dir,
+                    config_file_name=config_file_name,
+                    app_name=app_name_iter,
+                    dry_run=dry_run,
+                )
+                if use_progress:
+                    progress_tracker.update(task_id, advance=1)
+                    progress_tracker.console_print(
+                        f"[green]✅ {app_name_iter} deployed successfully[/green]"
+                    )
+                output.add_deployment(
+                    name=app_name_iter,
+                    namespace=getattr(app_config, "namespace", "default"),
+                    status="deployed",
+                    version=getattr(app_config, "version", None),
+                )
+
+        # 글로벌 post-apply 훅 실행
+        if config.hooks and "apply" in config.hooks:
+            apply_hooks = config.hooks["apply"].model_dump()
+            output.print(
+                "[cyan]🪝 Executing global post-apply hooks...[/cyan]", level="info"
+            )
+            if not hook_executor.execute_command_hooks(
+                apply_hooks, "post", "apply"
+            ):
+                output.print_error("Post-apply hook failed")
+                failed = True
+
+    except KeyboardInterrupt:
+        output.print(
+            "\n[yellow]⚠️  Operation interrupted by user[/yellow]", level="warning"
+        )
+        raise
+    except Exception as e:
+        failed = True
+        output.print_error(f"Deployment failed: {e}")
+        if config.hooks and "apply" in config.hooks:
+            apply_hooks = config.hooks["apply"].model_dump()
+            output.print(
+                "[yellow]🪝 Executing global on-failure hooks...[/yellow]",
+                level="warning",
+            )
+            hook_executor.execute_command_hooks(apply_hooks, "on_failure", "apply")
+
+    if failed:
+        overall_success = False
+    else:
+        output.print_success(
+            "App group applied successfully!",
+        )
+
+    return overall_success
 
 
 @click.command(name="apply")
@@ -155,7 +627,7 @@ def cmd(
         )
         # Load config to check if it has phases (workspace mode)
         config_data = load_config_file(str(detected.primary_file))
-        if "phases" in config_data:
+        if "phases" in config_data and config_data["phases"]:
             # Workspace mode: delegate to WorkspaceDeployCommand
             output.print(
                 "[cyan]🔄 Detected multi-phase workspace configuration[/cyan]",
@@ -177,21 +649,77 @@ def cmd(
             if not success:
                 raise click.Abort
             return
-        # Single app group mode with unified config - continue with normal flow
+
+        # Single app group mode with unified config - process apps directly
         output.print(
             "[cyan]📦 Single app group mode (no phases)[/cyan]",
             level="info",
         )
-    elif detected.is_deprecated():
-        emit_deprecation_warning(detected)
-        output.print(
-            f"[yellow]⚠️  {detected.deprecation_warning}[/yellow]",
-            level="warning",
+        # Load apps from unified config and deploy directly
+        from sbkube.models.unified_config_model import UnifiedConfig
+
+        try:
+            unified_config = UnifiedConfig(**config_data)
+        except Exception as e:
+            output.print_error(f"Invalid unified config: {e}", error=str(e))
+            raise click.Abort
+
+        # Convert UnifiedConfig apps to SBKubeConfig format for compatibility
+        config = SBKubeConfig(
+            namespace=unified_config.settings.namespace,
+            apps=unified_config.apps,
+            deps=unified_config.deps,
+            hooks=config_data.get("hooks", {}),
         )
-        output.print(
-            "[yellow]💡 Run 'sbkube migrate' to convert to the new format[/yellow]",
-            level="info",
+
+        # Process apps using the existing flow (skip directory scanning)
+        # Set up paths for the unified config location
+        APP_CONFIG_DIR = detected.primary_file.parent
+        current_app_dir = "."
+
+        overall_success = _execute_apps_deployment(
+            ctx=ctx,
+            config=config,
+            base_dir=str(BASE_DIR),
+            app_config_dir=APP_CONFIG_DIR,
+            current_app_dir=current_app_dir,
+            config_file_name="sbkube.yaml",
+            sources_file_name="sbkube.yaml",
+            app_name=app_name,
+            dry_run=dry_run,
+            skip_prepare=skip_prepare,
+            skip_build=skip_build,
+            skip_deps_check=skip_deps_check,
+            strict_deps=strict_deps,
+            no_progress=no_progress,
+            output=output,
         )
+
+        if not overall_success:
+            output.print(
+                "\n[bold red]❌ Deployment failed[/bold red]", level="error"
+            )
+            output.finalize(status="failed", summary={"status": "failed"})
+            raise click.Abort
+
+        output.print(
+            "\n[bold green]🎉 All apps applied successfully![/bold green]",
+            level="success",
+        )
+        output.finalize(
+            status="success",
+            summary={"status": "success"},
+            next_steps=["Verify deployment with: kubectl get pods"],
+        )
+        return
+
+    elif detected.config_type == ConfigType.UNKNOWN:
+        output.print_error(
+            f"No sbkube.yaml found in {BASE_DIR}. "
+            "Create one with 'sbkube init' or specify with -f flag.",
+            config_path=str(BASE_DIR),
+        )
+        raise click.Abort
 
     # 경로 설정
     BASE_DIR = Path(base_dir).resolve()

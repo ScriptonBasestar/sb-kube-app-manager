@@ -1,4 +1,8 @@
-"""Workspace 명령어 테스트."""
+"""Workspace 명령어 테스트.
+
+Note: These tests use the unified sbkube.yaml format (v0.10.0+).
+The legacy sbkube.yaml format is no longer supported.
+"""
 
 from pathlib import Path
 from unittest.mock import patch
@@ -22,34 +26,64 @@ from sbkube.commands.workspace import (
 )
 
 
+def create_unified_workspace_config(
+    name: str = "test-workspace",
+    phases: dict | None = None,
+) -> dict:
+    """Create a valid unified workspace config (sbkube.yaml format).
+
+    Args:
+        name: Workspace name
+        phases: Phase definitions
+
+    Returns:
+        dict: Valid sbkube.yaml config
+
+    """
+    if phases is None:
+        phases = {
+            "p1-infra": {
+                "description": "Infrastructure",
+                "source": "p1-kube/sbkube.yaml",
+            }
+        }
+
+    return {
+        "apiVersion": "sbkube/v1",
+        "metadata": {"name": name},
+        "settings": {
+            "namespace": "default",
+        },
+        "phases": phases,
+    }
+
+
 class TestWorkspaceValidateCommand:
     """WorkspaceValidateCommand 테스트."""
 
     def test_valid_workspace(self, tmp_path: Path) -> None:
-        """유효한 workspace.yaml 검증 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
-        workspace_config = {
-            "version": "1.0",
-            "metadata": {"name": "test-workspace"},
-            "phases": {
+        """유효한 sbkube.yaml 검증 테스트."""
+        workspace_file = tmp_path / "sbkube.yaml"
+        workspace_config = create_unified_workspace_config(
+            name="test-workspace",
+            phases={
                 "p1-infra": {
                     "description": "Infrastructure",
-                    "source": "p1-kube/sources.yaml",
-                    "app_groups": ["a000_network"],
+                    "source": "p1-kube/sbkube.yaml",
                 }
             },
-        }
+        )
         workspace_file.write_text(yaml.dump(workspace_config))
 
         cmd = WorkspaceValidateCommand(str(workspace_file))
         workspace = cmd.execute()
 
-        assert workspace.version == "1.0"
-        assert workspace.metadata.name == "test-workspace"
+        assert workspace.apiVersion == "sbkube/v1"
+        assert workspace.metadata.get("name") == "test-workspace"
         assert len(workspace.phases) == 1
 
     def test_missing_workspace_file(self, tmp_path: Path) -> None:
-        """workspace.yaml 파일 없음 테스트."""
+        """sbkube.yaml 파일 없음 테스트."""
         workspace_file = tmp_path / "nonexistent.yaml"
 
         cmd = WorkspaceValidateCommand(str(workspace_file))
@@ -58,17 +92,16 @@ class TestWorkspaceValidateCommand:
             cmd.execute()
 
     def test_invalid_workspace_structure(self, tmp_path: Path) -> None:
-        """잘못된 workspace.yaml 구조 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
-        # 잘못된 버전 형식
+        """잘못된 sbkube.yaml 구조 테스트."""
+        workspace_file = tmp_path / "sbkube.yaml"
+        # 잘못된 apiVersion 형식
         invalid_config = {
-            "version": "1",  # 잘못된 형식 (1.0이어야 함)
+            "apiVersion": "invalid",  # 잘못된 형식 (sbkube/v1이어야 함)
             "metadata": {"name": "test"},
             "phases": {
                 "p1": {
                     "description": "Phase 1",
-                    "source": "sources.yaml",
-                    "app_groups": ["app1"],
+                    "source": "sbkube.yaml",
                 }
             },
         }
@@ -81,25 +114,22 @@ class TestWorkspaceValidateCommand:
 
     def test_circular_dependency(self, tmp_path: Path) -> None:
         """순환 의존성 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
-        circular_config = {
-            "version": "1.0",
-            "metadata": {"name": "circular-test"},
-            "phases": {
+        workspace_file = tmp_path / "sbkube.yaml"
+        circular_config = create_unified_workspace_config(
+            name="circular-test",
+            phases={
                 "p1": {
                     "description": "Phase 1",
-                    "source": "sources.yaml",
-                    "app_groups": ["app1"],
+                    "source": "sbkube.yaml",
                     "depends_on": ["p2"],
                 },
                 "p2": {
                     "description": "Phase 2",
-                    "source": "sources.yaml",
-                    "app_groups": ["app2"],
+                    "source": "sbkube.yaml",
                     "depends_on": ["p1"],
                 },
             },
-        }
+        )
         workspace_file.write_text(yaml.dump(circular_config))
 
         cmd = WorkspaceValidateCommand(str(workspace_file))
@@ -113,24 +143,21 @@ class TestWorkspaceGraphCommand:
 
     def test_dependency_graph(self, tmp_path: Path) -> None:
         """의존성 그래프 출력 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
-        workspace_config = {
-            "version": "1.0",
-            "metadata": {"name": "graph-test"},
-            "phases": {
+        workspace_file = tmp_path / "sbkube.yaml"
+        workspace_config = create_unified_workspace_config(
+            name="graph-test",
+            phases={
                 "p1-infra": {
                     "description": "Infrastructure",
-                    "source": "p1-kube/sources.yaml",
-                    "app_groups": ["a000_network"],
+                    "source": "p1-kube/sbkube.yaml",
                 },
                 "p2-data": {
                     "description": "Data layer",
-                    "source": "p2-kube/sources.yaml",
-                    "app_groups": ["a100_postgres"],
+                    "source": "p2-kube/sbkube.yaml",
                     "depends_on": ["p1-infra"],
                 },
             },
-        }
+        )
         workspace_file.write_text(yaml.dump(workspace_config))
 
         cmd = WorkspaceGraphCommand(str(workspace_file))
@@ -138,7 +165,7 @@ class TestWorkspaceGraphCommand:
         cmd.execute()
 
     def test_graph_missing_file(self, tmp_path: Path) -> None:
-        """workspace.yaml 파일 없음 테스트."""
+        """sbkube.yaml 파일 없음 테스트."""
         workspace_file = tmp_path / "nonexistent.yaml"
 
         cmd = WorkspaceGraphCommand(str(workspace_file))
@@ -148,25 +175,22 @@ class TestWorkspaceGraphCommand:
 
     def test_graph_circular_dependency(self, tmp_path: Path) -> None:
         """순환 의존성 그래프 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
-        circular_config = {
-            "version": "1.0",
-            "metadata": {"name": "circular-graph"},
-            "phases": {
+        workspace_file = tmp_path / "sbkube.yaml"
+        circular_config = create_unified_workspace_config(
+            name="circular-graph",
+            phases={
                 "p1": {
                     "description": "Phase 1",
-                    "source": "sources.yaml",
-                    "app_groups": ["app1"],
+                    "source": "sbkube.yaml",
                     "depends_on": ["p2"],
                 },
                 "p2": {
                     "description": "Phase 2",
-                    "source": "sources.yaml",
-                    "app_groups": ["app2"],
+                    "source": "sbkube.yaml",
                     "depends_on": ["p1"],
                 },
             },
-        }
+        )
         workspace_file.write_text(yaml.dump(circular_config))
 
         cmd = WorkspaceGraphCommand(str(workspace_file))
@@ -180,15 +204,14 @@ class TestWorkspaceCLI:
 
     def test_validate_cli_success(self, tmp_path: Path) -> None:
         """Workspace validate CLI 성공 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
+        workspace_file = tmp_path / "sbkube.yaml"
         workspace_config = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {"name": "cli-test"},
             "phases": {
                 "p1": {
                     "description": "Phase 1",
-                    "source": "sources.yaml",
-                    "app_groups": ["app1"],
+                    "source": "sbkube.yaml",
                 }
             },
         }
@@ -202,9 +225,9 @@ class TestWorkspaceCLI:
 
     def test_validate_cli_failure(self, tmp_path: Path) -> None:
         """Workspace validate CLI 실패 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
-        # 잘못된 구조
-        invalid_config = {"version": "1.0", "metadata": {"name": "test"}, "phases": {}}
+        workspace_file = tmp_path / "sbkube.yaml"
+        # 잘못된 apiVersion 형식 (sbkube/v1 이어야 함)
+        invalid_config = {"apiVersion": "invalid", "metadata": {"name": "test"}, "phases": {}}
         workspace_file.write_text(yaml.dump(invalid_config))
 
         runner = CliRunner()
@@ -214,20 +237,18 @@ class TestWorkspaceCLI:
 
     def test_graph_cli_success(self, tmp_path: Path) -> None:
         """Workspace graph CLI 성공 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
+        workspace_file = tmp_path / "sbkube.yaml"
         workspace_config = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {"name": "graph-cli-test"},
             "phases": {
                 "p1-infra": {
                     "description": "Infrastructure",
-                    "source": "p1-kube/sources.yaml",
-                    "app_groups": ["a000_network"],
+                    "source": "p1-kube/sbkube.yaml",
                 },
                 "p2-data": {
                     "description": "Data",
-                    "source": "p2-kube/sources.yaml",
-                    "app_groups": ["a100_postgres"],
+                    "source": "p2-kube/sbkube.yaml",
                     "depends_on": ["p1-infra"],
                 },
             },
@@ -244,21 +265,19 @@ class TestWorkspaceCLI:
 
     def test_graph_cli_circular_dependency(self, tmp_path: Path) -> None:
         """Workspace graph CLI 순환 의존성 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
+        workspace_file = tmp_path / "sbkube.yaml"
         circular_config = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {"name": "circular-cli"},
             "phases": {
                 "p1": {
                     "description": "Phase 1",
-                    "source": "sources.yaml",
-                    "app_groups": ["app1"],
+                    "source": "sbkube.yaml",
                     "depends_on": ["p2"],
                 },
                 "p2": {
                     "description": "Phase 2",
-                    "source": "sources.yaml",
-                    "app_groups": ["app2"],
+                    "source": "sbkube.yaml",
                     "depends_on": ["p1"],
                 },
             },
@@ -276,7 +295,7 @@ class TestWorkspaceInitCommand:
 
     def test_default_template(self, tmp_path: Path) -> None:
         """기본 템플릿 생성 테스트."""
-        output_file = tmp_path / "workspace.yaml"
+        output_file = tmp_path / "sbkube.yaml"
 
         cmd = WorkspaceInitCommand(
             output_file=str(output_file),
@@ -291,7 +310,7 @@ class TestWorkspaceInitCommand:
         with open(output_file, encoding="utf-8") as f:
             workspace = yaml.safe_load(f)
 
-        assert workspace["version"] == "1.0"
+        assert workspace["apiVersion"] == "sbkube/v1"
         assert workspace["metadata"]["name"] == "my-workspace"
         assert len(workspace["phases"]) == 3
         assert "p1-infra" in workspace["phases"]
@@ -300,7 +319,7 @@ class TestWorkspaceInitCommand:
 
     def test_file_already_exists_no_overwrite(self, tmp_path: Path) -> None:
         """파일 존재 시 덮어쓰기 거부 테스트."""
-        output_file = tmp_path / "workspace.yaml"
+        output_file = tmp_path / "sbkube.yaml"
         output_file.write_text("existing content")
 
         cmd = WorkspaceInitCommand(
@@ -315,7 +334,7 @@ class TestWorkspaceInitCommand:
 
     def test_file_already_exists_overwrite(self, tmp_path: Path) -> None:
         """파일 존재 시 덮어쓰기 허용 테스트."""
-        output_file = tmp_path / "workspace.yaml"
+        output_file = tmp_path / "sbkube.yaml"
         output_file.write_text("existing content")
 
         cmd = WorkspaceInitCommand(
@@ -330,11 +349,11 @@ class TestWorkspaceInitCommand:
         # 새 내용으로 덮어쓰기 확인
         with open(output_file, encoding="utf-8") as f:
             workspace = yaml.safe_load(f)
-        assert workspace["version"] == "1.0"
+        assert workspace["apiVersion"] == "sbkube/v1"
 
     def test_init_cli_non_interactive(self, tmp_path: Path) -> None:
         """Workspace init CLI 비대화형 모드 테스트."""
-        output_file = tmp_path / "workspace.yaml"
+        output_file = tmp_path / "sbkube.yaml"
 
         runner = CliRunner()
         result = runner.invoke(init_cmd, [str(output_file), "--non-interactive"])
@@ -345,7 +364,7 @@ class TestWorkspaceInitCommand:
 
     def test_init_cli_with_existing_file(self, tmp_path: Path) -> None:
         """Workspace init CLI 기존 파일 존재 시 테스트."""
-        output_file = tmp_path / "workspace.yaml"
+        output_file = tmp_path / "sbkube.yaml"
         output_file.write_text("existing")
 
         runner = CliRunner()
@@ -364,23 +383,21 @@ class TestWorkspaceDeployCommand:
     def _create_workspace_file(
         self, tmp_path: Path, phases: dict | None = None
     ) -> Path:
-        """Helper to create workspace.yaml for tests."""
-        workspace_file = tmp_path / "workspace.yaml"
+        """Helper to create sbkube.yaml for tests."""
+        workspace_file = tmp_path / "sbkube.yaml"
         default_phases = {
             "p1-infra": {
                 "description": "Infrastructure",
-                "source": "p1-kube/sources.yaml",
-                "app_groups": ["a000_network"],
+                "source": "p1-kube/sbkube.yaml",
             },
             "p2-data": {
                 "description": "Data layer",
-                "source": "p2-kube/sources.yaml",
-                "app_groups": ["a100_postgres"],
+                "source": "p2-kube/sbkube.yaml",
                 "depends_on": ["p1-infra"],
             },
         }
         workspace_config = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {"name": "test-workspace", "environment": "test"},
             "phases": phases or default_phases,
         }
@@ -418,7 +435,7 @@ class TestWorkspaceDeployCommand:
         assert "p1-infra" in cmd.phase_results
 
     def test_deploy_missing_workspace_file(self, tmp_path: Path) -> None:
-        """workspace.yaml 파일 없음 테스트."""
+        """sbkube.yaml 파일 없음 테스트."""
         workspace_file = tmp_path / "nonexistent.yaml"
 
         cmd = WorkspaceDeployCommand(
@@ -447,19 +464,16 @@ class TestWorkspaceDeployCommand:
         phases = {
             "p1": {
                 "description": "First",
-                "source": "p1/sources.yaml",
-                "app_groups": ["app1"],
+                "source": "p1/sbkube.yaml",
             },
             "p2": {
                 "description": "Second",
-                "source": "p2/sources.yaml",
-                "app_groups": ["app2"],
+                "source": "p2/sbkube.yaml",
                 "depends_on": ["p1"],
             },
             "p3": {
                 "description": "Third",
-                "source": "p3/sources.yaml",
-                "app_groups": ["app3"],
+                "source": "p3/sbkube.yaml",
                 "depends_on": ["p2"],
             },
         }
@@ -481,21 +495,19 @@ class TestWorkspaceDeployCommand:
 
     def test_deploy_circular_dependency(self, tmp_path: Path) -> None:
         """순환 의존성 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
+        workspace_file = tmp_path / "sbkube.yaml"
         circular_config = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {"name": "circular-deploy"},
             "phases": {
                 "p1": {
                     "description": "Phase 1",
-                    "source": "sources.yaml",
-                    "app_groups": ["app1"],
+                    "source": "sbkube.yaml",
                     "depends_on": ["p2"],
                 },
                 "p2": {
                     "description": "Phase 2",
-                    "source": "sources.yaml",
-                    "app_groups": ["app2"],
+                    "source": "sbkube.yaml",
                     "depends_on": ["p1"],
                 },
             },
@@ -515,30 +527,28 @@ class TestWorkspaceStatusCommand:
     """WorkspaceStatusCommand 테스트."""
 
     def _create_workspace_file(self, tmp_path: Path) -> Path:
-        """Helper to create workspace.yaml for tests."""
-        workspace_file = tmp_path / "workspace.yaml"
+        """Helper to create sbkube.yaml for tests."""
+        workspace_file = tmp_path / "sbkube.yaml"
         workspace_config = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {
                 "name": "status-test",
                 "description": "Test workspace",
                 "environment": "test",
             },
-            "global": {
+            "settings": {
                 "kubeconfig": "~/.kube/config",
-                "context": "test-context",
+                "kubeconfig_context": "test-context",
                 "timeout": 300,
             },
             "phases": {
                 "p1-infra": {
                     "description": "Infrastructure",
-                    "source": "p1-kube/sources.yaml",
-                    "app_groups": ["a000_network", "a001_storage"],
+                    "source": "p1-kube/sbkube.yaml",
                 },
                 "p2-data": {
                     "description": "Data layer",
-                    "source": "p2-kube/sources.yaml",
-                    "app_groups": ["a100_postgres"],
+                    "source": "p2-kube/sbkube.yaml",
                     "depends_on": ["p1-infra"],
                 },
             },
@@ -555,7 +565,7 @@ class TestWorkspaceStatusCommand:
         cmd.execute()
 
     def test_status_missing_file(self, tmp_path: Path) -> None:
-        """workspace.yaml 파일 없음 테스트."""
+        """sbkube.yaml 파일 없음 테스트."""
         workspace_file = tmp_path / "nonexistent.yaml"
 
         cmd = WorkspaceStatusCommand(str(workspace_file))
@@ -564,12 +574,12 @@ class TestWorkspaceStatusCommand:
             cmd.execute()
 
     def test_status_invalid_workspace(self, tmp_path: Path) -> None:
-        """잘못된 workspace.yaml 테스트."""
-        workspace_file = tmp_path / "workspace.yaml"
+        """잘못된 sbkube.yaml 테스트."""
+        workspace_file = tmp_path / "sbkube.yaml"
         invalid_config = {
-            "version": "1.0",
+            "apiVersion": "invalid",  # Invalid apiVersion format
             "metadata": {"name": "invalid"},
-            "phases": {},  # Empty phases - invalid
+            "phases": {},
         }
         workspace_file.write_text(yaml.dump(invalid_config))
 
@@ -583,16 +593,15 @@ class TestWorkspaceDeployCLI:
     """Workspace deploy CLI 테스트."""
 
     def _create_workspace_file(self, tmp_path: Path) -> Path:
-        """Helper to create workspace.yaml for tests."""
-        workspace_file = tmp_path / "workspace.yaml"
+        """Helper to create sbkube.yaml for tests."""
+        workspace_file = tmp_path / "sbkube.yaml"
         workspace_config = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {"name": "deploy-cli-test"},
             "phases": {
                 "p1-infra": {
                     "description": "Infrastructure",
-                    "source": "p1-kube/sources.yaml",
-                    "app_groups": ["a000_network"],
+                    "source": "p1-kube/sbkube.yaml",
                 }
             },
         }
@@ -644,16 +653,15 @@ class TestWorkspaceStatusCLI:
     """Workspace status CLI 테스트."""
 
     def _create_workspace_file(self, tmp_path: Path) -> Path:
-        """Helper to create workspace.yaml for tests."""
-        workspace_file = tmp_path / "workspace.yaml"
+        """Helper to create sbkube.yaml for tests."""
+        workspace_file = tmp_path / "sbkube.yaml"
         workspace_config = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {"name": "status-cli-test", "environment": "test"},
             "phases": {
                 "p1-infra": {
                     "description": "Infrastructure",
-                    "source": "p1-kube/sources.yaml",
-                    "app_groups": ["a000_network"],
+                    "source": "p1-kube/sbkube.yaml",
                 }
             },
         }
@@ -686,29 +694,26 @@ class TestWorkspaceParallelExecution:
     def _create_workspace_file(
         self, tmp_path: Path, phases: dict | None = None
     ) -> Path:
-        """Helper to create workspace.yaml for tests."""
-        workspace_file = tmp_path / "workspace.yaml"
+        """Helper to create sbkube.yaml for tests."""
+        workspace_file = tmp_path / "sbkube.yaml"
         default_phases = {
             "p1-infra": {
                 "description": "Infrastructure",
-                "source": "p1-kube/sources.yaml",
-                "app_groups": ["a000_network"],
+                "source": "p1-kube/sbkube.yaml",
             },
             "p2-data": {
                 "description": "Data layer",
-                "source": "p2-kube/sources.yaml",
-                "app_groups": ["a100_postgres"],
+                "source": "p2-kube/sbkube.yaml",
                 "depends_on": ["p1-infra"],
             },
             "p3-cache": {
                 "description": "Cache layer",
-                "source": "p3-kube/sources.yaml",
-                "app_groups": ["a200_redis"],
+                "source": "p3-kube/sbkube.yaml",
                 "depends_on": ["p1-infra"],
             },
         }
         workspace_config = {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {"name": "parallel-test", "environment": "test"},
             "phases": phases or default_phases,
         }
@@ -739,19 +744,16 @@ class TestWorkspaceParallelExecution:
         phases = {
             "p1": {
                 "description": "First",
-                "source": "p1/sources.yaml",
-                "app_groups": ["app1"],
+                "source": "p1/sbkube.yaml",
             },
             "p2": {
                 "description": "Second",
-                "source": "p2/sources.yaml",
-                "app_groups": ["app2"],
+                "source": "p2/sbkube.yaml",
                 "depends_on": ["p1"],
             },
             "p3": {
                 "description": "Third",
-                "source": "p3/sources.yaml",
-                "app_groups": ["app3"],
+                "source": "p3/sbkube.yaml",
                 "depends_on": ["p1"],
             },
         }
@@ -805,25 +807,21 @@ class TestWorkspaceParallelExecution:
         phases = {
             "p1": {
                 "description": "Root",
-                "source": "p1/sources.yaml",
-                "app_groups": ["app1"],
+                "source": "p1/sbkube.yaml",
             },
             "p2": {
                 "description": "Left branch",
-                "source": "p2/sources.yaml",
-                "app_groups": ["app2"],
+                "source": "p2/sbkube.yaml",
                 "depends_on": ["p1"],
             },
             "p3": {
                 "description": "Right branch",
-                "source": "p3/sources.yaml",
-                "app_groups": ["app3"],
+                "source": "p3/sbkube.yaml",
                 "depends_on": ["p1"],
             },
             "p4": {
                 "description": "Merge",
-                "source": "p4/sources.yaml",
-                "app_groups": ["app4"],
+                "source": "p4/sbkube.yaml",
                 "depends_on": ["p2", "p3"],
             },
         }
@@ -853,13 +851,11 @@ class TestWorkspaceParallelExecution:
         phases = {
             "p1": {
                 "description": "First",
-                "source": "p1/sources.yaml",
-                "app_groups": ["app1"],
+                "source": "p1/sbkube.yaml",
             },
             "p2": {
                 "description": "Second",
-                "source": "p2/sources.yaml",
-                "app_groups": ["app2"],
+                "source": "p2/sbkube.yaml",
                 "depends_on": ["p1"],
             },
         }

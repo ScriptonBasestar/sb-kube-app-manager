@@ -1081,18 +1081,6 @@ def _finalize_status_output(
     )
 
 
-def _finalize_status_output(
-    output: OutputManager,
-    data: dict,
-    helm_releases: list[dict],
-    by_group: bool,
-    app_group: str | None,
-) -> None:
-    """Finalize structured output for LLM/JSON/YAML formats."""
-    # Already added deployments via add_deployment() calls
-    # This is a placeholder for any additional structured output finalization
-
-
 def _display_update_check(
     base_path: Path,
     sources,

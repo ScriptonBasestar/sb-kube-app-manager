@@ -469,7 +469,49 @@ def cmd(
         output.print(
             f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info"
         )
-        config_data = load_config_file(config_file_path)
+        raw_data = load_config_file(config_file_path)
+
+        # 통합 sbkube.yaml 포맷 감지 (apiVersion이 sbkube/로 시작)
+        api_version = raw_data.get("apiVersion", "") if raw_data else ""
+        if api_version.startswith("sbkube/"):
+            # 통합 포맷: apps와 namespace 추출
+            apps_data = raw_data.get("apps", {})
+            if not apps_data:
+                output.print_warning(f"No apps found in: {config_file_path}")
+                continue
+
+            # namespace 상속 처리 (parent → current)
+            merged_namespace = "default"
+            current_dir = config_file_path.parent
+            parent_configs = []
+            for _ in range(5):
+                parent_dir = current_dir.parent
+                if parent_dir == current_dir:
+                    break
+                parent_config = parent_dir / "sbkube.yaml"
+                if parent_config.exists():
+                    parent_configs.append(parent_config)
+                current_dir = parent_dir
+
+            for parent_config in reversed(parent_configs):
+                try:
+                    parent_data = load_config_file(parent_config)
+                    if parent_data and parent_data.get("apiVersion", "").startswith("sbkube/"):
+                        parent_ns = parent_data.get("settings", {}).get("namespace")
+                        if parent_ns:
+                            merged_namespace = parent_ns
+                except Exception:
+                    pass
+
+            # 현재 config의 namespace로 오버라이드
+            current_namespace = raw_data.get("settings", {}).get("namespace")
+            if current_namespace:
+                merged_namespace = current_namespace
+
+            config_data = {"apps": apps_data, "namespace": merged_namespace}
+        else:
+            # 레거시 포맷: 전체 데이터가 SBKubeConfig
+            config_data = raw_data
 
         try:
             config = SBKubeConfig(**config_data)

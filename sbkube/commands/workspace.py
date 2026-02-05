@@ -13,7 +13,7 @@ from rich.table import Table
 from rich.tree import Tree
 
 from sbkube.exceptions import ConfigValidationError
-from sbkube.models.workspace_model import PhaseConfig, WorkspaceConfig
+from sbkube.models.unified_config_model import PhaseReference, UnifiedConfig
 from sbkube.models.workspace_state import (
     PhaseDeploymentCreate,
     WorkspaceDeploymentCreate,
@@ -44,17 +44,17 @@ class WorkspaceValidateCommand:
         """Initialize workspace validate command.
 
         Args:
-            workspace_file: workspace.yaml 경로
+            workspace_file: sbkube.yaml 경로
 
         """
         self.workspace_file = Path(workspace_file)
         self.console = Console()
 
-    def execute(self) -> WorkspaceConfig:
+    def execute(self) -> UnifiedConfig:
         """Execute workspace validation.
 
         Returns:
-            WorkspaceConfig: 검증된 workspace 설정
+            UnifiedConfig: 검증된 workspace 설정
 
         Raises:
             click.Abort: 검증 실패 시
@@ -78,8 +78,8 @@ class WorkspaceValidateCommand:
 
         # Pydantic 모델 검증
         try:
-            logger.info("Workspace 모델 검증 중 (WorkspaceConfig)...")
-            workspace = WorkspaceConfig(**data)
+            logger.info("Workspace 모델 검증 중 (UnifiedConfig)...")
+            workspace = UnifiedConfig(**data)
             logger.success("Workspace 모델 검증 통과")
         except (PydanticValidationError, ConfigValidationError) as e:
             logger.error("Workspace 모델 검증 실패:")
@@ -98,7 +98,7 @@ class WorkspaceValidateCommand:
         logger.success("✅ Workspace 검증 완료")
         return workspace
 
-    def _print_validation_summary(self, workspace: WorkspaceConfig) -> None:
+    def _print_validation_summary(self, workspace: UnifiedConfig) -> None:
         """Print workspace validation summary.
 
         Args:
@@ -106,15 +106,15 @@ class WorkspaceValidateCommand:
 
         """
         self.console.print("\n[bold cyan]━━━ Workspace Summary ━━━[/bold cyan]")
-        self.console.print(f"  Name: {workspace.metadata.name}")
-        if workspace.metadata.description:
-            self.console.print(f"  Description: {workspace.metadata.description}")
-        if workspace.metadata.environment:
-            self.console.print(f"  Environment: {workspace.metadata.environment}")
-        if workspace.metadata.tags:
-            self.console.print(f"  Tags: {', '.join(workspace.metadata.tags)}")
+        self.console.print(f"  Name: {workspace.metadata.get('name', 'unnamed')}")
+        if workspace.metadata.get("description"):
+            self.console.print(f"  Description: {workspace.metadata['description']}")
+        if workspace.metadata.get("environment"):
+            self.console.print(f"  Environment: {workspace.metadata['environment']}")
+        if workspace.metadata.get("tags"):
+            self.console.print(f"  Tags: {', '.join(workspace.metadata['tags'])}")
 
-        self.console.print(f"\n  Version: {workspace.version}")
+        self.console.print(f"\n  API Version: {workspace.apiVersion}")
         self.console.print(f"  Phases: {len(workspace.phases)}")
 
         # Phase 리스트 출력
@@ -125,7 +125,7 @@ class WorkspaceValidateCommand:
 
         for phase_name, phase_config in workspace.phases.items():
             deps_str = ", ".join(phase_config.depends_on) if phase_config.depends_on else "-"
-            groups_str = ", ".join(phase_config.app_groups)
+            groups_str = ", ".join(phase_config.app_groups) if phase_config.app_groups else "(auto)"
             table.add_row(phase_name, groups_str, deps_str)
 
         self.console.print(table)
@@ -147,7 +147,7 @@ class WorkspaceGraphCommand:
         """Initialize workspace graph command.
 
         Args:
-            workspace_file: workspace.yaml 경로
+            workspace_file: sbkube.yaml 경로
 
         """
         self.workspace_file = Path(workspace_file)
@@ -170,7 +170,7 @@ class WorkspaceGraphCommand:
         # 파일 로드
         try:
             data = load_config_file(str(self.workspace_file))
-            workspace = WorkspaceConfig(**data)
+            workspace = UnifiedConfig(**data)
         except Exception as e:
             logger.error(f"Workspace 로딩 실패: {e}")
             raise click.Abort
@@ -178,15 +178,16 @@ class WorkspaceGraphCommand:
         # 의존성 그래프 출력
         self._print_dependency_graph(workspace)
 
-    def _print_dependency_graph(self, workspace: WorkspaceConfig) -> None:
+    def _print_dependency_graph(self, workspace: UnifiedConfig) -> None:
         """Print dependency graph using Rich Tree.
 
         Args:
             workspace: 검증된 workspace 설정
 
         """
+        workspace_name = workspace.metadata.get("name", "unnamed")
         self.console.print(
-            f"\n[bold cyan]━━━ Phase Dependency Graph: {workspace.metadata.name} ━━━[/bold cyan]"
+            f"\n[bold cyan]━━━ Phase Dependency Graph: {workspace_name} ━━━[/bold cyan]"
         )
 
         # Phase 실행 순서 계산
@@ -197,7 +198,7 @@ class WorkspaceGraphCommand:
             raise click.Abort
 
         # 의존성 그래프 생성
-        tree = Tree(f"[bold]Workspace: {workspace.metadata.name}[/bold]")
+        tree = Tree(f"[bold]Workspace: {workspace_name}[/bold]")
 
         # 각 Phase를 실행 순서대로 트리에 추가
         for phase_name in phase_order:
@@ -214,12 +215,18 @@ class WorkspaceGraphCommand:
                 phase_branch.add(f"[yellow]Depends on:[/yellow] {deps_str}")
 
             # App Groups 표시
-            groups_branch = phase_branch.add("[green]App Groups:[/green]")
-            for group in phase_config.app_groups:
-                groups_branch.add(f"├─ {group}")
+            if phase_config.app_groups:
+                groups_branch = phase_branch.add("[green]App Groups:[/green]")
+                for group in phase_config.app_groups:
+                    groups_branch.add(f"├─ {group}")
+            else:
+                phase_branch.add("[green]App Groups:[/green] (auto-discover)")
 
             # Source 표시
-            phase_branch.add(f"[magenta]Source:[/magenta] {phase_config.source}")
+            if phase_config.source:
+                phase_branch.add(f"[magenta]Source:[/magenta] {phase_config.source}")
+            else:
+                phase_branch.add(f"[magenta]Inline apps:[/magenta] {len(phase_config.apps)}")
 
         self.console.print(tree)
 
@@ -234,13 +241,13 @@ class WorkspaceInitCommand:
 
     def __init__(
         self,
-        output_file: str = "workspace.yaml",
+        output_file: str = "sbkube.yaml",
         interactive: bool = True,
     ) -> None:
         """Initialize workspace init command.
 
         Args:
-            output_file: 생성할 workspace.yaml 경로
+            output_file: 생성할 sbkube.yaml 경로
             interactive: 대화형 모드 여부
 
         """
@@ -320,8 +327,8 @@ class WorkspaceInitCommand:
                 f"Phase {i} 설명", default=f"Phase {i}", type=str
             )
             phase_source = click.prompt(
-                f"Phase {i} sources.yaml 경로",
-                default=f"p{i}-kube/sources.yaml",
+                f"Phase {i} sbkube.yaml 경로",
+                default=f"p{i}-kube/sbkube.yaml",
                 type=str,
             )
 
@@ -356,14 +363,14 @@ class WorkspaceInitCommand:
                 phases[phase_name]["depends_on"] = depends_on
 
         return {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {
                 "name": workspace_name,
                 "description": description if description else None,
                 "environment": environment,
                 "tags": ["workspace", environment],
             },
-            "global": {
+            "settings": {
                 "timeout": 600,
                 "on_failure": "stop",
             },
@@ -373,37 +380,32 @@ class WorkspaceInitCommand:
     def _default_template(self) -> dict:
         """기본 템플릿 생성."""
         return {
-            "version": "1.0",
+            "apiVersion": "sbkube/v1",
             "metadata": {
                 "name": "my-workspace",
                 "description": "Multi-phase deployment workspace",
                 "environment": "dev",
                 "tags": ["workspace", "multi-phase"],
             },
-            "global": {
-                "kubeconfig": None,
-                "context": None,
+            "settings": {
+                "namespace": "default",
                 "timeout": 600,
                 "on_failure": "stop",
-                "helm_repos": {},
             },
             "phases": {
                 "p1-infra": {
                     "description": "Infrastructure phase",
-                    "source": "p1-kube/sources.yaml",
-                    "app_groups": ["a000_network", "a001_storage"],
+                    "source": "p1-kube/sbkube.yaml",
                     "depends_on": [],
                 },
                 "p2-data": {
                     "description": "Data layer phase",
-                    "source": "p2-kube/sources.yaml",
-                    "app_groups": ["a100_postgres", "a101_redis"],
+                    "source": "p2-kube/sbkube.yaml",
                     "depends_on": ["p1-infra"],
                 },
                 "p3-app": {
                     "description": "Application phase",
-                    "source": "p3-kube/sources.yaml",
-                    "app_groups": ["a200_backend", "a201_frontend"],
+                    "source": "p3-kube/sbkube.yaml",
                     "depends_on": ["p2-data"],
                 },
             },
@@ -414,10 +416,10 @@ class WorkspaceInitCommand:
         self.console.print("\n[bold green]🎉 Workspace 초기화 완료![/bold green]")
         self.console.print("\n[bold cyan]다음 단계:[/bold cyan]")
         self.console.print(f"  1. {self.output_file} 파일을 확인하세요")
-        self.console.print("  2. 각 Phase의 sources.yaml 파일을 생성하세요:")
-        self.console.print("     - p1-kube/sources.yaml")
-        self.console.print("     - p2-kube/sources.yaml")
-        self.console.print("     - p3-kube/sources.yaml")
+        self.console.print("  2. 각 Phase의 sbkube.yaml 파일을 생성하세요:")
+        self.console.print("     - p1-kube/sbkube.yaml")
+        self.console.print("     - p2-kube/sbkube.yaml")
+        self.console.print("     - p3-kube/sbkube.yaml")
         self.console.print("\n  3. Workspace를 검증하세요:")
         self.console.print(f"     sbkube workspace validate {self.output_file}")
         self.console.print("\n  4. Phase 의존성 그래프를 확인하세요:")
@@ -433,7 +435,7 @@ def workspace_group() -> None:
 @click.argument(
     "workspace_file",
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
-    default="workspace.yaml",
+    default="sbkube.yaml",
 )
 @click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
@@ -444,14 +446,14 @@ def validate_cmd(
     verbose: bool,
     debug: bool,
 ) -> None:
-    """workspace.yaml 파일을 검증합니다.
+    """sbkube.yaml 파일을 검증합니다.
 
     Examples:
-        # Validate default workspace.yaml
+        # Validate default sbkube.yaml
         sbkube workspace validate
 
         # Validate specific file
-        sbkube workspace validate /path/to/workspace.yaml
+        sbkube workspace validate /path/to/sbkube.yaml
 
     """
     ctx.ensure_object(dict)
@@ -467,7 +469,7 @@ def validate_cmd(
 @click.argument(
     "workspace_file",
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
-    default="workspace.yaml",
+    default="sbkube.yaml",
 )
 @click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
@@ -481,11 +483,11 @@ def graph_cmd(
     """Phase 의존성 그래프를 시각화합니다.
 
     Examples:
-        # Visualize default workspace.yaml
+        # Visualize default sbkube.yaml
         sbkube workspace graph
 
         # Visualize specific file
-        sbkube workspace graph /path/to/workspace.yaml
+        sbkube workspace graph /path/to/sbkube.yaml
 
     """
     ctx.ensure_object(dict)
@@ -501,7 +503,7 @@ def graph_cmd(
 @click.argument(
     "output_file",
     type=click.Path(dir_okay=False, resolve_path=True),
-    default="workspace.yaml",
+    default="sbkube.yaml",
 )
 @click.option(
     "--non-interactive",
@@ -518,7 +520,7 @@ def init_cmd(
     verbose: bool,
     debug: bool,
 ) -> None:
-    """workspace.yaml 템플릿을 생성합니다.
+    """sbkube.yaml 템플릿을 생성합니다.
 
     Examples:
         # Interactive mode (default)
@@ -528,7 +530,7 @@ def init_cmd(
         sbkube workspace init --non-interactive
 
         # Custom output path
-        sbkube workspace init /path/to/workspace.yaml
+        sbkube workspace init /path/to/sbkube.yaml
 
     """
     ctx.ensure_object(dict)
@@ -565,7 +567,7 @@ class WorkspaceDeployCommand:
         """Initialize workspace deploy command.
 
         Args:
-            workspace_file: workspace.yaml 경로
+            workspace_file: sbkube.yaml 경로
             phase: 특정 Phase만 배포 (None이면 전체 배포)
             dry_run: 실제 배포 없이 시뮬레이션
             force: 이전 상태 무시하고 강제 배포
@@ -661,7 +663,7 @@ class WorkspaceDeployCommand:
         return success
 
     def _start_deployment_tracking(
-        self, workspace: WorkspaceConfig, phase_order: list[str]
+        self, workspace: UnifiedConfig, phase_order: list[str]
     ) -> None:
         """Start deployment state tracking.
 
@@ -675,9 +677,9 @@ class WorkspaceDeployCommand:
 
             # Create workspace deployment record
             create_data = WorkspaceDeploymentCreate(
-                workspace_name=workspace.metadata.name,
+                workspace_name=workspace.metadata.get("name", "unnamed"),
                 workspace_file=str(self.workspace_file),
-                environment=workspace.metadata.environment,
+                environment=workspace.metadata.get("environment"),
                 dry_run=self.dry_run,
                 force=self.force,
                 target_phase=self.phase,
@@ -735,7 +737,7 @@ class WorkspaceDeployCommand:
                     f"(success={success})"
                 )
 
-    def _load_and_validate_workspace(self) -> WorkspaceConfig:
+    def _load_and_validate_workspace(self) -> UnifiedConfig:
         """Load and validate workspace configuration.
 
         Returns:
@@ -760,8 +762,9 @@ class WorkspaceDeployCommand:
 
         # Pydantic 모델 검증
         try:
-            workspace = WorkspaceConfig(**data)
-            logger.success(f"Workspace '{workspace.metadata.name}' 로드 완료")
+            workspace = UnifiedConfig(**data)
+            workspace_name = workspace.metadata.get("name", "unnamed")
+            logger.success(f"Workspace '{workspace_name}' 로드 완료")
         except (PydanticValidationError, ConfigValidationError) as e:
             logger.error("Workspace 검증 실패:")
             if isinstance(e, PydanticValidationError):
@@ -772,13 +775,13 @@ class WorkspaceDeployCommand:
                 logger.error(str(e))
             raise click.Abort
 
-        # sources.yaml 파일 존재 검증 (skip_validation이 아닌 경우)
+        # source 파일 존재 검증 (skip_validation이 아닌 경우)
         if not self.skip_validation:
             self._validate_source_files(workspace)
 
         return workspace
 
-    def _validate_source_files(self, workspace: WorkspaceConfig) -> None:
+    def _validate_source_files(self, workspace: UnifiedConfig) -> None:
         """Validate that all source files exist.
 
         Args:
@@ -790,17 +793,20 @@ class WorkspaceDeployCommand:
         """
         missing_files = []
         for phase_name, phase_config in workspace.phases.items():
+            # Skip phases with inline apps (no source file)
+            if not phase_config.source:
+                continue
             source_path = self.workspace_dir / phase_config.source
             if not source_path.exists():
                 missing_files.append((phase_name, str(source_path)))
 
         if missing_files:
-            logger.error("다음 sources.yaml 파일이 존재하지 않습니다:")
+            logger.error("다음 source 파일이 존재하지 않습니다:")
             for phase_name, path in missing_files:
                 logger.error(f"  - Phase '{phase_name}': {path}")
             raise click.Abort
 
-    def _get_execution_order(self, workspace: WorkspaceConfig) -> list[str]:
+    def _get_execution_order(self, workspace: UnifiedConfig) -> list[str]:
         """Get phase execution order.
 
         Args:
@@ -830,7 +836,7 @@ class WorkspaceDeployCommand:
             raise click.Abort
 
     def _get_phase_with_dependencies(
-        self, workspace: WorkspaceConfig, target_phase: str
+        self, workspace: UnifiedConfig, target_phase: str
     ) -> list[str]:
         """Get target phase with all its dependencies.
 
@@ -865,7 +871,7 @@ class WorkspaceDeployCommand:
         return [p for p in full_order if p in result]
 
     def _execute_phases(
-        self, workspace: WorkspaceConfig, phase_order: list[str]
+        self, workspace: UnifiedConfig, phase_order: list[str]
     ) -> bool:
         """Execute phases in order.
 
@@ -906,15 +912,18 @@ class WorkspaceDeployCommand:
                 f"[bold yellow]Phase {i}/{len(phase_order)}: {phase_name}[/bold yellow]"
             )
             self.console.print(f"  Description: {phase_config.description}")
-            self.console.print(f"  App Groups: {', '.join(phase_config.app_groups)}")
+            if phase_config.app_groups:
+                self.console.print(f"  App Groups: {', '.join(phase_config.app_groups)}")
+            else:
+                self.console.print("  App Groups: (auto-discovering...)")
 
             # Phase 배포 실행
-            success = self._deploy_phase(phase_name, phase_config, workspace)
+            success, deployed_app_groups = self._deploy_phase(phase_name, phase_config, workspace)
 
             # 결과 저장
             self.phase_results[phase_name] = {
                 "success": success,
-                "app_groups": phase_config.app_groups,
+                "app_groups": deployed_app_groups,
             }
 
             if success:
@@ -939,7 +948,7 @@ class WorkspaceDeployCommand:
         return all_success
 
     def _execute_phases_parallel(
-        self, workspace: WorkspaceConfig, phase_order: list[str]
+        self, workspace: UnifiedConfig, phase_order: list[str]
     ) -> bool:
         """Execute phases in parallel where possible.
 
@@ -1015,7 +1024,7 @@ class WorkspaceDeployCommand:
         return all_success
 
     def _calculate_parallel_levels(
-        self, workspace: WorkspaceConfig, phase_order: list[str]
+        self, workspace: UnifiedConfig, phase_order: list[str]
     ) -> list[list[str]]:
         """Calculate parallel execution levels.
 
@@ -1066,7 +1075,7 @@ class WorkspaceDeployCommand:
     def _execute_single_phase(
         self,
         phase_name: str,
-        workspace: WorkspaceConfig,
+        workspace: UnifiedConfig,
         global_on_failure: str,
     ) -> bool:
         """Execute a single phase and update results.
@@ -1097,14 +1106,17 @@ class WorkspaceDeployCommand:
 
         self.console.print(f"[bold yellow]Phase: {phase_name}[/bold yellow]")
         self.console.print(f"  Description: {phase_config.description}")
-        self.console.print(f"  App Groups: {', '.join(phase_config.app_groups)}")
+        if phase_config.app_groups:
+            self.console.print(f"  App Groups: {', '.join(phase_config.app_groups)}")
+        else:
+            self.console.print("  App Groups: (auto-discovering...)")
 
-        success = self._deploy_phase(phase_name, phase_config, workspace)
+        success, deployed_app_groups = self._deploy_phase(phase_name, phase_config, workspace)
 
         with self._results_lock:
             self.phase_results[phase_name] = {
                 "success": success,
-                "app_groups": phase_config.app_groups,
+                "app_groups": deployed_app_groups,
             }
 
         if success:
@@ -1117,7 +1129,7 @@ class WorkspaceDeployCommand:
     def _execute_level_parallel(
         self,
         phases: list[str],
-        workspace: WorkspaceConfig,
+        workspace: UnifiedConfig,
         global_on_failure: str,
     ) -> dict[str, bool]:
         """Execute multiple phases in parallel.
@@ -1154,13 +1166,13 @@ class WorkspaceDeployCommand:
             for future in as_completed(futures):
                 phase_name = futures[future]
                 try:
-                    success = future.result()
+                    success, deployed_app_groups = future.result()
                     results[phase_name] = success
 
                     with self._results_lock:
                         self.phase_results[phase_name] = {
                             "success": success,
-                            "app_groups": workspace.phases[phase_name].app_groups,
+                            "app_groups": deployed_app_groups,
                         }
 
                     if success:
@@ -1184,9 +1196,9 @@ class WorkspaceDeployCommand:
     def _deploy_phase_thread_safe(
         self,
         phase_name: str,
-        phase_config: PhaseConfig,
-        workspace: WorkspaceConfig,
-    ) -> bool:
+        phase_config: PhaseReference,
+        workspace: UnifiedConfig,
+    ) -> tuple[bool, list[str]]:
         """Thread-safe wrapper for _deploy_phase.
 
         Args:
@@ -1195,22 +1207,22 @@ class WorkspaceDeployCommand:
             workspace: Workspace configuration
 
         Returns:
-            bool: 배포 성공 여부
+            tuple[bool, list[str]]: (배포 성공 여부, 배포된 app_groups)
 
         """
         # Note: Console output may interleave in parallel mode
-        # For dry-run, we just return True
+        # For dry-run, we just return True with original app_groups
         if self.dry_run:
-            return True
+            return (True, phase_config.app_groups)
 
         return self._deploy_phase(phase_name, phase_config, workspace)
 
     def _deploy_phase(
         self,
         phase_name: str,
-        phase_config: PhaseConfig,
-        workspace: WorkspaceConfig,
-    ) -> bool:
+        phase_config: PhaseReference,
+        workspace: UnifiedConfig,
+    ) -> tuple[bool, list[str]]:
         """Deploy a single phase.
 
         Args:
@@ -1219,11 +1231,155 @@ class WorkspaceDeployCommand:
             workspace: Workspace configuration
 
         Returns:
-            bool: 배포 성공 여부
+            tuple[bool, list[str]]: (배포 성공 여부, 배포된 app_groups 목록)
 
         """
+        # Handle phases with inline apps (no source file)
+        if not phase_config.source:
+            # Inline apps deployment
+            self._start_phase_tracking(phase_name)
+
+            if self.dry_run:
+                self.console.print(
+                    f"  [yellow]🔍 [DRY-RUN] Deploying {len(phase_config.apps)} inline apps[/yellow]"
+                )
+                self._complete_phase_tracking(
+                    phase_name, True, completed_app_groups=len(phase_config.apps)
+                )
+                return (True, list(phase_config.apps.keys()))
+
+            # TODO: Implement inline apps deployment
+            self.console.print(
+                f"  [yellow]⚠️  Inline apps deployment not yet implemented[/yellow]"
+            )
+            self._complete_phase_tracking(phase_name, False, "Inline apps not supported yet")
+            return (False, list(phase_config.apps.keys()))
+
         source_path = self.workspace_dir / phase_config.source
         base_dir = source_path.parent
+
+        # Check if source is a nested workspace (sbkube.yaml with phases) or app config (with apps)
+        if source_path.name.endswith('.yaml') and source_path.exists():
+            try:
+                nested_data = load_config_file(str(source_path))
+                if 'phases' in nested_data:
+                    # This is a nested workspace - deploy recursively
+                    self.console.print(
+                        f"  [magenta]🔄 Nested workspace detected: {source_path.name}[/magenta]"
+                    )
+                    nested_workspace = UnifiedConfig(**nested_data)
+                    nested_phases = list(nested_workspace.phases.keys())
+
+                    # Start phase tracking for this phase
+                    self._start_phase_tracking(phase_name)
+
+                    # Create nested deployer
+                    nested_deployer = WorkspaceDeployCommand(
+                        workspace_file=str(source_path),
+                        phase=None,
+                        parallel=self.parallel,
+                        parallel_apps=self.parallel_apps,
+                        dry_run=self.dry_run,
+                        force=self.force,
+                        skip_validation=True,  # Already validated parent
+                    )
+
+                    # Execute nested workspace
+                    success = nested_deployer._execute_phases(
+                        nested_workspace, nested_workspace.get_phase_order()
+                    )
+
+                    # Complete phase tracking
+                    self._complete_phase_tracking(
+                        phase_name, success, completed_app_groups=len(nested_phases)
+                    )
+                    return (success, nested_phases)
+
+                elif 'apps' in nested_data and nested_data['apps']:
+                    # This is an app config (sbkube.yaml with apps) - deploy using ApplyCommand
+                    self.console.print(
+                        f"  [cyan]📦 App config detected: {source_path.name}[/cyan]"
+                    )
+                    nested_config = UnifiedConfig(**nested_data)
+                    app_names = list(nested_config.apps.keys())
+                    enabled_apps = [
+                        name for name, app in nested_config.apps.items()
+                        if app.enabled
+                    ]
+
+                    if not enabled_apps:
+                        self.console.print(
+                            f"  [yellow]⚠️  No enabled apps in {source_path.name}[/yellow]"
+                        )
+                        self._start_phase_tracking(phase_name)
+                        self._complete_phase_tracking(phase_name, True, completed_app_groups=0)
+                        return (True, [])
+
+                    self.console.print(
+                        f"  [cyan]   Apps: {', '.join(enabled_apps)}[/cyan]"
+                    )
+
+                    # Start phase tracking for this phase
+                    self._start_phase_tracking(phase_name)
+
+                    if self.dry_run:
+                        self.console.print(
+                            f"  [yellow]🔍 [DRY-RUN] Would deploy {len(enabled_apps)} app(s)[/yellow]"
+                        )
+                        self._complete_phase_tracking(
+                            phase_name, True, completed_app_groups=len(enabled_apps)
+                        )
+                        return (True, enabled_apps)
+
+                    # Deploy apps using ApplyCommand
+                    from sbkube.commands.apply import ApplyCommand
+
+                    try:
+                        apply_cmd = ApplyCommand(
+                            config_file=str(source_path),
+                            dry_run=self.dry_run,
+                            force=self.force,
+                            parallel=self.parallel_apps,
+                        )
+                        success = apply_cmd.execute()
+                        self._complete_phase_tracking(
+                            phase_name,
+                            success,
+                            completed_app_groups=len(enabled_apps) if success else 0,
+                        )
+                        return (success, enabled_apps)
+                    except Exception as e:
+                        self.console.print(
+                            f"  [red]❌ App deployment failed: {e}[/red]"
+                        )
+                        self._complete_phase_tracking(phase_name, False, str(e))
+                        return (False, [])
+
+            except Exception as e:
+                self.console.print(
+                    f"  [yellow]⚠️  Could not parse nested config: {e}[/yellow]"
+                )
+                # Fall through to normal processing
+
+        # Auto-discover app_groups if not specified (legacy config.yaml support)
+        app_groups = list(phase_config.app_groups)
+        if not app_groups:
+            from sbkube.utils.common import find_all_app_dirs
+
+            # Try sbkube.yaml first, then config.yaml for backwards compatibility
+            discovered_dirs = find_all_app_dirs(base_dir, "sbkube.yaml")
+            if not discovered_dirs:
+                discovered_dirs = find_all_app_dirs(base_dir, "config.yaml")
+            if discovered_dirs:
+                app_groups = [d.name for d in discovered_dirs]
+                self.console.print(
+                    f"  [cyan]📂 Auto-discovered {len(app_groups)} app group(s): "
+                    f"{', '.join(app_groups)}[/cyan]"
+                )
+            else:
+                self.console.print(
+                    f"  [yellow]⚠️  No app groups found in {base_dir}[/yellow]"
+                )
 
         # Start phase tracking
         self._start_phase_tracking(phase_name)
@@ -1232,13 +1388,13 @@ class WorkspaceDeployCommand:
             self.console.print("  [yellow]🔍 [DRY-RUN] sbkube apply[/yellow]")
             self.console.print(f"     --base-dir {base_dir}")
             self.console.print(f"     --source {source_path.name}")
-            for group in phase_config.app_groups:
+            for group in app_groups:
                 self.console.print(f"     --app-dir {group}")
             # Complete phase tracking (dry-run is always success)
             self._complete_phase_tracking(
-                phase_name, True, completed_app_groups=len(phase_config.app_groups)
+                phase_name, True, completed_app_groups=len(app_groups)
             )
-            return True
+            return (True, app_groups)
 
         # 실제 배포: sbkube apply 명령 호출
         completed_app_groups = 0
@@ -1247,7 +1403,14 @@ class WorkspaceDeployCommand:
 
             # Parallel apps mode: execute app_groups in parallel within each level
             if self.parallel_apps:
-                app_group_levels = phase_config.get_app_group_order()
+                # Use phase_config.get_app_group_order() if app_groups were specified,
+                # otherwise use auto-discovered app_groups as a single level
+                if phase_config.app_groups:
+                    app_group_levels = phase_config.get_app_group_order()
+                else:
+                    # Auto-discovered: no deps info, treat as single parallel level
+                    app_group_levels = [app_groups] if app_groups else []
+
                 self.console.print(
                     f"  [magenta]Parallel mode: {len(app_group_levels)} levels[/magenta]"
                 )
@@ -1267,7 +1430,7 @@ class WorkspaceDeployCommand:
                             self._complete_phase_tracking(
                                 phase_name, False, error_msg, completed_app_groups
                             )
-                            return False
+                            return (False, app_groups)
                     else:
                         # Single app group - execute sequentially
                         app_group = level_groups[0]
@@ -1277,11 +1440,11 @@ class WorkspaceDeployCommand:
                             self._complete_phase_tracking(
                                 phase_name, False, error_msg, completed_app_groups
                             )
-                            return False
+                            return (False, app_groups)
                         completed_app_groups += 1
             else:
                 # Sequential mode: ApplyCommand 생성 및 실행
-                for app_group in phase_config.app_groups:
+                for app_group in app_groups:
                     self.console.print(f"  Deploying app group: {app_group}")
 
                     apply_cmd = ApplyCommand(
@@ -1303,33 +1466,33 @@ class WorkspaceDeployCommand:
                         self._complete_phase_tracking(
                             phase_name, False, error_msg, completed_app_groups
                         )
-                        return False
+                        return (False, app_groups)
 
                     completed_app_groups += 1
 
             self._complete_phase_tracking(phase_name, True, completed_app_groups=completed_app_groups)
-            return True
+            return (True, app_groups)
 
         except ImportError:
             # ApplyCommand가 없는 경우 subprocess로 실행
             result = self._deploy_phase_subprocess(
-                phase_name, phase_config, base_dir, source_path
+                phase_name, phase_config, base_dir, source_path, app_groups
             )
             # For subprocess, we assume all or nothing
             if result:
                 self._complete_phase_tracking(
-                    phase_name, True, completed_app_groups=len(phase_config.app_groups)
+                    phase_name, True, completed_app_groups=len(app_groups)
                 )
             else:
                 self._complete_phase_tracking(
                     phase_name, False, "Subprocess deployment failed"
                 )
-            return result
+            return (result, app_groups)
         except Exception as e:
             error_msg = f"Phase '{phase_name}' 배포 중 오류: {e}"
             logger.error(error_msg)
             self._complete_phase_tracking(phase_name, False, error_msg, completed_app_groups)
-            return False
+            return (False, app_groups)
 
     def _deploy_single_app_group(
         self,
@@ -1469,9 +1632,10 @@ class WorkspaceDeployCommand:
     def _deploy_phase_subprocess(
         self,
         phase_name: str,
-        phase_config: PhaseConfig,
+        phase_config: PhaseReference,
         base_dir: Path,
         source_path: Path,
+        app_groups: list[str] | None = None,
     ) -> bool:
         """Deploy phase using subprocess.
 
@@ -1482,6 +1646,7 @@ class WorkspaceDeployCommand:
             phase_config: Phase configuration
             base_dir: Base directory
             source_path: Source file path
+            app_groups: List of app groups to deploy (if None, uses phase_config.app_groups)
 
         Returns:
             bool: 배포 성공 여부
@@ -1489,7 +1654,10 @@ class WorkspaceDeployCommand:
         """
         import subprocess
 
-        for app_group in phase_config.app_groups:
+        # Use provided app_groups or fall back to phase_config
+        groups_to_deploy = app_groups if app_groups is not None else phase_config.app_groups
+
+        for app_group in groups_to_deploy:
             self.console.print(f"  Deploying app group: {app_group}")
 
             cmd = [
@@ -1527,7 +1695,7 @@ class WorkspaceDeployCommand:
         return True
 
     def _print_summary(
-        self, workspace: WorkspaceConfig, phase_order: list[str]
+        self, workspace: UnifiedConfig, phase_order: list[str]
     ) -> None:
         """Print deployment summary.
 
@@ -1595,7 +1763,7 @@ class WorkspaceStatusCommand:
         """Initialize workspace status command.
 
         Args:
-            workspace_file: workspace.yaml 경로
+            workspace_file: sbkube.yaml 경로
             phase: 특정 Phase만 조회 (None이면 전체)
 
         """
@@ -1620,7 +1788,7 @@ class WorkspaceStatusCommand:
 
         try:
             data = load_config_file(str(self.workspace_file))
-            workspace = WorkspaceConfig(**data)
+            workspace = UnifiedConfig(**data)
         except Exception as e:
             logger.error(f"Workspace 로딩 실패: {e}")
             raise click.Abort
@@ -1628,21 +1796,22 @@ class WorkspaceStatusCommand:
         # 상태 출력
         self._print_workspace_status(workspace)
 
-    def _print_workspace_status(self, workspace: WorkspaceConfig) -> None:
+    def _print_workspace_status(self, workspace: UnifiedConfig) -> None:
         """Print workspace status.
 
         Args:
             workspace: Workspace configuration
 
         """
-        self.console.print(f"\n[bold cyan]━━━ Workspace: {workspace.metadata.name} ━━━[/bold cyan]")
+        workspace_name = workspace.metadata.get("name", "unnamed")
+        self.console.print(f"\n[bold cyan]━━━ Workspace: {workspace_name} ━━━[/bold cyan]")
 
-        if workspace.metadata.description:
-            self.console.print(f"Description: {workspace.metadata.description}")
-        if workspace.metadata.environment:
-            self.console.print(f"Environment: {workspace.metadata.environment}")
+        if workspace.metadata.get("description"):
+            self.console.print(f"Description: {workspace.metadata['description']}")
+        if workspace.metadata.get("environment"):
+            self.console.print(f"Environment: {workspace.metadata['environment']}")
 
-        self.console.print(f"Version: {workspace.version}")
+        self.console.print(f"API Version: {workspace.apiVersion}")
         self.console.print(f"Total Phases: {len(workspace.phases)}")
 
         # Phase 상태 테이블
@@ -1660,16 +1829,23 @@ class WorkspaceStatusCommand:
                 continue
 
             phase_config = workspace.phases[phase_name]
-            source_path = self.workspace_dir / phase_config.source
 
-            # Source 파일 존재 확인
-            source_exists = "[green]✓[/green]" if source_path.exists() else "[red]✗[/red]"
+            # Handle phases with inline apps (no source)
+            if phase_config.source:
+                source_path = self.workspace_dir / phase_config.source
+                source_exists = "[green]✓[/green]" if source_path.exists() else "[red]✗[/red]"
+                source_display = phase_config.source
+            else:
+                source_exists = "[dim]-[/dim]"
+                source_display = f"(inline: {len(phase_config.apps)} apps)"
+
+            app_groups_display = ", ".join(phase_config.app_groups) if phase_config.app_groups else "(auto)"
 
             table.add_row(
                 phase_name,
-                phase_config.description,
-                phase_config.source,
-                ", ".join(phase_config.app_groups),
+                phase_config.description or "",
+                source_display,
+                app_groups_display,
                 source_exists,
             )
 
@@ -1686,7 +1862,7 @@ class WorkspaceStatusCommand:
 @click.argument(
     "workspace_file",
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
-    default="workspace.yaml",
+    default="sbkube.yaml",
 )
 @click.option(
     "--phase",
@@ -1796,7 +1972,7 @@ def deploy_cmd(
 @click.argument(
     "workspace_file",
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
-    default="workspace.yaml",
+    default="sbkube.yaml",
 )
 @click.option(
     "--phase",

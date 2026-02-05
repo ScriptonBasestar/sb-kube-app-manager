@@ -331,16 +331,18 @@ def find_sources_file(
     app_config_dir: Path,
     sources_file_name: str = "sources.yaml",
 ) -> Path | None:
-    """sources.yaml 파일을 찾습니다.
+    """sources.yaml 또는 sbkube.yaml 파일을 찾습니다.
 
     다음 순서로 검색합니다:
-    1. app_config_dir (현재 작업 디렉토리, .)
-    2. app_config_dir 상위 디렉토리 (..)
-    3. base_dir (프로젝트 루트)
+    1. app_config_dir에서 지정된 파일 (sources_file_name)
+    2. app_config_dir 상위 디렉토리에서 지정된 파일
+    3. base_dir에서 지정된 파일
+    4. (fallback) sbkube.yaml을 위 순서로 검색
 
-    이 로직을 통해 다음 두 가지 실행 방법을 모두 지원합니다:
+    이 로직을 통해 다음 실행 방법을 모두 지원합니다:
     - `sbkube apply --app-dir app1` (base-dir에서 실행)
     - `cd app1 && sbkube apply` (app-dir에서 실행)
+    - `sbkube apply -f sbkube.yaml` (통합 포맷)
 
     Args:
         base_dir: 프로젝트 루트 디렉토리
@@ -361,21 +363,29 @@ def find_sources_file(
         >>> find_sources_file(Path("/project/app1"), Path("/project/app1"))
         Path("/project/sources.yaml")  # 상위 디렉토리에서 발견
 
+        >>> # Case 3: 통합 포맷 (sbkube.yaml)
+        >>> find_sources_file(Path("/project"), Path("/project/app1"))
+        Path("/project/sbkube.yaml")  # sources.yaml 없으면 sbkube.yaml
+
     """
-    # 1. app_config_dir에서 sources.yaml 찾기 (현재 디렉토리)
-    sources_path = app_config_dir / sources_file_name
-    if sources_path.exists():
-        return sources_path
+    # 검색할 파일 목록 (지정된 파일 먼저, 없으면 sbkube.yaml)
+    files_to_search = [sources_file_name]
+    if sources_file_name != "sbkube.yaml":
+        files_to_search.append("sbkube.yaml")
 
-    # 2. app_config_dir 상위 디렉토리에서 sources.yaml 찾기 (..)
-    parent_sources_path = app_config_dir.parent / sources_file_name
-    if parent_sources_path.exists():
-        return parent_sources_path
+    # 검색할 디렉토리 목록
+    dirs_to_search = [
+        app_config_dir,  # 현재 디렉토리
+        app_config_dir.parent,  # 상위 디렉토리
+        base_dir,  # 프로젝트 루트
+    ]
 
-    # 3. base_dir에서 sources.yaml 찾기 (프로젝트 루트)
-    base_sources_path = base_dir / sources_file_name
-    if base_sources_path.exists():
-        return base_sources_path
+    # 각 파일에 대해 순서대로 검색
+    for file_name in files_to_search:
+        for search_dir in dirs_to_search:
+            path = search_dir / file_name
+            if path.exists():
+                return path
 
     # 찾지 못함
     return None

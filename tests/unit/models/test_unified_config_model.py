@@ -296,50 +296,6 @@ class TestUnifiedConfig:
         assert resolved is None  # Inline apps have no source path
 
 
-class TestUnifiedConfigFromLegacy:
-    """Legacy 파일 변환 테스트."""
-
-    def test_from_legacy_files_sources_only(self, tmp_path: Path) -> None:
-        """sources.yaml만 있는 경우 테스트."""
-        sources_yaml = tmp_path / "sources.yaml"
-        sources_yaml.write_text("""
-kubeconfig: ~/.kube/config
-kubeconfig_context: test-context
-helm_repos:
-  grafana:
-    url: https://grafana.github.io/helm-charts
-""")
-
-        config = UnifiedConfig.from_legacy_files(
-            sources_path=sources_yaml,
-        )
-
-        assert config.settings.kubeconfig == "~/.kube/config"
-        assert config.settings.kubeconfig_context == "test-context"
-        assert "grafana" in config.settings.helm_repos
-
-    def test_from_legacy_files_workspace(self, tmp_path: Path) -> None:
-        """workspace.yaml 변환 테스트."""
-        workspace_yaml = tmp_path / "workspace.yaml"
-        workspace_yaml.write_text("""
-version: "1.0"
-metadata:
-  name: test-workspace
-  environment: prod
-global:
-  timeout: 900
-phases:
-  p1:
-    description: "Phase 1"
-    source: p1/sources.yaml
-    app_groups:
-      - app1
-""")
-
-        config = UnifiedConfig.from_legacy_files(
-            workspace_path=workspace_yaml,
-        )
-
-        assert config.metadata["name"] == "test-workspace"
-        assert config.settings.timeout == 900
-        assert "p1" in config.phases
+### Removed TestUnifiedConfigFromLegacy class ###
+# Legacy file conversion methods (from_legacy_files) were removed in v0.11.0
+# Only unified sbkube.yaml format is supported now

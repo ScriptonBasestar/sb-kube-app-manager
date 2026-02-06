@@ -241,6 +241,7 @@ def deploy_helm_app(
         .with_create_namespace(app.create_namespace)
         .with_wait(app.wait)
         .with_atomic(app.atomic)
+        .with_force_conflicts(app.force_conflicts)
         .with_timeout(app.timeout)
         .with_cluster_global_values(cluster_global_values)
     )

@@ -86,6 +86,7 @@ class HelmCommandBuilder:
         self._install_flag: bool = False
         self._wait: bool = False
         self._atomic: bool = False
+        self._force_conflicts: bool = False
         self._timeout: str | None = None
         self._values_files: list[Path] = []
         self._set_values: dict[str, str] = {}
@@ -144,6 +145,15 @@ class HelmCommandBuilder:
     def with_atomic(self, atomic: bool = True) -> "HelmCommandBuilder":
         """Enable --atomic flag."""
         self._atomic = atomic
+        return self
+
+    def with_force_conflicts(self, force: bool = True) -> "HelmCommandBuilder":
+        """Enable --force-conflicts flag (Helm 4.x server-side apply).
+
+        Use when operators modify Helm-managed resources at runtime,
+        causing field ownership conflicts on subsequent upgrades.
+        """
+        self._force_conflicts = force
         return self
 
     def with_timeout(self, timeout: str | None) -> "HelmCommandBuilder":
@@ -343,6 +353,9 @@ class HelmCommandBuilder:
 
         if self._atomic:
             cmd.append("--atomic")
+
+        if self._force_conflicts:
+            cmd.append("--force-conflicts")
 
         if self._timeout:
             cmd.extend(["--timeout", self._timeout])

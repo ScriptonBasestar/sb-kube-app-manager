@@ -665,6 +665,12 @@ class HelmApp(ConfigBaseModel):
     wait: bool = True
     timeout: str = "5m"
     atomic: bool = False
+    force_conflicts: bool = Field(
+        default=False,
+        description="Force server-side apply to overwrite field conflicts. "
+        "Use when operators modify Helm-managed resources at runtime (e.g., Percona PXC Operator). "
+        "Maps to Helm 4.x --force-conflicts flag.",
+    )
     helm_label_injection: bool = Field(
         default=True,
         description="Enable automatic label/annotation injection via commonLabels/commonAnnotations. "

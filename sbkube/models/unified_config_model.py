@@ -26,7 +26,6 @@ from .base_model import ConfigBaseModel
 from .config_model import AppConfig
 from .sources_model import GitRepoScheme, HelmRepoScheme, OciRepoScheme
 
-
 # ============================================================================
 # Unified Settings
 # ============================================================================
@@ -382,6 +381,18 @@ class PhaseReference(ConfigBaseModel):
         ),
     ] = {}
 
+    def get_on_failure(self, default: str = "stop") -> str:
+        """Resolve effective on_failure for this phase.
+
+        Priority: phase.on_failure > phase.settings.on_failure > default
+
+        """
+        if self.on_failure:
+            return self.on_failure
+        if self.settings and self.settings.on_failure:
+            return self.settings.on_failure
+        return default
+
     @model_validator(mode="after")
     def validate_source_or_apps(self) -> "PhaseReference":
         """Validate that either source or apps is defined (not both)."""
@@ -412,7 +423,7 @@ class PhaseReference(ConfigBaseModel):
             return [self.app_groups] if self.app_groups else []
 
         # Calculate in-degree for each group
-        in_degree = {group: 0 for group in self.app_groups}
+        in_degree = dict.fromkeys(self.app_groups, 0)
         for group, deps in self.app_group_deps.items():
             in_degree[group] = len(deps)
 
@@ -610,7 +621,7 @@ class UnifiedConfig(ConfigBaseModel):
         if not self.phases:
             return []
 
-        in_degree = {name: 0 for name in self.phases}
+        in_degree = dict.fromkeys(self.phases, 0)
         graph = {name: [] for name in self.phases}
 
         for name, phase in self.phases.items():

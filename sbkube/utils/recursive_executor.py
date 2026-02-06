@@ -22,15 +22,20 @@ Usage:
     result = executor.execute(config)
 """
 
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from sbkube.models.config_model import AppConfig
-from sbkube.models.unified_config_model import PhaseReference, UnifiedConfig, UnifiedSettings
+from sbkube.models.unified_config_model import (
+    PhaseReference,
+    UnifiedConfig,
+    UnifiedSettings,
+)
 from sbkube.utils.logger import logger
 from sbkube.utils.settings_merger import merge_settings
 
@@ -453,9 +458,10 @@ class RecursiveExecutor:
 
                 # Check if we should continue
                 if result.status == ExecutionStatus.FAILED:
-                    if settings.on_failure == "stop":
+                    effective_on_failure = phase_ref.get_on_failure(settings.on_failure)
+                    if effective_on_failure == "stop":
                         break
-                    elif settings.on_failure == "rollback":
+                    elif effective_on_failure == "rollback":
                         self._handle_rollback(settings.rollback_scope, result=result)
                         break
 
@@ -508,7 +514,11 @@ class RecursiveExecutor:
 
                 # Check for failures
                 failed = [r for r in parallel_results if r.status == ExecutionStatus.FAILED]
-                if failed and settings.on_failure == "stop":
+                should_stop = any(
+                    config.phases[r.phase_name].get_on_failure(settings.on_failure) == "stop"
+                    for r in failed
+                )
+                if should_stop:
                     break
 
                 for r in parallel_results:
@@ -517,12 +527,13 @@ class RecursiveExecutor:
             else:
                 # Single phase - execute sequentially
                 phase_name = ready_phases[0]
+                phase_ref = config.phases[phase_name]
                 result = self._execute_single_phase(
-                    phase_name, config.phases[phase_name], settings
+                    phase_name, phase_ref, settings
                 )
                 results.append(result)
 
-                if result.status == ExecutionStatus.FAILED and settings.on_failure == "stop":
+                if result.status == ExecutionStatus.FAILED and phase_ref.get_on_failure(settings.on_failure) == "stop":
                     break
 
                 completed_phases.add(phase_name)

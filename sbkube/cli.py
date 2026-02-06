@@ -203,6 +203,11 @@ def main(
     ctx.obj["format"] = output_format
     ctx.obj["verbose"] = verbose
 
+    # Optional perf profiling (SBKUBE_PERF=1)
+    from sbkube.utils.perf import enable_from_env
+
+    enable_from_env(output_format=output_format)
+
     # --profile 옵션으로 sources 파일명 자동 생성
     if profile:
         ctx.obj["sources_file"] = f"sources-{profile}.yaml"

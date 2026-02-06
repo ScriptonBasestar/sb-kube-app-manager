@@ -22,6 +22,7 @@ from sbkube.utils.file_loader import (
 )
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
+from sbkube.utils.perf import perf_timer
 from sbkube.utils.progress_tracker import ProgressTracker
 
 if TYPE_CHECKING:
@@ -414,16 +415,17 @@ def _execute_apps_deployment(
 
                     prepare_ctx = click.Context(prepare_cmd, parent=ctx)
                     prepare_ctx.obj = ctx.obj
-                    prepare_ctx.invoke(
-                        prepare_cmd,
-                        app_config_dir_name=current_app_dir,
-                        base_dir=base_dir,
-                        config_file_name=config_file_name,
-                        sources_file_name=sources_file_name,
-                        app_name=app_name_iter,
-                        force=False,
-                        dry_run=dry_run,
-                    )
+                    with perf_timer("stage.prepare", app=app_name_iter):
+                        prepare_ctx.invoke(
+                            prepare_cmd,
+                            app_config_dir_name=current_app_dir,
+                            base_dir=base_dir,
+                            config_file_name=config_file_name,
+                            sources_file_name=sources_file_name,
+                            app_name=app_name_iter,
+                            force=False,
+                            dry_run=dry_run,
+                        )
                     if use_progress:
                         progress_tracker.update(task_id, advance=1)
 
@@ -442,15 +444,16 @@ def _execute_apps_deployment(
 
                     build_ctx = click.Context(build_cmd, parent=ctx)
                     build_ctx.obj = ctx.obj
-                    build_ctx.invoke(
-                        build_cmd,
-                        app_config_dir_name=current_app_dir,
-                        base_dir=base_dir,
-                        config_file_name=config_file_name,
-                        sources_file_name=sources_file_name,
-                        app_name=app_name_iter,
-                        dry_run=dry_run,
-                    )
+                    with perf_timer("stage.build", app=app_name_iter):
+                        build_ctx.invoke(
+                            build_cmd,
+                            app_config_dir_name=current_app_dir,
+                            base_dir=base_dir,
+                            config_file_name=config_file_name,
+                            sources_file_name=sources_file_name,
+                            app_name=app_name_iter,
+                            dry_run=dry_run,
+                        )
                     if use_progress:
                         progress_tracker.update(task_id, advance=1)
 
@@ -473,15 +476,16 @@ def _execute_apps_deployment(
 
                 deploy_ctx = click.Context(deploy_cmd, parent=ctx)
                 deploy_ctx.obj = ctx.obj
-                deploy_ctx.invoke(
-                    deploy_cmd,
-                    app_config_dir_name=current_app_dir,
-                    base_dir=base_dir,
-                    config_file_name=config_file_name,
-                    sources_file_name=sources_file_name,
-                    app_name=app_name_iter,
-                    dry_run=dry_run,
-                )
+                with perf_timer("stage.deploy", app=app_name_iter):
+                    deploy_ctx.invoke(
+                        deploy_cmd,
+                        app_config_dir_name=current_app_dir,
+                        base_dir=base_dir,
+                        config_file_name=config_file_name,
+                        sources_file_name=sources_file_name,
+                        app_name=app_name_iter,
+                        dry_run=dry_run,
+                    )
                 if use_progress:
                     progress_tracker.update(task_id, advance=1)
                     progress_tracker.console_print(

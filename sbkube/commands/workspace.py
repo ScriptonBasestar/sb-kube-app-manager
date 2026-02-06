@@ -707,7 +707,7 @@ class WorkspaceDeployCommand:
                     execution_order=order,
                     depends_on=phase_config.depends_on,
                     app_groups=phase_config.app_groups,
-                    on_failure_action=phase_config.on_failure or workspace.settings.on_failure,
+                    on_failure_action=self._resolve_on_failure(phase_config, workspace.settings.on_failure),
                 )
                 tracker.add_phase_deployment(workspace_deployment, phase_data)
 
@@ -873,6 +873,21 @@ class WorkspaceDeployCommand:
         full_order = workspace.get_phase_order()
         return [p for p in full_order if p in result]
 
+    @staticmethod
+    def _resolve_on_failure(
+        phase_config: "PhaseReference", global_on_failure: str
+    ) -> str:
+        """Resolve effective on_failure for a phase.
+
+        Priority: phase.on_failure > phase.settings.on_failure > global
+
+        """
+        if phase_config.on_failure:
+            return phase_config.on_failure
+        if phase_config.settings and phase_config.settings.on_failure:
+            return phase_config.settings.on_failure
+        return global_on_failure
+
     def _execute_phases(
         self, workspace: UnifiedConfig, phase_order: list[str]
     ) -> bool:
@@ -909,7 +924,7 @@ class WorkspaceDeployCommand:
                 }
                 continue
 
-            on_failure = phase_config.on_failure or global_on_failure
+            on_failure = self._resolve_on_failure(phase_config, global_on_failure)
 
             self.console.print(
                 f"[bold yellow]Phase {i}/{len(phase_order)}: {phase_name}[/bold yellow]"
@@ -1001,7 +1016,10 @@ class WorkspaceDeployCommand:
                 else:
                     failed_phases.add(phase_name)
                     all_success = False
-                    if global_on_failure == "stop":
+                    phase_on_failure = self._resolve_on_failure(
+                        workspace.phases[phase_name], global_on_failure
+                    )
+                    if phase_on_failure == "stop":
                         logger.warning("on_failure=stop: 배포를 중단합니다.")
                         break
             else:
@@ -1017,8 +1035,14 @@ class WorkspaceDeployCommand:
                         failed_phases.add(phase_name)
                         all_success = False
 
-                # Check if we should stop
-                if failed_phases and global_on_failure == "stop":
+                # Check if any failed phase requires stop
+                should_stop = any(
+                    self._resolve_on_failure(
+                        workspace.phases[pn], global_on_failure
+                    ) == "stop"
+                    for pn in failed_phases
+                )
+                if should_stop:
                     logger.warning("on_failure=stop: 배포를 중단합니다.")
                     break
 

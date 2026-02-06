@@ -5,6 +5,7 @@ from sbkube.utils.error_suggestions import (
     format_suggestions,
     get_error_suggestions,
     get_quick_fix_command,
+    has_placeholder,
     is_auto_recoverable,
 )
 
@@ -89,6 +90,13 @@ def test_get_quick_fix_command_returns_none_for_unknown() -> None:
     # Changed: now returns fallback quick fix instead of None
     assert command is not None
     assert "sbkube doctor" in command
+
+
+def test_has_placeholder_detects_placeholders() -> None:
+    """has_placeholder should detect <...> patterns in commands."""
+    assert has_placeholder("kubectl create namespace <NAMESPACE>") is True
+    assert has_placeholder("helm list -n <namespace>") is True
+    assert has_placeholder("sbkube doctor") is False
 
 
 def test_is_auto_recoverable_true_for_recoverable() -> None:

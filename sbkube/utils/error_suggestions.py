@@ -3,7 +3,10 @@
 이 모듈은 SbkubeError의 각 타입에 대한 해결 방법, 명령어 제안, 문서 링크를 제공합니다.
 """
 
+import re
 from typing import Any
+
+_PLACEHOLDER_PATTERN = re.compile(r"<[^>]+>")
 
 # 에러 타입별 가이드 데이터베이스
 ERROR_GUIDE: dict[str, dict[str, Any]] = {
@@ -438,6 +441,11 @@ def get_quick_fix_command(error_type: str) -> str | None:
     if not guide:
         return None
     return guide.get("quick_fix")
+
+
+def has_placeholder(command: str) -> bool:
+    """Check whether a quick-fix command contains placeholders like <value>."""
+    return bool(_PLACEHOLDER_PATTERN.search(command))
 
 
 def is_auto_recoverable(error_type: str) -> bool:

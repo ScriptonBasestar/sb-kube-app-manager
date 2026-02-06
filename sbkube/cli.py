@@ -246,6 +246,7 @@ def main_with_exception_handling() -> None:
     except SbkubeError as e:
         from sbkube.utils.error_suggestions import (
             get_quick_fix_command,
+            has_placeholder,
             is_auto_recoverable,
         )
 
@@ -256,29 +257,35 @@ def main_with_exception_handling() -> None:
         if sys.stdin.isatty() and is_auto_recoverable(error_type):
             quick_fix = get_quick_fix_command(error_type)
             if quick_fix:
-                try:
-                    response = (
-                        input("\n❓ 자동 수정을 시도하시겠습니까? (y/N): ")
-                        .strip()
-                        .lower()
+                if has_placeholder(quick_fix):
+                    logger.warning(
+                        "⚠️ 자동 수정 명령어에 placeholder가 포함되어 있어 "
+                        "실행을 건너뜁니다. 수동으로 수정해 실행하세요."
                     )
-                    if response in ["y", "yes"]:
-                        import subprocess
-
-                        logger.info(f"🔧 실행: {quick_fix}")
-                        result = subprocess.run(
-                            shlex.split(quick_fix), check=False, shell=False
+                else:
+                    try:
+                        response = (
+                            input("\n❓ 자동 수정을 시도하시겠습니까? (y/N): ")
+                            .strip()
+                            .lower()
                         )
-                        if result.returncode == 0:
-                            logger.info(
-                                "✅ 자동 수정이 완료되었습니다. 다시 시도해 주세요."
+                        if response in ["y", "yes"]:
+                            import subprocess
+
+                            logger.info(f"🔧 실행: {quick_fix}")
+                            result = subprocess.run(
+                                shlex.split(quick_fix), check=False, shell=False
                             )
-                        else:
-                            logger.warning(
-                                "⚠️ 자동 수정이 실패했습니다. 수동으로 처리해 주세요."
-                            )
-                except (KeyboardInterrupt, EOFError):
-                    pass  # User cancelled, just exit normally
+                            if result.returncode == 0:
+                                logger.info(
+                                    "✅ 자동 수정이 완료되었습니다. 다시 시도해 주세요."
+                                )
+                            else:
+                                logger.warning(
+                                    "⚠️ 자동 수정이 실패했습니다. 수동으로 처리해 주세요."
+                                )
+                    except (KeyboardInterrupt, EOFError):
+                        pass  # User cancelled, just exit normally
 
         sys.exit(e.exit_code)
     except KeyboardInterrupt:

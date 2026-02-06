@@ -52,6 +52,7 @@ from sbkube.utils.helm_command_builder import (
     HelmCommandBuilder,
 )
 from sbkube.utils.hook_executor import HookExecutor
+from sbkube.utils.security import is_exec_allowed
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 
@@ -798,6 +799,13 @@ def deploy_exec_app(
     """
     console = output.get_console()
     output.print(f"[cyan]🚀 Executing commands: {app_name}[/cyan]")
+
+    if not dry_run and not is_exec_allowed():
+        output.print_error(
+            "Exec apps are disabled (SBKUBE_ALLOW_EXEC=false). "
+            "Enable execution to run exec commands."
+        )
+        return False
 
     for command in app.commands:
         if dry_run:

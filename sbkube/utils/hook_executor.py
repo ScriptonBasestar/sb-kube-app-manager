@@ -14,6 +14,7 @@ from rich.console import Console
 from sbkube.exceptions import SbkubeError
 from sbkube.utils.cluster_config import apply_cluster_config_to_command
 from sbkube.utils.common import run_command
+from sbkube.utils.security import is_exec_allowed
 
 console = Console()
 
@@ -187,6 +188,12 @@ class HookExecutor:
                 f"[yellow]🔍 [DRY-RUN] Would execute hook: {command}[/yellow]"
             )
             return True
+
+        if not is_exec_allowed():
+            console.print(
+                "[red]❌ Hook execution disabled (SBKUBE_ALLOW_EXEC=false)[/red]"
+            )
+            return False
 
         console.print(f"  ▶ Running: [dim]{command}[/dim]")
 

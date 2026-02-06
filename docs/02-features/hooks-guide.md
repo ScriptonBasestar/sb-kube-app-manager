@@ -10,6 +10,7 @@ SBKube hooks enable custom script execution before/after commands and deployment
 capabilities for your Kubernetes workflows.
 
 > **보안 주의**: Hooks는 **로컬 머신**에서 명령어/스크립트를 실행합니다. 신뢰된 설정만 사용하고, CI/공유 환경에서는 권한 제한을 고려하세요.
+> `SBKUBE_ALLOW_EXEC=false` 환경변수로 hook 실행을 비활성화할 수 있습니다.
 
 ## TL;DR
 

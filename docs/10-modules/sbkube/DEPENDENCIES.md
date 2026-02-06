@@ -130,7 +130,6 @@ dependencies = [
   "pydantic>=2.7.1",      # 데이터 모델링 및 검증
   "sqlalchemy>=2.0.0",    # ORM 및 데이터베이스
   "requests>=2.31.0",     # HTTP 클라이언트
-  "kubernetes>=28.1.0",   # Kubernetes Python API
 ]
 ```
 
@@ -192,13 +191,6 @@ dependencies = [
 - **라이선스**: Apache-2.0
 - **보안**: 인증서 검증 필수
 
-#### 9. kubernetes (Python 클라이언트)
-
-- **버전**: 28.1.0 이상
-- **용도**: Kubernetes API 직접 접근 (향후 확장)
-- **라이선스**: Apache-2.0
-- **현재**: kubectl 래퍼 우선 사용
-
 ### 개발 의존성 (dev)
 
 ```toml
@@ -234,6 +226,8 @@ test = [
     "faker>=22.0.0",         # 테스트 데이터 생성
 ]
 ```
+
+런타임 기본 동작은 `kubectl`/`helm` CLI를 사용하며, Python `kubernetes` 클라이언트는 현재 테스트/확장 용도로만 포함됩니다.
 
 ## Kubernetes 클러스터 요구사항
 
@@ -356,7 +350,6 @@ uv run safety check
 | pydantic | MIT | ✅ |
 | rich | MIT | ✅ |
 | sqlalchemy | MIT | ✅ |
-| kubernetes | Apache-2.0 | ✅ |
 
 **SBKube 라이선스**: MIT (모든 의존성과 호환)
 

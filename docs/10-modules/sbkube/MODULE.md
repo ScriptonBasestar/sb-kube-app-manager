@@ -199,7 +199,6 @@ dependencies = [
   "pydantic>=2.7.1",     # 데이터 검증
   "sqlalchemy>=2.0.0",   # ORM
   "requests>=2.31.0",    # HTTP 클라이언트
-  "kubernetes>=28.1.0",  # Kubernetes API
 ]
 ```
 

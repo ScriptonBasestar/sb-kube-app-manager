@@ -1,3 +1,4 @@
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -442,4 +443,134 @@ class ResourceAvailabilityCheck(DiagnosticCheck):
         except Exception as e:
             return self.create_result(
                 DiagnosticLevel.WARNING, f"리소스 가용성 검사 실패: {e!s}"
+            )
+
+
+class HelmFieldManagerCheck(DiagnosticCheck):
+    """Helm SSA Field Manager 충돌 감지."""
+
+    def __init__(self) -> None:
+        super().__init__("helm_field_manager", "Helm SSA Field Manager 충돌")
+
+    async def run(self) -> DiagnosticResult:
+        try:
+            helm_path = shutil.which("helm")
+            if not helm_path:
+                return self.create_result(
+                    DiagnosticLevel.INFO,
+                    "Helm이 설치되지 않아 검사를 건너뜁니다",
+                )
+
+            # 전체 helm release 조회
+            result = subprocess.run(
+                ["helm", "list", "-A", "--output", "json"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+
+            if result.returncode != 0:
+                return self.create_result(
+                    DiagnosticLevel.WARNING,
+                    "Helm release 목록을 가져올 수 없습니다",
+                    result.stderr.strip(),
+                )
+
+            releases = json.loads(result.stdout) if result.stdout.strip() else []
+            if not releases:
+                return self.create_result(
+                    DiagnosticLevel.SUCCESS,
+                    "Helm release가 없습니다",
+                )
+
+            failed_conflict_releases: list[str] = []
+            past_conflict_releases: list[str] = []
+
+            for release in releases:
+                name = release.get("name", "")
+                namespace = release.get("namespace", "")
+                status = release.get("status", "")
+
+                # failed 상태 release의 description에서 conflict 확인
+                if status == "failed":
+                    # helm list 출력에는 상세 description이 없으므로 history 조회
+                    history_result = subprocess.run(
+                        ["helm", "history", name, "-n", namespace, "--output", "json"],
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if history_result.returncode == 0 and history_result.stdout.strip():
+                        history = json.loads(history_result.stdout)
+                        # 마지막 항목(최신)의 description 확인
+                        if history:
+                            latest = history[-1]
+                            latest_desc = latest.get("description", "").lower()
+                            if "conflict" in latest_desc:
+                                failed_conflict_releases.append(
+                                    f"{namespace}/{name}"
+                                )
+                    continue
+
+                # deployed 상태 release의 과거 충돌 이력 확인
+                if status == "deployed":
+                    history_result = subprocess.run(
+                        ["helm", "history", name, "-n", namespace, "--output", "json"],
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if history_result.returncode == 0 and history_result.stdout.strip():
+                        history = json.loads(history_result.stdout)
+                        for entry in history:
+                            entry_desc = entry.get("description", "").lower()
+                            if "conflict" in entry_desc:
+                                past_conflict_releases.append(
+                                    f"{namespace}/{name}"
+                                )
+                                break
+
+            # 결과 판정
+            if failed_conflict_releases:
+                return self.create_result(
+                    DiagnosticLevel.ERROR,
+                    f"Field Manager 충돌로 실패한 release: {', '.join(failed_conflict_releases)}",
+                    "Helm SSA에서 다른 field manager와의 충돌이 발생했습니다. "
+                    "force_conflicts: true 설정이 필요합니다.",
+                    "sbkube.yaml의 해당 app에 force_conflicts: true 추가",
+                    "SSA field manager 충돌 해결",
+                )
+
+            if past_conflict_releases:
+                return self.create_result(
+                    DiagnosticLevel.WARNING,
+                    f"과거 충돌 이력이 있는 release: {', '.join(past_conflict_releases)}",
+                    "현재는 정상이나, 과거 field manager 충돌이 발생한 적이 있습니다. "
+                    "force_conflicts 설정이 적용되었는지 확인하세요.",
+                )
+
+            return self.create_result(
+                DiagnosticLevel.SUCCESS,
+                f"Helm Field Manager 충돌 없음 ({len(releases)}개 release 검사)",
+            )
+
+        except subprocess.TimeoutExpired:
+            return self.create_result(
+                DiagnosticLevel.WARNING,
+                "Helm release 조회 시간 초과",
+                "클러스터 응답이 느립니다. 네트워크 상태를 확인하세요.",
+            )
+        except json.JSONDecodeError as e:
+            return self.create_result(
+                DiagnosticLevel.WARNING,
+                "Helm 출력 파싱 실패",
+                f"JSON 파싱 오류: {e!s}",
+            )
+        except Exception as e:
+            return self.create_result(
+                DiagnosticLevel.WARNING,
+                f"Helm Field Manager 검사 실패: {e!s}",
             )

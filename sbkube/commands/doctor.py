@@ -6,6 +6,7 @@ from rich.console import Console
 
 from sbkube.diagnostics.kubernetes_checks import (
     ConfigValidityCheck,
+    HelmFieldManagerCheck,
     HelmInstallationCheck,
     KubernetesConnectivityCheck,
     NetworkAccessCheck,
@@ -43,6 +44,7 @@ def cmd(ctx, detailed, check, config_dir) -> None:
         all_checks = [
             KubernetesConnectivityCheck(),
             HelmInstallationCheck(),
+            HelmFieldManagerCheck(),
             ConfigValidityCheck(config_dir),
             NetworkAccessCheck(),
             PermissionsCheck(),

@@ -41,8 +41,8 @@ class TestDoctorCommandBasic:
         # Mock DiagnosticEngine
         mock_engine = MagicMock()
         mock_engine.get_summary.return_value = {
-            "total": 6,
-            "passed": 6,
+            "total": 7,
+            "passed": 7,
             "warning": 0,
             "error": 0,
         }
@@ -55,8 +55,8 @@ class TestDoctorCommandBasic:
         assert result.exit_code == 0
         # Verify engine was initialized
         mock_engine_class.assert_called_once()
-        # Verify checks were registered (6 checks)
-        assert mock_engine.register_check.call_count == 6
+        # Verify checks were registered (7 checks)
+        assert mock_engine.register_check.call_count == 7
         # Verify engine ran
         mock_asyncio_run.assert_called_once()
         # Verify results displayed
@@ -74,8 +74,8 @@ class TestDoctorCommandBasic:
         # Mock DiagnosticEngine
         mock_engine = MagicMock()
         mock_engine.get_summary.return_value = {
-            "total": 6,
-            "passed": 6,
+            "total": 7,
+            "passed": 7,
             "warning": 0,
             "error": 0,
         }
@@ -239,8 +239,8 @@ class TestDoctorCommandOptions:
         # Mock DiagnosticEngine
         mock_engine = MagicMock()
         mock_engine.get_summary.return_value = {
-            "total": 6,
-            "passed": 6,
+            "total": 7,
+            "passed": 7,
             "warning": 0,
             "error": 0,
         }

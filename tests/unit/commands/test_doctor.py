@@ -7,6 +7,7 @@ Tests verify:
 - Check name validation
 - Error handling
 - Exit code behavior (0=success, 1=error, 2=warning)
+- HelmFieldManagerCheck registration
 """
 
 from unittest.mock import MagicMock, patch
@@ -27,8 +28,8 @@ class TestDoctorBasic:
         mock_engine = MagicMock()
         mock_engine_class.return_value = mock_engine
         mock_engine.get_summary.return_value = {
-            "total": 6,
-            "success": 6,
+            "total": 7,
+            "success": 7,
             "warning": 0,
             "error": 0,
         }
@@ -51,8 +52,8 @@ class TestDoctorBasic:
         mock_engine = MagicMock()
         mock_engine_class.return_value = mock_engine
         mock_engine.get_summary.return_value = {
-            "total": 6,
-            "success": 6,
+            "total": 7,
+            "success": 7,
             "warning": 0,
             "error": 0,
         }
@@ -73,8 +74,8 @@ class TestDoctorBasic:
         mock_engine = MagicMock()
         mock_engine_class.return_value = mock_engine
         mock_engine.get_summary.return_value = {
-            "total": 6,
-            "success": 6,
+            "total": 7,
+            "success": 7,
             "warning": 0,
             "error": 0,
         }
@@ -125,6 +126,7 @@ class TestDoctorSpecificCheck:
 
     @patch("sbkube.commands.doctor.KubernetesConnectivityCheck")
     @patch("sbkube.commands.doctor.HelmInstallationCheck")
+    @patch("sbkube.commands.doctor.HelmFieldManagerCheck")
     @patch("sbkube.commands.doctor.ConfigValidityCheck")
     @patch("sbkube.commands.doctor.NetworkAccessCheck")
     @patch("sbkube.commands.doctor.PermissionsCheck")
@@ -135,6 +137,7 @@ class TestDoctorSpecificCheck:
         mock_permissions_check,
         mock_network_check,
         mock_config_check,
+        mock_field_manager_check,
         mock_helm_check,
         mock_k8s_check,
     ):
@@ -143,6 +146,7 @@ class TestDoctorSpecificCheck:
         for mock_check_class, name, desc in [
             (mock_k8s_check, "k8s_connectivity", "Kubernetes connectivity"),
             (mock_helm_check, "helm_installation", "Helm installation"),
+            (mock_field_manager_check, "helm_field_manager", "Helm field manager"),
             (mock_config_check, "config_validity", "Config validity"),
             (mock_network_check, "network_access", "Network access"),
             (mock_permissions_check, "permissions", "Permissions"),
@@ -174,8 +178,8 @@ class TestDoctorExitCodes:
         mock_engine = MagicMock()
         mock_engine_class.return_value = mock_engine
         mock_engine.get_summary.return_value = {
-            "total": 6,
-            "success": 6,
+            "total": 7,
+            "success": 7,
             "warning": 0,
             "error": 0,
         }
@@ -273,6 +277,7 @@ class TestDoctorCheckRegistration:
     @patch("sbkube.commands.doctor.DiagnosticEngine")
     @patch("sbkube.commands.doctor.KubernetesConnectivityCheck")
     @patch("sbkube.commands.doctor.HelmInstallationCheck")
+    @patch("sbkube.commands.doctor.HelmFieldManagerCheck")
     @patch("sbkube.commands.doctor.ConfigValidityCheck")
     @patch("sbkube.commands.doctor.NetworkAccessCheck")
     @patch("sbkube.commands.doctor.PermissionsCheck")
@@ -283,18 +288,19 @@ class TestDoctorCheckRegistration:
         mock_permissions_check,
         mock_network_check,
         mock_config_check,
+        mock_field_manager_check,
         mock_helm_check,
         mock_k8s_check,
         mock_engine_class,
         mock_asyncio_run,
     ):
-        """Test that all 6 diagnostic checks are registered."""
+        """Test that all 7 diagnostic checks are registered."""
         # Arrange
         mock_engine = MagicMock()
         mock_engine_class.return_value = mock_engine
         mock_engine.get_summary.return_value = {
-            "total": 6,
-            "success": 6,
+            "total": 7,
+            "success": 7,
             "warning": 0,
             "error": 0,
         }
@@ -303,6 +309,7 @@ class TestDoctorCheckRegistration:
         for mock_check_class, name in [
             (mock_k8s_check, "k8s_connectivity"),
             (mock_helm_check, "helm_installation"),
+            (mock_field_manager_check, "helm_field_manager"),
             (mock_config_check, "config_validity"),
             (mock_network_check, "network_access"),
             (mock_permissions_check, "permissions"),
@@ -319,8 +326,8 @@ class TestDoctorCheckRegistration:
 
         # Assert
         assert result.exit_code == 0
-        # Should register all 6 checks
-        assert mock_engine.register_check.call_count == 6
+        # Should register all 7 checks
+        assert mock_engine.register_check.call_count == 7
 
     @patch("sbkube.commands.doctor.asyncio.run")
     @patch("sbkube.commands.doctor.DiagnosticEngine")
@@ -337,8 +344,8 @@ class TestDoctorCheckRegistration:
         mock_engine = MagicMock()
         mock_engine_class.return_value = mock_engine
         mock_engine.get_summary.return_value = {
-            "total": 6,
-            "success": 6,
+            "total": 7,
+            "success": 7,
             "warning": 0,
             "error": 0,
         }

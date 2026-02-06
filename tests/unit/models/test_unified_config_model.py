@@ -24,8 +24,8 @@ class TestUnifiedSettings:
         assert settings.namespace == "default"
         assert settings.timeout == 600
         assert settings.on_failure == "stop"
-        assert settings.parallel is False
-        assert settings.parallel_apps is False
+        assert settings.parallel is True
+        assert settings.parallel_apps is True
         assert settings.max_workers == 4
 
     def test_custom_values(self) -> None:

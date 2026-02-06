@@ -57,12 +57,14 @@ class SbkubeLogger:
             self.console.print(f"[red]❌ {message}[/red]", **kwargs)
 
     def success(self, message: str, **kwargs) -> None:
-        """성공 메시지 출력 (항상 표시)."""
-        self.console.print(f"[bold green]✅ {message}[/bold green]", **kwargs)
+        """성공 메시지 출력 (INFO 레벨 이하일 때)."""
+        if self._level <= LogLevel.INFO:
+            self.console.print(f"[bold green]✅ {message}[/bold green]", **kwargs)
 
     def progress(self, message: str, **kwargs) -> None:
-        """진행 상황 메시지 출력 (항상 표시)."""
-        self.console.print(f"[magenta]➡️  {message}[/magenta]", **kwargs)
+        """진행 상황 메시지 출력 (INFO 레벨 이하일 때)."""
+        if self._level <= LogLevel.INFO:
+            self.console.print(f"[magenta]➡️  {message}[/magenta]", **kwargs)
 
     def command(self, command: str, **kwargs) -> None:
         """실행 명령어 출력."""

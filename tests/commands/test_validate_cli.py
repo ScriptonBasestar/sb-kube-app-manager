@@ -71,7 +71,7 @@ class TestValidateExplicitPath:
     def test_validate_explicit_path(self, runner, temp_project) -> None:
         """Test validate with explicit file path."""
         config_file = temp_project / "examples" / "basic" / "config.yaml"
-        result = runner.invoke(main, ["validate", str(config_file)])
+        result = runner.invoke(main, ["validate", "-v", str(config_file)])
 
         # Should succeed (file exists and valid)
         assert result.exit_code == 0
@@ -80,7 +80,7 @@ class TestValidateExplicitPath:
     def test_validate_explicit_path_sources(self, runner, temp_project) -> None:
         """Test validate with explicit sources.yaml path."""
         sources_file = temp_project / "sources.yaml"
-        result = runner.invoke(main, ["validate", str(sources_file)])
+        result = runner.invoke(main, ["validate", "-v", str(sources_file)])
 
         # Should succeed (file exists and valid)
         assert result.exit_code == 0
@@ -104,6 +104,7 @@ class TestValidateAppDir:
             main,
             [
                 "validate",
+                "-v",
                 "--app-dir",
                 "examples/basic",
                 "--base-dir",
@@ -123,6 +124,7 @@ class TestValidateAppDir:
             main,
             [
                 "validate",
+                "-v",
                 "--app-dir",
                 "examples/custom",
                 "--config-file",
@@ -191,7 +193,7 @@ apps:
 """
         (app1_dir / "config.yaml").write_text(config_content)
 
-        result = runner.invoke(main, ["validate", "--base-dir", str(temp_project)])
+        result = runner.invoke(main, ["validate", "-v", "--base-dir", str(temp_project)])
 
         # Should succeed (auto-discovers app directories)
         assert result.exit_code == 0

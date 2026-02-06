@@ -50,7 +50,7 @@ apps:
 
         # Act
         runner = CliRunner()
-        result = runner.invoke(cmd, [str(config_yaml)], obj={"format": "human"})
+        result = runner.invoke(cmd, ["-v", str(config_yaml)], obj={"format": "human"})
 
         # Assert
         assert result.exit_code == 0
@@ -310,7 +310,7 @@ helm:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            [str(sources_yaml), "--schema-type", "sources"],
+            ["-v", str(sources_yaml), "--schema-type", "sources"],
             obj={"format": "human"},
         )
 

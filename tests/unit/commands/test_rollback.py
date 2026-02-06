@@ -216,6 +216,9 @@ class TestRollbackExecution:
     @patch("sbkube.commands.rollback.RollbackManager")
     def test_rollback_success(self, mock_manager_class) -> None:
         """Test successful rollback execution."""
+        from sbkube.utils.logger import LogLevel, logger
+        logger.set_level(LogLevel.INFO)
+
         # Arrange
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
@@ -456,6 +459,9 @@ class TestRollbackHelperFunctions:
 
     def test_print_rollback_result_success(self, capsys) -> None:
         """Test successful rollback result formatting."""
+        from sbkube.utils.logger import LogLevel, logger
+        logger.set_level(LogLevel.INFO)
+
         # Arrange
         result = {
             "success": True,

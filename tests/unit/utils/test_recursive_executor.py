@@ -485,7 +485,7 @@ class TestRecursiveExecutorRollback:
         )
 
         config = UnifiedConfig(
-            settings=UnifiedSettings(on_failure="rollback", rollback_scope="app"),
+            settings=UnifiedSettings(on_failure="rollback", rollback_scope="app", parallel=False, parallel_apps=False),
             apps={
                 "app1": HelmApp(type="helm", chart="test/app1"),
                 "app2": HelmApp(type="helm", chart="test/app2"),

@@ -113,13 +113,13 @@ class TestMergeSettings:
         parent = UnifiedSettings(
             kubeconfig="/parent/config",
             timeout=600,
-            parallel=False,
+            parallel=True,
             max_workers=4,
         )
         child = UnifiedSettings(
             kubeconfig="/child/config",
             timeout=300,
-            parallel=True,
+            parallel=False,
             max_workers=8,
         )
 
@@ -127,7 +127,7 @@ class TestMergeSettings:
 
         assert merged.kubeconfig == "/child/config"
         assert merged.timeout == 300
-        assert merged.parallel is True
+        assert merged.parallel is False
         assert merged.max_workers == 8
 
 

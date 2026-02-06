@@ -151,14 +151,14 @@ class UnifiedSettings(ConfigBaseModel):
         Field(
             description="Execute independent phases in parallel",
         ),
-    ] = False
+    ] = True
 
     parallel_apps: Annotated[
         bool,
         Field(
             description="Execute app groups in parallel within phases",
         ),
-    ] = False
+    ] = True
 
     max_workers: Annotated[
         int,

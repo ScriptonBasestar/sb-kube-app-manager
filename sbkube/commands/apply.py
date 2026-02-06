@@ -679,8 +679,8 @@ def cmd(
                 dry_run=dry_run,
                 force=False,
                 skip_validation=False,
-                parallel=False,
-                parallel_apps=False,
+                parallel=None,
+                parallel_apps=None,
                 max_workers=4,
             )
             success = workspace_cmd.execute()

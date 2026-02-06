@@ -218,7 +218,7 @@ class TestWorkspaceCLI:
         workspace_file.write_text(yaml.dump(workspace_config))
 
         runner = CliRunner()
-        result = runner.invoke(validate_cmd, [str(workspace_file)])
+        result = runner.invoke(validate_cmd, ["-v", str(workspace_file)])
 
         assert result.exit_code == 0
         assert "Workspace 검증 완료" in result.output
@@ -356,7 +356,7 @@ class TestWorkspaceInitCommand:
         output_file = tmp_path / "sbkube.yaml"
 
         runner = CliRunner()
-        result = runner.invoke(init_cmd, [str(output_file), "--non-interactive"])
+        result = runner.invoke(init_cmd, ["-v", str(output_file), "--non-interactive"])
 
         assert result.exit_code == 0
         assert output_file.exists()
@@ -793,6 +793,7 @@ class TestWorkspaceParallelExecution:
                 "--parallel",
                 "--max-workers",
                 "2",
+                "-v",
             ],
         )
 

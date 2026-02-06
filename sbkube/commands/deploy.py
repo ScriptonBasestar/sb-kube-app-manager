@@ -53,6 +53,7 @@ from sbkube.utils.helm_command_builder import (
 )
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.security import is_exec_allowed
+from sbkube.utils.logger import LogLevel, logger
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 
@@ -68,6 +69,18 @@ _CONNECTION_ERROR_KEYWORDS: tuple[str, ...] = (
     "connection timed out",
     "timeout expired",
 )
+
+
+def _info_print(console, msg, **kwargs) -> None:
+    """INFO 레벨 이하일 때만 console.print 출력."""
+    if logger._level <= LogLevel.INFO:
+        console.print(msg, **kwargs)
+
+
+def _verbose_print(console, msg, **kwargs) -> None:
+    """VERBOSE 레벨 이하일 때만 console.print 출력."""
+    if logger._level <= LogLevel.VERBOSE:
+        console.print(msg, **kwargs)
 
 
 def _get_connection_error_reason(stdout: str, stderr: str) -> str | None:
@@ -156,7 +169,7 @@ def deploy_helm_app(
     # App-level context overrides CLI/sources.yaml context
     if hasattr(app, "context") and app.context:
         context = app.context
-        console.print(f"  [yellow]Using app-specific context: {context}[/yellow]")
+        _verbose_print(console, f"  [yellow]Using app-specific context: {context}[/yellow]")
 
     # Chart 경로 결정 (.sbkube/build/ 우선, 없으면 .sbkube/charts/ 또는 로컬)
     chart_path = None
@@ -165,7 +178,7 @@ def deploy_helm_app(
     build_path = build_dir / app_name
     if build_path.exists() and build_path.is_dir():
         chart_path = build_path
-        console.print(f"  Using built chart: {chart_path}")
+        _verbose_print(console, f"  Using built chart: {chart_path}")
     # 2. build 없으면 원본 차트 사용 (v0.8.0+ path structure)
     elif app.is_remote_chart():
         # Remote chart: .sbkube/charts/{repo}/{chart-name}-{version}/
@@ -230,7 +243,7 @@ def deploy_helm_app(
             return False
 
         chart_path = source_path
-        console.print(f"  Using local chart: {chart_path}")
+        _verbose_print(console, f"  Using local chart: {chart_path}")
 
     # Helm install/upgrade 명령어 구성 (HelmCommandBuilder 사용)
     helm_builder = (
@@ -286,7 +299,7 @@ def deploy_helm_app(
                         f"[yellow]  Creating namespace '{namespace}'...[/yellow]"
                     )
                 else:
-                    console.print(
+                    _info_print(console,
                         f"[yellow]ℹ️  Namespace '{namespace}' not found. Creating...[/yellow]"
                     )
                 create_cmd = ["kubectl", "create", "namespace", namespace]
@@ -302,7 +315,7 @@ def deploy_helm_app(
                     return False
 
     if cluster_global_values:
-        console.print("  [dim]Applying cluster global values...[/dim]")
+        _verbose_print(console, "  [dim]Applying cluster global values...[/dim]")
 
     # Phase 2: Inject sbkube labels and annotations
     # Extract app-group from app_config_dir path
@@ -329,7 +342,7 @@ def deploy_helm_app(
             )
             if recommendation:
                 for line in recommendation.split("\n"):
-                    console.print(f"  [yellow]{line}[/yellow]")
+                    _verbose_print(console, f"  [yellow]{line}[/yellow]")
             effective_label_injection = False
 
     # Check if automatic label injection is enabled
@@ -343,7 +356,7 @@ def deploy_helm_app(
             )
             label_args = build_helm_set_labels(labels)
             cmd.extend(label_args)
-            console.print(f"  [dim]Injecting labels: app-group={app_group}[/dim]")
+            _verbose_print(console, f"  [dim]Injecting labels: app-group={app_group}[/dim]")
 
             # Build annotations
             annotations = build_sbkube_annotations(
@@ -353,10 +366,10 @@ def deploy_helm_app(
             annotation_args = build_helm_set_annotations(annotations)
             cmd.extend(annotation_args)
         else:
-            console.print(
+            _verbose_print(console,
                 f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
             )
-            console.print(
+            _verbose_print(console,
                 "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
             )
     else:
@@ -366,11 +379,11 @@ def deploy_helm_app(
             force_compatible=force_label_injection,
         ):
             # User explicitly disabled, not auto-disabled
-            console.print(
+            _verbose_print(console,
                 "  [dim]Label injection disabled (helm_label_injection: false)[/dim]"
             )
         if app_group:
-            console.print(
+            _verbose_print(console,
                 f"  [dim]App tracking will use State DB and name pattern (app-group={app_group})[/dim]"
             )
 
@@ -383,7 +396,7 @@ def deploy_helm_app(
 
     # 명령어 출력
     if not progress_tracker:
-        console.print(f"  Command: {' '.join(cmd)}")
+        _verbose_print(console, f"  Command: {' '.join(cmd)}")
 
     # 실행
     _update_progress("Installing/Upgrading Helm release")
@@ -517,7 +530,7 @@ def deploy_yaml_app(
     # App-level context overrides CLI/sources.yaml context
     if hasattr(app, "context") and app.context:
         context = app.context
-        console.print(f"  [yellow]Using app-specific context: {context}[/yellow]")
+        _verbose_print(console, f"  [yellow]Using app-specific context: {context}[/yellow]")
 
     # .sbkube 디렉토리 결정 (기본값: base_dir/.sbkube)
     if sbkube_work_dir is None:
@@ -535,12 +548,12 @@ def deploy_yaml_app(
     if app_group:
         labels = build_sbkube_labels(app_name, app_group)
         annotations = build_sbkube_annotations()
-        console.print(f"  [dim]Will inject labels: app-group={app_group}[/dim]")
+        _verbose_print(console, f"  [dim]Will inject labels: app-group={app_group}[/dim]")
     else:
-        console.print(
+        _verbose_print(console,
             f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
         )
-        console.print(
+        _verbose_print(console,
             "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
         )
 
@@ -557,7 +570,7 @@ def deploy_yaml_app(
                 expanded_file = expand_repo_variables(yaml_file, repos_dir, apps_config)
                 # 변수 확장 성공 로그
                 if expanded_file != yaml_file:
-                    console.print(
+                    _verbose_print(console,
                         f"  [dim]Variable expanded: {yaml_file} → {expanded_file}[/dim]"
                     )
             except Exception as e:
@@ -618,7 +631,7 @@ def deploy_yaml_app(
             # Apply cluster configuration
             cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
 
-            console.print(f"  Applying: {yaml_file}")
+            _info_print(console, f"  Applying: {yaml_file}")
             return_code, stdout, stderr = run_command(cmd)
 
             # Clean up temporary file
@@ -687,12 +700,12 @@ def deploy_action_app(
     if app_group:
         labels = build_sbkube_labels(app_name, app_group)
         annotations = build_sbkube_annotations()
-        console.print(f"  [dim]Will inject labels: app-group={app_group}[/dim]")
+        _verbose_print(console, f"  [dim]Will inject labels: app-group={app_group}[/dim]")
     else:
-        console.print(
+        _verbose_print(console,
             f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
         )
-        console.print(
+        _verbose_print(console,
             "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
         )
 
@@ -756,7 +769,7 @@ def deploy_action_app(
         # Apply cluster configuration
         cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
 
-        console.print(f"  {action_type.capitalize()}: {action_path}")
+        _info_print(console, f"  {action_type.capitalize()}: {action_path}")
         return_code, stdout, stderr = run_command(cmd)
 
         # Clean up temporary file if created
@@ -812,7 +825,7 @@ def deploy_exec_app(
             console.print(f"  [DRY-RUN] {command}")
             continue
 
-        console.print(f"  Running: {command}")
+        _info_print(console, f"  Running: {command}")
         return_code, stdout, stderr = run_command(command, timeout=60)
 
         if return_code != 0:
@@ -823,7 +836,7 @@ def deploy_exec_app(
             return False
 
         if stdout:
-            console.print(f"  Output: {stdout.strip()}")
+            _verbose_print(console, f"  Output: {stdout.strip()}")
 
     output.print_success(f"Commands executed: {app_name}")
     return True
@@ -879,12 +892,12 @@ def deploy_kustomize_app(
     if app_group:
         labels = build_sbkube_labels(app_name, app_group)
         annotations = build_sbkube_annotations()
-        console.print(f"  [dim]Will inject labels: app-group={app_group}[/dim]")
+        _verbose_print(console, f"  [dim]Will inject labels: app-group={app_group}[/dim]")
     else:
-        console.print(
+        _verbose_print(console,
             f"  [yellow]⚠️ Could not detect app-group from path: {app_config_dir}[/yellow]"
         )
-        console.print(
+        _verbose_print(console,
             "  [dim]Labels will not be injected (use app_XXX_category naming)[/dim]"
         )
 
@@ -894,7 +907,7 @@ def deploy_kustomize_app(
     # Apply cluster configuration (for kubeconfig/context if needed in build step)
     build_cmd = apply_cluster_config_to_command(build_cmd, kubeconfig, context)
 
-    console.print(f"  Building Kustomize: {kustomize_path}")
+    _info_print(console, f"  Building Kustomize: {kustomize_path}")
     return_code, stdout, stderr = run_command(build_cmd)
 
     if return_code != 0:
@@ -939,7 +952,7 @@ def deploy_kustomize_app(
         # Apply cluster configuration
         cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
 
-        console.print(f"  Applying: {kustomize_path}")
+        _info_print(console, f"  Applying: {kustomize_path}")
         return_code, stdout, stderr = run_command(cmd)
 
         if return_code != 0:
@@ -987,7 +1000,7 @@ def deploy_noop_app(
     output.print(f"[cyan]🚀 Processing Noop app: {app_name}[/cyan]")
 
     if app.description:
-        console.print(f"  Description: {app.description}")
+        _verbose_print(console, f"  Description: {app.description}")
 
     if dry_run:
         output.print_warning("Dry-run mode: No actual deployment")
@@ -1055,7 +1068,7 @@ def deploy_hook_app(
     }
 
     # Hook Tasks 실행 (Phase 2/3 로직 재사용)
-    console.print(f"  Executing {len(app.tasks)} tasks...")
+    _info_print(console, f"  Executing {len(app.tasks)} tasks...")
     success = hook_executor.execute_hook_tasks(
         app_name=app_name,
         tasks=app.tasks,

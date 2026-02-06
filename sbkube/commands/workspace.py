@@ -21,7 +21,7 @@ from sbkube.models.workspace_state import (
 from sbkube.state.database import DeploymentDatabase
 from sbkube.state.workspace_tracker import WorkspaceStateTracker
 from sbkube.utils.file_loader import load_config_file
-from sbkube.utils.logger import logger, setup_logging_from_context
+from sbkube.utils.logger import LogLevel, logger, setup_logging_from_context
 
 
 # SBKube version for tracking
@@ -560,8 +560,8 @@ class WorkspaceDeployCommand:
         dry_run: bool = False,
         force: bool = False,
         skip_validation: bool = False,
-        parallel: bool = False,
-        parallel_apps: bool = False,
+        parallel: bool | None = None,
+        parallel_apps: bool | None = None,
         max_workers: int = 4,
         inherited_settings: dict | None = None,
     ) -> None:
@@ -573,8 +573,8 @@ class WorkspaceDeployCommand:
             dry_run: 실제 배포 없이 시뮬레이션
             force: 이전 상태 무시하고 강제 배포
             skip_validation: 파일 존재 검증 건너뛰기
-            parallel: 병렬 실행 모드 (Phase 간 병렬)
-            parallel_apps: App group 병렬 실행 모드 (Phase 내 병렬)
+            parallel: 병렬 실행 모드 (None=workspace 설정 사용)
+            parallel_apps: App group 병렬 실행 모드 (None=workspace 설정 사용)
             max_workers: 최대 병렬 워커 수 (기본: 4)
             inherited_settings: Settings inherited from parent workspace
 
@@ -585,8 +585,10 @@ class WorkspaceDeployCommand:
         self.dry_run = dry_run
         self.force = force
         self.skip_validation = skip_validation
-        self.parallel = parallel
-        self.parallel_apps = parallel_apps
+        self._parallel_cli = parallel
+        self._parallel_apps_cli = parallel_apps
+        self.parallel = parallel if parallel is not None else True
+        self.parallel_apps = parallel_apps if parallel_apps is not None else True
         self.max_workers = max_workers
         self.inherited_settings = inherited_settings or {}
         self.console = Console()
@@ -597,6 +599,11 @@ class WorkspaceDeployCommand:
         self.db = DeploymentDatabase()
         self.workspace_deployment_id: str | None = None
         self.phase_names: list[str] = []
+
+    def _info_print(self, msg, **kwargs) -> None:
+        """INFO 레벨 이하일 때만 console.print 출력."""
+        if logger._level <= LogLevel.INFO:
+            self.console.print(msg, **kwargs)
 
     def execute(self) -> bool:
         """Execute workspace deployment.
@@ -610,6 +617,19 @@ class WorkspaceDeployCommand:
         """
         logger.heading(f"Workspace Deployment - {self.workspace_file}")
 
+        # 1. Workspace 로드 및 검증
+        workspace = self._load_and_validate_workspace()
+
+        # 1.5. CLI > workspace settings > default(True) 로 resolve
+        if self._parallel_cli is not None:
+            self.parallel = self._parallel_cli
+        else:
+            self.parallel = workspace.settings.parallel
+        if self._parallel_apps_cli is not None:
+            self.parallel_apps = self._parallel_apps_cli
+        else:
+            self.parallel_apps = workspace.settings.parallel_apps
+
         if self.dry_run:
             self.console.print(
                 Panel(
@@ -619,7 +639,7 @@ class WorkspaceDeployCommand:
             )
 
         if self.parallel:
-            self.console.print(
+            self._info_print(
                 Panel(
                     "[cyan]PARALLEL MODE[/cyan]: 독립적인 Phase들을 병렬로 실행합니다.\n"
                     f"Max workers: {self.max_workers}",
@@ -628,7 +648,7 @@ class WorkspaceDeployCommand:
             )
 
         if self.parallel_apps:
-            self.console.print(
+            self._info_print(
                 Panel(
                     "[magenta]PARALLEL-APPS MODE[/magenta]: Phase 내 App groups를 병렬로 실행합니다.\n"
                     f"Max workers: {self.max_workers}\n"
@@ -636,9 +656,6 @@ class WorkspaceDeployCommand:
                     style="magenta",
                 )
             )
-
-        # 1. Workspace 로드 및 검증
-        workspace = self._load_and_validate_workspace()
 
         # 2. Phase 실행 순서 계산
         phase_order = self._get_execution_order(workspace)
@@ -886,10 +903,10 @@ class WorkspaceDeployCommand:
             bool: 전체 성공 여부
 
         """
-        self.console.print(
+        self._info_print(
             f"\n[bold cyan]━━━ Deploying {len(phase_order)} Phase(s) ━━━[/bold cyan]"
         )
-        self.console.print(f"Execution order: {' → '.join(phase_order)}\n")
+        self._info_print(f"Execution order: {' → '.join(phase_order)}\n")
 
         all_success = True
         global_on_failure = workspace.settings.on_failure
@@ -899,7 +916,7 @@ class WorkspaceDeployCommand:
 
             # Skip disabled phases
             if not phase_config.enabled:
-                self.console.print(
+                self._info_print(
                     f"[yellow]⏭️  Phase {i}/{len(phase_order)}: {phase_name} (disabled)[/yellow]"
                 )
                 self.phase_results[phase_name] = {
@@ -911,14 +928,14 @@ class WorkspaceDeployCommand:
 
             on_failure = phase_config.get_on_failure(global_on_failure)
 
-            self.console.print(
+            self._info_print(
                 f"[bold yellow]Phase {i}/{len(phase_order)}: {phase_name}[/bold yellow]"
             )
-            self.console.print(f"  Description: {phase_config.description}")
+            self._info_print(f"  Description: {phase_config.description}")
             if phase_config.app_groups:
-                self.console.print(f"  App Groups: {', '.join(phase_config.app_groups)}")
+                self._info_print(f"  App Groups: {', '.join(phase_config.app_groups)}")
             else:
-                self.console.print("  App Groups: (auto-discovering...)")
+                self._info_print("  App Groups: (auto-discovering...)")
 
             # Phase 배포 실행
             success, deployed_app_groups = self._deploy_phase(phase_name, phase_config, workspace)
@@ -946,7 +963,7 @@ class WorkspaceDeployCommand:
                     logger.warning("현재는 배포를 중단합니다.")
                     break
 
-            self.console.print()  # 구분선
+            self._info_print("")  # 구분선
 
         return all_success
 
@@ -966,17 +983,17 @@ class WorkspaceDeployCommand:
             bool: 전체 성공 여부
 
         """
-        self.console.print(
+        self._info_print(
             f"\n[bold cyan]━━━ Parallel Deploying {len(phase_order)} Phase(s) ━━━[/bold cyan]"
         )
 
         # 1. Build dependency graph and calculate levels
         levels = self._calculate_parallel_levels(workspace, phase_order)
 
-        self.console.print(f"Parallel execution levels: {len(levels)}")
+        self._info_print(f"Parallel execution levels: {len(levels)}")
         for i, level in enumerate(levels):
-            self.console.print(f"  Level {i + 1}: {', '.join(level)}")
-        self.console.print()
+            self._info_print(f"  Level {i + 1}: {', '.join(level)}")
+        self._info_print("")
 
         all_success = True
         global_on_failure = workspace.settings.on_failure
@@ -985,7 +1002,7 @@ class WorkspaceDeployCommand:
 
         # 2. Execute level by level
         for level_idx, level_phases in enumerate(levels, 1):
-            self.console.print(
+            self._info_print(
                 f"[bold magenta]━━━ Level {level_idx}/{len(levels)} "
                 f"({len(level_phases)} phase(s)) ━━━[/bold magenta]"
             )
@@ -1029,7 +1046,7 @@ class WorkspaceDeployCommand:
                     logger.warning("on_failure=stop: 배포를 중단합니다.")
                     break
 
-            self.console.print()
+            self._info_print("")
 
         return all_success
 
@@ -1103,7 +1120,7 @@ class WorkspaceDeployCommand:
 
         # Skip disabled phases
         if not phase_config.enabled:
-            self.console.print(
+            self._info_print(
                 f"[yellow]⏭️  Phase: {phase_name} (disabled)[/yellow]"
             )
             with self._results_lock:
@@ -1114,12 +1131,12 @@ class WorkspaceDeployCommand:
                 }
             return True
 
-        self.console.print(f"[bold yellow]Phase: {phase_name}[/bold yellow]")
-        self.console.print(f"  Description: {phase_config.description}")
+        self._info_print(f"[bold yellow]Phase: {phase_name}[/bold yellow]")
+        self._info_print(f"  Description: {phase_config.description}")
         if phase_config.app_groups:
-            self.console.print(f"  App Groups: {', '.join(phase_config.app_groups)}")
+            self._info_print(f"  App Groups: {', '.join(phase_config.app_groups)}")
         else:
-            self.console.print("  App Groups: (auto-discovering...)")
+            self._info_print("  App Groups: (auto-discovering...)")
 
         success, deployed_app_groups = self._deploy_phase(phase_name, phase_config, workspace)
 
@@ -1420,7 +1437,7 @@ class WorkspaceDeployCommand:
                 discovered_dirs = find_all_app_dirs(base_dir, "config.yaml")
             if discovered_dirs:
                 app_groups = [d.name for d in discovered_dirs]
-                self.console.print(
+                self._info_print(
                     f"  [cyan]📂 Auto-discovered {len(app_groups)} app group(s): "
                     f"{', '.join(app_groups)}[/cyan]"
                 )
@@ -1478,13 +1495,13 @@ class WorkspaceDeployCommand:
                     # Auto-discovered: no deps info, treat as single parallel level
                     app_group_levels = [app_groups] if app_groups else []
 
-                self.console.print(
+                self._info_print(
                     f"  [magenta]Parallel mode: {len(app_group_levels)} levels[/magenta]"
                 )
 
                 for level_idx, level_groups in enumerate(app_group_levels):
                     if len(level_groups) > 1:
-                        self.console.print(
+                        self._info_print(
                             f"  [cyan]Level {level_idx + 1}: "
                             f"Deploying {len(level_groups)} app groups in parallel[/cyan]"
                         )
@@ -1501,7 +1518,7 @@ class WorkspaceDeployCommand:
                     else:
                         # Single app group - execute sequentially
                         app_group = level_groups[0]
-                        self.console.print(f"  Deploying app group: {app_group}")
+                        self._info_print(f"  Deploying app group: {app_group}")
                         if not self._deploy_single_app_group(app_group, base_dir, source_path, inherited_settings):
                             error_msg = f"App group '{app_group}' 배포 실패"
                             self._complete_phase_tracking(
@@ -1512,7 +1529,7 @@ class WorkspaceDeployCommand:
             else:
                 # Sequential mode: ApplyCommand 생성 및 실행
                 for app_group in app_groups:
-                    self.console.print(f"  Deploying app group: {app_group}")
+                    self._info_print(f"  Deploying app group: {app_group}")
 
                     apply_cmd = ApplyCommand(
                         base_dir=str(base_dir),
@@ -1732,7 +1749,7 @@ class WorkspaceDeployCommand:
         groups_to_deploy = app_groups if app_groups is not None else phase_config.app_groups
 
         for app_group in groups_to_deploy:
-            self.console.print(f"  Deploying app group: {app_group}")
+            self._info_print(f"  Deploying app group: {app_group}")
 
             cmd = [
                 "sbkube",
@@ -1961,14 +1978,14 @@ class WorkspaceStatusCommand:
     help="파일 존재 검증 건너뛰기",
 )
 @click.option(
-    "--parallel",
-    is_flag=True,
-    help="독립적인 Phase들을 병렬로 실행",
+    "--parallel/--no-parallel",
+    default=None,
+    help="Phase 병렬 실행 (기본: workspace 설정 또는 True)",
 )
 @click.option(
-    "--parallel-apps",
-    is_flag=True,
-    help="Phase 내 App groups를 병렬로 실행 (app_group_deps로 의존성 정의)",
+    "--parallel-apps/--no-parallel-apps",
+    default=None,
+    help="Phase 내 App group 병렬 실행 (기본: workspace 설정 또는 True)",
 )
 @click.option(
     "--max-workers",
@@ -1986,8 +2003,8 @@ def deploy_cmd(
     dry_run: bool,
     force: bool,
     skip_validation: bool,
-    parallel: bool,
-    parallel_apps: bool,
+    parallel: bool | None,
+    parallel_apps: bool | None,
     max_workers: int,
     verbose: int,
     debug: bool,
@@ -1995,12 +2012,15 @@ def deploy_cmd(
     """Workspace를 배포합니다.
 
     Phase 의존성 순서대로 각 Phase를 배포합니다.
-    --parallel 옵션 사용 시 의존성이 없는 Phase들을 동시에 실행합니다.
-    --parallel-apps 옵션 사용 시 Phase 내 App groups를 병렬로 실행합니다.
+    기본적으로 병렬 실행이 활성화됩니다 (workspace 설정 또는 기본값).
+    --no-parallel / --no-parallel-apps 로 순차 실행을 강제할 수 있습니다.
 
     Examples:
-        # 전체 workspace 배포
+        # 전체 workspace 배포 (기본: 병렬)
         sbkube workspace deploy
+
+        # 순차 실행 강제
+        sbkube workspace deploy --no-parallel --no-parallel-apps
 
         # 특정 Phase만 배포 (의존성 Phase 포함)
         sbkube workspace deploy --phase p2-data
@@ -2011,14 +2031,8 @@ def deploy_cmd(
         # 강제 재배포
         sbkube workspace deploy --force
 
-        # Phase 병렬 실행
-        sbkube workspace deploy --parallel --max-workers 4
-
-        # App group 병렬 실행
-        sbkube workspace deploy --parallel-apps --max-workers 8
-
-        # 전체 병렬 (Phase + App groups)
-        sbkube workspace deploy --parallel --parallel-apps --max-workers 4
+        # 워커 수 지정
+        sbkube workspace deploy --max-workers 8
 
     """
     ctx.ensure_object(dict)

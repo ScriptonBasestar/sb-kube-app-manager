@@ -131,7 +131,7 @@ def cmd(
         # Rollback operation requires deployment_id
         if not deployment_id:
             logger.error("deployment_id is required for rollback operation")
-            logger.info("Use --list to see available rollback points")
+            logger.error("Use --list to see available rollback points")
             raise click.Abort
 
         # Validate scope-specific options
@@ -254,7 +254,7 @@ def _list_rollback_points(
     )
 
     if not points:
-        logger.info("No rollback points found")
+        logger.warning("No rollback points found")
         return
 
     logger.heading(f"Rollback points for {app_config_dir}")

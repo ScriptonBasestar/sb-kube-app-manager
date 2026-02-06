@@ -25,7 +25,7 @@ class SbkubeLogger:
 
     def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
-        self._level = LogLevel.INFO
+        self._level = LogLevel.WARNING
 
     def set_level(self, level: LogLevel) -> None:
         """로그 레벨 설정."""
@@ -84,13 +84,18 @@ def get_logger() -> SbkubeLogger:
 
 
 def setup_logging_from_context(ctx: click.Context) -> None:
-    """Click 컨텍스트에서 verbose 옵션을 읽어 로깅 레벨 설정."""
-    verbose = ctx.obj.get("verbose", False) if ctx.obj else False
+    """Click 컨텍스트에서 verbose 옵션을 읽어 로깅 레벨 설정.
+
+    -v → INFO, -vv → VERBOSE, --debug → DEBUG, 기본 → WARNING (summary)
+    """
+    verbose = ctx.obj.get("verbose", 0) if ctx.obj else 0
     debug = ctx.obj.get("debug", False) if ctx.obj else False
 
     if debug:
         logger.set_level(LogLevel.DEBUG)
-    elif verbose:
+    elif verbose >= 2:
         logger.set_level(LogLevel.VERBOSE)
-    else:
+    elif verbose >= 1:
         logger.set_level(LogLevel.INFO)
+    else:
+        logger.set_level(LogLevel.WARNING)

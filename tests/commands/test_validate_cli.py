@@ -232,9 +232,9 @@ class TestValidatePriorityLogic:
             ],
         )
 
-        # Should use explicit path (not app-dir)
+        # Should use explicit path (not app-dir) — heading shows the file path
         assert result.exit_code == 0
-        assert "Using explicit file path" in result.output
+        assert "config.yaml" in result.output
 
     def test_app_dir_overrides_current_dir(self, runner, temp_project) -> None:
         """Test that --app-dir takes precedence over current directory."""

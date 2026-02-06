@@ -32,7 +32,7 @@ from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
 )
-from sbkube.utils.logger import logger
+from sbkube.utils.logger import LogLevel, logger
 
 
 class SbkubeGroup(click.Group):
@@ -180,7 +180,7 @@ class SbkubeGroup(click.Group):
     default="human",
     help="출력 형식 (human: Rich Console, llm: LLM 친화적, json: JSON, yaml: YAML). 환경변수: SBKUBE_OUTPUT_FORMAT",
 )
-@click.option("-v", "--verbose", is_flag=True, help="상세 로깅을 활성화합니다.")
+@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세).")
 @click.pass_context
 def main(
     ctx: click.Context,
@@ -190,7 +190,7 @@ def main(
     profile: str | None,
     namespace: str | None,
     output_format: str,
-    verbose: bool,
+    verbose: int,
 ) -> None:
     """sbkube: Kubernetes 애플리케이션 관리를 위한 CLI 도구.
 
@@ -214,12 +214,15 @@ def main(
     else:
         ctx.obj["sources_file"] = source
 
-    if verbose:
+    if verbose >= 2:
         logging.basicConfig(
             level=logging.DEBUG,
             format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         )
+        logger.set_level(LogLevel.VERBOSE)
         logger.verbose("상세 로깅 활성화됨.")
+    elif verbose >= 1:
+        logger.set_level(LogLevel.INFO)
 
 
 # 핵심 워크플로우 명령어

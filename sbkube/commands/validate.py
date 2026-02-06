@@ -64,7 +64,7 @@ class ValidateCommand:
 
         """
         if self.skip_deps:
-            logger.info("의존성 검증 건너뜀 (--skip-deps)")
+            logger.warning("의존성 검증 건너뜀 (--skip-deps)")
             return True
 
         if not config.deps:
@@ -330,7 +330,7 @@ class ValidateCommand:
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
     help="사용자 정의 JSON 스키마 파일 경로 (지정 시 schema-type 무시)",
 )
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력 (추가 기능용)")
+@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력 (추가 기능용)")
 @click.option(
     "--skip-deps",
@@ -367,7 +367,7 @@ def cmd(
     schema_type: str | None,
     base_dir: str,
     custom_schema_path: str | None,
-    verbose: bool,
+    verbose: int,
     debug: bool,
     skip_deps: bool,
     strict_deps: bool,

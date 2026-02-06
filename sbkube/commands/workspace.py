@@ -437,13 +437,13 @@ def workspace_group() -> None:
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
     default="sbkube.yaml",
 )
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def validate_cmd(
     ctx: click.Context,
     workspace_file: str,
-    verbose: bool,
+    verbose: int,
     debug: bool,
 ) -> None:
     """sbkube.yaml 파일을 검증합니다.
@@ -471,13 +471,13 @@ def validate_cmd(
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
     default="sbkube.yaml",
 )
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def graph_cmd(
     ctx: click.Context,
     workspace_file: str,
-    verbose: bool,
+    verbose: int,
     debug: bool,
 ) -> None:
     """Phase 의존성 그래프를 시각화합니다.
@@ -510,14 +510,14 @@ def graph_cmd(
     is_flag=True,
     help="대화형 입력 없이 기본 템플릿 생성",
 )
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def init_cmd(
     ctx: click.Context,
     output_file: str,
     non_interactive: bool,
-    verbose: bool,
+    verbose: int,
     debug: bool,
 ) -> None:
     """sbkube.yaml 템플릿을 생성합니다.
@@ -1993,7 +1993,7 @@ class WorkspaceStatusCommand:
     default=4,
     help="최대 병렬 워커 수 (기본: 4)",
 )
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def deploy_cmd(
@@ -2006,7 +2006,7 @@ def deploy_cmd(
     parallel: bool,
     parallel_apps: bool,
     max_workers: int,
-    verbose: bool,
+    verbose: int,
     debug: bool,
 ) -> None:
     """Workspace를 배포합니다.
@@ -2072,14 +2072,14 @@ def deploy_cmd(
     default=None,
     help="특정 Phase만 조회",
 )
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def status_cmd(
     ctx: click.Context,
     workspace_file: str,
     phase: str | None,
-    verbose: bool,
+    verbose: int,
     debug: bool,
 ) -> None:
     """Workspace 상태를 조회합니다.
@@ -2313,7 +2313,7 @@ class WorkspaceHistoryCommand:
     default=10,
     help="조회할 최대 배포 수 (기본: 10)",
 )
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def history_cmd(
@@ -2321,7 +2321,7 @@ def history_cmd(
     workspace: str | None,
     deployment_id: str | None,
     limit: int,
-    verbose: bool,
+    verbose: int,
     debug: bool,
 ) -> None:
     """Workspace 배포 히스토리를 조회합니다.
@@ -2490,7 +2490,7 @@ class WorkspaceCleanupCommand:
     is_flag=True,
     help="실제 삭제 없이 시뮬레이션",
 )
-@click.option("-v", "--verbose", is_flag=True, help="상세 로그 출력")
+@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
 @click.option("--debug", is_flag=True, help="디버그 로그 출력")
 @click.pass_context
 def cleanup_cmd(
@@ -2499,7 +2499,7 @@ def cleanup_cmd(
     keep: int,
     deployment_id: str | None,
     dry_run: bool,
-    verbose: bool,
+    verbose: int,
     debug: bool,
 ) -> None:
     """오래된 배포 히스토리를 정리합니다.

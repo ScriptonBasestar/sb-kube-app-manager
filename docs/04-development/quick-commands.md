@@ -17,7 +17,7 @@ make install-all          # Install sbkube with dev + test dependencies
 # Manual installation
 uv venv                   # Create virtual environment
 source .venv/bin/activate # Activate (Windows: .venv\Scripts\activate)
-uv sync                   # Install dependencies
+uv sync --frozen          # Install dependencies from uv.lock
 uv pip install -e .       # Install in editable mode
 ```
 

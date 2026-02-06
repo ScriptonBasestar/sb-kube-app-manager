@@ -28,8 +28,11 @@ uv venv
 source .venv/bin/activate
 
 # 3. 개발 의존성 설치
+uv sync --frozen
 uv pip install -e .
 ```
+
+`uv.lock`이 존재하므로 기본 설치는 `uv sync --frozen`을 사용합니다. 의존성을 변경했다면 `uv lock`으로 갱신한 뒤 다시 `uv sync`를 실행하세요.
 
 ### 기본 개발 워크플로우
 

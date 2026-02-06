@@ -29,7 +29,7 @@ uv venv
 source .venv/bin/activate
 
 # 3. Install development dependencies
-uv sync
+uv sync --frozen
 uv pip install -e .
 
 # 4. Verify setup

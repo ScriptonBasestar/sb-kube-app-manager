@@ -235,6 +235,7 @@ def _execute_apps_deployment(
     strict_deps: bool,
     no_progress: bool,
     output: OutputManager,
+    prune_disabled: bool = False,
 ) -> bool:
     """Execute app deployment for unified config without phases.
 
@@ -254,6 +255,7 @@ def _execute_apps_deployment(
         strict_deps: Strict dependency mode
         no_progress: Disable progress tracking
         output: Output manager
+        prune_disabled: Auto-delete disabled apps from cluster
 
     Returns:
         bool: True if deployment succeeded
@@ -365,6 +367,28 @@ def _execute_apps_deployment(
         )
     else:
         apps_to_apply = deployment_order
+
+    # Prune disabled apps before deployment
+    if prune_disabled:
+        from sbkube.utils.prune_helper import (
+            find_disabled_apps_to_prune,
+            prune_disabled_apps,
+        )
+
+        apps_to_prune = find_disabled_apps_to_prune(config)
+        if apps_to_prune:
+            output.print(
+                f"\n[yellow]🗑️  Pruning {len(apps_to_prune)} disabled app(s)...[/yellow]",
+                level="info",
+            )
+            prune_disabled_apps(
+                apps_to_prune=apps_to_prune,
+                kubeconfig=ctx.obj.get("kubeconfig"),
+                context=ctx.obj.get("context"),
+                app_config_dir=APP_CONFIG_DIR,
+                output=output,
+                dry_run=dry_run,
+            )
 
     # Progress tracking setup
     console = output.get_console()
@@ -612,6 +636,12 @@ def _execute_apps_deployment(
     default=False,
     help="진행 상황 표시 비활성화",
 )
+@click.option(
+    "--prune-disabled",
+    is_flag=True,
+    default=False,
+    help="비활성화된 앱 자동 삭제 (enabled: false인 앱이 클러스터에 설치되어 있으면 삭제)",
+)
 @click.pass_context
 def cmd(
     ctx: click.Context,
@@ -627,6 +657,7 @@ def cmd(
     skip_deps_check: bool,
     strict_deps: bool,
     no_progress: bool,
+    prune_disabled: bool,
 ) -> None:
     """SBKube apply 명령어.
 
@@ -774,6 +805,7 @@ def cmd(
             dry_run=dry_run,
             skip_prepare=skip_prepare,
             skip_build=skip_build,
+            prune_disabled=prune_disabled,
             skip_deps_check=skip_deps_check,
             strict_deps=strict_deps,
             no_progress=no_progress,
@@ -976,6 +1008,30 @@ def cmd(
             )
         else:
             apps_to_apply = deployment_order
+
+        # Prune disabled apps before deployment (legacy path)
+        if prune_disabled:
+            from sbkube.utils.prune_helper import (
+                find_disabled_apps_to_prune,
+            )
+            from sbkube.utils.prune_helper import (
+                prune_disabled_apps as _prune_apps,
+            )
+
+            apps_to_prune = find_disabled_apps_to_prune(config)
+            if apps_to_prune:
+                output.print(
+                    f"\n[yellow]🗑️  Pruning {len(apps_to_prune)} disabled app(s)...[/yellow]",
+                    level="info",
+                )
+                _prune_apps(
+                    apps_to_prune=apps_to_prune,
+                    kubeconfig=ctx.obj.get("kubeconfig"),
+                    context=ctx.obj.get("context"),
+                    app_config_dir=APP_CONFIG_DIR,
+                    output=output,
+                    dry_run=dry_run,
+                )
 
         # Import commands
         from sbkube.commands.build import cmd as build_cmd

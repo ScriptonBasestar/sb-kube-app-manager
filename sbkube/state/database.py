@@ -12,7 +12,7 @@ from typing import Any
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool
 
 from sbkube.models.deployment_state import (
     AppDeployment,
@@ -65,7 +65,7 @@ class DeploymentDatabase:
         self.engine = create_engine(
             f"sqlite:///{self.db_path}",
             connect_args={"check_same_thread": False},
-            poolclass=StaticPool,
+            poolclass=NullPool,
             echo=False,
         )
 
@@ -74,6 +74,7 @@ class DeploymentDatabase:
         def set_sqlite_pragma(dbapi_connection, connection_record) -> None:
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.execute("PRAGMA journal_mode=WAL")
             cursor.close()
 
         # Create session factory

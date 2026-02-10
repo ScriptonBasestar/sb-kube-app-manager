@@ -682,6 +682,29 @@ def cmd(
                     level="info",
                 )
                 config_data = load_config_file(str(app_config_file))
+                if "phases" in config_data and config_data["phases"]:
+                    # app-dir itself has phases: deploy as sub-workspace
+                    output.print(
+                        f"[cyan]🔄 Sub-workspace detected: {app_config_dir_name}[/cyan]",
+                        level="info",
+                    )
+                    from sbkube.commands.workspace import WorkspaceDeployCommand
+
+                    workspace_cmd = WorkspaceDeployCommand(
+                        workspace_file=str(app_config_file),
+                        phase=None,
+                        dry_run=dry_run,
+                        force=False,
+                        skip_validation=False,
+                        parallel=None,
+                        parallel_apps=None,
+                        max_workers=4,
+                    )
+                    success = workspace_cmd.execute()
+                    if not success:
+                        raise click.Abort
+                    return
+                # No phases: single app group mode
                 detected = DetectedConfig(
                     config_type=ConfigType.UNIFIED,
                     primary_file=app_config_file,

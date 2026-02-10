@@ -17,6 +17,7 @@ from sbkube.utils.deployment_checker import DeploymentChecker
 from sbkube.utils.error_formatter import format_deployment_error
 from sbkube.utils.file_loader import (
     ConfigType,
+    DetectedConfig,
     detect_config_file,
     load_config_file,
 )
@@ -666,27 +667,50 @@ def cmd(
         # Load config to check if it has phases (workspace mode)
         config_data = load_config_file(str(detected.primary_file))
         if "phases" in config_data and config_data["phases"]:
-            # Workspace mode: delegate to WorkspaceDeployCommand
-            output.print(
-                "[cyan]🔄 Detected multi-phase workspace configuration[/cyan]",
-                level="info",
-            )
-            from sbkube.commands.workspace import WorkspaceDeployCommand
+            if app_config_dir_name:
+                # --app-dir specified: redirect to app group's own sbkube.yaml
+                app_dir_path = BASE_DIR / app_config_dir_name
+                app_config_file = app_dir_path / "sbkube.yaml"
+                if not app_config_file.exists():
+                    output.print_error(
+                        f"sbkube.yaml not found: {app_config_file}",
+                        config_path=str(app_config_file),
+                    )
+                    raise click.Abort
+                output.print(
+                    f"[cyan]📦 Redirecting to app group: {app_config_dir_name}[/cyan]",
+                    level="info",
+                )
+                config_data = load_config_file(str(app_config_file))
+                detected = DetectedConfig(
+                    config_type=ConfigType.UNIFIED,
+                    primary_file=app_config_file,
+                    secondary_files=[],
+                    base_dir=app_dir_path,
+                )
+                # Fall through to single app group mode below
+            else:
+                # No --app-dir: workspace mode, deploy all phases
+                output.print(
+                    "[cyan]🔄 Detected multi-phase workspace configuration[/cyan]",
+                    level="info",
+                )
+                from sbkube.commands.workspace import WorkspaceDeployCommand
 
-            workspace_cmd = WorkspaceDeployCommand(
-                workspace_file=str(detected.primary_file),
-                phase=None,  # Deploy all phases
-                dry_run=dry_run,
-                force=False,
-                skip_validation=False,
-                parallel=None,
-                parallel_apps=None,
-                max_workers=4,
-            )
-            success = workspace_cmd.execute()
-            if not success:
-                raise click.Abort
-            return
+                workspace_cmd = WorkspaceDeployCommand(
+                    workspace_file=str(detected.primary_file),
+                    phase=None,  # Deploy all phases
+                    dry_run=dry_run,
+                    force=False,
+                    skip_validation=False,
+                    parallel=None,
+                    parallel_apps=None,
+                    max_workers=4,
+                )
+                success = workspace_cmd.execute()
+                if not success:
+                    raise click.Abort
+                return
 
         # Single app group mode with unified config - process apps directly
         output.print(

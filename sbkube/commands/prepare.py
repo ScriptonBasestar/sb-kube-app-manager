@@ -119,8 +119,29 @@ def preflight_check_helm_repos(
         if repo_name not in missing_in_sources and repo_name not in local_repos:
             missing_locally.append(repo_name)
 
-    # 4. 결과 출력
-    if missing_in_sources or missing_locally:
+    # 4. missing_locally 자동 등록 시도
+    auto_register_failed: list[str] = []
+    if missing_locally:
+        output.print("🔧 로컬에 없는 Helm 저장소 자동 등록 중...")
+        for repo in missing_locally:
+            repo_config = helm_sources[repo]
+            if isinstance(repo_config, HelmRepoScheme):
+                url = repo_config.url
+            elif isinstance(repo_config, dict):
+                url = repo_config.get("url", "URL_UNKNOWN")
+            else:
+                url = str(repo_config)
+
+            output.print(f"  helm repo add {repo} {url}")
+            rc, _, stderr = run_command(["helm", "repo", "add", repo, url])
+            if rc != 0 and "already exists" not in stderr.lower():
+                output.print_error(f"  자동 등록 실패: {stderr}")
+                auto_register_failed.append(repo)
+            else:
+                output.print(f"  ✅ '{repo}' 등록 완료")
+
+    # 5. 결과 출력
+    if missing_in_sources or auto_register_failed:
         output.print_section("⚠️  Helm 저장소 사전 검증 실패")
 
         if missing_in_sources:
@@ -129,19 +150,8 @@ def preflight_check_helm_repos(
             for repo in missing_in_sources:
                 output.print(f"     {repo}: https://example.com/charts")
 
-        if missing_locally:
-            output.print_warning(f"로컬에 등록되지 않은 저장소: {', '.join(missing_locally)}")
-            output.print("   다음 명령어로 추가하세요:")
-            for repo in missing_locally:
-                if repo in helm_sources:
-                    repo_config = helm_sources[repo]
-                    if isinstance(repo_config, HelmRepoScheme):
-                        url = repo_config.url
-                    elif isinstance(repo_config, dict):
-                        url = repo_config.get("url", "URL_UNKNOWN")
-                    else:
-                        url = str(repo_config)
-                    output.print(f"     helm repo add {repo} {url}")
+        if auto_register_failed:
+            output.print_error(f"자동 등록 실패한 저장소: {', '.join(auto_register_failed)}")
 
         return False, issues
 

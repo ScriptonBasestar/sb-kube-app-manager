@@ -8,6 +8,9 @@ order: 4
 depends_on:
   - cli-redesign-01-positional-target.md
   - cli-redesign-02-unified-config-support.md
+started-at: 2026-02-11T11:05:40+09:00
+completed-at: 2026-02-11T11:08:52+09:00
+completion-summary: "Added centralized deprecated-option warnings and applied them across apply/prepare/build/template/deploy/validate."
 ---
 
 # [4/5] legacy 옵션 deprecated 경고 강화
@@ -90,3 +93,15 @@ def cmd(ctx, target, config_file, app_config_dir_name, base_dir, ...):
 
 - `apply.py`는 이미 `--app-dir`, `--config-file`, `--source`에 `[DEPRECATED]` help 텍스트가 있음
 - 다른 명령어들은 아직 deprecated 표시 없음 → 이 task에서 통일
+
+## Execution Log
+
+- Started: 2026-02-11T11:05:40+09:00
+- Worker: AI (Codex)
+- Scope summary: Added unified deprecation warning utility and applied runtime/help deprecation handling to legacy options in workflow commands and validate.
+
+## Completion
+
+- Work summary: Created `sbkube/utils/deprecation.py` with warning and option-source detection, integrated warnings into command callbacks (only when options are explicitly set), updated help text across target commands, and added apply CLI coverage for deprecation warnings. Also fixed a pre-existing `logger` import bug in `sbkube/utils/file_loader.py` discovered during validation runs.
+- Key files changed: `sbkube/utils/deprecation.py`, `sbkube/commands/apply.py`, `sbkube/commands/prepare.py`, `sbkube/commands/build.py`, `sbkube/commands/template.py`, `sbkube/commands/deploy.py`, `sbkube/commands/validate.py`, `sbkube/utils/file_loader.py`, `tests/commands/test_apply_cli.py`
+- Verification method: `pytest -q tests/commands/test_apply_cli.py tests/unit/commands/test_prepare_cmd.py tests/unit/commands/test_build_cmd.py tests/unit/commands/test_template_cmd.py tests/unit/commands/test_deploy_cmd.py tests/unit/commands/test_validate_cmd.py tests/commands/test_validate_cli.py` and `ruff check sbkube/utils/deprecation.py sbkube/utils/file_loader.py sbkube/commands/apply.py sbkube/commands/prepare.py sbkube/commands/build.py sbkube/commands/template.py sbkube/commands/deploy.py sbkube/commands/validate.py tests/commands/test_apply_cli.py`

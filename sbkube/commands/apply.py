@@ -14,6 +14,7 @@ import click
 from sbkube.models.config_model import SBKubeConfig
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.deployment_checker import DeploymentChecker
+from sbkube.utils.deprecation import option_was_explicitly_set, warn_deprecated_option
 from sbkube.utils.error_formatter import format_deployment_error
 from sbkube.utils.file_loader import (
     ConfigType,
@@ -621,7 +622,7 @@ def _match_phase_by_scope(config_data: dict, scope_path: str) -> str | None:
     "--base-dir",
     default=".",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    help="프로젝트 루트 디렉토리",
+    help="[DEPRECATED] 프로젝트 루트 디렉토리 - use TARGET full path or -f",
 )
 @click.option(
     "--config-file",
@@ -764,6 +765,15 @@ def cmd(
     output = OutputManager(format_type=output_format)
 
     output.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]", level="info")
+
+    if option_was_explicitly_set(ctx, "app_config_dir_name"):
+        warn_deprecated_option("--app-dir", "positional TARGET argument")
+    if option_was_explicitly_set(ctx, "base_dir"):
+        warn_deprecated_option("--base-dir", "full path in TARGET or -f")
+    if option_was_explicitly_set(ctx, "config_file_name"):
+        warn_deprecated_option("--config-file", "-f with sbkube.yaml")
+    if option_was_explicitly_set(ctx, "sources_file_name"):
+        warn_deprecated_option("--source", "unified sbkube.yaml settings")
 
     if dry_run:
         output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="info")

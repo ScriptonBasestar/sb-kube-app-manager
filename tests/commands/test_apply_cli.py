@@ -110,6 +110,17 @@ class TestApplyConfigValidation:
         # Should fail with parsing error
         assert result.exit_code != 0
 
+    def test_apply_warns_legacy_options(self, runner, tmp_path) -> None:
+        """Legacy options should emit deprecation warnings."""
+        app_dir = tmp_path / "test_app"
+        app_dir.mkdir()
+        result = runner.invoke(
+            main, ["apply", "--base-dir", str(tmp_path), "--app-dir", "test_app"]
+        )
+        assert result.exit_code != 0
+        assert "'--app-dir' is deprecated" in result.output
+        assert "'--base-dir' is deprecated" in result.output
+
     def test_apply_rejects_target_with_phase(self, runner, tmp_path) -> None:
         """TARGET and --phase should be mutually exclusive."""
         (tmp_path / "sbkube.yaml").write_text(

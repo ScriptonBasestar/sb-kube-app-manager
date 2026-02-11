@@ -15,6 +15,7 @@ from sbkube.models.config_model import HelmApp, HookApp, HttpApp, SBKubeConfig, 
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.common import run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
+from sbkube.utils.deprecation import option_was_explicitly_set, warn_deprecated_option
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_command_builder import build_helm_template_command
 from sbkube.utils.hook_executor import HookExecutor
@@ -352,25 +353,25 @@ def template_http_app(
     "--app-dir",
     "app_config_dir_name",
     default=None,
-    help="앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
+    help="[DEPRECATED: use positional TARGET] 앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
 )
 @click.option(
     "--base-dir",
     default=".",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    help="프로젝트 루트 디렉토리",
+    help="[DEPRECATED: use TARGET full path or -f] 프로젝트 루트 디렉토리",
 )
 @click.option(
     "--config-file",
     "config_file_name",
     default="config.yaml",
-    help="설정 파일 이름 (app-dir 내부)",
+    help="[DEPRECATED: use -f with sbkube.yaml] 설정 파일 이름 (app-dir 내부)",
 )
 @click.option(
     "--source",
     "sources_file_name",
     default="sources.yaml",
-    help="소스 설정 파일 (base-dir 기준)",
+    help="[DEPRECATED: use unified sbkube.yaml settings] 소스 설정 파일 (base-dir 기준)",
 )
 @click.option(
     "--output-dir",
@@ -415,6 +416,15 @@ def cmd(
     output = OutputManager(format_type=output_format)
 
     output.print("[bold blue]✨ SBKube `template` 시작 ✨[/bold blue]", level="info")
+
+    if option_was_explicitly_set(ctx, "app_config_dir_name"):
+        warn_deprecated_option("--app-dir", "positional TARGET argument")
+    if option_was_explicitly_set(ctx, "base_dir"):
+        warn_deprecated_option("--base-dir", "full path in TARGET or -f")
+    if option_was_explicitly_set(ctx, "config_file_name"):
+        warn_deprecated_option("--config-file", "-f with sbkube.yaml")
+    if option_was_explicitly_set(ctx, "sources_file_name"):
+        warn_deprecated_option("--source", "unified sbkube.yaml settings")
 
     if dry_run:
         output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="info")

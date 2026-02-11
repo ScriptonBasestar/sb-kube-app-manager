@@ -20,6 +20,7 @@ class TestApplyBasic:
         result = runner.invoke(main, ["apply", "--help"])
         assert result.exit_code == 0
         assert "SBKube apply" in result.output or "전체 워크플로우" in result.output
+        assert "TARGET" in result.output
         assert "--app-dir" in result.output
         assert "--dry-run" in result.output
 

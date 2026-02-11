@@ -5,6 +5,9 @@ status: todo
 assignee: unassigned
 parent: cli-redesign-overview.md
 order: 1
+started-at: 2026-02-11T10:58:58+09:00
+completed-at: 2026-02-11T10:59:07+09:00
+completion-summary: "Added positional TARGET resolution for apply with upward sbkube.yaml discovery and scope-aware -f support."
 ---
 
 # [1/5] `apply`에 positional TARGET 추가 + upward search
@@ -102,3 +105,15 @@ sbkube apply -f ~/ph3_kube/sbkube.yaml ph1_infra/app_010_infra_network
 sbkube apply --app-dir ph1_infra/app_010_infra_network
 sbkube apply --base-dir ~/ph3_kube --app-dir ph1_infra
 ```
+
+## Execution Log
+
+- Started: 2026-02-11T10:58:58+09:00
+- Worker: AI (Codex)
+- Scope summary: Added `TARGET` argument in `apply`, implemented reusable resolver for upward config detection, and integrated target/file scope precedence.
+
+## Completion
+
+- Work summary: Implemented `sbkube/utils/target_resolver.py`, wired positional `TARGET` and scope logic into `sbkube apply`, added phase-scope matching fallback for workspace configs, and added resolver/apply tests.
+- Key files changed: `sbkube/commands/apply.py`, `sbkube/utils/target_resolver.py`, `tests/unit/utils/test_target_resolver.py`, `tests/commands/test_apply_cli.py`
+- Verification method: `pytest -q tests/unit/utils/test_target_resolver.py tests/commands/test_apply_cli.py tests/unit/commands/test_apply.py` and `ruff check sbkube/commands/apply.py sbkube/utils/target_resolver.py tests/unit/utils/test_target_resolver.py tests/commands/test_apply_cli.py`

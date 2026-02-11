@@ -25,6 +25,7 @@ from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.perf import perf_timer
 from sbkube.utils.progress_tracker import ProgressTracker
+from sbkube.utils.target_resolver import resolve_target
 
 if TYPE_CHECKING:
     pass
@@ -561,7 +562,47 @@ def _execute_apps_deployment(
     return overall_success
 
 
+def _match_phase_by_scope(config_data: dict, scope_path: str) -> str | None:
+    """Find best matching phase name for filesystem scope path."""
+    phases = config_data.get("phases")
+    if not isinstance(phases, dict):
+        return None
+
+    scope = Path(scope_path)
+    best_match: tuple[int, str] | None = None
+
+    for phase_name, phase_cfg in phases.items():
+        if not isinstance(phase_cfg, dict):
+            continue
+
+        source = phase_cfg.get("source")
+        if source:
+            source_path = Path(source)
+            phase_dir = source_path.parent if source_path.suffix else source_path
+            if not phase_dir.parts:
+                continue
+            if scope == phase_dir or scope.is_relative_to(phase_dir):
+                score = len(phase_dir.parts)
+                if scope == phase_dir:
+                    score += 1000
+                if best_match is None or score > best_match[0]:
+                    best_match = (score, phase_name)
+
+        if scope_path == phase_name or scope_path.startswith(f"{phase_name}/"):
+            score = 500
+            if best_match is None or score > best_match[0]:
+                best_match = (score, phase_name)
+
+    return best_match[1] if best_match else None
+
+
 @click.command(name="apply")
+@click.argument(
+    "target",
+    required=False,
+    default=None,
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+)
 @click.option(
     "-f",
     "--file",
@@ -645,6 +686,7 @@ def _execute_apps_deployment(
 @click.pass_context
 def cmd(
     ctx: click.Context,
+    target: str | None,
     config_file: str | None,
     app_config_dir_name: str | None,
     base_dir: str,
@@ -686,8 +728,34 @@ def cmd(
     if dry_run:
         output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="info")
 
+    if target and app_config_dir_name:
+        click.echo(
+            "WARNING: '--app-dir' is ignored when positional TARGET is provided.",
+            err=True,
+        )
+    if target and base_dir != ".":
+        click.echo(
+            "WARNING: '--base-dir' is ignored when positional TARGET is provided.",
+            err=True,
+        )
+
+    try:
+        resolved_target = resolve_target(
+            target=target,
+            config_file=config_file,
+            base_dir=Path.cwd(),
+        )
+    except ValueError as e:
+        output.print_error(str(e), error=str(e))
+        raise click.Abort from e
+
+    BASE_DIR = resolved_target.workspace_root
+    config_file = str(resolved_target.config_file)
+
+    if target and resolved_target.scope_path:
+        app_config_dir_name = resolved_target.scope_path
+
     # Detect config format and emit deprecation warnings
-    BASE_DIR = Path(base_dir).resolve()
     detected = detect_config_file(BASE_DIR, config_file)
 
     if detected.config_type == ConfigType.UNIFIED:
@@ -703,6 +771,28 @@ def cmd(
                 app_dir_path = BASE_DIR / app_config_dir_name
                 app_config_file = app_dir_path / "sbkube.yaml"
                 if not app_config_file.exists():
+                    phase_name = _match_phase_by_scope(config_data, app_config_dir_name)
+                    if phase_name:
+                        output.print(
+                            f"[cyan]🔄 Resolved TARGET scope to phase: {phase_name}[/cyan]",
+                            level="info",
+                        )
+                        from sbkube.commands.workspace import WorkspaceDeployCommand
+
+                        workspace_cmd = WorkspaceDeployCommand(
+                            workspace_file=str(detected.primary_file),
+                            phase=phase_name,
+                            dry_run=dry_run,
+                            force=False,
+                            skip_validation=False,
+                            parallel=None,
+                            parallel_apps=None,
+                            max_workers=4,
+                        )
+                        success = workspace_cmd.execute()
+                        if not success:
+                            raise click.Abort
+                        return
                     output.print_error(
                         f"sbkube.yaml not found: {app_config_file}",
                         config_path=str(app_config_file),

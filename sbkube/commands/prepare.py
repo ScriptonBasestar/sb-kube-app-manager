@@ -12,7 +12,7 @@ from pathlib import Path
 import click
 
 from sbkube.models.config_model import GitApp, HelmApp, HookApp, HttpApp, SBKubeConfig
-from sbkube.models.sources_model import HelmRepoScheme, SourceScheme
+from sbkube.models.sources_model import HelmRepoScheme, OciRepoScheme, SourceScheme
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.utils.cluster_config import (
@@ -199,7 +199,11 @@ def prepare_oci_chart(
 
     # OCI 레지스트리 설정 가져오기
     oci_config = oci_sources[repo_name]
-    if isinstance(oci_config, dict):
+    if isinstance(oci_config, OciRepoScheme):
+        registry_url = oci_config.registry
+        username = oci_config.username
+        password = oci_config.password
+    elif isinstance(oci_config, dict):
         registry_url = oci_config.get("registry")
         username = oci_config.get("username")
         password = oci_config.get("password")

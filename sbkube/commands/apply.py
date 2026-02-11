@@ -642,6 +642,12 @@ def _match_phase_by_scope(config_data: dict, scope_path: str) -> str | None:
     help="적용할 특정 앱 이름 (지정하지 않으면 모든 앱 적용)",
 )
 @click.option(
+    "--phase",
+    "phase_name",
+    default=None,
+    help="특정 phase만 배포 (config name 기반, 의존성 phase 포함)",
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     default=False,
@@ -683,6 +689,34 @@ def _match_phase_by_scope(config_data: dict, scope_path: str) -> str | None:
     default=False,
     help="비활성화된 앱 자동 삭제 (enabled: false인 앱이 클러스터에 설치되어 있으면 삭제)",
 )
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Workspace 모드에서 이전 상태를 무시하고 강제 배포",
+)
+@click.option(
+    "--skip-validation",
+    is_flag=True,
+    default=False,
+    help="Workspace 모드에서 source 파일 존재 검증 건너뛰기",
+)
+@click.option(
+    "--parallel/--no-parallel",
+    default=None,
+    help="Phase 병렬 실행 (workspace 모드에서만 적용)",
+)
+@click.option(
+    "--parallel-apps/--no-parallel-apps",
+    default=None,
+    help="Phase 내 app group 병렬 실행 (workspace 모드에서만 적용)",
+)
+@click.option(
+    "--max-workers",
+    type=int,
+    default=4,
+    help="최대 병렬 워커 수 (workspace 모드, 기본: 4)",
+)
 @click.pass_context
 def cmd(
     ctx: click.Context,
@@ -693,6 +727,7 @@ def cmd(
     config_file_name: str,
     sources_file_name: str,
     app_name: str | None,
+    phase_name: str | None,
     dry_run: bool,
     skip_prepare: bool,
     skip_build: bool,
@@ -700,6 +735,11 @@ def cmd(
     strict_deps: bool,
     no_progress: bool,
     prune_disabled: bool,
+    force: bool,
+    skip_validation: bool,
+    parallel: bool | None,
+    parallel_apps: bool | None,
+    max_workers: int,
 ) -> None:
     """SBKube apply 명령어.
 
@@ -728,6 +768,10 @@ def cmd(
     if dry_run:
         output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="info")
 
+    if target and phase_name:
+        output.print_error("Cannot use positional TARGET and --phase together.")
+        raise click.Abort
+
     if target and app_config_dir_name:
         click.echo(
             "WARNING: '--app-dir' is ignored when positional TARGET is provided.",
@@ -739,11 +783,12 @@ def cmd(
             err=True,
         )
 
+    resolver_base_dir = Path.cwd() if target else Path(base_dir).resolve()
     try:
         resolved_target = resolve_target(
             target=target,
             config_file=config_file,
-            base_dir=Path.cwd(),
+            base_dir=resolver_base_dir,
         )
     except ValueError as e:
         output.print_error(str(e), error=str(e))
@@ -771,23 +816,25 @@ def cmd(
                 app_dir_path = BASE_DIR / app_config_dir_name
                 app_config_file = app_dir_path / "sbkube.yaml"
                 if not app_config_file.exists():
-                    phase_name = _match_phase_by_scope(config_data, app_config_dir_name)
-                    if phase_name:
+                    matched_phase = _match_phase_by_scope(
+                        config_data, app_config_dir_name
+                    )
+                    if matched_phase:
                         output.print(
-                            f"[cyan]🔄 Resolved TARGET scope to phase: {phase_name}[/cyan]",
+                            f"[cyan]🔄 Resolved TARGET scope to phase: {matched_phase}[/cyan]",
                             level="info",
                         )
                         from sbkube.commands.workspace import WorkspaceDeployCommand
 
                         workspace_cmd = WorkspaceDeployCommand(
                             workspace_file=str(detected.primary_file),
-                            phase=phase_name,
+                            phase=matched_phase,
                             dry_run=dry_run,
-                            force=False,
-                            skip_validation=False,
-                            parallel=None,
-                            parallel_apps=None,
-                            max_workers=4,
+                            force=force,
+                            skip_validation=skip_validation,
+                            parallel=parallel,
+                            parallel_apps=parallel_apps,
+                            max_workers=max_workers,
                         )
                         success = workspace_cmd.execute()
                         if not success:
@@ -813,13 +860,13 @@ def cmd(
 
                     workspace_cmd = WorkspaceDeployCommand(
                         workspace_file=str(app_config_file),
-                        phase=None,
+                        phase=phase_name,
                         dry_run=dry_run,
-                        force=False,
-                        skip_validation=False,
-                        parallel=None,
-                        parallel_apps=None,
-                        max_workers=4,
+                        force=force,
+                        skip_validation=skip_validation,
+                        parallel=parallel,
+                        parallel_apps=parallel_apps,
+                        max_workers=max_workers,
                     )
                     success = workspace_cmd.execute()
                     if not success:
@@ -843,13 +890,13 @@ def cmd(
 
                 workspace_cmd = WorkspaceDeployCommand(
                     workspace_file=str(detected.primary_file),
-                    phase=None,  # Deploy all phases
+                    phase=phase_name,
                     dry_run=dry_run,
-                    force=False,
-                    skip_validation=False,
-                    parallel=None,
-                    parallel_apps=None,
-                    max_workers=4,
+                    force=force,
+                    skip_validation=skip_validation,
+                    parallel=parallel,
+                    parallel_apps=parallel_apps,
+                    max_workers=max_workers,
                 )
                 success = workspace_cmd.execute()
                 if not success:

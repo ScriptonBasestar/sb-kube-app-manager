@@ -67,6 +67,18 @@ class TestApplyOptions:
         result = runner.invoke(main, ["apply", "--help"])
         assert "--app" in result.output
 
+    def test_apply_phase_option_exists(self, runner) -> None:
+        """Test --phase option is available."""
+        result = runner.invoke(main, ["apply", "--help"])
+        assert "--phase" in result.output
+
+    def test_apply_parallel_options_exist(self, runner) -> None:
+        """Test workspace parallel options are exposed in apply."""
+        result = runner.invoke(main, ["apply", "--help"])
+        assert "--parallel / --no-parallel" in result.output
+        assert "--parallel-apps / --no-parallel-apps" in result.output
+        assert "--max-workers" in result.output
+
 
 class TestApplyConfigValidation:
     """Tests for config file validation in apply command."""
@@ -97,6 +109,15 @@ class TestApplyConfigValidation:
 
         # Should fail with parsing error
         assert result.exit_code != 0
+
+    def test_apply_rejects_target_with_phase(self, runner, tmp_path) -> None:
+        """TARGET and --phase should be mutually exclusive."""
+        (tmp_path / "sbkube.yaml").write_text(
+            "apiVersion: sbkube/v1\nmetadata:\n  name: test\napps: {}\n"
+        )
+        result = runner.invoke(main, ["apply", str(tmp_path), "--phase", "p1-infra"])
+        assert result.exit_code != 0
+        assert "Cannot use positional TARGET and --phase together." in result.output
 
 
 @pytest.mark.integration

@@ -2009,51 +2009,43 @@ def deploy_cmd(
     verbose: int,
     debug: bool,
 ) -> None:
-    """Workspace를 배포합니다.
-
-    Phase 의존성 순서대로 각 Phase를 배포합니다.
-    기본적으로 병렬 실행이 활성화됩니다 (workspace 설정 또는 기본값).
-    --no-parallel / --no-parallel-apps 로 순차 실행을 강제할 수 있습니다.
-
-    Examples:
-        # 전체 workspace 배포 (기본: 병렬)
-        sbkube workspace deploy
-
-        # 순차 실행 강제
-        sbkube workspace deploy --no-parallel --no-parallel-apps
-
-        # 특정 Phase만 배포 (의존성 Phase 포함)
-        sbkube workspace deploy --phase p2-data
-
-        # Dry-run 모드
-        sbkube workspace deploy --dry-run
-
-        # 강제 재배포
-        sbkube workspace deploy --force
-
-        # 워커 수 지정
-        sbkube workspace deploy --max-workers 8
-
-    """
+    """Deprecated alias for `sbkube apply` workspace deployment."""
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
     ctx.obj["debug"] = debug
     setup_logging_from_context(ctx)
 
-    deploy_command = WorkspaceDeployCommand(
-        workspace_file=workspace_file,
-        phase=phase,
+    click.echo(
+        "WARNING: 'sbkube workspace deploy' is deprecated. "
+        "Use 'sbkube apply' instead.",
+        err=True,
+    )
+
+    from sbkube.commands.apply import cmd as apply_cmd
+
+    ctx.invoke(
+        apply_cmd,
+        target=None,
+        config_file=workspace_file,
+        app_config_dir_name=None,
+        base_dir=".",
+        config_file_name="config.yaml",
+        sources_file_name="sources.yaml",
+        app_name=None,
+        phase_name=phase,
         dry_run=dry_run,
+        skip_prepare=False,
+        skip_build=False,
+        skip_deps_check=False,
+        strict_deps=False,
+        no_progress=False,
+        prune_disabled=False,
         force=force,
         skip_validation=skip_validation,
         parallel=parallel,
         parallel_apps=parallel_apps,
         max_workers=max_workers,
     )
-
-    success = deploy_command.execute()
-    if not success:
-        raise click.Abort
 
 
 @workspace_group.command(name="status")

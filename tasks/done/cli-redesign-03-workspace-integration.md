@@ -7,6 +7,9 @@ parent: cli-redesign-overview.md
 order: 3
 depends_on:
   - cli-redesign-01-positional-target.md
+started-at: 2026-02-11T11:02:30+09:00
+completed-at: 2026-02-11T11:05:13+09:00
+completion-summary: "Integrated workspace deployment controls into apply and converted workspace deploy into a deprecated redirect."
 ---
 
 # [3/5] `workspace deploy` → `apply`로 통합
@@ -93,3 +96,15 @@ sbkube workspace validate ~/ph3_kube/sbkube.yaml
 
 - `--phase`와 `TARGET`이 동시에 있으면 에러 (둘은 같은 목적의 다른 방식)
 - `--parallel/--no-parallel`, `--max-workers` 등 workspace deploy 전용 옵션은 `apply`로 이동
+
+## Execution Log
+
+- Started: 2026-02-11T11:02:30+09:00
+- Worker: AI (Codex)
+- Scope summary: Added workspace-phase controls to `apply`, enforced `TARGET`/`--phase` exclusivity, and redirected `workspace deploy` to `apply` with deprecation warning.
+
+## Completion
+
+- Work summary: Added `--phase`, `--parallel`, `--parallel-apps`, `--max-workers`, `--force`, and `--skip-validation` passthrough in `apply` for workspace mode; updated workspace deployment branches to consume those options; replaced `workspace deploy` execution with `ctx.invoke(apply_cmd, ...)` and deprecation warning.
+- Key files changed: `sbkube/commands/apply.py`, `sbkube/commands/workspace.py`, `tests/commands/test_apply_cli.py`
+- Verification method: `pytest -q tests/commands/test_apply_cli.py tests/unit/commands/test_workspace.py tests/unit/commands/test_apply.py` and `ruff check sbkube/commands/apply.py sbkube/commands/workspace.py tests/commands/test_apply_cli.py tests/unit/commands/test_workspace.py tests/unit/commands/test_apply.py`

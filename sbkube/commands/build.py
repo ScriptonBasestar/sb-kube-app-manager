@@ -18,6 +18,7 @@ from sbkube.utils.chart_path_resolver import (
     resolve_local_chart_path,
     resolve_remote_chart_path,
 )
+from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_helpers import (
     create_hook_executor,
@@ -316,6 +317,7 @@ def build_http_app(
 
 
 @click.command(name="build")
+@target_options
 @click.option(
     "--app-dir",
     "app_config_dir_name",
@@ -355,6 +357,8 @@ def build_http_app(
 @click.pass_context
 def cmd(
     ctx: click.Context,
+    target: str | None,
+    config_file: str | None,
     app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
@@ -375,8 +379,23 @@ def cmd(
 
     output.print("[bold blue]✨ SBKube `build` 시작 ✨[/bold blue]", level="info")
 
-    # 경로 설정
-    BASE_DIR = Path(base_dir).resolve()
+    try:
+        resolved_paths = resolve_command_paths(
+            target=target,
+            config_file=config_file,
+            base_dir=base_dir,
+            app_config_dir_name=app_config_dir_name,
+            config_file_name=config_file_name,
+            sources_file_name=sources_file_name,
+        )
+    except ValueError as e:
+        output.print_error(str(e), error=str(e))
+        raise click.Abort from e
+
+    BASE_DIR = resolved_paths.base_dir
+    app_config_dir_name = resolved_paths.app_config_dir_name
+    config_file_name = resolved_paths.config_file_name
+    sources_file_name = resolved_paths.sources_file_name
 
     # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
     try:

@@ -23,6 +23,8 @@ class TestTemplateCommandHelp:
         result = runner.invoke(main, ["template", "--help"])
 
         assert result.exit_code == 0
+        assert "TARGET" in result.output
+        assert "--file" in result.output
         assert "template" in result.output.lower()
         assert "render" in result.output.lower() or "yaml" in result.output.lower()
 

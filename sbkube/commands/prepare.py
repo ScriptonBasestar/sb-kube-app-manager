@@ -5,7 +5,6 @@
 - git 타입: 리포지토리 clone
 """
 
-import json
 import shutil
 import uuid
 from pathlib import Path
@@ -16,16 +15,17 @@ from sbkube.models.config_model import GitApp, HelmApp, HookApp, HttpApp, SBKube
 from sbkube.models.sources_model import HelmRepoScheme, SourceScheme
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.cli_check import check_helm_installed_or_exit
-from sbkube.utils.workspace_resolver import SbkubeDirectories
 from sbkube.utils.cluster_config import (
     ClusterConfigError,
     apply_cluster_config_to_command,
     resolve_cluster_config,
 )
 from sbkube.utils.common import find_sources_file, run_command
+from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
+from sbkube.utils.workspace_resolver import SbkubeDirectories
 
 
 def parse_helm_chart(chart: str) -> tuple[str, str]:
@@ -729,6 +729,7 @@ def prepare_git_app(
 
 
 @click.command(name="prepare")
+@target_options
 @click.option(
     "--app-dir",
     "app_config_dir_name",
@@ -780,6 +781,8 @@ def prepare_git_app(
 @click.pass_context
 def cmd(
     ctx: click.Context,
+    target: str | None,
+    config_file: str | None,
     app_config_dir_name: str | None,
     base_dir: str,
     config_file_name: str,
@@ -804,8 +807,23 @@ def cmd(
     # Helm 설치 확인
     check_helm_installed_or_exit()
 
-    # 경로 설정
-    BASE_DIR = Path(base_dir).resolve()
+    try:
+        resolved_paths = resolve_command_paths(
+            target=target,
+            config_file=config_file,
+            base_dir=base_dir,
+            app_config_dir_name=app_config_dir_name,
+            config_file_name=config_file_name,
+            sources_file_name=sources_file_name,
+        )
+    except ValueError as e:
+        output.print_error(str(e), error=str(e))
+        raise click.Abort from e
+
+    BASE_DIR = resolved_paths.base_dir
+    app_config_dir_name = resolved_paths.app_config_dir_name
+    config_file_name = resolved_paths.config_file_name
+    sources_file_name = resolved_paths.sources_file_name
 
     # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
     try:

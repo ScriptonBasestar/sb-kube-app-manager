@@ -31,6 +31,8 @@ class TestBuildCommandHelp:
         result = runner.invoke(main, ["build", "--help"])
         assert result.exit_code == 0
         assert "SBKube build" in result.output
+        assert "TARGET" in result.output
+        assert "--file" in result.output
         assert "--app-dir" in result.output
         assert "--base-dir" in result.output
         assert "--app" in result.output

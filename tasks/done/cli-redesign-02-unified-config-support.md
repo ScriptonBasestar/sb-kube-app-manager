@@ -7,6 +7,9 @@ parent: cli-redesign-overview.md
 order: 2
 depends_on:
   - cli-redesign-01-positional-target.md
+started-at: 2026-02-11T11:00:05+09:00
+completed-at: 2026-02-11T11:02:07+09:00
+completion-summary: "Added shared TARGET/-f option handling and integrated unified target resolution into prepare/build/template/deploy."
 ---
 
 # [2/5] `prepare/build/template/deploy`에 `-f` + TARGET 추가
@@ -94,3 +97,15 @@ def target_options(f):
 
 - 기존 `--app-dir`, `--config-file`, `--source` 옵션은 유지 (task-04에서 deprecated)
 - TARGET이 있으면 legacy 옵션 무시하는 우선순위 로직은 task-01의 resolve_target과 동일
+
+## Execution Log
+
+- Started: 2026-02-11T11:00:05+09:00
+- Worker: AI (Codex)
+- Scope summary: Added shared CLI target option helpers and applied them across `prepare`, `build`, `template`, and `deploy` while preserving legacy flags.
+
+## Completion
+
+- Work summary: Created `sbkube/utils/common_options.py` with `target_options` and `resolve_command_paths`, updated command signatures and decorators for TARGET/`-f` support, and ensured unified config path precedence is consistently applied.
+- Key files changed: `sbkube/utils/common_options.py`, `sbkube/commands/prepare.py`, `sbkube/commands/build.py`, `sbkube/commands/template.py`, `sbkube/commands/deploy.py`, `tests/unit/utils/test_common_options.py`, `tests/unit/commands/test_prepare_cmd.py`, `tests/unit/commands/test_build_cmd.py`, `tests/unit/commands/test_template_cmd.py`, `tests/unit/commands/test_deploy_cmd.py`
+- Verification method: `pytest -q tests/unit/utils/test_common_options.py tests/unit/commands/test_prepare_cmd.py tests/unit/commands/test_build_cmd.py tests/unit/commands/test_template_cmd.py tests/unit/commands/test_deploy_cmd.py` and `ruff check sbkube/utils/common_options.py sbkube/commands/prepare.py sbkube/commands/build.py sbkube/commands/template.py sbkube/commands/deploy.py tests/unit/utils/test_common_options.py tests/unit/commands/test_prepare_cmd.py tests/unit/commands/test_build_cmd.py tests/unit/commands/test_template_cmd.py tests/unit/commands/test_deploy_cmd.py`

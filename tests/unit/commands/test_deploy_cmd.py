@@ -32,6 +32,8 @@ class TestDeployCommandHelp:
         result = runner.invoke(main, ["deploy", "--help"])
         assert result.exit_code == 0
         assert "SBKube deploy" in result.output or "deploy" in result.output.lower()
+        assert "TARGET" in result.output
+        assert "--file" in result.output
         assert "--app-dir" in result.output
         assert "--dry-run" in result.output
 

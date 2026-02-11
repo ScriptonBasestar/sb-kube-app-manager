@@ -23,6 +23,8 @@ class TestPrepareCommandHelp:
         result = runner.invoke(main, ["prepare", "--help"])
 
         assert result.exit_code == 0
+        assert "TARGET" in result.output
+        assert "--file" in result.output
         assert "prepare" in result.output.lower()
         assert "chart" in result.output.lower() or "download" in result.output.lower()
 

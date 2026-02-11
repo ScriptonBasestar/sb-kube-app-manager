@@ -24,6 +24,41 @@ class TestUpgradeBasicSuccess:
 
     @patch("sbkube.commands.upgrade.run_command")
     @patch("sbkube.commands.upgrade.check_helm_installed_or_exit")
+    def test_upgrade_single_helm_app_with_target(
+        self, mock_check_helm, mock_run_command, tmp_path: Path
+    ) -> None:
+        """Test upgrade using positional TARGET with unified config."""
+        base_dir = tmp_path
+        app_config_dir = base_dir / "config"
+        app_config_dir.mkdir(exist_ok=True)
+
+        (app_config_dir / "sbkube.yaml").write_text(
+            """
+apiVersion: sbkube/v1
+settings:
+  namespace: default
+apps:
+  nginx:
+    type: helm
+    chart: bitnami/nginx
+    version: 15.0.0
+"""
+        )
+
+        build_dir = base_dir / ".sbkube" / "build" / "nginx"
+        build_dir.mkdir(parents=True, exist_ok=True)
+        (build_dir / "Chart.yaml").write_text("name: nginx\nversion: 15.0.0")
+
+        mock_run_command.return_value = (0, "Release upgraded successfully", "")
+
+        runner = CliRunner()
+        result = runner.invoke(cmd, [str(app_config_dir)], obj={"namespace": None})
+
+        assert result.exit_code == 0
+        assert "업그레이드/설치 성공" in result.output
+
+    @patch("sbkube.commands.upgrade.run_command")
+    @patch("sbkube.commands.upgrade.check_helm_installed_or_exit")
     def test_upgrade_single_helm_app_success(
         self, mock_check_helm, mock_run_command, tmp_path: Path
     ) -> None:

@@ -8,6 +8,9 @@ order: 5
 depends_on:
   - cli-redesign-01-positional-target.md
   - cli-redesign-04-deprecate-legacy-options.md
+started-at: 2026-02-11T11:09:10+09:00
+completed-at: 2026-02-11T11:11:55+09:00
+completion-summary: "Applied TARGET/-f pattern to delete and upgrade with unified sbkube.yaml compatibility."
 ---
 
 # [5/5] `delete/upgrade`에 TARGET 패턴 적용
@@ -89,3 +92,15 @@ unified config에서 delete/upgrade 시:
 
 - delete/upgrade는 파괴적 명령어이므로 TARGET 해석 시 확인 단계 권장
 - `--app` 옵션은 `delete`에서는 `target_app_name`, `upgrade`에서도 `target_app_name`으로 명명되어 있음 → 다른 명령어의 `app_name`과 통일 검토 (별도 task)
+
+## Execution Log
+
+- Started: 2026-02-11T11:09:10+09:00
+- Worker: AI (Codex)
+- Scope summary: Added positional TARGET and `-f` path resolution to `delete` and `upgrade`, while preserving legacy behavior and adding unified config parsing support.
+
+## Completion
+
+- Work summary: Integrated shared target resolution into destructive commands, added unified `sbkube.yaml` parsing branches, kept legacy options with deprecation warnings, and added/updated tests for TARGET-based invocation.
+- Key files changed: `sbkube/commands/delete.py`, `sbkube/commands/upgrade.py`, `sbkube/utils/common_options.py`, `tests/unit/commands/test_delete.py`, `tests/unit/commands/test_upgrade.py`
+- Verification method: `pytest -q tests/unit/commands/test_delete.py tests/unit/commands/test_upgrade.py tests/unit/utils/test_common_options.py` and `ruff check sbkube/commands/delete.py sbkube/commands/upgrade.py sbkube/utils/common_options.py tests/unit/commands/test_delete.py tests/unit/commands/test_upgrade.py tests/unit/utils/test_common_options.py`

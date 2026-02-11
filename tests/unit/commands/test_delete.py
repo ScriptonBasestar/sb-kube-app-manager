@@ -27,6 +27,47 @@ class TestDeleteHelmAppBasic:
     @patch("sbkube.commands.delete.run_command")
     @patch("sbkube.commands.delete.check_helm_installed_or_exit")
     @patch("sbkube.commands.delete.find_sources_file")
+    def test_delete_helm_app_success_with_target(
+        self,
+        mock_find_sources,
+        mock_check_helm,
+        mock_run_command,
+        mock_get_charts,
+        tmp_path: Path,
+    ) -> None:
+        """Test successful Helm app deletion with positional TARGET."""
+        base_dir = tmp_path
+        app_config_dir = base_dir / "config"
+        app_config_dir.mkdir(exist_ok=True)
+
+        (app_config_dir / "sbkube.yaml").write_text(
+            """
+apiVersion: sbkube/v1
+settings:
+  namespace: default
+apps:
+  nginx:
+    type: helm
+    chart: bitnami/nginx
+    release_name: my-nginx
+"""
+        )
+
+        mock_find_sources.return_value = None
+        mock_get_charts.return_value = ["my-nginx"]
+        mock_run_command.return_value = (0, "release uninstalled", "")
+
+        runner = CliRunner()
+        result = runner.invoke(cmd, [str(app_config_dir)], obj={"namespace": None})
+
+        assert result.exit_code == 0
+        assert "삭제 완료" in result.output
+        mock_run_command.assert_called_once()
+
+    @patch("sbkube.commands.delete.get_installed_charts")
+    @patch("sbkube.commands.delete.run_command")
+    @patch("sbkube.commands.delete.check_helm_installed_or_exit")
+    @patch("sbkube.commands.delete.find_sources_file")
     def test_delete_helm_app_success(
         self,
         mock_find_sources,

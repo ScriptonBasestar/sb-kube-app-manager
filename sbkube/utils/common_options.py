@@ -14,7 +14,7 @@ class ResolvedCommandPaths:
 
     base_dir: Path
     app_config_dir_name: str | None
-    config_file_name: str
+    config_file_name: str | None
     sources_file_name: str
 
 
@@ -43,7 +43,7 @@ def resolve_command_paths(
     config_file: str | None,
     base_dir: str,
     app_config_dir_name: str | None,
-    config_file_name: str,
+    config_file_name: str | None,
     sources_file_name: str,
 ) -> ResolvedCommandPaths:
     """Resolve command path arguments with positional TARGET semantics."""

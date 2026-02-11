@@ -9,6 +9,9 @@ related:
   - cli-redesign-03-workspace-integration.md
   - cli-redesign-04-deprecate-legacy-options.md
   - cli-redesign-05-delete-upgrade-alignment.md
+started-at: 2026-02-11T11:12:20+09:00
+completed-at: 2026-02-11T11:12:43+09:00
+completion-summary: "All 5 CLI redesign child tasks completed and merged; TARGET-first CLI flow is now implemented across core commands."
 ---
 
 # CLI Redesign: `--app-dir` 제거 및 positional TARGET 도입
@@ -78,3 +81,15 @@ TARGET이 full path를 허용하고 upward search가 sbkube.yaml을 찾으므로
 | 5 | `delete/upgrade`에 TARGET 패턴 적용 | No |
 
 모든 단계는 기존 옵션과 병존하므로 비파괴적 점진 적용.
+
+## Execution Log
+
+- Started: 2026-02-11T11:12:20+09:00
+- Worker: AI (Codex)
+- Scope summary: Verified all linked redesign tasks were completed and aligned in `tasks/done/`, then closed the epic.
+
+## Completion
+
+- Work summary: Confirmed completion of all related tasks (`01`-`05`), including positional TARGET adoption, workspace integration, and legacy deprecation rollout.
+- Key files changed: `tasks/done/cli-redesign-overview.md` (moved from todo)
+- Verification method: Checked presence of all child task files in `tasks/done/`.

@@ -285,7 +285,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Run all tests

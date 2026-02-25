@@ -150,7 +150,7 @@ sbkube deploy --base-dir . --app-dir config --namespace <namespace>
 
 - 🏢 **개발**: [ScriptonBasestar](https://github.com/ScriptonBasestar)
 - 📄 **라이선스**: MIT License
-- 🐍 **Python**: 3.12 이상 required
+- 🐍 **Python**: 3.14 이상 required
 - 🛠️ **의존성**: Click, Pydantic, PyYAML, GitPython
 
 ---

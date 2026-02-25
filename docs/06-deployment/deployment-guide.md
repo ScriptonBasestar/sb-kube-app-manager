@@ -42,7 +42,7 @@ source sbkube-env/bin/activate  # Linux/Mac
 pip install sbkube
 
 # conda 사용
-conda create -n sbkube python=3.12
+conda create -n sbkube python=3.14
 conda activate sbkube
 pip install sbkube
 ```
@@ -86,7 +86,7 @@ ______________________________________________________________________
 ```bash
 # Dockerfile 생성
 cat > Dockerfile << 'EOF'
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # 필수 도구 설치
 RUN apt-get update && apt-get install -y \
@@ -122,7 +122,7 @@ ______________________________________________________________________
 
 ### 필수 요구사항
 
-- **Python**: 3.12 이상
+- **Python**: 3.14 이상
 - **운영체제**: Linux, macOS, Windows
 - **메모리**: 최소 512MB RAM
 - **디스크**: 최소 100MB 여유 공간
@@ -264,7 +264,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.12'
+        python-version: '3.14'
         
     - name: Install SBKube
       run: pip install sbkube
@@ -415,7 +415,7 @@ spec:
     spec:
       containers:
       - name: sbkube
-        image: python:3.12-slim
+        image: python:3.14-slim
         command: ["/bin/bash"]
         args:
           - -c
@@ -533,7 +533,7 @@ pip install sbkube
 pip install --user sbkube
 
 # Python 버전 확인
-python --version  # 3.12 이상 필요
+python --version  # 3.14 이상 필요
 ```
 
 ### 런타임 문제 해결

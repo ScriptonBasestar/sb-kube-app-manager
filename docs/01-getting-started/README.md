@@ -25,7 +25,7 @@ ______________________________________________________________________
 
 ### Requirements
 
-- **Python 3.12+**
+- **Python 3.14+**
 - **kubectl** - Kubernetes cluster access
 - **helm** - Helm chart management
 

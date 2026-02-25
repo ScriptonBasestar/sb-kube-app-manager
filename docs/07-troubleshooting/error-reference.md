@@ -30,24 +30,24 @@ ______________________________________________________________________
 
 ```bash
 # Error
-ERROR: Python 3.12 is required, but you have 3.11
+ERROR: Python 3.14 is required, but you have 3.13
 ```
 
-**Cause:** SBKube requires Python 3.12 or higher.
+**Cause:** SBKube requires Python 3.14 or higher.
 
 **Solution:**
 
 ```bash
-# Install Python 3.12+
+# Install Python 3.14+
 # Ubuntu/Debian
-sudo apt update && sudo apt install python3.12
+sudo apt update && sudo apt install python3.14
 
 # macOS (Homebrew)
-brew install python@3.12
+brew install python@3.14
 
 # pyenv
-pyenv install 3.12.0
-pyenv global 3.12.0
+pyenv install 3.14.0
+pyenv global 3.14.0
 
 # Windows (Python.org)
 # Download from https://www.python.org/downloads/
@@ -1232,7 +1232,7 @@ echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc
 
 ```bash
 # SELinux issues (RHEL/CentOS/Fedora)
-Error: SELinux is preventing /usr/bin/python3.12 from read access
+Error: SELinux is preventing /usr/bin/python3.14 from read access
 ```
 
 **Solutions:**

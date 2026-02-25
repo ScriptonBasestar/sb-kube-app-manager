@@ -193,7 +193,7 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
 
 ### 기술적 의존성
 
-- Python 생태계 발전 (3.12+)
+- Python 생태계 발전 (3.14+)
 - Helm v3.x 호환성 유지
 - Kubernetes API 안정성
 - SQLAlchemy, Pydantic 최신 버전 지원

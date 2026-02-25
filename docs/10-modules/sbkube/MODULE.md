@@ -16,7 +16,7 @@ last_updated: 2026-02-25
 - **버전**: v0.11.0
 - **타입**: Python CLI Application (Monolithic)
 - **역할**: Kubernetes 배포 자동화 CLI 도구 (k3s 최적화)
-- **런타임**: Python 3.12+
+- **런타임**: Python 3.14+
 
 ## 모듈 경계 (Boundaries)
 

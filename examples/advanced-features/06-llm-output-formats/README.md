@@ -394,7 +394,7 @@ jobs:
 # .gitlab-ci.yml
 deploy:
   stage: deploy
-  image: python:3.12-slim
+  image: python:3.14-slim
   script:
     - uv tool install sbkube
 

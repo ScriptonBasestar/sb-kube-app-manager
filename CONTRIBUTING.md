@@ -335,7 +335,7 @@ When reporting bugs, please include:
 
 ## Environment
 - SBKube version: 0.9.1
-- Python version: 3.12.1
+- Python version: 3.14.0
 - OS: Ubuntu 22.04
 - Kubernetes: k3s v1.28.0
 

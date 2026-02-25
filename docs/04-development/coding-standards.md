@@ -8,7 +8,7 @@ This document defines coding standards and conventions for SBKube development.
 
 ## Python Style
 
-- **Language**: Python 3.12+
+- **Language**: Python 3.14+
 - **Formatter**: black (line-length: 120)
 - **Linter**: ruff (configuration: [ruff.toml](../../ruff.toml))
 - **Type Checker**: mypy (configuration: [mypy.ini](../../mypy.ini))

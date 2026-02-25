@@ -240,7 +240,7 @@ ______________________________________________________________________
 ## 관련 문서
 
 - **상위 문서**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
-- **제품 정의**: [product-definition.md](product-definition.md) - 완전한 제품 정의
+- **제품 정의**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
 - **기능 명세**: [product-spec.md](product-spec.md) - 전체 기능 목록
 - **변경 이력**: [../../CHANGELOG.md](../../CHANGELOG.md) - 버전별 변경사항
 

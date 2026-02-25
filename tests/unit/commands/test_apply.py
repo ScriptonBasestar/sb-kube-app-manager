@@ -71,8 +71,6 @@ class TestApplyBasicWorkflow:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
             ],
@@ -96,8 +94,6 @@ class TestApplyBasicWorkflow:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--dry-run",
@@ -153,8 +149,6 @@ class TestApplySkipFlags:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--skip-prepare",
@@ -178,8 +172,6 @@ class TestApplySkipFlags:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--skip-build",
@@ -200,8 +192,6 @@ class TestApplySkipFlags:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--skip-prepare",
@@ -272,8 +262,6 @@ class TestApplyAppFiltering:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--app",
@@ -299,8 +287,6 @@ class TestApplyAppFiltering:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--app",
@@ -321,8 +307,6 @@ class TestApplyAppFiltering:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--app",
@@ -393,8 +377,6 @@ class TestApplyDependencyValidation:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
             ],
@@ -430,8 +412,6 @@ class TestApplyDependencyValidation:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
             ],
@@ -463,8 +443,6 @@ class TestApplyDependencyValidation:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--strict-deps",
@@ -488,8 +466,6 @@ class TestApplyDependencyValidation:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--skip-deps-check",
@@ -557,8 +533,6 @@ class TestApplyHooks:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
             ],
@@ -581,8 +555,6 @@ class TestApplyHooks:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
             ],
@@ -604,9 +576,7 @@ class TestApplyErrorHandling:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
-            ],
+                ],
             obj={"format": "human"},  # Provide context object
         )
 
@@ -631,8 +601,6 @@ class TestApplyErrorHandling:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
             ],
@@ -682,8 +650,6 @@ class TestApplyErrorHandling:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
             ],
@@ -741,8 +707,6 @@ class TestApplyProgressTracking:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
                 "-f",
                 str(base_dir / "sbkube.yaml"),
                 "--no-progress",

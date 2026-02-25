@@ -14,7 +14,6 @@ import click
 from sbkube.models.config_model import SBKubeConfig
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.deployment_checker import DeploymentChecker
-from sbkube.utils.deprecation import option_was_explicitly_set, warn_deprecated_option
 from sbkube.utils.error_formatter import format_deployment_error
 from sbkube.utils.file_loader import (
     ConfigType,
@@ -269,6 +268,7 @@ def _execute_apps_deployment(
 
     BASE_DIR = Path(base_dir).resolve()
     APP_CONFIG_DIR = app_config_dir
+    config_file_path = APP_CONFIG_DIR / config_file_name
     overall_success = True
 
     # deps (app-group dependencies) 배포 상태 검증
@@ -445,10 +445,8 @@ def _execute_apps_deployment(
                     with perf_timer("stage.prepare", app=app_name_iter):
                         prepare_ctx.invoke(
                             prepare_cmd,
-                            app_config_dir_name=current_app_dir,
-                            base_dir=base_dir,
-                            config_file_name=config_file_name,
-                            sources_file_name=sources_file_name,
+                            target=str(APP_CONFIG_DIR),
+                            config_file=str(config_file_path),
                             app_name=app_name_iter,
                             force=False,
                             dry_run=dry_run,
@@ -474,10 +472,8 @@ def _execute_apps_deployment(
                     with perf_timer("stage.build", app=app_name_iter):
                         build_ctx.invoke(
                             build_cmd,
-                            app_config_dir_name=current_app_dir,
-                            base_dir=base_dir,
-                            config_file_name=config_file_name,
-                            sources_file_name=sources_file_name,
+                            target=str(APP_CONFIG_DIR),
+                            config_file=str(config_file_path),
                             app_name=app_name_iter,
                             dry_run=dry_run,
                         )
@@ -506,10 +502,8 @@ def _execute_apps_deployment(
                 with perf_timer("stage.deploy", app=app_name_iter):
                     deploy_ctx.invoke(
                         deploy_cmd,
-                        app_config_dir_name=current_app_dir,
-                        base_dir=base_dir,
-                        config_file_name=config_file_name,
-                        sources_file_name=sources_file_name,
+                        target=str(APP_CONFIG_DIR),
+                        config_file=str(config_file_path),
                         app_name=app_name_iter,
                         dry_run=dry_run,
                     )
@@ -613,30 +607,6 @@ def _match_phase_by_scope(config_data: dict, scope_path: str) -> str | None:
     help="Unified config file (sbkube.yaml) - recommended for new projects",
 )
 @click.option(
-    "--app-dir",
-    "app_config_dir_name",
-    default=None,
-    help="[DEPRECATED] 앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
-)
-@click.option(
-    "--base-dir",
-    default=".",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    help="[DEPRECATED] 프로젝트 루트 디렉토리 - use TARGET full path or -f",
-)
-@click.option(
-    "--config-file",
-    "config_file_name",
-    default="config.yaml",
-    help="[DEPRECATED] 설정 파일 이름 (app-dir 내부) - use -f instead",
-)
-@click.option(
-    "--source",
-    "sources_file_name",
-    default="sources.yaml",
-    help="[DEPRECATED] 소스 설정 파일 (base-dir 기준) - use -f instead",
-)
-@click.option(
     "--app",
     "app_name",
     default=None,
@@ -723,10 +693,6 @@ def cmd(
     ctx: click.Context,
     target: str | None,
     config_file: str | None,
-    app_config_dir_name: str | None,
-    base_dir: str,
-    config_file_name: str,
-    sources_file_name: str,
     app_name: str | None,
     phase_name: str | None,
     dry_run: bool,
@@ -757,23 +723,14 @@ def cmd(
         sbkube apply -f sbkube.yaml --dry-run
 
     \b
-    Usage with legacy config (deprecated):
-        sbkube apply --base-dir ./project --source sources.yaml
+    Usage with legacy config directory:
+        sbkube apply ./config
     """
     # Initialize OutputManager
     output_format = ctx.obj.get("format", "human")
     output = OutputManager(format_type=output_format)
 
     output.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]", level="info")
-
-    if option_was_explicitly_set(ctx, "app_config_dir_name"):
-        warn_deprecated_option("--app-dir", "positional TARGET argument")
-    if option_was_explicitly_set(ctx, "base_dir"):
-        warn_deprecated_option("--base-dir", "full path in TARGET or -f")
-    if option_was_explicitly_set(ctx, "config_file_name"):
-        warn_deprecated_option("--config-file", "-f with sbkube.yaml")
-    if option_was_explicitly_set(ctx, "sources_file_name"):
-        warn_deprecated_option("--source", "unified sbkube.yaml settings")
 
     if dry_run:
         output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="info")
@@ -782,18 +739,10 @@ def cmd(
         output.print_error("Cannot use positional TARGET and --phase together.")
         raise click.Abort
 
-    if target and app_config_dir_name:
-        click.echo(
-            "WARNING: '--app-dir' is ignored when positional TARGET is provided.",
-            err=True,
-        )
-    if target and base_dir != ".":
-        click.echo(
-            "WARNING: '--base-dir' is ignored when positional TARGET is provided.",
-            err=True,
-        )
-
-    resolver_base_dir = Path.cwd() if target else Path(base_dir).resolve()
+    app_config_dir_name: str | None = None
+    config_file_name = "config.yaml"
+    sources_file_name = ctx.obj.get("sources_file", "sources.yaml")
+    resolver_base_dir = Path.cwd()
     try:
         resolved_target = resolve_target(
             target=target,
@@ -810,7 +759,7 @@ def cmd(
     if target and resolved_target.scope_path:
         app_config_dir_name = resolved_target.scope_path
 
-    # Detect config format and emit deprecation warnings
+    # Detect config format
     detected = detect_config_file(BASE_DIR, config_file)
 
     if detected.config_type == ConfigType.UNIFIED:
@@ -822,7 +771,7 @@ def cmd(
         config_data = load_config_file(str(detected.primary_file))
         if "phases" in config_data and config_data["phases"]:
             if app_config_dir_name:
-                # --app-dir specified: redirect to app group's own sbkube.yaml
+                # TARGET scope specified: redirect to app group's own sbkube.yaml
                 app_dir_path = BASE_DIR / app_config_dir_name
                 app_config_file = app_dir_path / "sbkube.yaml"
                 if not app_config_file.exists():
@@ -891,7 +840,7 @@ def cmd(
                 )
                 # Fall through to single app group mode below
             else:
-                # No --app-dir: workspace mode, deploy all phases
+                # No TARGET scope: workspace mode, deploy all phases
                 output.print(
                     "[cyan]🔄 Detected multi-phase configuration[/cyan]",
                     level="info",
@@ -985,9 +934,6 @@ def cmd(
         )
         raise click.Abort
 
-    # 경로 설정
-    BASE_DIR = Path(base_dir).resolve()
-
     # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
     try:
         app_config_dirs = resolve_app_dirs(
@@ -1058,7 +1004,7 @@ def cmd(
                     level="warning",
                 )
                 for dep in dep_check_result["missing"]:
-                    output.print(f"  sbkube apply --app-dir {dep}", level="info")
+                    output.print(f"  sbkube apply {dep}", level="info")
 
                 # strict_deps 모드일 때만 중단
                 if strict_deps:
@@ -1252,10 +1198,8 @@ def cmd(
                             prepare_ctx.obj = ctx.obj  # Pass parent context object
                             prepare_ctx.invoke(
                                 prepare_cmd,
-                                app_config_dir_name=current_app_dir,
-                                base_dir=base_dir,
-                                config_file_name=config_file_name,
-                                sources_file_name=sources_file_name,
+                                target=str(APP_CONFIG_DIR),
+                                config_file=str(config_file_path),
                                 app_name=app_name_iter,  # 현재 처리 중인 앱
                                 force=False,
                                 dry_run=dry_run,
@@ -1292,9 +1236,8 @@ def cmd(
                             build_ctx.obj = ctx.obj  # Pass parent context object
                             build_ctx.invoke(
                                 build_cmd,
-                                app_config_dir_name=current_app_dir,
-                                base_dir=base_dir,
-                                config_file_name=config_file_name,
+                                target=str(APP_CONFIG_DIR),
+                                config_file=str(config_file_path),
                                 app_name=app_name_iter,  # 현재 처리 중인 앱
                                 dry_run=dry_run,
                             )
@@ -1334,9 +1277,8 @@ def cmd(
                         deploy_ctx.obj = ctx.obj  # Pass parent context object
                         deploy_ctx.invoke(
                             deploy_cmd,
-                            app_config_dir_name=current_app_dir,
-                            base_dir=base_dir,
-                            config_file_name=config_file_name,
+                            target=str(APP_CONFIG_DIR),
+                            config_file=str(config_file_path),
                             app_name=app_name_iter,  # 현재 처리 중인 앱
                             dry_run=dry_run,
                         )

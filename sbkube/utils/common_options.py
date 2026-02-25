@@ -47,18 +47,7 @@ def resolve_command_paths(
     sources_file_name: str,
 ) -> ResolvedCommandPaths:
     """Resolve command path arguments with positional TARGET semantics."""
-    if target and app_config_dir_name:
-        click.echo(
-            "WARNING: '--app-dir' is ignored when positional TARGET is provided.",
-            err=True,
-        )
-    if target and base_dir != ".":
-        click.echo(
-            "WARNING: '--base-dir' is ignored when positional TARGET is provided.",
-            err=True,
-        )
-
-    # Legacy mode (no TARGET/-f): keep existing path behavior.
+    # Default mode (no TARGET/-f): keep current working-directory behavior.
     if not target and not config_file:
         return ResolvedCommandPaths(
             base_dir=Path(base_dir).resolve(),
@@ -67,11 +56,26 @@ def resolve_command_paths(
             sources_file_name=sources_file_name,
         )
 
-    resolved = resolve_target(
-        target=target,
-        config_file=config_file,
-        base_dir=Path.cwd(),
-    )
+    try:
+        resolved = resolve_target(
+            target=target,
+            config_file=config_file,
+            base_dir=Path.cwd(),
+        )
+    except ValueError as exc:
+        # Fallback: TARGET directory as legacy app-group scope (config.yaml/sources.yaml)
+        if target and not config_file:
+            target_path = Path(target)
+            if not target_path.is_absolute():
+                target_path = (Path.cwd() / target_path).resolve()
+            if target_path.exists() and target_path.is_dir():
+                return ResolvedCommandPaths(
+                    base_dir=target_path.parent,
+                    app_config_dir_name=target_path.name,
+                    config_file_name=config_file_name,
+                    sources_file_name=sources_file_name,
+                )
+        raise exc
     scope = resolved.scope_path or "."
 
     return ResolvedCommandPaths(

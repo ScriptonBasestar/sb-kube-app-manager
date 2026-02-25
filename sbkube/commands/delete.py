@@ -12,7 +12,6 @@ from sbkube.utils.cli_check import (
 from sbkube.utils.cluster_config import resolve_cluster_config
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
-from sbkube.utils.deprecation import option_was_explicitly_set, warn_deprecated_option
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts
 
@@ -21,18 +20,6 @@ console = Console()
 
 @click.command(name="delete")
 @target_options
-@click.option(
-    "--app-dir",
-    "app_config_dir_name",
-    default=".",
-    help="[DEPRECATED: use positional TARGET] 앱 설정 파일이 위치한 디렉토리 이름 (base-dir 기준)",
-)
-@click.option(
-    "--base-dir",
-    default=".",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    help="[DEPRECATED: use TARGET full path or -f] 프로젝트 루트 디렉토리",
-)
 @click.option(
     "--app",
     "target_app_name",
@@ -49,40 +36,27 @@ console = Console()
     is_flag=True,
     help="실제로 삭제하지 않고 삭제될 리소스를 미리 확인합니다.",
 )
-@click.option(
-    "--config-file",
-    "config_file_name",
-    default=None,
-    help="[DEPRECATED: use -f with sbkube.yaml] 사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)",
-)
 @click.pass_context
 def cmd(
-    ctx,
+    ctx: click.Context,
     target: str | None,
     config_file: str | None,
-    app_config_dir_name: str | None,
-    base_dir: str,
     target_app_name: str | None,
     skip_not_found: bool,
     dry_run: bool,
-    config_file_name: str | None,
 ) -> None:
     """config.yaml/toml에 정의된 애플리케이션을 삭제합니다 (Helm 릴리스, Kubectl 리소스 등)."""
+    app_config_dir_name: str | None = None
+    config_file_name = "config.yaml"
+
     if dry_run:
         console.print(
             "[bold yellow]🔍 `delete` 작업 시작 (DRY-RUN 모드) - 실제 삭제는 수행되지 않습니다 ✨[/bold yellow]",
         )
     else:
         console.print(
-            f"[bold blue]✨ `delete` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]",
+            "[bold blue]✨ `delete` 작업 시작 ✨[/bold blue]",
         )
-
-    if option_was_explicitly_set(ctx, "app_config_dir_name"):
-        warn_deprecated_option("--app-dir", "positional TARGET argument")
-    if option_was_explicitly_set(ctx, "base_dir"):
-        warn_deprecated_option("--base-dir", "full path in TARGET or -f")
-    if option_was_explicitly_set(ctx, "config_file_name"):
-        warn_deprecated_option("--config-file", "-f with sbkube.yaml")
 
     cli_namespace = ctx.obj.get("namespace")
 
@@ -90,7 +64,7 @@ def cmd(
         resolved_paths = resolve_command_paths(
             target=target,
             config_file=config_file,
-            base_dir=base_dir,
+            base_dir=".",
             app_config_dir_name=app_config_dir_name,
             config_file_name=config_file_name,
             sources_file_name=ctx.obj.get("sources_file", "sources.yaml"),

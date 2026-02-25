@@ -22,7 +22,6 @@ from sbkube.utils.cluster_config import (
 )
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
-from sbkube.utils.deprecation import option_was_explicitly_set, warn_deprecated_option
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
@@ -736,30 +735,6 @@ def prepare_git_app(
 @click.command(name="prepare")
 @target_options
 @click.option(
-    "--app-dir",
-    "app_config_dir_name",
-    default=None,
-    help="[DEPRECATED: use positional TARGET] 앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
-)
-@click.option(
-    "--base-dir",
-    default=".",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    help="[DEPRECATED: use TARGET full path or -f] 프로젝트 루트 디렉토리",
-)
-@click.option(
-    "--config-file",
-    "config_file_name",
-    default="config.yaml",
-    help="[DEPRECATED: use -f with sbkube.yaml] 설정 파일 이름 (app-dir 내부)",
-)
-@click.option(
-    "--source",
-    "sources_file_name",
-    default="sources.yaml",
-    help="[DEPRECATED: use unified sbkube.yaml settings] 소스 설정 파일 (base-dir 기준)",
-)
-@click.option(
     "--app",
     "app_name",
     default=None,
@@ -788,10 +763,6 @@ def cmd(
     ctx: click.Context,
     target: str | None,
     config_file: str | None,
-    app_config_dir_name: str | None,
-    base_dir: str,
-    config_file_name: str,
-    sources_file_name: str,
     app_name: str | None,
     force: bool,
     dry_run: bool,
@@ -809,15 +780,6 @@ def cmd(
 
     output.print_section("SBKube `prepare` 시작")
 
-    if option_was_explicitly_set(ctx, "app_config_dir_name"):
-        warn_deprecated_option("--app-dir", "positional TARGET argument")
-    if option_was_explicitly_set(ctx, "base_dir"):
-        warn_deprecated_option("--base-dir", "full path in TARGET or -f")
-    if option_was_explicitly_set(ctx, "config_file_name"):
-        warn_deprecated_option("--config-file", "-f with sbkube.yaml")
-    if option_was_explicitly_set(ctx, "sources_file_name"):
-        warn_deprecated_option("--source", "unified sbkube.yaml settings")
-
     # Helm 설치 확인
     check_helm_installed_or_exit()
 
@@ -825,10 +787,10 @@ def cmd(
         resolved_paths = resolve_command_paths(
             target=target,
             config_file=config_file,
-            base_dir=base_dir,
-            app_config_dir_name=app_config_dir_name,
-            config_file_name=config_file_name,
-            sources_file_name=sources_file_name,
+            base_dir=".",
+            app_config_dir_name=None,
+            config_file_name="config.yaml",
+            sources_file_name=ctx.obj.get("sources_file", "sources.yaml"),
         )
     except ValueError as e:
         output.print_error(str(e), error=str(e))

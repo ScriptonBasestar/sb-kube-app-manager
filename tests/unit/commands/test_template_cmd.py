@@ -45,7 +45,7 @@ class TestTemplateCommandBasic:
         config_dir.mkdir(parents=True, exist_ok=True)
 
         result = runner.invoke(
-            main, ["template", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["template", str(tmp_path / "config")]
         )
 
         assert result.exit_code != 0
@@ -114,7 +114,7 @@ spec:
 
         # Run template
         result = runner.invoke(
-            main, ["template", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["template", str(tmp_path / "config")]
         )
 
         # Assert
@@ -167,7 +167,7 @@ spec:
 
         # Run template
         result = runner.invoke(
-            main, ["template", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["template", str(tmp_path / "config")]
         )
 
         # Assert
@@ -219,7 +219,7 @@ spec:
 
         # Run template
         result = runner.invoke(
-            main, ["template", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["template", str(tmp_path / "config")]
         )
 
         # Assert
@@ -273,11 +273,7 @@ metadata:
         result = runner.invoke(
             main,
             [
-                "template",
-                "--base-dir",
-                str(tmp_path),
-                "--app-dir",
-                "config",
+                "template", str(tmp_path / "config"),
                 "--dry-run",
             ],
         )
@@ -328,11 +324,7 @@ metadata:
         result = runner.invoke(
             main,
             [
-                "template",
-                "--base-dir",
-                str(tmp_path),
-                "--app-dir",
-                "config",
+                "template", str(tmp_path / "config"),
                 "--app",
                 "nginx",
             ],
@@ -377,11 +369,7 @@ class TestTemplateCommandErrors:
         result = runner.invoke(
             main,
             [
-                "template",
-                "--base-dir",
-                str(tmp_path),
-                "--app-dir",
-                "config",
+                "template", str(tmp_path / "config"),
                 "--app",
                 "nonexistent",
             ],
@@ -422,7 +410,7 @@ class TestTemplateCommandErrors:
 
         # Run template
         result = runner.invoke(
-            main, ["template", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["template", str(tmp_path / "config")]
         )
 
         # Assert - should succeed but skip disabled app

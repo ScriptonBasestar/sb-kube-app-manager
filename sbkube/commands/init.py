@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+from typing import Literal
 
 import click
 from jinja2 import Environment, FileSystemLoader
@@ -18,11 +19,13 @@ class InitCommand(BaseCommand):
         template_name: str = "basic",
         project_name: str | None = None,
         interactive: bool = True,
+        config_format: Literal["unified", "legacy"] = "unified",
     ) -> None:
         self.base_dir = Path(base_dir).resolve()
         self.template_name = template_name
         self.project_name = project_name
         self.interactive = interactive
+        self.config_format = config_format
         self.template_vars = {}
 
     def execute(self) -> None:
@@ -236,20 +239,28 @@ class InitCommand(BaseCommand):
         template_dir = self._get_template_dir()
         env = Environment(loader=FileSystemLoader(template_dir), autoescape=True)
 
-        template_files = [
-            ("config.yaml.j2", "config/config.yaml"),
-            ("sources.yaml.j2", "config/sources.yaml"),
+        template_files = []
+        if self.config_format == "unified":
+            template_files.append(("sbkube.yaml.j2", "sbkube.yaml"))
+        else:
+            template_files.extend(
+                [
+                    ("config.yaml.j2", "config/config.yaml"),
+                    ("sources.yaml.j2", "config/sources.yaml"),
+                ]
+            )
+        template_files.append(
             (
                 "values/app-values.yaml.j2",
                 f"values/{self.template_vars['app_name']}-values.yaml",
-            ),
-        ]
+            )
+        )
 
         for template_file, output_file in template_files:
             self._render_single_template(env, template_file, output_file)
 
         # 환경별 설정 파일 생성
-        if self.template_vars.get("create_environments"):
+        if self.config_format == "legacy" and self.template_vars.get("create_environments"):
             self._create_environment_configs(env)
 
     def _render_single_template(
@@ -296,9 +307,34 @@ class InitCommand(BaseCommand):
 
     def _create_readme(self) -> None:
         """README 파일 생성."""
-        env_section = ""
-        if self.template_vars.get("create_environments"):
-            env_section = "- `config/config-*.yaml` - 환경별 설정"
+        if self.config_format == "unified":
+            config_files = "- `sbkube.yaml` - 통합 설정 파일"
+            env_section = ""
+            apply_examples = (
+                "# 전체 워크플로우 실행\n"
+                "sbkube apply -f sbkube.yaml\n"
+                "\n"
+                "# 특정 단계(phase) 실행\n"
+                "sbkube apply -f sbkube.yaml --phase p1-infra"
+            )
+        else:
+            config_files = (
+                "- `config/config.yaml` - 메인 설정 파일\n"
+                "- `config/sources.yaml` - 외부 소스 설정"
+            )
+            env_section = ""
+            if self.template_vars.get("create_environments"):
+                env_section = "- `config/config-*.yaml` - 환경별 설정"
+            apply_examples = (
+                "# 전체 워크플로우 실행\n"
+                "sbkube apply\n"
+                "\n"
+                "# 단계별 실행\n"
+                "sbkube prepare\n"
+                "sbkube build\n"
+                "sbkube template\n"
+                "sbkube deploy"
+            )
 
         readme_content = f"""# {self.template_vars["project_name"]}
 
@@ -307,14 +343,7 @@ class InitCommand(BaseCommand):
 ## 🚀 빠른 시작
 
 ```bash
-# 전체 워크플로우 실행
-sbkube apply
-
-# 단계별 실행
-sbkube prepare
-sbkube build
-sbkube template
-sbkube deploy
+{apply_examples}
 ```
 
 ## 📁 디렉토리 구조
@@ -325,8 +354,7 @@ sbkube deploy
 
 ## 🔧 설정 파일
 
-- `config/config.yaml` - 메인 설정 파일
-- `config/sources.yaml` - 외부 소스 설정
+{config_files}
 {env_section}
 
 ## 💡 사용 예제
@@ -407,14 +435,21 @@ sbkube validate
         logger.info("   3. sbkube apply로 전체 워크플로우를 실행하세요")
         logger.info("\n📁 생성된 파일:")
 
-        created_files = [
-            "config/config.yaml",
-            "config/sources.yaml",
-            f"values/{self.template_vars['app_name']}-values.yaml",
-            "README.md",
-        ]
+        if self.config_format == "unified":
+            created_files = [
+                "sbkube.yaml",
+                f"values/{self.template_vars['app_name']}-values.yaml",
+                "README.md",
+            ]
+        else:
+            created_files = [
+                "config/config.yaml",
+                "config/sources.yaml",
+                f"values/{self.template_vars['app_name']}-values.yaml",
+                "README.md",
+            ]
 
-        if self.template_vars.get("create_environments"):
+        if self.config_format == "legacy" and self.template_vars.get("create_environments"):
             for env in self.template_vars.get("environments", []):
                 created_files.append(f"config/config-{env}.yaml")
 
@@ -435,8 +470,15 @@ sbkube validate
     "--non-interactive", is_flag=True, help="대화형 입력 없이 기본값으로 생성"
 )
 @click.option("--force", is_flag=True, help="기존 파일이 있어도 덮어쓰기")
+@click.option(
+    "--config-format",
+    type=click.Choice(["unified", "legacy"], case_sensitive=False),
+    default="unified",
+    show_default=True,
+    help="생성할 설정 포맷 (unified: sbkube.yaml, legacy: config.yaml + sources.yaml)",
+)
 @click.pass_context
-def cmd(ctx, template, name, non_interactive, force) -> None:
+def cmd(ctx, template, name, non_interactive, force, config_format) -> None:
     r"""새 프로젝트를 초기화합니다.
 
     기본 설정 파일들과 디렉토리 구조를 자동으로 생성하여
@@ -448,12 +490,17 @@ def cmd(ctx, template, name, non_interactive, force) -> None:
         sbkube init --template web-app       # 웹앱 템플릿 사용
         sbkube init --name my-project        # 프로젝트명 지정
         sbkube init --non-interactive        # 대화형 입력 없이 생성
+        sbkube init --config-format legacy   # 레거시 포맷 생성
     """
     base_dir = os.getcwd()
+    normalized_config_format = config_format.lower()
 
     # 기존 파일 확인
     if not force:
-        existing_files = ["config/config.yaml", "config/sources.yaml"]
+        if normalized_config_format == "unified":
+            existing_files = ["sbkube.yaml"]
+        else:
+            existing_files = ["config/config.yaml", "config/sources.yaml"]
         found_files = [f for f in existing_files if os.path.exists(f)]
 
         if found_files:
@@ -467,6 +514,7 @@ def cmd(ctx, template, name, non_interactive, force) -> None:
         template_name=template,
         project_name=name,
         interactive=not non_interactive,
+        config_format=normalized_config_format,
     )
 
     try:

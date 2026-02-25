@@ -865,7 +865,7 @@ ______________________________________________________________________
 
 - **상위 문서**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
 - **기술 명세**: [SPEC.md](../../SPEC.md) - 기술 구현 (어떻게)
-- **제품 정의**: [product-definition.md](product-definition.md) - 완전한 제품 정의
+- **제품 정의**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
 - **아키텍처**: [../10-modules/sbkube/ARCHITECTURE.md](../10-modules/sbkube/ARCHITECTURE.md) - 시스템 설계
 - **명령어 참조**: [../02-features/commands.md](../02-features/commands.md) - 전체 명령어
 

@@ -34,7 +34,7 @@ class TestDeployCommandHelp:
         assert "SBKube deploy" in result.output or "deploy" in result.output.lower()
         assert "TARGET" in result.output
         assert "--file" in result.output
-        assert "--app-dir" in result.output
+        assert "--app-dir" not in result.output
         assert "--dry-run" in result.output
 
 
@@ -98,7 +98,7 @@ cluster: test-cluster
         )
 
         result = runner.invoke(
-            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["deploy", str(tmp_path / "config")]
         )
 
         assert result.exit_code != 0
@@ -188,7 +188,7 @@ cluster: test-cluster
 
         # Run deploy
         result = runner.invoke(
-            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["deploy", str(tmp_path / "config")]
         )
 
         # Assert
@@ -284,7 +284,7 @@ spec:
 
         # Run deploy
         result = runner.invoke(
-            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["deploy", str(tmp_path / "config")]
         )
 
         # Assert
@@ -364,7 +364,7 @@ cluster: test-cluster
 
         # Run deploy
         result = runner.invoke(
-            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["deploy", str(tmp_path / "config")]
         )
 
         # Assert
@@ -451,7 +451,7 @@ cluster: test-cluster
 
         # Run deploy
         result = runner.invoke(
-            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["deploy", str(tmp_path / "config")]
         )
 
         # Assert
@@ -554,7 +554,7 @@ spec:
 
         # Run deploy
         result = runner.invoke(
-            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["deploy", str(tmp_path / "config")]
         )
 
         # Assert
@@ -655,7 +655,7 @@ spec:
 
         # Run deploy
         result = runner.invoke(
-            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["deploy", str(tmp_path / "config")]
         )
 
         # Assert
@@ -732,7 +732,7 @@ cluster: test-cluster
 
         # Run deploy (noop shouldn't call any commands)
         result = runner.invoke(
-            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["deploy", str(tmp_path / "config")]
         )
 
         # Assert
@@ -829,7 +829,7 @@ cluster: test-cluster
         # Run deploy with --dry-run
         result = runner.invoke(
             main,
-            ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config", "--dry-run"],
+            ["deploy", str(tmp_path / "config"), "--dry-run"],
         )
 
         # Assert
@@ -931,11 +931,7 @@ cluster: test-cluster
         result = runner.invoke(
             main,
             [
-                "deploy",
-                "--base-dir",
-                str(tmp_path),
-                "--app-dir",
-                "config",
+                "deploy", str(tmp_path / "config"),
                 "--app",
                 "nginx",
             ],
@@ -1025,11 +1021,7 @@ cluster: test-cluster
         result = runner.invoke(
             main,
             [
-                "deploy",
-                "--base-dir",
-                str(tmp_path),
-                "--app-dir",
-                "config",
+                "deploy", str(tmp_path / "config"),
                 "--app",
                 "nonexistent",
             ],
@@ -1113,7 +1105,7 @@ cluster: test-cluster
 
         # Run deploy
         result = runner.invoke(
-            main, ["deploy", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["deploy", str(tmp_path / "config")]
         )
 
         # Assert

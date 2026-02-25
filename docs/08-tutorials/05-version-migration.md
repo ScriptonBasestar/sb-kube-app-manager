@@ -557,8 +557,8 @@ ______________________________________________________________________
 
 ## 📚 참고 자료
 
-- [RELEASE_v0.8.0.md](../RELEASE_v0.8.0.md) - 전체 릴리스 노트
-- [MIGRATION_v0.8.0.md](../MIGRATION_v0.8.0.md) - 공식 마이그레이션 가이드
+- [CHANGELOG.md](../../CHANGELOG.md) - 전체 릴리스 노트
+- [Migration Guide](../03-configuration/migration-guide.md) - 공식 마이그레이션 가이드
 - [CHANGELOG.md](../../CHANGELOG.md) - 변경 이력
 - [Chart Path Refactoring](../10-modules/sbkube/CHART_PATH_REFACTORING_v080.md) - 기술 세부사항
 

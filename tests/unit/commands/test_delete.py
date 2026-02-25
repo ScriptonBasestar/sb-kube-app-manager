@@ -107,7 +107,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": None},
         )
 
@@ -159,7 +159,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": None},
         )
 
@@ -216,7 +216,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": None},
         )
 
@@ -264,7 +264,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": None},
         )
 
@@ -313,7 +313,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config", "--dry-run"],
+            [str(base_dir / "config"), "--dry-run"],
             obj={"namespace": None},
         )
 
@@ -363,7 +363,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config", "--dry-run"],
+            [str(base_dir / "config"), "--dry-run"],
             obj={"namespace": None},
         )
 
@@ -413,10 +413,7 @@ apps:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
-                "--app-dir",
-                "config",
+                str(base_dir / "config"),
                 "--skip-not-found",
             ],
             obj={"namespace": None},
@@ -467,10 +464,7 @@ apps:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
-                "--app-dir",
-                "config",
+                str(base_dir / "config"),
                 "--skip-not-found",
             ],
             obj={"namespace": None},
@@ -525,7 +519,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config", "--app", "nginx"],
+            [str(base_dir / "config"), "--app", "nginx"],
             obj={"namespace": None},
         )
 
@@ -567,10 +561,7 @@ apps:
         result = runner.invoke(
             cmd,
             [
-                "--base-dir",
-                str(base_dir),
-                "--app-dir",
-                "config",
+                str(base_dir / "config"),
                 "--app",
                 "nonexistent",
             ],
@@ -623,7 +614,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": "cli-ns"},  # CLI namespace
         )
 
@@ -655,7 +646,7 @@ class TestDeleteErrors:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": None},
         )
 
@@ -701,7 +692,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": None},
         )
 
@@ -749,7 +740,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": None},
         )
 
@@ -811,7 +802,7 @@ apps:
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": None},
         )
 
@@ -847,7 +838,7 @@ apps: {}
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "config"],
+            [str(base_dir / "config")],
             obj={"namespace": None},
         )
 

@@ -151,7 +151,7 @@ sbkube validate
 # 💡 PV 생성 방법 안내 제공
 ```
 
-**See**: [v0.8.0 Release Notes](docs/RELEASE_v0.8.0.md)
+**See**: [v0.8.0 Release Notes](CHANGELOG.md)
 
 </details>
 
@@ -168,7 +168,7 @@ ______________________________________________________________________
 
 ### 📖 Product & Planning
 
-- 📋 [Product Definition](docs/00-product/product-definition.md) - 제품 정의 및 해결 과제
+- 📋 [Product Overview](PRODUCT.md) - 제품 정의 및 해결 과제
 - 📖 [Feature Specification](docs/00-product/product-spec.md) - 전체 기능 및 사용자 시나리오
 - 🗺️ [Vision & Roadmap](docs/00-product/vision-roadmap.md) - 장기 비전 및 개발 계획
 - 👥 [Target Users](docs/00-product/target-users.md) - 사용자 페르소나 및 여정
@@ -402,14 +402,16 @@ sbkube prepare --force
 sbkube apply
 ```
 
-**상세 가이드**: [v0.8.0 Migration Guide](docs/MIGRATION_v0.8.0.md)
+**상세 가이드**: [v0.8.0 Migration Guide](docs/03-configuration/migration-guide.md)
 
 ### v0.2.x → v0.4.10+ 업그레이드
 
-자동 마이그레이션 도구를 사용하세요:
+수동으로 설정을 통합 포맷(`sbkube.yaml`)으로 전환하세요:
 
 ```bash
-sbkube migrate old-config.yaml -o config.yaml
+# 기존 sources.yaml + config.yaml을 참고해 sbkube.yaml 작성
+sbkube validate
+sbkube apply -f sbkube.yaml --dry-run
 ```
 
 **상세 내용**: [CHANGELOG.md](CHANGELOG.md) 및 [Migration Guide](docs/03-configuration/migration-guide.md)

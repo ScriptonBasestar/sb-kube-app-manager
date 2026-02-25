@@ -150,7 +150,8 @@ def cmd(
     if not sources_file.exists():
         output.print_error(f"sources.yaml not found in {base_dir}")
         output.print(
-            "\n[yellow]Hint: Run 'sbkube init' to create a sources.yaml file[/yellow]"
+            "\n[yellow]Hint: Run 'sbkube init --config-format legacy' to create sources.yaml, "
+            "or use unified sbkube.yaml workflow with `sbkube apply -f sbkube.yaml`.[/yellow]"
         )
         sys.exit(1)
 

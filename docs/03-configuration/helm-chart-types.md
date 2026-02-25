@@ -257,5 +257,5 @@ ______________________________________________________________________
 ## 🔗 참고 문서
 
 - [SBKube Configuration Schema](./config-schema-v3.md)
-- [Migration Guide](../MIGRATION_V3.md)
+- [Migration Guide](./migration-guide.md)
 - [Helm Official Docs](https://helm.sh/docs/)

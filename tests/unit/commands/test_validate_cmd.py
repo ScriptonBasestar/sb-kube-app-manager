@@ -546,7 +546,6 @@ class TestValidateCommandAutoDiscovery:
             main,
             [
                 "validate",
-                "--base-dir",
                 str(tmp_path),
                 "--skip-deps",
                 "--skip-storage-check",

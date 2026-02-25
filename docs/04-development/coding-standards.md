@@ -114,5 +114,5 @@ pre-commit run --all-files
 ## Related Documents
 
 - [Testing Guide](testing.md)
-- [Architecture Patterns](architecture-patterns.md)
+- [Architecture](../10-modules/sbkube/ARCHITECTURE.md)
 - [Development Setup](README.md)

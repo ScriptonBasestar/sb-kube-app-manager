@@ -101,7 +101,7 @@ ______________________________________________________________________
 
 - **[Quick Commands](quick-commands.md)** - 자주 사용하는 개발 명령어
 - **[Coding Standards](coding-standards.md)** - 코드 스타일 및 규약
-- **[Architecture Patterns](architecture-patterns.md)** - 핵심 아키텍처 패턴
+- **[Architecture](../10-modules/sbkube/ARCHITECTURE.md)** - 상세 아키텍처 설계
 - **[Testing Guide](testing.md)** - 테스트 작성 및 실행 가이드
 
 ### 문제 해결

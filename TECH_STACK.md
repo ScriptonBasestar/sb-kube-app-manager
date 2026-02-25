@@ -1,6 +1,6 @@
 # Technology Stack - SBKube
 
-> **Quick Reference**: Technology overview for SBKube v0.9.1
+> **Quick Reference**: Technology overview for SBKube v0.11.0
 >
 > **For Detailed Setup**: See [Development Setup Guide](docs/04-development/README.md)
 
@@ -19,17 +19,20 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 
 ### CLI Framework
 - **Click 8.1+**: Command-line interface framework
-  - Categorized help system
+  - `SbkubeGroup`: Custom click.Group with categorized help display
   - Rich parameter validation
   - Context management
+  - Global exception handling with auto-fix prompts
 
 ### Configuration & Validation
 - **Pydantic 2.7.1+**: Data validation and settings management
-  - Strict type validation
+  - Strict type validation (`extra="forbid"`)
   - JSON schema generation
   - Model inheritance for app types
+  - Discriminated unions for type-safe app configs
 - **PyYAML**: YAML parsing and generation
 - **jsonschema 4.23.0+**: Schema validation
+- **Jinja2**: Template rendering
 
 ### Kubernetes & Helm
 - **kubernetes 28.1.0+**: Official Kubernetes Python client
@@ -37,15 +40,17 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
   - Resource querying
   - Namespace management
 - **Helm 3.x** (external): Chart management via subprocess
-  - Repository management
+  - Repository management (including OCI registries)
   - Chart pulling and templating
   - Release deployment
+  - Retry with exponential backoff
 - **kubectl** (external): Kubernetes CLI operations
 
 ### State Management
 - **SQLAlchemy 2.0.0+**: Database ORM
-  - Deployment history tracking
-  - State persistence
+  - Deployment history tracking (`Deployment`, `AppDeployment`)
+  - Resource tracking (`DeployedResource`, `HelmRelease`)
+  - Workspace tracking (`WorkspaceDeployment`, `PhaseDeployment`)
   - Rollback support
 - **Database**: SQLite (~/.sbkube/deployments.db)
 
@@ -55,15 +60,18 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
   - Progress bars and spinners
   - Table rendering
   - Tree visualization
-- **OutputFormatter**: Custom LLM-friendly output system
+- **OutputManager**: Unified output lifecycle management
+  - Event collection → structured final output
+  - Format-aware output (human = immediate, LLM/JSON/YAML = collected + finalized)
+- **OutputFormatter**: Multi-format output strategy
   - Multiple formats: human, llm, json, yaml
   - 80-90% token reduction for AI agents
 
 ### Utilities
 - **GitPython**: Git repository management
-- **Jinja2**: Template rendering
 - **requests 2.31.0+**: HTTP client for file downloads
-- **packaging 25.0+**: Semantic version comparison (v0.9.1+)
+- **packaging 25.0+**: Semantic version comparison
+- **toml 0.10.2+**: TOML configuration parsing
 
 ## Development Tools
 
@@ -87,6 +95,8 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 - **pytest-xdist 3.5.0+**: Parallel test execution
 - **pytest-mock 3.12.0+**: Mocking utilities
 - **pytest-benchmark 4.0.0+**: Performance benchmarks
+- **pytest-timeout 2.2.0+**: Test timeout enforcement
+- **pytest-asyncio 0.23.0+**: Async test support
 - **testcontainers[k3s] 4.0.0+**: Integration testing with real clusters
 - **faker 22.0.0+**: Test data generation
 
@@ -95,10 +105,10 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 - **Type stubs**: types-PyYAML, types-toml, types-requests
 
 ### Build & Package Management
-- **uv**: Modern Python package manager (recommended)
+- **uv**: Modern Python package manager (**mandatory** — no pip, no requirements.txt)
   - Fast dependency resolution
   - Virtual environment management
-  - Lock file support
+  - Lock file support (`uv.lock`)
 - **hatchling**: Build backend
   - Modern pyproject.toml-based builds
 - **twine 6.1.0+**: PyPI package upload
@@ -127,29 +137,35 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 - **Hexagonal Architecture**: Clean separation of concerns
 - **Command Pattern**: EnhancedBaseCommand for all CLI commands
 - **Repository Pattern**: ConfigManager for configuration access
-- **Strategy Pattern**: Multiple output formats (OutputFormatter)
+- **Strategy Pattern**: OutputFormatter + OutputManager for output
 - **Observer Pattern**: Hook system for workflow events
+- **Retry Pattern**: Exponential backoff with jitter for external tool calls
+- **Error Classification**: Three-tier error handling (classify → suggest → format)
 
 ### Key Components
-- **CLI Layer**: Click-based commands (`sbkube/cli.py`)
-- **Command Layer**: Business logic (`sbkube/commands/`)
-- **Model Layer**: Pydantic models (`sbkube/models/`)
-- **State Layer**: SQLAlchemy ORM (`sbkube/state/`)
-- **Utilities**: Cross-cutting concerns (`sbkube/utils/`)
-- **Validators**: Multi-layer validation (`sbkube/validators/`)
+- **CLI Layer**: Click-based commands with SbkubeGroup (`sbkube/cli.py`)
+- **Command Layer**: Business logic (`sbkube/commands/` — 16 commands)
+- **Model Layer**: Pydantic models (`sbkube/models/` — 10 files, 9 app types)
+- **State Layer**: SQLAlchemy ORM (`sbkube/state/` — 5 files)
+- **Utilities**: Cross-cutting concerns (`sbkube/utils/` — 45 modules)
+- **Validators**: Multi-layer validation (`sbkube/validators/` — 7 files)
+- **Diagnostics**: Runtime checks (`sbkube/diagnostics/`)
+- **Exceptions**: Comprehensive hierarchy (`sbkube/exceptions.py` — 20+ types)
 
 ## Configuration Files
 
 ### Project Configuration
 - `pyproject.toml`: Project metadata, dependencies, tool configuration
 - `ruff.toml`: Linting and formatting rules
-- `mypy.ini`: Type checking configuration (if exists)
+- `mypy.ini`: Type checking configuration
 - `.pre-commit-config.yaml`: Pre-commit hooks
+- `pytest.ini`: Test configuration and markers
 
 ### Runtime Configuration
-- `sources.yaml`: Cluster and repository configuration
-- `config.yaml`: Application definitions
-- `workspace.yaml`: Multi-phase deployment orchestration (v0.9.0+)
+- `sbkube.yaml`: Unified config (v0.10.0+ — **recommended**)
+  - `apiVersion: sbkube/v1`
+  - Consolidates settings, apps, and phases in a single file
+- `sources.yaml` + `config.yaml`: Legacy split configuration (backward compatible)
 
 ## Version Compatibility
 
@@ -177,8 +193,12 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 
 ### Scalability
 - **Apps per deployment**: Tested with 50+ apps
-- **Concurrent operations**: Parallel phase execution (v0.9.0+)
+- **Concurrent operations**: Parallel phase execution (workspace mode)
 - **Database**: SQLite sufficient for single-user workflows
+
+### Profiling
+- **Built-in**: `SBKUBE_PERF=1` enables subprocess timing and summary
+- **Output**: JSONL event log at `tmp/perf/`
 
 ## Related Documentation
 
@@ -190,6 +210,6 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-12-01
-**SBKube Version**: 0.9.1
+**Document Version**: 2.0
+**Last Updated**: 2026-02-25
+**SBKube Version**: 0.11.0

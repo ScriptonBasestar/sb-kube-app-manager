@@ -13,12 +13,12 @@ ______________________________________________________________________
 - **Current Version**: v0.11.0
 - **Latest Stable**: v0.11.0
 - **Major Changes**: v0.11.0 (unified apply workflow), v0.10.0 (unified config), v0.7.1 (cluster global values)
-- **Migration Tool**: `sbkube migrate` converts legacy configs to unified format
+- **Migration Path**: Manual conversion to unified `sbkube.yaml` (v0.11.0 기준)
 - **Recommended Format**: `sbkube.yaml` (unified config)
 - **Related**: [Unified Config Schema](unified-config-schema.md), [Config Schema](config-schema.md)
 
 > **⚠️ Important**: Starting with v0.10.0, the legacy configuration format (`sources.yaml` + `config.yaml`)
-> is deprecated. Use `sbkube migrate` to convert to the new unified format (`sbkube.yaml`).
+> is deprecated. Convert to the new unified format (`sbkube.yaml`) manually.
 > Starting with v0.11.0, multi-phase deployment is handled through `sbkube apply -f sbkube.yaml`.
 
 ______________________________________________________________________
@@ -28,17 +28,15 @@ ______________________________________________________________________
 Convert your legacy configuration to the new unified format:
 
 ```bash
-# Preview migration (dry-run)
-sbkube migrate --dry-run
+# 1) 기존 파일 백업
+cp sources.yaml sources.yaml.bak
+cp config.yaml config.yaml.bak
 
-# Migrate current directory
-sbkube migrate
+# 2) sbkube.yaml 작성 후 검증
+sbkube validate
 
-# Migrate from specific directory
-sbkube migrate -s ./my-project -o ./my-project/sbkube.yaml
-
-# Force overwrite existing file
-sbkube migrate -o sbkube.yaml --force
+# 3) 통합 포맷 dry-run 검증
+sbkube apply -f sbkube.yaml --dry-run
 ```
 
 ______________________________________________________________________
@@ -128,14 +126,15 @@ sbkube apply -f sbkube.yaml --dry-run
    sbkube validate --app-dir <path>
    ```
 
-1. **Run Migration** (if available):
+1. **Convert Configuration**:
 
    ```bash
-   # Dry run first
-   sbkube migrate --app-dir <path> --dry-run
+   # Legacy 파일 백업
+   cp <path>/sources.yaml <path>/sources.yaml.bak
+   cp <path>/config.yaml <path>/config.yaml.bak
 
-   # Apply migration
-   sbkube migrate --app-dir <path>
+   # sbkube.yaml 작성 후 dry-run 검증
+   sbkube apply -f <path>/sbkube.yaml --dry-run
    ```
 
 1. **Test Deployment**:
@@ -179,26 +178,24 @@ ______________________________________________________________________
 - **Unified Configuration**: Single `sbkube.yaml` file replaces `sources.yaml` + `config.yaml`
 - **Recursive Executor**: Support for nested phases with settings inheritance
 - **Rollback Scope**: Control rollback at app, phase, or deployment level
-- **Migration Tool**: `sbkube migrate` command for automatic conversion
+- **Migration Method**: Manual conversion from legacy files to unified `sbkube.yaml`
 
 #### Migration Steps
 
-**1. Run the Migration Tool**
+**1. Convert Legacy Files to `sbkube.yaml`**
 
 ```bash
-# Preview the migration (recommended first)
-sbkube migrate --dry-run
+# Back up legacy files
+cp sources.yaml sources.yaml.bak
+cp config.yaml config.yaml.bak
 
-# Perform the migration
-sbkube migrate -o sbkube.yaml
-
-# Or specify source directory
-sbkube migrate -s ./my-config -o ./my-config/sbkube.yaml
+# Validate legacy config before conversion
+sbkube validate
 ```
 
 **2. Review the Generated File**
 
-The migration tool converts:
+수동 전환 시 다음 항목을 매핑합니다:
 - `sources.yaml` settings → `settings` section
 - `config.yaml` apps → `apps` section
 - legacy phase file phases → `phases` section
@@ -612,20 +609,19 @@ sbkube build --force
 sbkube state history
 ```
 
-#### Automated Migration
+#### Manual Migration
 
 ```bash
-# Run migration command
-sbkube migrate --app-dir <path>
+# 1) Back up current files
+cp <path>/sources.yaml <path>/sources.yaml.bak
+cp <path>/config.yaml <path>/config.yaml.bak
 
-# Preview changes
-sbkube migrate --app-dir <path> --dry-run
-
-# Migrate specific file
-sbkube migrate --config <path>/config.yaml
+# 2) Convert to sbkube.yaml and validate
+sbkube validate
+sbkube apply -f <path>/sbkube.yaml --dry-run
 ```
 
-The migration tool will:
+수동 전환 시 다음 항목을 확인하세요:
 
 1. Back up original files to `.backup`
 1. Convert `repo:` + `chart:` → `chart: repo/chart`

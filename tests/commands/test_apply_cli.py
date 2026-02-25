@@ -21,12 +21,12 @@ class TestApplyBasic:
         assert result.exit_code == 0
         assert "SBKube apply" in result.output or "전체 워크플로우" in result.output
         assert "TARGET" in result.output
-        assert "--app-dir" in result.output
+        assert "--app-dir" not in result.output
         assert "--dry-run" in result.output
 
     def test_apply_requires_sources_yaml(self, runner, tmp_path) -> None:
         """Test apply fails without sources.yaml."""
-        result = runner.invoke(main, ["apply", "--base-dir", str(tmp_path)])
+        result = runner.invoke(main, ["apply", str(tmp_path)])
         # apply should fail when no app directories found or invalid config
         assert result.exit_code != 0
 
@@ -90,7 +90,7 @@ class TestApplyConfigValidation:
         app_dir.mkdir()
 
         result = runner.invoke(
-            main, ["apply", "--base-dir", str(tmp_path), "--app-dir", "test_app"]
+            main, ["apply", str(tmp_path / "test_app")]
         )
 
         # Should fail with config not found error
@@ -104,22 +104,21 @@ class TestApplyConfigValidation:
         (app_dir / "config.yaml").write_text("invalid: [unclosed")
 
         result = runner.invoke(
-            main, ["apply", "--base-dir", str(tmp_path), "--app-dir", "test_app"]
+            main, ["apply", str(tmp_path / "test_app")]
         )
 
         # Should fail with parsing error
         assert result.exit_code != 0
 
-    def test_apply_warns_legacy_options(self, runner, tmp_path) -> None:
-        """Legacy options should emit deprecation warnings."""
+    def test_apply_rejects_removed_legacy_options(self, runner, tmp_path) -> None:
+        """Removed legacy options should raise Click option error."""
         app_dir = tmp_path / "test_app"
         app_dir.mkdir()
         result = runner.invoke(
             main, ["apply", "--base-dir", str(tmp_path), "--app-dir", "test_app"]
         )
         assert result.exit_code != 0
-        assert "'--app-dir' is deprecated" in result.output
-        assert "'--base-dir' is deprecated" in result.output
+        assert "No such option: --base-dir" in result.output
 
     def test_apply_rejects_target_with_phase(self, runner, tmp_path) -> None:
         """TARGET and --phase should be mutually exclusive."""

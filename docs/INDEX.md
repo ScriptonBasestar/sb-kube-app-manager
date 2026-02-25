@@ -4,7 +4,7 @@ audience: End User, Developer, AI Agent
 topics: [navigation, index, documentation-map]
 llm_priority: high
 always_load: true
-last_updated: 2025-01-04
+last_updated: 2026-02-25
 ---
 
 # 📚 SBKube Documentation Index
@@ -99,8 +99,8 @@ prepare → build → template → deploy
 
 ### 설정 파일
 
-- **config.yaml** - 애플리케이션 정의 및 배포 스펙
-- **sources.yaml** - 외부 소스 정의 (Helm repos, Git repos)
+- **sbkube.yaml** - 통합 설정 (v0.10.0+, 권장)
+- **config.yaml** + **sources.yaml** - 레거시 분리 설정
 - **values/** - Helm 값 파일 디렉토리
 
 ---
@@ -226,5 +226,5 @@ See [CLAUDE.md](../CLAUDE.md) for complete AI agent guidelines.
 
 ---
 
-*📅 Last Updated: 2025-10-31 | 📋 Documentation Version: v1.2*
-*🎯 SBKube v0.6.0 | 🌐 English + Korean*
+*📅 Last Updated: 2026-02-25 | 📋 Documentation Version: v2.0*
+*🎯 SBKube v0.11.0 | 🌐 English + Korean*

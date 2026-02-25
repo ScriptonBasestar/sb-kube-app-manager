@@ -1451,10 +1451,9 @@ class WorkspaceDeployCommand:
 
         if self.dry_run:
             self.console.print("  [yellow]🔍 [DRY-RUN] sbkube apply[/yellow]")
-            self.console.print(f"     --base-dir {base_dir}")
-            self.console.print(f"     --source {source_path.name}")
             for group in app_groups:
-                self.console.print(f"     --app-dir {group}")
+                target_path = base_dir / group
+                self.console.print(f"     sbkube --source {source_path.name} apply {target_path}")
             # Complete phase tracking (dry-run is always success)
             self._complete_phase_tracking(
                 phase_name, True, completed_app_groups=len(app_groups)
@@ -1753,13 +1752,10 @@ class WorkspaceDeployCommand:
 
             cmd = [
                 "sbkube",
-                "apply",
-                "--base-dir",
-                str(base_dir),
-                "--app-dir",
-                app_group,
                 "--source",
                 source_path.name,
+                "apply",
+                str(base_dir / app_group),
             ]
 
             if self.force:
@@ -2027,10 +2023,6 @@ def deploy_cmd(
         apply_cmd,
         target=None,
         config_file=workspace_file,
-        app_config_dir_name=None,
-        base_dir=".",
-        config_file_name="config.yaml",
-        sources_file_name="sources.yaml",
         app_name=None,
         phase_name=phase,
         dry_run=dry_run,

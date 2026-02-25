@@ -83,7 +83,7 @@ class TestInitNonInteractiveBasic:
 
     @patch("sbkube.utils.cli_check.get_available_contexts")
     def test_init_creates_config_files(self, mock_contexts, tmp_path: Path) -> None:
-        """Test init creates config.yaml and sources.yaml."""
+        """Test init creates unified sbkube.yaml by default."""
         # Arrange
         mock_contexts.return_value = (["minikube"], "minikube")
 
@@ -97,20 +97,33 @@ class TestInitNonInteractiveBasic:
         command.execute()
 
         # Assert
-        config_file = tmp_path / "config" / "config.yaml"
-        sources_file = tmp_path / "config" / "sources.yaml"
+        unified_file = tmp_path / "sbkube.yaml"
+        assert unified_file.exists()
 
-        assert config_file.exists()
-        assert sources_file.exists()
+        # Check sbkube.yaml content
+        unified_content = unified_file.read_text()
+        assert "apiVersion: sbkube/v1" in unified_content
+        assert "settings:" in unified_content
+        assert "apps:" in unified_content
 
-        # Check config.yaml content
-        config_content = config_file.read_text()
-        assert "namespace:" in config_content
-        assert "apps:" in config_content
+    @patch("sbkube.utils.cli_check.get_available_contexts")
+    def test_init_creates_legacy_config_files_when_requested(
+        self, mock_contexts, tmp_path: Path
+    ) -> None:
+        """Test init creates legacy config files with config_format=legacy."""
+        mock_contexts.return_value = (["minikube"], "minikube")
 
-        # Check sources.yaml content
-        sources_content = sources_file.read_text()
-        assert "helm_repos:" in sources_content
+        command = InitCommand(
+            base_dir=str(tmp_path),
+            template_name="basic",
+            project_name="myapp",
+            interactive=False,
+            config_format="legacy",
+        )
+        command.execute()
+
+        assert (tmp_path / "config" / "config.yaml").exists()
+        assert (tmp_path / "config" / "sources.yaml").exists()
 
 
 class TestInitTemplateVariations:
@@ -132,7 +145,7 @@ class TestInitTemplateVariations:
         command.execute()
 
         # Assert
-        assert (tmp_path / "config" / "config.yaml").exists()
+        assert (tmp_path / "sbkube.yaml").exists()
         assert (tmp_path / "README.md").exists()
 
 
@@ -237,6 +250,7 @@ class TestInitCLICommand:
         assert call_args["template_name"] == "basic"
         assert call_args["project_name"] == "testapp"
         assert call_args["interactive"] is False
+        assert call_args["config_format"] == "unified"
         mock_command.execute.assert_called_once()
 
     @patch("sbkube.commands.init.InitCommand")
@@ -254,6 +268,7 @@ class TestInitCLICommand:
         # Assert
         assert result.exit_code == 0
         assert mock_init_class.call_args[1]["template_name"] == "basic"
+        assert mock_init_class.call_args[1]["config_format"] == "unified"
 
     @patch("sbkube.commands.init.InitCommand")
     def test_cli_custom_project_name(self, mock_init_class) -> None:
@@ -272,6 +287,27 @@ class TestInitCLICommand:
         # Assert
         assert result.exit_code == 0
         assert mock_init_class.call_args[1]["project_name"] == "my-custom-app"
+        assert mock_init_class.call_args[1]["config_format"] == "unified"
+
+    @patch("sbkube.commands.init.InitCommand")
+    def test_cli_legacy_config_format(self, mock_init_class) -> None:
+        """Test CLI supports legacy config format option."""
+        # Arrange
+        mock_command = MagicMock()
+        mock_init_class.return_value = mock_command
+
+        # Act
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            result = runner.invoke(
+                cmd,
+                ["--non-interactive", "--config-format", "legacy"],
+                obj={},
+            )
+
+        # Assert
+        assert result.exit_code == 0
+        assert mock_init_class.call_args[1]["config_format"] == "legacy"
 
 
 class TestInitErrors:
@@ -392,9 +428,9 @@ class TestInitKubeconfigDetection:
         command.execute()
 
         # Assert
-        sources_file = tmp_path / "config" / "sources.yaml"
-        assert sources_file.exists()
-        sources_content = sources_file.read_text()
+        unified_file = tmp_path / "sbkube.yaml"
+        assert unified_file.exists()
+        sources_content = unified_file.read_text()
         # Should reference the current context
         assert "context:" in sources_content or "staging" in sources_content
 
@@ -416,8 +452,7 @@ class TestInitKubeconfigDetection:
         command.execute()
 
         # Assert - Should still create files with default context
-        assert (tmp_path / "config" / "sources.yaml").exists()
-        assert (tmp_path / "config" / "config.yaml").exists()
+        assert (tmp_path / "sbkube.yaml").exists()
 
 
 class TestInitTemplateRendering:
@@ -511,7 +546,7 @@ class TestInitGitignoreErrors:
             gitignore.chmod(0o644)
 
         # Assert - Should still create other files
-        assert (tmp_path / "config" / "config.yaml").exists()
+        assert (tmp_path / "sbkube.yaml").exists()
         assert (tmp_path / "README.md").exists()
 
 
@@ -596,6 +631,7 @@ class TestInitReadmeContent:
             template_name="basic",
             project_name="test-with-env",
             interactive=False,
+            config_format="legacy",
         )
         command.execute()
 

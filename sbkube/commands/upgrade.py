@@ -8,7 +8,6 @@ from sbkube.models.config_model import HelmApp, SBKubeConfig
 from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.utils.common import run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
-from sbkube.utils.deprecation import option_was_explicitly_set, warn_deprecated_option
 from sbkube.utils.file_loader import load_config_file
 
 console = Console()
@@ -16,18 +15,6 @@ console = Console()
 
 @click.command(name="upgrade")
 @target_options
-@click.option(
-    "--app-dir",
-    "app_config_dir_name",
-    default=".",
-    help="[DEPRECATED: use positional TARGET] 앱 설정 파일이 위치한 디렉토리 이름 (base-dir 기준)",
-)
-@click.option(
-    "--base-dir",
-    default=".",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    help="[DEPRECATED: use TARGET full path or -f] 프로젝트 루트 디렉토리",
-)
 @click.option(
     "--app",
     "target_app_name",
@@ -47,36 +34,23 @@ console = Console()
     default=False,
     help="릴리스가 존재하지 않을 경우 새로 설치하지 않음 (helm upgrade의 --install 플래그 비활성화)",
 )
-@click.option(
-    "--config-file",
-    "config_file_name",
-    default=None,
-    help="[DEPRECATED: use -f with sbkube.yaml] 사용할 설정 파일 이름 (app-dir 내부, 기본값: config.yaml 자동 탐색)",
-)
 @click.pass_context
 def cmd(
-    ctx,
+    ctx: click.Context,
     target: str | None,
     config_file: str | None,
-    app_config_dir_name: str | None,
-    base_dir: str,
     target_app_name: str | None,
     dry_run: bool,
     skip_install: bool,
-    config_file_name: str | None,
 ) -> None:
     """config.yaml/toml에 정의된 Helm 애플리케이션을 업그레이드하거나 새로 설치합니다 (helm 타입 대상)."""
+    app_config_dir_name: str | None = None
+    config_file_name = "config.yaml"
+
     console.print(
-        f"[bold blue]✨ `upgrade` 작업 시작 (앱 설정: '{app_config_dir_name}', 기준 경로: '{base_dir}') ✨[/bold blue]",
+        "[bold blue]✨ `upgrade` 작업 시작 ✨[/bold blue]",
     )
     check_helm_installed_or_exit()
-
-    if option_was_explicitly_set(ctx, "app_config_dir_name"):
-        warn_deprecated_option("--app-dir", "positional TARGET argument")
-    if option_was_explicitly_set(ctx, "base_dir"):
-        warn_deprecated_option("--base-dir", "full path in TARGET or -f")
-    if option_was_explicitly_set(ctx, "config_file_name"):
-        warn_deprecated_option("--config-file", "-f with sbkube.yaml")
 
     cli_namespace = ctx.obj.get("namespace")
 
@@ -84,7 +58,7 @@ def cmd(
         resolved_paths = resolve_command_paths(
             target=target,
             config_file=config_file,
-            base_dir=base_dir,
+            base_dir=".",
             app_config_dir_name=app_config_dir_name,
             config_file_name=config_file_name,
             sources_file_name=ctx.obj.get("sources_file", "sources.yaml"),
@@ -113,7 +87,7 @@ def cmd(
 
     config_file_path = None
     if config_file_name:
-        # --config-file 옵션이 지정된 경우
+        # 명시된 파일명(기본 config.yaml 또는 resolve_target 결과)을 사용
         config_file_path = APP_CONFIG_DIR / config_file_name
         if not config_file_path.exists() or not config_file_path.is_file():
             console.print(

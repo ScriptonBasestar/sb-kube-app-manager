@@ -33,8 +33,8 @@ class TestBuildCommandHelp:
         assert "SBKube build" in result.output
         assert "TARGET" in result.output
         assert "--file" in result.output
-        assert "--app-dir" in result.output
-        assert "--base-dir" in result.output
+        assert "--app-dir" not in result.output
+        assert "--base-dir" not in result.output
         assert "--app" in result.output
         assert "--dry-run" in result.output
 
@@ -59,7 +59,7 @@ cluster: test-cluster
         )
 
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         assert result.exit_code != 0
@@ -106,7 +106,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -157,7 +157,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -210,7 +210,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -266,7 +266,7 @@ cluster: test-cluster
         # Run build with --dry-run
         result = runner.invoke(
             main,
-            ["build", "--base-dir", str(tmp_path), "--app-dir", "config", "--dry-run"],
+            ["build", str(tmp_path / "config"), "--dry-run"],
         )
 
         # Assert
@@ -328,7 +328,7 @@ cluster: test-cluster
         # Run build for nginx only
         result = runner.invoke(
             main,
-            ["build", "--base-dir", str(tmp_path), "--app-dir", "config", "--app", "nginx"],
+            ["build", str(tmp_path / "config"), "--app", "nginx"],
         )
 
         # Assert
@@ -379,11 +379,7 @@ cluster: test-cluster
         result = runner.invoke(
             main,
             [
-                "build",
-                "--base-dir",
-                str(tmp_path),
-                "--app-dir",
-                "config",
+                "build", str(tmp_path / "config"),
                 "--app",
                 "nonexistent",
             ],
@@ -431,7 +427,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -469,7 +465,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -539,8 +535,10 @@ cluster: test-cluster
         redis_chart.mkdir(parents=True)
         (redis_chart / "Chart.yaml").write_text("name: redis\nversion: 17.0.0")
 
-        # Run build without --app-dir (auto-discovery)
-        result = runner.invoke(main, ["build", "--base-dir", str(tmp_path)])
+        # Run build from project root without TARGET (auto-discovery)
+        with pytest.MonkeyPatch.context() as mp:
+            mp.chdir(tmp_path)
+            result = runner.invoke(main, ["build"])
 
         # Assert
         assert result.exit_code == 0
@@ -602,7 +600,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -655,7 +653,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -713,7 +711,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -765,7 +763,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -815,7 +813,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -865,7 +863,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert
@@ -913,7 +911,7 @@ cluster: test-cluster
 
         # Run build
         result = runner.invoke(
-            main, ["build", "--base-dir", str(tmp_path), "--app-dir", "config"]
+            main, ["build", str(tmp_path / "config")]
         )
 
         # Assert

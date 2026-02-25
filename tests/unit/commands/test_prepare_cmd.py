@@ -47,7 +47,7 @@ class TestPrepareCommandBasic:
         config_dir.mkdir(parents=True, exist_ok=True)
 
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
+            main, ["prepare", str(tmp_path / "config"), "--skip-preflight"]
         )
 
         assert result.exit_code != 0
@@ -148,7 +148,7 @@ users:
 
         # Run prepare (skip preflight to avoid helm repo list mock requirement)
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
+            main, ["prepare", str(tmp_path / "config"), "--skip-preflight"]
         )
 
         # Assert
@@ -205,7 +205,7 @@ cluster: test-cluster
 
         # Run prepare
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
+            main, ["prepare", str(tmp_path / "config"), "--skip-preflight"]
         )
 
         # Assert
@@ -262,7 +262,7 @@ cluster: test-cluster
 
         # Run prepare
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
+            main, ["prepare", str(tmp_path / "config"), "--skip-preflight"]
         )
 
         # Assert
@@ -337,11 +337,7 @@ contexts:
         result = runner.invoke(
             main,
             [
-                "prepare",
-                "--base-dir",
-                str(tmp_path),
-                "--app-dir",
-                "config",
+                "prepare", str(tmp_path / "config"),
                 "--dry-run",
                 "--skip-preflight",
             ],
@@ -408,7 +404,7 @@ current-context: test-context
 
         # Run prepare
         result = runner.invoke(
-            main, ["prepare", "--base-dir", str(tmp_path), "--app-dir", "config", "--skip-preflight"]
+            main, ["prepare", str(tmp_path / "config"), "--skip-preflight"]
         )
 
         # Assert - should skip disabled app
@@ -462,11 +458,7 @@ cluster: test-cluster
         result = runner.invoke(
             main,
             [
-                "prepare",
-                "--base-dir",
-                str(tmp_path),
-                "--app-dir",
-                "config",
+                "prepare", str(tmp_path / "config"),
                 "--app",
                 "nonexistent",
             ],

@@ -8,7 +8,7 @@ Your quickstart guide to deploying applications with SBKube.
 
 > **Key Features**: Simplified configuration, unified Helm types, chart customization
 >
-> Previous version users: See the [Migration Guide](../MIGRATION_V3.md)
+> Previous version users: See the [Migration Guide](../03-configuration/migration-guide.md)
 
 ______________________________________________________________________
 

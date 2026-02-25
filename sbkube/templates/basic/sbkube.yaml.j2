@@ -1,0 +1,40 @@
+apiVersion: sbkube/v1
+metadata:
+  name: {{ project_name }}
+
+settings:
+  cluster: {{ cluster }}
+  kubeconfig: {{ kubeconfig }}
+  kubeconfig_context: {{ kubeconfig_context }}
+  namespace: {{ namespace or project_name }}
+{%- if use_grafana or use_prometheus %}
+  helm_repos:
+{%- if use_grafana %}
+    grafana:
+      url: https://grafana.github.io/helm-charts
+{%- endif %}
+{%- if use_prometheus %}
+    prometheus-community:
+      url: https://prometheus-community.github.io/helm-charts
+{%- endif %}
+{%- else %}
+  helm_repos: {}
+{%- endif %}
+  git_repos: {}
+
+apps:
+  {{ app_name }}:
+    type: {{ app_type }}
+    enabled: true
+{%- if app_type == "helm" %}
+    chart: ./{{ app_name }}
+    values:
+      - values/{{ app_name }}-values.yaml
+{%- elif app_type == "yaml" %}
+    manifests:
+      - manifests/{{ app_name }}.yaml
+    namespace: {{ namespace or project_name }}
+{%- elif app_type == "http" %}
+    url: https://example.com/manifest.yaml
+    dest: manifests/{{ app_name }}.yaml
+{%- endif %}

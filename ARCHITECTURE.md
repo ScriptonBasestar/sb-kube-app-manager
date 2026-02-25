@@ -1,349 +1,131 @@
 # Architecture Overview - SBKube
 
-> **Quick Reference**: High-level architecture for SBKube v0.9.1
+> **Quick Reference**: High-level architecture for SBKube v0.11.0
 >
-> **For Complete Details**: See [SPEC.md](SPEC.md) Section 2 and [System Design](docs/20-architecture/system-design.md) (if exists)
+> **상세 아키텍처**: [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
 
 ---
 
 ## System Overview
 
-SBKube is a **monolithic Python CLI application** that orchestrates Kubernetes deployments through a four-stage workflow: prepare → build → template → deploy.
-
-### Core Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      SBKube CLI                             │
-│               (Click Framework)                             │
-└───────────────────────┬─────────────────────────────────────┘
-                        │
-        ┌───────────────┼───────────────┐
-        ▼               ▼               ▼
-┌───────────────┐ ┌──────────────┐ ┌──────────────┐
-│   Commands    │ │    Models    │ │    State     │
-│    Layer      │ │    Layer     │ │  Management  │
-├───────────────┤ ├──────────────┤ ├──────────────┤
-│ • prepare     │ │ • ConfigModel│ │ • SQLAlchemy │
-│ • build       │ │ • SourcesModel│ │ • Tracker   │
-│ • template    │ │ • Pydantic   │ │ • History    │
-│ • deploy      │ │   Validators │ │ • Rollback   │
-│ • apply       │ │              │ │              │
-│ • status      │ │              │ │              │
-└───────┬───────┘ └──────┬───────┘ └──────┬───────┘
-        │                │                │
-        └────────────────┼────────────────┘
-                         ▼
-              ┌──────────────────┐
-              │  Utils & Helpers │
-              ├──────────────────┤
-              │ • helm_util      │
-              │ • logger         │
-              │ • file_loader    │
-              │ • output_formatter│
-              └─────────┬────────┘
-                        │
-        ┌───────────────┼───────────────┐
-        ▼               ▼               ▼
-┌──────────────┐ ┌─────────────┐ ┌──────────────┐
-│   Helm CLI   │ │   kubectl   │ │   Git CLI    │
-│   (v3.x)     │ │             │ │              │
-└──────────────┘ └─────────────┘ └──────────────┘
-        │               │               │
-        └───────────────┼───────────────┘
-                        ▼
-               ┌────────────────┐
-               │  Kubernetes    │
-               │   Cluster      │
-               └────────────────┘
+```text
+┌────────────────────────────────────────────────────────┐
+│                   CLI Layer (cli.py)                    │
+│   SbkubeGroup + main_with_exception_handling()         │
+├────────────────────────────────────────────────────────┤
+│ ┌───────────────┐ ┌──────────────┐ ┌──────────────┐   │
+│ │   Commands    │ │    Models    │ │    State     │   │
+│ │    Layer      │ │    Layer     │ │  Management  │   │
+│ ├───────────────┤ ├──────────────┤ ├──────────────┤   │
+│ │ • prepare     │ │ • Unified    │ │ • SQLAlchemy │   │
+│ │ • build       │ │   Config     │ │ • Deployment │   │
+│ │ • template    │ │ • SBKube     │ │   Tracking   │   │
+│ │ • deploy      │ │   Config     │ │ • History    │   │
+│ │ • apply       │ │ • Sources    │ │ • Rollback   │   │
+│ │ • +11 more    │ │   Model      │ │              │   │
+│ └───────────────┘ └──────────────┘ └──────────────┘   │
+├────────────────────────────────────────────────────────┤
+│ Utils (45 modules) │ Validators (7) │ Diagnostics     │
+├────────────────────────────────────────────────────────┤
+│              External Tools (Helm, kubectl, Git)       │
+└────────────────────────────────────────────────────────┘
 ```
 
----
-
-## Key Components
+## Layer Summary
 
 ### 1. CLI Layer (`sbkube/cli.py`)
-- **Framework**: Click 8.1+
-- **Responsibility**: Command registration, global options, help system
-- **Pattern**: Command group with categorization
 
-### 2. Commands Layer (`sbkube/commands/`)
-All commands inherit from `EnhancedBaseCommand`:
-- **Core Workflow**: prepare, build, template, deploy, apply
-- **State Management**: status, history, rollback
-- **Utilities**: init, validate, doctor, version
-- **Management**: upgrade, delete, check-updates (v0.9.1+)
-- **Workspace**: workspace validate/deploy/status/graph/history (v0.9.0+)
+- **SbkubeGroup**: `click.Group` with categorized help display
+- **Entry Point**: `main_with_exception_handling()` with auto-fix prompts
+- **Categories**: 핵심 워크플로우 / 통합 명령어 / 상태 관리 / 업그레이드·삭제 / 유틸리티
 
-### 3. Models Layer (`sbkube/models/`)
-- **Pydantic 2.7.1+**: Strict type validation
-- **Config Models**: SBKubeConfig, AppConfig, HelmApp, YamlApp, etc.
-- **Sources Models**: SourceScheme, HelmSource, GitSource
-- **Workspace Models**: WorkspaceConfig, PhaseConfig (v0.9.0+)
-- **Validation**: Automatic validation on model instantiation
+### 2. Command Layer (`sbkube/commands/` — 16 commands)
+
+- All commands inherit `EnhancedBaseCommand`
+- Core workflow: `prepare → build → template → deploy`
+- Unified: `apply` (4단계 자동 실행)
+- State: `status`, `history`, `rollback`
+
+### 3. Model Layer (`sbkube/models/` — 10 files)
+
+- **UnifiedConfig** (`unified_config_model.py`): `sbkube.yaml` — recommended (v0.10.0+)
+- **SBKubeConfig** (`config_model.py`): Legacy `config.yaml`
+- **SourceScheme** (`sources_model.py`): Legacy `sources.yaml`
+- 9 app types: `helm`, `yaml`, `git`, `http`, `action`, `exec`, `kustomize`, `oci`, `noop`
 
 ### 4. State Management (`sbkube/state/`)
+
 - **Database**: SQLite at `~/.sbkube/deployments.db`
 - **ORM**: SQLAlchemy 2.0.0+
-- **Models**: DeploymentState, AppState, RollbackPoint
-- **Tracker**: StateTracker for deployment history
-- **Rollback**: Snapshot-based rollback support
+- **Tracking**: Deployment → AppDeployment → DeployedResource / HelmRelease
 
-### 5. Utilities (`sbkube/utils/`)
-- **BaseCommand**: EnhancedBaseCommand for command inheritance
-- **Logger**: Rich console logging with color coding
-- **HelmUtil**: Helm CLI interactions (chart download, install, query)
-- **FileLoader**: Configuration and template file loading
-- **OutputFormatter**: Multi-format output (human, llm, json, yaml)
-- **VersionCompare**: Semantic version comparison (v0.9.1+)
+### 5. Utilities (`sbkube/utils/` — 45 modules)
 
-### 6. Validators (`sbkube/validators/`)
-- **ConfigValidator**: Configuration file validation
-- **DependencyValidator**: App dependency graph validation
-- **EnvironmentValidator**: System requirements check
-- **StorageValidator**: PV/PVC validation (v0.8.0+)
+- Output: `OutputManager` + `OutputFormatter` (human/llm/json/yaml)
+- Helm: `helm_util.py`, `helm_command_builder.py`
+- Error handling: `error_classifier.py`, `error_suggestions.py`, `diagnostic_system.py`
+- Retry, performance profiling, hooks, validation
 
----
+### 6. Validators (`sbkube/validators/` — 7 files)
 
-## Architecture Patterns
+- Pre-deployment: cluster, namespace, RBAC, tools
+- Post-deployment: pod status, service endpoints
+- Environment: disk, network, CLI versions
 
-### Design Patterns
+## Design Patterns
 
-#### 1. **Command Pattern**
-All CLI commands implement a consistent interface through `EnhancedBaseCommand`:
-```python
-class EnhancedBaseCommand:
-    def __init__(self, base_dir, app_config_dir, output_format):
-        self.BASE_DIR = base_dir
-        self.APP_CONFIG_DIR = app_config_dir
-        self.formatter = OutputFormatter(output_format)
-        self.config_manager = ConfigManager(...)
-        self.hook_executor = HookExecutor(...)
+| Pattern        | Implementation                                   |
+| -------------- | ------------------------------------------------ |
+| **Command**    | `EnhancedBaseCommand` — all CLI commands         |
+| **Strategy**   | `OutputFormatter` — multi-format output          |
+| **Observer**   | Hook system — pre/post workflow events           |
+| **Repository** | `ConfigManager` — configuration access           |
+| **Retry**      | Exponential backoff with jitter                  |
+| **Hexagonal**  | Clean separation: domain ↔ infrastructure        |
+
+## Exception Hierarchy
+
+```text
+SbkubeError (base)
+├── ConfigurationError (ConfigFileNotFoundError, ConfigValidationError, ...)
+├── ToolError (CliToolNotFoundError, CliToolExecutionError, CliToolVersionError)
+├── KubernetesError (KubernetesConnectionError, KubernetesResourceError)
+├── HelmError (HelmChartNotFoundError, HelmInstallationError)
+├── GitError (GitRepositoryError)
+├── FileSystemError (FileOperationError, DirectoryNotFoundError)
+└── DeploymentError (RollbackError, DependencyError)
 ```
 
-#### 2. **Repository Pattern**
-`ConfigManager` abstracts configuration access:
-- Hierarchical configuration loading
-- Profile-based inheritance
-- Validation on load
+## Key Workflows
 
-#### 3. **Strategy Pattern**
-`OutputFormatter` supports multiple output formats:
-- Human: Rich console output (default)
-- LLM: Token-optimized text (80-90% reduction)
-- JSON: Structured data
-- YAML: YAML format
+### Configuration Loading
 
-#### 4. **Observer Pattern**
-Hooks system for workflow events:
-- pre_deploy, post_deploy, on_failure
-- Global and app-level hooks
-- Inline commands and script files
-
-#### 5. **Dependency Injection**
-Commands receive dependencies via constructor:
-- OutputFormatter for consistent output
-- ConfigManager for configuration
-- HookExecutor for hook execution
-
-### Hexagonal Architecture Principles
-
-```
-┌─────────────────────────────────────────┐
-│            CLI Interface                │  ← Adapters (Click commands)
-├─────────────────────────────────────────┤
-│         Application Core                │
-│  ┌─────────────────────────────────┐   │
-│  │   Commands (Use Cases)          │   │  ← Business Logic
-│  │   • apply, deploy, status       │   │
-│  └─────────────────────────────────┘   │
-│  ┌─────────────────────────────────┐   │
-│  │   Models (Domain)               │   │  ← Domain Models
-│  │   • AppConfig, SourceScheme     │   │
-│  └─────────────────────────────────┘   │
-├─────────────────────────────────────────┤
-│          Infrastructure                 │
-│  • Helm CLI (subprocess)                │  ← Ports
-│  • kubectl CLI (subprocess)             │
-│  • SQLAlchemy (database)                │
-│  • File I/O                             │
-└─────────────────────────────────────────┘
+```text
+sbkube.yaml (Unified, v0.10.0+)
+  or sources.yaml + config.yaml (Legacy)
+    → ConfigManager (Pydantic validation)
+    → Validated models
 ```
 
-**Benefits:**
-- Business logic isolated from external dependencies
-- Easy to test (mock external dependencies)
-- Flexible infrastructure (can swap Helm for alternative)
+### Deployment Pipeline
 
----
-
-## Data Flow
-
-### 1. Configuration Loading
-```
-sources.yaml + config.yaml + config-{profile}.yaml
-         ↓
-    ConfigManager (Pydantic validation)
-         ↓
-   SBKubeConfig (validated model)
-```
-
-### 2. Deployment Workflow
-```
-User Command (sbkube apply)
-         ↓
-    CLI Layer (Click)
-         ↓
-  ApplyCommand (prepare → build → template → deploy)
-         ↓
-   ┌─────────┬─────────┬──────────┬─────────┐
-   ▼         ▼         ▼          ▼         ▼
-prepare   build   template   deploy   hooks
-   │         │         │          │         │
-   └─────────┴─────────┴──────────┴─────────┘
-                  ↓
-           StateTracker (SQLite)
-                  ↓
-         Kubernetes Cluster
-```
-
-### 3. State Management
-```
-Deployment Start
-    ↓
-StateTracker.start_deployment()
-    ↓
-For each app:
-    ↓
-StateTracker.update_app_status()
-    ↓
-StateTracker.complete_deployment()
-    ↓
-Database Persistence (~/.sbkube/deployments.db)
+```text
+prepare → build → template → deploy
+   ↓        ↓         ↓         ↓
+소스준비  커스터마이징 템플릿화  클러스터배포
 ```
 
 ---
 
-## Module Structure
+## Related Documents
 
-```
-sbkube/
-├── cli.py                    # CLI entry point
-├── commands/                 # Command implementations
-│   ├── apply.py             # Unified workflow
-│   ├── prepare.py           # Source preparation
-│   ├── build.py             # App building
-│   ├── template.py          # Manifest rendering
-│   ├── deploy.py            # Deployment execution
-│   ├── status.py            # Status queries
-│   ├── history.py           # History management
-│   ├── rollback.py          # Rollback operations
-│   ├── validate.py          # Configuration validation
-│   ├── check_updates.py     # Update checking (v0.9.1+)
-│   └── workspace.py         # Workspace commands (v0.9.0+)
-├── models/                  # Data models
-│   ├── config_model.py      # config.yaml models
-│   ├── sources_model.py     # sources.yaml models
-│   ├── workspace_model.py   # workspace.yaml models (v0.9.0+)
-│   └── config_manager.py    # Configuration management
-├── state/                   # State management
-│   ├── database.py          # SQLAlchemy setup
-│   ├── tracker.py           # Deployment tracking
-│   └── models.py            # State models
-├── utils/                   # Utilities
-│   ├── base_command.py      # Command base class
-│   ├── logger.py            # Rich logging
-│   ├── helm_util.py         # Helm utilities
-│   ├── file_loader.py       # File loading
-│   ├── output_formatter.py  # Output formatting
-│   ├── version_compare.py   # Version comparison (v0.9.1+)
-│   └── hook_executor.py     # Hook execution
-└── validators/              # Validation system
-    ├── basic_validators.py
-    ├── dependency_validators.py
-    ├── environment_validators.py
-    └── storage_validators.py
-```
+- **상세 아키텍처**: [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
+- **기술 스택**: [TECH_STACK.md](TECH_STACK.md)
+- **기술 명세**: [SPEC.md](SPEC.md) Section 2
+- **API 참조**: [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md)
 
 ---
 
-## Key Design Decisions
-
-### 1. **Monolithic CLI vs. Microservices**
-- **Choice**: Monolithic CLI
-- **Rationale**: Single-user workflows, no concurrency needs, simpler deployment
-- **Trade-off**: Not suitable for multi-tenant scenarios (future: API server mode)
-
-### 2. **SQLite vs. Cloud Database**
-- **Choice**: SQLite (~/.sbkube/deployments.db)
-- **Rationale**: Local state, no external dependencies, simple backup
-- **Trade-off**: Single-user only (future: PostgreSQL for multi-user)
-
-### 3. **Subprocess vs. SDK**
-- **Choice**: Subprocess calls to Helm/kubectl
-- **Rationale**: Leverage existing CLI tools, avoid SDK version conflicts
-- **Trade-off**: Slower than native SDKs, parsing output complexity
-
-### 4. **Pydantic vs. Dataclasses**
-- **Choice**: Pydantic 2.7.1+
-- **Rationale**: Automatic validation, JSON schema generation, type coercion
-- **Trade-off**: Heavier dependency, learning curve
-
-### 5. **Click vs. argparse**
-- **Choice**: Click 8.1+
-- **Rationale**: Better UX (help formatting, colors), plugin system, decorator syntax
-- **Trade-off**: External dependency (not stdlib)
-
----
-
-## Scalability Considerations
-
-### Current Limits
-- **Apps per deployment**: Tested with 50+ apps
-- **Concurrent users**: Single-user (SQLite limitation)
-- **Cluster size**: Tested with small k3s clusters
-
-### Future Enhancements (v1.0+)
-- **API Server Mode**: REST API for remote management
-- **PostgreSQL Support**: Multi-user state management
-- **Kubernetes Operator**: Native Kubernetes controller
-- **Distributed Locks**: Prevent concurrent deployment conflicts
-
----
-
-## Security Architecture
-
-### 1. **Credentials Management**
-- Uses existing kubeconfig (no custom auth)
-- Respects KUBECONFIG environment variable
-- Supports context switching
-
-### 2. **Input Validation**
-- Pydantic for schema validation
-- Path traversal prevention
-- Command injection prevention (no shell=True)
-
-### 3. **State Isolation**
-- Per-user SQLite database (~/.sbkube/)
-- File permissions (user-only access)
-
-### 4. **Secrets Handling**
-- No secret storage (relies on Kubernetes secrets)
-- Helm values files can reference secrets
-- Future: Sealed Secrets, Vault integration
-
----
-
-## Related Documentation
-
-- **Complete Specification**: [SPEC.md](SPEC.md) - Comprehensive technical details
-- **Module Details**: [docs/10-modules/sbkube/](docs/10-modules/sbkube/)
-- **API Contract**: [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md)
-- **Development Guide**: [docs/04-development/](docs/04-development/)
-- **Technology Stack**: [TECH_STACK.md](TECH_STACK.md)
-
----
-
-**Document Version**: 1.0
-**Last Updated**: 2025-12-01
-**SBKube Version**: 0.9.1
+**Document Version**: 3.0
+**Last Updated**: 2026-02-25
+**SBKube Version**: 0.11.0

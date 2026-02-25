@@ -8,7 +8,6 @@ from pydantic import ValidationError as PydanticValidationError
 
 from sbkube.models.config_model import SBKubeConfig
 from sbkube.models.sources_model import SourceScheme
-from sbkube.utils.deprecation import option_was_explicitly_set, warn_deprecated_option
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.logger import logger, setup_logging_from_context
 
@@ -108,13 +107,13 @@ class ValidateCommand:
             logger.error("의존성 검증 실패 (--strict-deps 모드)")
             logger.warning("배포가 실패할 수 있습니다. 의존성을 먼저 배포하세요:")
             for dep in result["missing"]:
-                logger.info(f"  sbkube deploy --app-dir {dep}")
+                logger.info(f"  sbkube deploy {dep}")
             return False
 
         logger.warning("의존성 검증 실패 (논-블로킹) - 배포 시 실패할 수 있음")
         logger.info("배포 권장 순서:")
         for dep in result["missing"]:
-            logger.info(f"  sbkube deploy --app-dir {dep}")
+            logger.info(f"  sbkube deploy {dep}")
 
         return False
 
@@ -292,38 +291,14 @@ class ValidateCommand:
 @click.command(name="validate")
 @click.argument(
     "target_file",
-    type=click.Path(dir_okay=False, resolve_path=True),
+    type=click.Path(file_okay=True, dir_okay=True, resolve_path=True),
     required=False,
     default=None,
-)
-@click.option(
-    "--app-dir",
-    "app_config_dir_name",
-    default=None,
-    help="[DEPRECATED: use positional TARGET] 앱 설정 디렉토리 (지정하지 않으면 모든 하위 디렉토리 자동 탐색)",
-)
-@click.option(
-    "--config-file",
-    "config_file_name",
-    default="config.yaml",
-    help="[DEPRECATED: use -f with sbkube.yaml] 설정 파일 이름 (app-dir 내부, 기본값: config.yaml)",
-)
-@click.option(
-    "--source",
-    "sources_file_name",
-    default="sources.yaml",
-    help="[DEPRECATED: use unified sbkube.yaml settings] 소스 설정 파일 (base-dir 기준)",
 )
 @click.option(
     "--schema-type",
     type=click.Choice(["config", "sources"], case_sensitive=False),
     help="검증할 파일의 종류 (config 또는 sources). 파일명으로 자동 유추 가능 시 생략 가능.",
-)
-@click.option(
-    "--base-dir",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True),
-    default=".",
-    help="[DEPRECATED: use TARGET full path or -f] 프로젝트 루트 디렉토리 (스키마 파일 상대 경로 해석 기준)",
 )
 @click.option(
     "--schema-path",
@@ -362,11 +337,7 @@ class ValidateCommand:
 def cmd(
     ctx,
     target_file: str | None,
-    app_config_dir_name: str | None,
-    config_file_name: str,
-    sources_file_name: str,
     schema_type: str | None,
-    base_dir: str,
     custom_schema_path: str | None,
     verbose: int,
     debug: bool,
@@ -383,7 +354,7 @@ def cmd(
         sbkube validate
 
         # Validate specific app group
-        sbkube validate --app-dir redis
+        sbkube validate ./redis
 
         # Skip dependency validation
         sbkube validate --skip-deps
@@ -400,9 +371,6 @@ def cmd(
         # Explicit file path (backward compatible)
         sbkube validate /path/to/config.yaml
 
-        # Custom config file name
-        sbkube validate --app-dir redis --config-file custom.yaml
-
         # With custom kubeconfig
         sbkube validate --kubeconfig ~/.kube/production-config
 
@@ -411,15 +379,6 @@ def cmd(
     ctx.obj["verbose"] = verbose
     ctx.obj["debug"] = debug
     setup_logging_from_context(ctx)
-
-    if option_was_explicitly_set(ctx, "app_config_dir_name"):
-        warn_deprecated_option("--app-dir", "positional TARGET argument")
-    if option_was_explicitly_set(ctx, "base_dir"):
-        warn_deprecated_option("--base-dir", "full path in TARGET or -f")
-    if option_was_explicitly_set(ctx, "config_file_name"):
-        warn_deprecated_option("--config-file", "-f with sbkube.yaml")
-    if option_was_explicitly_set(ctx, "sources_file_name"):
-        warn_deprecated_option("--source", "unified sbkube.yaml settings")
 
     # Validate conflicting options
     if skip_deps and strict_deps:
@@ -433,28 +392,36 @@ def cmd(
         raise click.Abort
 
     # Resolve base directory
-    BASE_DIR = Path(base_dir).resolve()
+    BASE_DIR = Path.cwd().resolve()
+    app_config_dir_name: str | None = None
+    config_file_name = "config.yaml"
 
-    # Case 1: Explicit file path provided (backward compatible)
     if target_file:
-        target_path = Path(target_file)
-        logger.info(f"Using explicit file path: {target_path}")
+        target_path = Path(target_file).resolve()
+        if target_path.is_file():
+            logger.info(f"Using explicit file path: {target_path}")
 
-        validate_cmd = ValidateCommand(
-            target_file=str(target_path),
-            schema_type=schema_type,
-            base_dir=str(BASE_DIR),
-            custom_schema_path=custom_schema_path,
-            skip_deps=skip_deps,
-            strict_deps=strict_deps,
-            skip_storage_check=skip_storage_check,
-            strict_storage_check=strict_storage_check,
-            kubeconfig=kubeconfig,
-        )
-        validate_cmd.execute()
-        return
+            validate_cmd = ValidateCommand(
+                target_file=str(target_path),
+                schema_type=schema_type,
+                base_dir=str(BASE_DIR),
+                custom_schema_path=custom_schema_path,
+                skip_deps=skip_deps,
+                strict_deps=strict_deps,
+                skip_storage_check=skip_storage_check,
+                strict_storage_check=strict_storage_check,
+                kubeconfig=kubeconfig,
+            )
+            validate_cmd.execute()
+            return
+        if target_path.is_dir():
+            BASE_DIR = target_path.parent
+            app_config_dir_name = target_path.name
+        else:
+            logger.error(f"Target path not found: {target_path}")
+            raise click.Abort
 
-    # Case 2 & 3: Auto-discovery or --app-dir specified
+    # Auto-discovery or target directory
     from rich.console import Console
 
     from sbkube.utils.app_dir_resolver import resolve_app_dirs

@@ -32,7 +32,7 @@ dataStorage:
 
 # PVC 재생성:
 kubectl delete pvc <pvc-name> -n <namespace>
-sbkube apply --app-dir <app-dir>
+sbkube apply <app-dir>
 """,
     },
     "HelmRepoNotRegisteredError": {
@@ -118,7 +118,7 @@ kubectl delete mutatingwebhookconfiguration <webhook-name>
 
 # 3. Helm release 완전 삭제 후 재설치:
 helm uninstall <release> -n <namespace>
-sbkube apply --app-dir <app-dir>
+sbkube apply <app-dir>
 """,
     },
     "DeploymentTimeoutError": {
@@ -162,7 +162,7 @@ apps:
         "suggestions": [
             "새 프로젝트인가요? → sbkube init 명령어로 초기화하세요",
             "파일 경로 확인 → ls config.yaml 또는 ls sources.yaml",
-            "설정 검증 → sbkube validate --app-dir <디렉토리>",
+            "설정 검증 → sbkube validate <디렉토리>",
         ],
         "commands": {
             "init": "프로젝트 초기화 및 설정 파일 생성",
@@ -209,7 +209,7 @@ apps:
             "차트 이름 확인 → helm search repo <차트명>",
             "리포지토리 추가 → helm repo add <이름> <URL>",
             "리포지토리 업데이트 → helm repo update",
-            "설정 검증 → sbkube validate --app-dir <디렉토리>",
+            "설정 검증 → sbkube validate <디렉토리>",
         ],
         "commands": {
             "validate": "설정 파일 유효성 검사",
@@ -225,7 +225,7 @@ apps:
             "리포지토리 URL 확인 → git ls-remote <URL>",
             "인증 정보 확인 → Git 자격증명 또는 SSH 키",
             "네트워크 연결 확인 → ping github.com",
-            "설정 검증 → sbkube validate --app-dir <디렉토리>",
+            "설정 검증 → sbkube validate <디렉토리>",
         ],
         "commands": {
             "validate": "설정 파일 유효성 검사",
@@ -255,13 +255,13 @@ apps:
             "설정 파일 구문 확인 → YAML 문법 오류",
             "필수 필드 확인 → name, type, specs 등",
             "스키마 참조 → docs/03-configuration/config-schema.md",
-            "검증 도구 실행 → sbkube validate --app-dir <디렉토리>",
+            "검증 도구 실행 → sbkube validate <디렉토리>",
         ],
         "commands": {
             "validate": "설정 파일 유효성 검사 (상세 오류 표시)",
         },
         "doc_link": "docs/03-configuration/config-schema.md",
-        "quick_fix": "sbkube validate --app-dir .",
+        "quick_fix": "sbkube validate .",
         "auto_recoverable": True,
     },
     "DeploymentFailedError": {

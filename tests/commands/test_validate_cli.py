@@ -61,8 +61,8 @@ class TestValidateHelp:
             "config.yaml/toml 또는 sources.yaml/toml 파일을 JSON 스키마 및 데이터 모델로 검증합니다"
             in result.output
         )
-        assert "--app-dir" in result.output
-        assert "--config-file" in result.output
+        assert "--app-dir" not in result.output
+        assert "--config-file" not in result.output
 
 
 class TestValidateExplicitPath:
@@ -95,20 +95,17 @@ class TestValidateExplicitPath:
         assert result.exit_code != 0
 
 
-class TestValidateAppDir:
-    """Test validate with --app-dir option."""
+class TestValidateTargetDir:
+    """Test validate with positional TARGET directory."""
 
-    def test_validate_app_dir(self, runner, temp_project) -> None:
-        """Test validate with --app-dir option."""
+    def test_validate_target_dir(self, runner, temp_project) -> None:
+        """Test validate with positional TARGET directory."""
         result = runner.invoke(
             main,
             [
                 "validate",
                 "-v",
-                "--app-dir",
-                "examples/basic",
-                "--base-dir",
-                str(temp_project),
+                str(temp_project / "examples" / "basic"),
             ],
         )
 
@@ -118,54 +115,46 @@ class TestValidateAppDir:
         assert "유효성 검사 완료" in result.output
         assert "validated successfully" in result.output
 
-    def test_validate_app_dir_custom_config(self, runner, temp_project) -> None:
-        """Test validate with --app-dir and --config-file (non-standard filename)."""
+    def test_validate_target_file_custom_config(self, runner, temp_project) -> None:
+        """Test validate with explicit custom config file path."""
         result = runner.invoke(
             main,
             [
                 "validate",
                 "-v",
-                "--app-dir",
-                "examples/custom",
-                "--config-file",
-                "custom.yaml",
+                str(temp_project / "examples" / "custom" / "custom.yaml"),
                 "--schema-type",
                 "config",  # Required for non-standard filenames
-                "--base-dir",
-                str(temp_project),
             ],
         )
 
         # Should succeed
         assert result.exit_code == 0
-        assert "Validating app group: custom" in result.output
         assert "유효성 검사 완료" in result.output
-        assert "validated successfully" in result.output
 
-    def test_validate_app_dir_nonexistent(self, runner, temp_project) -> None:
-        """Test validate with non-existent app directory."""
+    def test_validate_target_dir_nonexistent(self, runner, temp_project) -> None:
+        """Test validate with non-existent target directory."""
         result = runner.invoke(
             main,
-            ["validate", "--app-dir", "nonexistent", "--base-dir", str(temp_project)],
+            ["validate", str(temp_project / "nonexistent")],
         )
 
         # Should fail with clear error message
         assert result.exit_code != 0
         # Accept either error message format
         assert (
-            "App directory not found" in result.output
+            "Target path not found" in result.output
+            or "App directory not found" in result.output
             or "Config file not found" in result.output
         )
 
-    def test_validate_app_dir_missing_config(self, runner, temp_project) -> None:
-        """Test validate with app-dir but missing config file."""
+    def test_validate_target_dir_missing_config(self, runner, temp_project) -> None:
+        """Test validate with target dir but missing config file."""
         # Create empty directory
         empty_dir = temp_project / "empty"
         empty_dir.mkdir()
 
-        result = runner.invoke(
-            main, ["validate", "--app-dir", "empty", "--base-dir", str(temp_project)]
-        )
+        result = runner.invoke(main, ["validate", str(empty_dir)])
 
         # Should fail with clear error message
         assert result.exit_code != 0
@@ -193,12 +182,11 @@ apps:
 """
         (app1_dir / "config.yaml").write_text(config_content)
 
-        result = runner.invoke(main, ["validate", "-v", "--base-dir", str(temp_project)])
+        result = runner.invoke(main, ["validate", "-v", str(temp_project)])
 
         # Should succeed (auto-discovers app directories)
         assert result.exit_code == 0
         assert "SBKube `validate` 시작" in result.output
-        assert "Found" in result.output or "Using app_dirs" in result.output
         assert "유효성 검사 완료" in result.output
 
     def test_validate_current_dir_missing_config(self, runner, tmp_path) -> None:
@@ -207,55 +195,40 @@ apps:
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
 
-        result = runner.invoke(main, ["validate", "--base-dir", str(empty_dir)])
+        result = runner.invoke(main, ["validate", str(empty_dir)])
 
         # Should fail with helpful error message (no app directories found)
         assert result.exit_code != 0
-        assert "No app directories found" in result.output
-        assert "💡 Tip" in result.output
+        assert "Config file not found" in result.output
 
 
 class TestValidatePriorityLogic:
     """Test file resolution priority logic."""
 
-    def test_explicit_path_overrides_app_dir(self, runner, temp_project) -> None:
-        """Test that explicit path takes precedence over --app-dir."""
+    def test_explicit_path_validation(self, runner, temp_project) -> None:
+        """Test explicit file path validation works."""
         config_file = temp_project / "config.yaml"
 
-        result = runner.invoke(
-            main,
-            [
-                "validate",
-                str(config_file),
-                "--app-dir",
-                "examples/basic",
-                "--base-dir",
-                str(temp_project),
-            ],
-        )
+        result = runner.invoke(main, ["validate", str(config_file)])
 
         # Should use explicit path (not app-dir) — heading shows the file path
         assert result.exit_code == 0
         assert "config.yaml" in result.output
 
-    def test_app_dir_overrides_current_dir(self, runner, temp_project) -> None:
-        """Test that --app-dir takes precedence over current directory."""
+    def test_target_dir_validation(self, runner, temp_project) -> None:
+        """Test target directory validation works."""
         result = runner.invoke(
             main,
             [
                 "validate",
-                "--app-dir",
-                "examples/basic",
-                "--base-dir",
-                str(temp_project),
+                str(temp_project / "examples" / "basic"),
             ],
         )
 
-        # Should use app-dir (not current dir auto-discovery)
+        # Should use provided target directory
         assert result.exit_code == 0
         assert "Validating app group: basic" in result.output
         assert "validated successfully" in result.output
-        assert "Using current directory" not in result.output
 
 
 class TestValidateSchemaType:
@@ -298,10 +271,7 @@ class TestValidateIntegration:
             main,
             [
                 "validate",
-                "--app-dir",
-                "examples/basic",
-                "--base-dir",
-                str(temp_project),
+                str(temp_project / "examples" / "basic"),
             ],
         )
         assert result2.exit_code == 0
@@ -366,6 +336,7 @@ apps:
         assert (
             "not found" in result.output.lower()
             or "does not exist" in result.output.lower()
+            or "target path not found" in result.output.lower()
         )
 
     def test_validate_directory_instead_of_file(self, runner, tmp_path) -> None:

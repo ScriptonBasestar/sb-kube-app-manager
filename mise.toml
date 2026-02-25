@@ -2,8 +2,8 @@
 # https://mise.jdx.dev/configuration.html
 
 [tools]
-python = "3.12"
-helm = "4.0.2"
+python = "3.14"
+helm = "4"
 uv = "latest"
 kubectl = "latest"
 kustomize = "latest"

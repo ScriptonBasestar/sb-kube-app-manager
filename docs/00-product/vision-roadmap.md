@@ -90,26 +90,23 @@ SBKube는 단순한 Kubernetes 배포 도구를 넘어, DevOps 팀이 모든 배
 
 ### v0.9.0 (2025 Q2 - 구현 완료) ✅
 
-**목표**: Workspace 기능 (Multi-Phase Deployment)
+**목표**: Multi-Phase Deployment 기능
 
-- ✅ Workspace 설계 완료 (2025-01-13)
-  - ✅ 파일명: workspace.yaml
+- ✅ Multi-Phase 설계 완료 (2025-01-13)
+  - ✅ 파일명: sbkube.yaml
   - ✅ Phase-level sources 참조 (Override 방식)
   - ✅ 단일 클러스터 순차 배포
   - ✅ Repository 우선순위: App > Phase > Workspace
-- ✅ Pydantic 모델 구현 (WorkspaceConfig, PhaseConfig) (2025-01-25)
-- ✅ CLI 명령어 구현 (workspace validate/deploy/status/graph/history) (2025-01-25)
+- ✅ Pydantic 모델 구현 (MultiPhaseConfig, PhaseConfig) (2025-01-25)
+- ✅ CLI 실행 흐름 구현 (`apply -f sbkube.yaml` 중심) (2025-01-25)
 - ✅ Phase 의존성 해결 (Kahn's algorithm) (2025-01-25)
-- ✅ Workspace-level 상태 관리 (2025-01-25)
+- ✅ Multi-Phase 상태 관리 (2025-01-25)
 - ✅ 병렬 Phase 실행 지원 (독립 Phase 동시 실행)
 
 **Use Case**: p1-kube, p2-kube, p3-kube처럼 단계별로 나뉜 프로젝트 구조 지원
 
 **설계 문서**:
-- [workspace-design.md](../02-features/future/workspace-design.md) - Design decisions
-- [workspace-schema.md](../03-configuration/workspace-schema.md) - Schema guide
-- [workspace-schema.yaml](../03-configuration/workspace-schema.yaml) - Example schema
-- [workspace-roadmap.md](../02-features/future/workspace-roadmap.md) - Implementation plan
+- Unified multi-phase 설계는 `sbkube.yaml` 기반 문서로 통합됨
 
 ### v0.9.1 (2025-12-01 - 릴리즈 완료) ✅
 

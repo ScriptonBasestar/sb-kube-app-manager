@@ -2,26 +2,25 @@ ______________________________________________________________________
 
 ## type: API Reference audience: End User topics: [configuration, unified-config, sbkube-yaml] llm_priority: high last_updated: 2025-02-04
 
-# 📋 Unified Configuration Schema (v0.10.0+)
+# 📋 Unified Configuration Schema (v0.11.0+)
 
-> **SBKube v0.10.0+** introduces a unified configuration format (`sbkube.yaml`) that replaces the previous
-> multi-file configuration approach (`sources.yaml` + `config.yaml`).
+> **SBKube v0.11.0+** uses unified configuration (`sbkube.yaml`) as the primary format,
+> replacing the previous multi-file approach (`sources.yaml` + `config.yaml`).
 
 ## TL;DR
 
 - **Purpose**: Single-file configuration for all deployment settings
-- **Version**: v0.10.0+ (Unified Config), v0.11.0+ (Recursive Execution)
+- **Version**: v0.11.0+ (Unified Config, default)
 - **Key Points**:
   - Single `sbkube.yaml` file replaces `sources.yaml` + `config.yaml`
   - Settings inheritance: global → phase → app
   - Phase-based organization with dependencies
   - Recursive execution for nested phases
-  - Backward compatible with legacy formats (with deprecation warnings)
+  - Legacy formats still readable with deprecation warnings
 - **Related**:
   - **Legacy Config**: [config-schema.md](config-schema.md)
   - **Legacy Sources**: [sources-schema.md](sources-schema.md)
   - **Migration Guide**: [migration-guide.md](migration-guide.md)
-  - **Workspace**: [workspace-schema.md](workspace-schema.md)
 
 ______________________________________________________________________
 
@@ -29,9 +28,8 @@ ______________________________________________________________________
 
 SBKube detects configuration files in the following order:
 
-1. `sbkube.yaml` - **Unified Config** (recommended, v0.10.0+)
-2. `workspace.yaml` - Workspace Config (v0.9.x, deprecated)
-3. `sources.yaml` + `config.yaml` - Legacy Config (deprecated)
+1. `sbkube.yaml` - **Unified Config** (recommended, v0.11.0+)
+2. `sources.yaml` + `config.yaml` - Legacy Config (deprecated)
 
 When multiple formats exist, the highest priority format is used with a deprecation warning.
 

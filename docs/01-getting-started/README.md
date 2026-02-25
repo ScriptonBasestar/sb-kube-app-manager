@@ -39,7 +39,7 @@ pip install sbkube
 uv tool install sbkube
 
 # Verify installation
-sbkube --version
+sbkube version
 ```
 
 ### Development Installation

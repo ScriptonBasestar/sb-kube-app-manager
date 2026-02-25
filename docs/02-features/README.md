@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## type: Feature Index audience: End User, Developer topics: [features, overview, cli-commands] llm_priority: medium last_updated: 2025-01-04
+## type: Feature Index audience: End User, Developer topics: [features, overview, cli-commands] llm_priority: medium last_updated: 2026-02-25
 
 # 🚀 SBKube CLI 주요 기능
 
@@ -29,13 +29,13 @@ ______________________________________________________________________
 - **`version`** - CLI 현재 버전 표시
 - **`state`** - 배포 상태 관리 및 추적 *(신규)*
 
-### 🏗️ Workspace (Multi-Phase Deployment) *(v0.9.0 Preview)*
+### 🏗️ Multi-Phase Deployment *(v0.11.0+)*
 
-- **`workspace validate`** - workspace.yaml 검증
-- **`workspace graph`** - Phase 의존성 그래프 출력
-- **`workspace deploy`** - 다단계 배포 실행
-- **`workspace status`** - Workspace 설정 조회
-- **`workspace init`** - workspace.yaml 템플릿 생성
+- **`apply -f sbkube.yaml`** - 다단계 배포 실행
+- **`apply -f sbkube.yaml --phase <name>`** - 특정 Phase 중심 배포
+- **`apply -f sbkube.yaml --dry-run`** - 계획 검증
+- **`status` / `history`** - 상태 및 이력 조회
+
 
 ### 💡 기본 사용법
 
@@ -186,4 +186,4 @@ ______________________________________________________________________
 
 *자세한 명령어 사용법은 [commands.md](commands.md)를 참조하세요.*\
 *애플리케이션 타입별 상세 설명은 [application-types.md](application-types.md)를 확인하세요.*\
-*Multi-Phase 배포는 [workspace-guide.md](workspace-guide.md)를 참조하세요.*
+*Multi-Phase 배포는 `sbkube apply -f sbkube.yaml` 워크플로우를 사용하세요.*

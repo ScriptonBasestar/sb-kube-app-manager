@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## type: User Guide audience: End User, Developer topics: [migration, upgrade, breaking-changes] llm_priority: medium last_updated: 2025-02-04
+## type: User Guide audience: End User, Developer topics: [migration, upgrade, breaking-changes] llm_priority: medium last_updated: 2026-02-25
 
 # SBKube Migration Guide
 
@@ -10,19 +10,20 @@ ______________________________________________________________________
 
 ## TL;DR
 
-- **Current Version**: v0.10.0
-- **Latest Stable**: v0.10.0
-- **Major Changes**: v0.10.0 (unified config), v0.9.0 (workspace), v0.7.1 (cluster global values)
+- **Current Version**: v0.11.0
+- **Latest Stable**: v0.11.0
+- **Major Changes**: v0.11.0 (unified apply workflow), v0.10.0 (unified config), v0.7.1 (cluster global values)
 - **Migration Tool**: `sbkube migrate` converts legacy configs to unified format
 - **Recommended Format**: `sbkube.yaml` (unified config)
 - **Related**: [Unified Config Schema](unified-config-schema.md), [Config Schema](config-schema.md)
 
 > **⚠️ Important**: Starting with v0.10.0, the legacy configuration format (`sources.yaml` + `config.yaml`)
 > is deprecated. Use `sbkube migrate` to convert to the new unified format (`sbkube.yaml`).
+> Starting with v0.11.0, multi-phase deployment is handled through `sbkube apply -f sbkube.yaml`.
 
 ______________________________________________________________________
 
-## Quick Migration (v0.10.0+)
+## Quick Migration (v0.11.0+)
 
 Convert your legacy configuration to the new unified format:
 
@@ -47,8 +48,9 @@ ______________________________________________________________________
 - [Overview](#overview)
 - [General Migration Process](#general-migration-process)
 - [Version-Specific Guides](#version-specific-guides)
+  - [Migration to v0.11.0 (Unified Apply Workflow)](#migration-to-v0110)
   - [Migration to v0.10.0 (Unified Config)](#migration-to-v0100)
-  - [Migration to v0.9.0 (Workspace)](#migration-to-v090)
+  - [Migration to v0.9.0 (Multi-Phase)](#migration-to-v090)
   - [Migration to v0.7.1](#migration-to-v071)
   - [Migration to v0.7.0](#migration-to-v070)
   - [Migration to v0.6.1](#migration-to-v061)
@@ -69,8 +71,9 @@ breaking changes that require configuration migration.
 
 | Version | Release Date | Major Changes |
 |---------|--------------|---------------|
+| v0.11.0 | 2026-02-25 | Unified apply workflow for multi-phase deployments |
 | v0.10.0 | 2025-02-04 | Unified config (sbkube.yaml), recursive executor, rollback_scope |
-| v0.9.0 | 2025-01-20 | Workspace support, multi-phase deployment |
+| v0.9.0 | 2025-01-20 | Early multi-phase deployment support |
 | v0.7.1 | 2025-01-06 | Cluster global values, helm_label_injection, error handling |
 | v0.7.0 | 2025-01-03 | LLM output integration |
 | v0.6.1 | 2025-01-03 | Enhanced error handling |
@@ -81,6 +84,20 @@ breaking changes that require configuration migration.
 ______________________________________________________________________
 
 ## General Migration Process
+
+### Migration to v0.11.0
+
+이전 multi-phase 서브커맨드는 제거되었으며, 다음 명령으로 전환하세요.
+
+```bash
+# Old (removed)
+sbkube apply -f sbkube.yaml
+
+# New
+sbkube apply -f sbkube.yaml
+sbkube apply -f sbkube.yaml --phase p2-data
+sbkube apply -f sbkube.yaml --dry-run
+```
 
 ### Pre-Migration Checklist
 
@@ -94,7 +111,7 @@ ______________________________________________________________________
 1. **Check Current Version**:
 
    ```bash
-   sbkube --version
+   sbkube version
    ```
 
 1. **Review Changelog**:
@@ -184,12 +201,12 @@ sbkube migrate -s ./my-config -o ./my-config/sbkube.yaml
 The migration tool converts:
 - `sources.yaml` settings → `settings` section
 - `config.yaml` apps → `apps` section
-- `workspace.yaml` phases → `phases` section
+- legacy phase file phases → `phases` section
 
 **3. Verify the Configuration**
 
 ```bash
-sbkube validate -f sbkube.yaml
+sbkube apply -f sbkube.yaml --dry-run
 ```
 
 **4. Test with Dry-Run**
@@ -206,8 +223,8 @@ After verifying the migration:
 mkdir legacy-backup
 mv sources.yaml config.yaml legacy-backup/
 
-# Or for workspace format
-mv workspace.yaml legacy-backup/
+# Or for legacy phase format
+mv legacy-phase.yaml legacy-backup/
 ```
 
 #### Configuration Mapping
@@ -216,7 +233,7 @@ mv workspace.yaml legacy-backup/
 |---------------|----------------|
 | `sources.yaml` | `settings:` section |
 | `config.yaml` | `apps:` section |
-| `workspace.yaml` | `metadata:` + `phases:` sections |
+| `legacy-phase.yaml` | `metadata:` + `phases:` sections |
 | `helm_repos:` (list) | `settings.helm_repos:` (dict) |
 | `repos:` | `settings.helm_repos:` |
 
@@ -262,11 +279,11 @@ ______________________________________________________________________
 
 #### What's New
 
-- **Workspace Support**: Multi-phase deployment orchestration
+- **Multi-Phase Support**: Deployment orchestration via unified apply workflow
 - **Parallel Execution**: Execute phases and apps in parallel
 - **App Group Dependencies**: Define dependencies between app groups
 
-See [Workspace Guide](../02-features/workspace-guide.md) for details.
+See [Unified Config Schema](unified-config-schema.md) for details.
 
 ______________________________________________________________________
 
@@ -750,7 +767,7 @@ sbkube init
 
 # Add your apps to config.yaml
 # Then re-deploy
-sbkube apply --profile production
+sbkube --profile production apply
 ```
 
 **Option 2: Manual Label Patching** (For non-sbkube resources)
@@ -902,7 +919,7 @@ ______________________________________________________________________
 ### Q: How do I check my current version?
 
 ```bash
-sbkube --version
+sbkube version
 ```
 
 ### Q: Can I skip versions during upgrade?
@@ -1036,7 +1053,7 @@ helm_sources:
 
 ```bash
 uv pip install --upgrade sbkube
-sbkube --version  # Should show 0.6.0+
+sbkube version  # Should show 0.6.0+
 ```
 
 ### Issue: State database errors

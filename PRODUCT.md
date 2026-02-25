@@ -336,12 +336,12 @@ sbkube [전역옵션] <명령어> [명령어옵션]
 - `rollback`: 이전 배포로 복원
 - `validate`: 설정 파일 검증
 
-**Workspace 명령어** (v0.9.0 Preview):
+**다단계 Orchestration** (v0.11.0+):
 
-- `workspace validate`: workspace.yaml 검증
-- `workspace graph`: Phase 의존성 그래프 시각화
-- `workspace deploy`: 다단계 Phase 배포 실행
-- `workspace status`: Workspace 설정 조회
+- `apply -f sbkube.yaml --dry-run`: 설정/실행 계획 검증
+- `apply -f sbkube.yaml`: 다단계 Phase 배포 실행
+- `apply -f sbkube.yaml --phase <name>`: 특정 Phase 중심 배포
+- `status`, `history`: 배포 상태/이력 조회
 
 ### 7.2 Rich 콘솔 출력
 
@@ -470,7 +470,6 @@ ______________________________________________________________________
 - **[빠른 시작](docs/01-getting-started/README.md)** - 설치 및 기본 사용법
 - **[명령어 참조](docs/02-features/commands.md)** - 전체 명령어 상세 가이드
 - **[설정 가이드](docs/03-configuration/README.md)** - config.yaml, sources.yaml 작성법
-- **[Workspace 가이드](docs/02-features/workspace-guide.md)** - 다단계 Phase 배포 (v0.9.0)
 - **[튜토리얼](docs/08-tutorials/README.md)** - 실전 사용 예제
 
 ### 기술 문서

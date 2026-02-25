@@ -13,7 +13,7 @@ ______________________________________________________________________
 1. [문서 개요](#1-%EB%AC%B8%EC%84%9C-%EA%B0%9C%EC%9A%94)
 1. [시스템 아키텍처](#2-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98)
 1. [워크플로우 상세](#3-%EC%9B%8C%ED%81%AC%ED%94%8C%EB%A1%9C%EC%9A%B0-%EC%83%81%EC%84%B8)
-1. [Workspace 시스템](#4-workspace-%EC%8B%9C%EC%8A%A4%ED%85%9C) (v0.9.0 Preview)
+1. [Multi-Phase 시스템](#4-multi-phase-%EC%8B%9C%EC%8A%A4%ED%85%9C)
 1. [데이터 모델 및 스키마](#5-%EB%8D%B0%EC%9D%B4%ED%84%B0-%EB%AA%A8%EB%8D%B8-%EB%B0%8F-%EC%8A%A4%ED%82%A4%EB%A7%88)
 1. [API 및 명령어 명세](#6-api-%EB%B0%8F-%EB%AA%85%EB%A0%B9%EC%96%B4-%EB%AA%85%EC%84%B8)
 1. [상태 관리 시스템](#7-%EC%83%81%ED%83%9C-%EA%B4%80%EB%A6%AC-%EC%8B%9C%EC%8A%A4%ED%85%9C)
@@ -440,20 +440,20 @@ def deploy_helm_app(app: AppConfig, namespace: str, dry_run: bool = False):
 
 ______________________________________________________________________
 
-## 4. Workspace 시스템 (v0.9.0 Preview)
+## 4. Multi-Phase 시스템
 
-> **주의**: Workspace 기능은 v0.9.0 Preview 상태입니다. API가 변경될 수 있습니다.
+> **주의**: Multi-Phase 기능은 통합 `sbkube.yaml` + `apply` 워크플로우를 기준으로 합니다.
 
 ### 4.1 개요
 
-Workspace는 복잡한 다단계 배포를 Phase 기반으로 오케스트레이션합니다.
+Multi-Phase 시스템은 복잡한 다단계 배포를 Phase 기반으로 오케스트레이션합니다.
 
 **사용 사례**: Infrastructure → Data → Application → Monitoring 순서의 단계별 배포
 
 **계층 구조**:
 
 ```
-Workspace (workspace.yaml)
+Multi-Phase (sbkube.yaml)
 ├── Phase 1 (infra)
 │   └── App Group: a000_network/
 ├── Phase 2 (data)
@@ -466,12 +466,12 @@ Workspace (workspace.yaml)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│               Workspace Layer (v0.9.0)                       │
+│               Multi-Phase Layer                              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│   workspace.yaml                                            │
+│   sbkube.yaml                                               │
 │        ↓                                                    │
-│   WorkspaceConfig (Pydantic)                                │
+│   MultiPhaseConfig (Pydantic)                               │
 │        ↓                                                    │
 │   Phase Dependency Resolver (Kahn's Algorithm)              │
 │        ↓                                                    │
@@ -492,12 +492,12 @@ Workspace (workspace.yaml)
               └───────────────────────────────┘
 ```
 
-### 4.3 workspace.yaml 스키마
+### 4.3 sbkube.yaml 스키마
 
 **Pydantic 모델**:
 
 ```python
-# sbkube/models/workspace_model.py
+# sbkube/models/unified_config_model.py
 class PhaseConfig(BaseModel):
     """Phase 설정"""
     description: str
@@ -508,8 +508,8 @@ class PhaseConfig(BaseModel):
     on_failure: str = "stop"  # stop | continue | rollback
     env: Dict[str, str] = {}
 
-class WorkspaceMetadata(BaseModel):
-    """Workspace 메타데이터"""
+class MultiPhaseMetadata(BaseModel):
+    """Multi-Phase 메타데이터"""
     name: str
     description: Optional[str] = None
     environment: Optional[str] = None
@@ -523,8 +523,8 @@ class GlobalConfig(BaseModel):
     on_failure: str = "stop"
     helm_repos: Dict[str, Dict[str, str]] = {}
 
-class WorkspaceConfig(BaseModel):
-    """workspace.yaml 전체 모델"""
+class MultiPhaseConfig(BaseModel):
+    """sbkube.yaml 전체 모델"""
     version: str = "1.0"
     metadata: WorkspaceMetadata
     global_config: Optional[GlobalConfig] = Field(default=None, alias="global")
@@ -655,7 +655,7 @@ def validate_phase_dependencies(self) -> None:
 **독립 Phase 병렬 실행**:
 
 ```python
-def deploy_phases_parallel(self, workspace: WorkspaceConfig):
+def deploy_phases_parallel(self, config: MultiPhaseConfig):
     """
     독립적인 Phase들을 병렬로 실행
 
@@ -665,7 +665,7 @@ def deploy_phases_parallel(self, workspace: WorkspaceConfig):
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    phase_order = workspace.get_phase_order()
+    phase_order = config.get_phase_order()
     completed = set()
 
     while len(completed) < len(phase_order):
@@ -673,13 +673,13 @@ def deploy_phases_parallel(self, workspace: WorkspaceConfig):
         ready = [
             p for p in phase_order
             if p not in completed
-            and all(d in completed for d in workspace.phases[p].depends_on)
+            and all(d in completed for d in config.phases[p].depends_on)
         ]
 
         # 병렬 실행
         with ThreadPoolExecutor(max_workers=len(ready)) as executor:
             futures = {
-                executor.submit(self._deploy_phase, workspace, p): p
+                executor.submit(self._deploy_phase, config, p): p
                 for p in ready
             }
 
@@ -689,15 +689,15 @@ def deploy_phases_parallel(self, workspace: WorkspaceConfig):
                     future.result()
                     completed.add(phase_name)
                 except Exception as e:
-                    self._handle_phase_failure(workspace, phase_name, e)
+                    self._handle_phase_failure(config, phase_name, e)
 ```
 
 ### 4.6 CLI 명령어
 
-#### 4.6.1 workspace validate
+#### 4.6.1 검증/그래프 확인
 
 ```bash
-sbkube workspace validate <workspace.yaml>
+sbkube apply -f <sbkube.yaml> --dry-run
 
 검증 항목:
   1. YAML 구문 검증
@@ -707,16 +707,16 @@ sbkube workspace validate <workspace.yaml>
   5. sources.yaml 존재 확인 (선택)
 ```
 
-#### 4.6.2 workspace graph
+#### 4.6.2 의존성 확인
 
 ```bash
-sbkube workspace graph <workspace.yaml>
+sbkube apply -f <sbkube.yaml> --dry-run
 
 출력:
   Phase 의존성 그래프 (Rich Tree)
 
 예시 출력:
-  Workspace: production-deployment
+  Deployment: production-deployment
   ├── p1-infra - Infrastructure layer
   │   └── App Groups: a000_network, a001_storage
   ├── p2-data - Data layer [depends: p1-infra]
@@ -725,10 +725,10 @@ sbkube workspace graph <workspace.yaml>
       └── App Groups: a200_backend
 ```
 
-#### 4.6.3 workspace deploy
+#### 4.6.3 배포 실행
 
 ```bash
-sbkube workspace deploy <workspace.yaml> [옵션]
+sbkube apply -f <sbkube.yaml> [옵션]
 
 옵션:
   --dry-run              # 시뮬레이션 모드
@@ -738,7 +738,7 @@ sbkube workspace deploy <workspace.yaml> [옵션]
   --parallel             # 독립 Phase 병렬 실행
 
 실행 흐름:
-  1. workspace.yaml 로드 및 검증
+  1. sbkube.yaml 로드 및 검증
   2. Phase 실행 순서 계산
   3. 각 Phase 순차 실행:
      - sources.yaml 로드
@@ -748,10 +748,11 @@ sbkube workspace deploy <workspace.yaml> [옵션]
   4. 실패 시 on_failure 정책 적용
 ```
 
-#### 4.6.4 workspace status
+#### 4.6.4 상태 조회
 
 ```bash
-sbkube workspace status <workspace.yaml>
+sbkube status
+sbkube history
 
 출력:
   - Metadata (name, environment, tags)
@@ -764,8 +765,8 @@ sbkube workspace status <workspace.yaml>
 **1. Phase별 Sources 참조 (Override Approach)**:
 
 - 각 Phase는 독립적인 `sources.yaml` 참조
-- 관심사 분리: Orchestration (workspace) vs Targeting (sources)
-- 우선순위: App-level > Phase-level > Workspace-level
+- 관심사 분리: Orchestration (multi-phase) vs Targeting (sources)
+- 우선순위: App-level > Phase-level > Global-level
 
 **2. 단일 클러스터 순차 배포**:
 
@@ -774,14 +775,11 @@ sbkube workspace status <workspace.yaml>
 
 **3. 파일 네이밍**:
 
-- `workspace.yaml` 채택 (sources.yaml, config.yaml과 일관성)
+- `sbkube.yaml` 채택 (통합 설정 파일)
 
 ### 4.8 관련 문서
 
-- **[Workspace Guide](docs/02-features/workspace-guide.md)** - 사용자 가이드
-- **[Workspace Schema](docs/03-configuration/workspace-schema.md)** - 스키마 상세
-- **[Workspace Roadmap](docs/02-features/future/workspace-roadmap.md)** - 구현 계획
-- **[Example](examples/workspace-multi-phase/)** - 예제
+- **[Unified Config Schema](docs/03-configuration/unified-config-schema.md)** - 다단계 설정 스키마
 
 ______________________________________________________________________
 

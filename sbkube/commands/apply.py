@@ -705,18 +705,18 @@ def _match_phase_by_scope(config_data: dict, scope_path: str) -> str | None:
 @click.option(
     "--parallel/--no-parallel",
     default=None,
-    help="Phase 병렬 실행 (workspace 모드에서만 적용)",
+    help="Phase 병렬 실행 (멀티-페이즈 모드에서만 적용)",
 )
 @click.option(
     "--parallel-apps/--no-parallel-apps",
     default=None,
-    help="Phase 내 app group 병렬 실행 (workspace 모드에서만 적용)",
+    help="Phase 내 app group 병렬 실행 (멀티-페이즈 모드에서만 적용)",
 )
 @click.option(
     "--max-workers",
     type=int,
     default=4,
-    help="최대 병렬 워커 수 (workspace 모드, 기본: 4)",
+    help="최대 병렬 워커 수 (멀티-페이즈 모드, 기본: 4)",
 )
 @click.pass_context
 def cmd(
@@ -863,7 +863,7 @@ def cmd(
                 if "phases" in config_data and config_data["phases"]:
                     # app-dir itself has phases: deploy as sub-workspace
                     output.print(
-                        f"[cyan]🔄 Sub-workspace detected: {app_config_dir_name}[/cyan]",
+                        f"[cyan]🔄 sub-phase detected: {app_config_dir_name}[/cyan]",
                         level="info",
                     )
                     from sbkube.commands.workspace import WorkspaceDeployCommand
@@ -893,7 +893,7 @@ def cmd(
             else:
                 # No --app-dir: workspace mode, deploy all phases
                 output.print(
-                    "[cyan]🔄 Detected multi-phase workspace configuration[/cyan]",
+                    "[cyan]🔄 Detected multi-phase configuration[/cyan]",
                     level="info",
                 )
                 from sbkube.commands.workspace import WorkspaceDeployCommand

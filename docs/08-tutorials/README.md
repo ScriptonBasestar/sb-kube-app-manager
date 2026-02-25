@@ -266,7 +266,7 @@ pip install sbkube
 uv tool install sbkube
 
 # 설치 확인
-sbkube --version
+sbkube version
 # sbkube, version 0.9.1
 ```
 

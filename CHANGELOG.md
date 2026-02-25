@@ -8,6 +8,23 @@ ______________________________________________________________________
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-02-25
+
+### 💥 Breaking Changes
+
+- Removed public `sbkube workspace ...` command group from CLI entrypoints.
+- Unified workflow is now the official path:
+  - `sbkube apply -f sbkube.yaml`
+  - `sbkube validate -f sbkube.yaml`
+
+### ✨ Improvements
+
+- Added explicit migration shim command:
+  - Running `sbkube workspace ...` now returns migration guidance instead of a generic "No such command".
+- Updated core docs to reflect v0.11.0:
+  - README version/stable badges
+  - Unified config schema wording and priority notes
+
 ## [0.9.1] - 2025-12-01
 
 ### 🚀 New Features
@@ -129,9 +146,8 @@ sbkube apply
   - Rollback support at phase level
 
 - **Documentation**:
-  - Comprehensive workspace guide: `docs/02-features/workspace-guide.md`
-  - Example: `examples/workspace-multi-phase/`
-  - 40+ unit tests for workspace commands
+  - Multi-phase examples: `examples/workspace-multi-phase/`
+  - 40+ unit tests for multi-phase commands
 
 ## [0.8.1] - 2025-11-25
 

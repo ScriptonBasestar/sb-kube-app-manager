@@ -36,7 +36,7 @@ sbkube doctor                      # Check all dependencies (future feature)
 sbkube validate                     # Validate configuration files
 
 # Version information
-sbkube --version                    # SBKube version
+sbkube version                    # SBKube version
 python --version                    # Python version
 kubectl version --client            # kubectl version
 helm version                        # Helm version
@@ -228,7 +228,7 @@ ______________________________________________________________________
 ### 1. Information Gathering
 
 ```bash
-sbkube --version
+sbkube version
 kubectl cluster-info
 kubectl get nodes
 helm version

@@ -1,6 +1,6 @@
 # Usage Guide - SBKube
 
-> **Quick Reference**: Essential commands and workflows for SBKube v0.9.1
+> **Quick Reference**: Essential commands and workflows for SBKube v0.11.0
 >
 > **For Complete Details**: See [Commands Reference](docs/02-features/commands.md) and [Features Documentation](docs/02-features/)
 
@@ -17,7 +17,7 @@ pip install sbkube
 uv tool install sbkube
 
 # Verify installation
-sbkube version  # Expected: 0.9.1
+sbkube version  # Expected: 0.11.0
 ```
 
 ### First Deployment (5 Minutes)
@@ -83,7 +83,7 @@ sbkube deploy
 sbkube validate
 
 # Deploy to development
-sbkube apply --profile development
+sbkube --profile development apply
 
 # Check status
 sbkube status
@@ -118,7 +118,7 @@ sbkube apply
 
 ```bash
 # Use production profile
-sbkube apply --profile production --namespace production
+sbkube --profile production --namespace production apply
 
 # Monitor deployment
 sbkube status --namespace production
@@ -208,13 +208,13 @@ Use profiles for different environments:
 
 ```bash
 # Development
-sbkube apply --profile development
+sbkube --profile development apply
 
 # Staging
-sbkube apply --profile staging
+sbkube --profile staging apply
 
 # Production
-sbkube apply --profile production
+sbkube --profile production apply
 ```
 
 Configuration inheritance:
@@ -325,25 +325,23 @@ export SBKUBE_OUTPUT_FORMAT=llm
 sbkube apply  # Uses LLM format
 ```
 
-### 8. Workspace Orchestration (v0.9.0+)
+### 8. Multi-Phase Orchestration (v0.11.0+)
 
 Multi-phase deployment for complex environments:
 
 ```bash
-# Validate workspace
-sbkube workspace validate
+# Validate + preview workflow
+sbkube apply -f sbkube.yaml --dry-run
 
-# Visualize dependencies
-sbkube workspace graph
+# Deploy phases in dependency order
+sbkube apply -f sbkube.yaml
 
-# Deploy phases in order
-sbkube workspace deploy
+# Deploy specific phase (with dependencies)
+sbkube apply -f sbkube.yaml --phase p2-data
 
-# Check workspace status
-sbkube workspace status
-
-# View workspace history
-sbkube workspace history
+# Check runtime status/history
+sbkube status
+sbkube history
 ```
 
 ---
@@ -413,7 +411,7 @@ sbkube workspace history
 
 ### Platform Engineers
 - **Need**: Infrastructure automation and multi-cluster management
-- **Use**: Workspace orchestration, hooks system, LLM integration
+- **Use**: Multi-phase orchestration (`sbkube.yaml`), hooks system, LLM integration
 - **Benefit**: Scalable deployment pipelines
 
 ### Solo Developers
@@ -443,21 +441,24 @@ sbkube apply
 
 ### Microservices Stack
 ```bash
-# Use workspace for phased deployment
-cat > workspace.yaml << EOF
+# Use unified config for phased deployment
+cat > sbkube.yaml << EOF
+apiVersion: sbkube/v1
+metadata:
+  name: microservices-stack
 phases:
-  - name: infrastructure
-    config_dir: infra
-  - name: databases
-    config_dir: data
+  infrastructure:
+    source: infra/sbkube.yaml
+  databases:
+    source: data/sbkube.yaml
     depends_on: [infrastructure]
-  - name: applications
-    config_dir: apps
+  applications:
+    source: apps/sbkube.yaml
     depends_on: [databases]
 EOF
 
 # Deploy all phases
-sbkube workspace deploy
+sbkube apply -f sbkube.yaml
 ```
 
 ### GitOps Workflow
@@ -465,7 +466,7 @@ sbkube workspace deploy
 # In CI/CD pipeline
 sbkube validate
 sbkube apply --dry-run
-sbkube apply --profile production
+sbkube --profile production apply
 sbkube status --unhealthy && exit 1
 ```
 
@@ -477,12 +478,12 @@ sbkube status --unhealthy && exit 1
 - **Complete Command Reference**: [Commands Documentation](docs/02-features/commands.md)
 - **Application Types**: [App Types Guide](docs/02-features/application-types.md)
 - **Hooks System**: [Hooks Guide](docs/02-features/hooks-guide.md)
-- **Workspace Feature**: [Workspace Guide](docs/02-features/workspace-guide.md)
+- **Unified Multi-Phase Guide**: [Unified Config Schema](docs/03-configuration/unified-config-schema.md)
 - **Troubleshooting**: [Common Issues](docs/07-troubleshooting/README.md)
 - **Examples**: [Example Configurations](examples/)
 
 ---
 
 **Document Version**: 1.0
-**Last Updated**: 2025-12-01
-**SBKube Version**: 0.9.1
+**Last Updated**: 2026-02-25
+**SBKube Version**: 0.11.0

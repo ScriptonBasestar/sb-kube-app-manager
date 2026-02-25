@@ -6,7 +6,7 @@
 
 ## Current Problems
 
-1. **파일 분리로 인한 혼란**: `workspace.yaml`, `sources.yaml`, `config.yaml` 역할 구분 어려움
+1. **파일 분리로 인한 혼란**: `sources.yaml`, `config.yaml` 역할 구분 어려움
 2. **설정 위치 불명확**: 어디서 설정해야 하는지 혼란
 3. **깊은 계층 미지원**: 2단계 이상의 중첩 구조 어려움
 4. **설정 상속 부재**: 상위 설정을 하위에서 재사용 불가
@@ -204,7 +204,7 @@ project/
 - [ ] Implement settings inheritance logic
 
 ### Phase 2: Backward Compatibility (v0.10.x)
-- [ ] Fallback to legacy files: `sbkube.yaml` > `workspace.yaml` > `sources.yaml` > `config.yaml`
+- [ ] Fallback to legacy files: `sbkube.yaml` > `sources.yaml` > `config.yaml`
 - [ ] Auto-migration tool: `sbkube migrate`
 - [ ] Deprecation warnings for legacy files
 
@@ -234,7 +234,7 @@ sbkube apply --phase infra
 sbkube apply --app nginx
 
 # 마이그레이션
-sbkube migrate  # workspace.yaml + sources.yaml → sbkube.yaml
+sbkube migrate  # legacy config + sources.yaml → sbkube.yaml
 ```
 
 ## Settings Reference
@@ -325,6 +325,6 @@ settings:
 
 ## References
 
-- Current workspace design: [workspace-design.md](./workspace-design.md)
+- Current multi-phase design: unified `sbkube.yaml` phases model
 - Current sources schema: [sources_model.py](../../../sbkube/models/sources_model.py)
 - Current config schema: [config_model.py](../../../sbkube/models/config_model.py)

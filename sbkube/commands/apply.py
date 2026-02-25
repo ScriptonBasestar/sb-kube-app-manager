@@ -557,6 +557,83 @@ def _execute_apps_deployment(
     return overall_success
 
 
+def _extract_inherited_settings_from_config(config_data: dict) -> dict:
+    """Extract inheritable settings from a loaded config dict.
+
+    Extracts kubeconfig, kubeconfig_context, helm_repos, oci_registries,
+    and git_repos from the settings section of a sbkube.yaml config.
+
+    Args:
+        config_data: Loaded sbkube.yaml dict
+
+    Returns:
+        dict with inheritable settings (empty values omitted)
+
+    """
+    settings = config_data.get("settings", {})
+    if not isinstance(settings, dict):
+        return {}
+
+    result: dict = {}
+
+    for key in ("helm_repos", "oci_registries", "git_repos"):
+        val = settings.get(key)
+        if val:
+            result[key] = dict(val)
+
+    for key in ("kubeconfig", "kubeconfig_context", "namespace"):
+        val = settings.get(key)
+        if val:
+            result[key] = val
+
+    return result
+
+
+def _build_inherited_settings_chain(
+    root_config_data: dict,
+    intermediate_config_path: Path | None = None,
+) -> dict:
+    """Build inherited settings by merging root and optional intermediate config.
+
+    For a path like ph2_observability/app_095_monitoring, this merges:
+    1. root sbkube.yaml settings
+    2. ph2_observability/sbkube.yaml settings (if intermediate_config_path given)
+
+    Child settings override parent for scalar values; dicts are merged.
+
+    Args:
+        root_config_data: Already-loaded root config dict
+        intermediate_config_path: Optional path to intermediate sbkube.yaml
+
+    Returns:
+        Merged inherited_settings dict
+
+    """
+    merged = _extract_inherited_settings_from_config(root_config_data)
+
+    if intermediate_config_path and intermediate_config_path.exists():
+        try:
+            intermediate_data = load_config_file(str(intermediate_config_path))
+            intermediate_settings = _extract_inherited_settings_from_config(
+                intermediate_data
+            )
+        except Exception:
+            return merged
+
+        # Merge: intermediate overrides root
+        for key in ("helm_repos", "oci_registries", "git_repos"):
+            if key in intermediate_settings:
+                base = merged.get(key, {})
+                base.update(intermediate_settings[key])
+                merged[key] = base
+
+        for key in ("kubeconfig", "kubeconfig_context", "namespace"):
+            if key in intermediate_settings:
+                merged[key] = intermediate_settings[key]
+
+    return merged
+
+
 def _match_phase_by_scope(config_data: dict, scope_path: str) -> str | None:
     """Find best matching phase name for filesystem scope path."""
     phases = config_data.get("phases")
@@ -772,6 +849,9 @@ def cmd(
         if "phases" in config_data and config_data["phases"]:
             if app_config_dir_name:
                 # TARGET scope specified: redirect to app group's own sbkube.yaml
+                # Extract root settings for inheritance to child configs
+                root_inherited = _extract_inherited_settings_from_config(config_data)
+
                 app_dir_path = BASE_DIR / app_config_dir_name
                 app_config_file = app_dir_path / "sbkube.yaml"
                 if not app_config_file.exists():
@@ -794,6 +874,7 @@ def cmd(
                             parallel=parallel,
                             parallel_apps=parallel_apps,
                             max_workers=max_workers,
+                            inherited_settings=root_inherited,
                         )
                         success = workspace_cmd.execute()
                         if not success:
@@ -804,6 +885,21 @@ def cmd(
                         config_path=str(app_config_file),
                     )
                     raise click.Abort
+
+                # Build inherited settings chain:
+                # For multi-level paths (e.g. ph2_observability/app_095_monitoring),
+                # merge root settings with intermediate dir settings
+                scope_parts = Path(app_config_dir_name).parts
+                if len(scope_parts) > 1:
+                    # Multi-level: find intermediate config
+                    intermediate_dir = BASE_DIR / scope_parts[0]
+                    intermediate_config = intermediate_dir / "sbkube.yaml"
+                    target_inherited = _build_inherited_settings_chain(
+                        config_data, intermediate_config
+                    )
+                else:
+                    target_inherited = root_inherited
+
                 output.print(
                     f"[cyan]📦 Redirecting to app group: {app_config_dir_name}[/cyan]",
                     level="info",
@@ -826,12 +922,20 @@ def cmd(
                         parallel=parallel,
                         parallel_apps=parallel_apps,
                         max_workers=max_workers,
+                        inherited_settings=target_inherited,
                     )
                     success = workspace_cmd.execute()
                     if not success:
                         raise click.Abort
                     return
                 # No phases: single app group mode
+                # Inject inherited settings into ctx.obj for downstream use
+                if target_inherited:
+                    if not ctx.obj.get("kubeconfig") and target_inherited.get("kubeconfig"):
+                        ctx.obj["kubeconfig"] = target_inherited["kubeconfig"]
+                    if not ctx.obj.get("context") and target_inherited.get("kubeconfig_context"):
+                        ctx.obj["context"] = target_inherited["kubeconfig_context"]
+                    ctx.obj["inherited_settings"] = target_inherited
                 detected = DetectedConfig(
                     config_type=ConfigType.UNIFIED,
                     primary_file=app_config_file,

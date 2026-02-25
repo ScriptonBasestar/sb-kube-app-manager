@@ -715,3 +715,140 @@ class TestApplyProgressTracking:
         )
 
         assert result.exit_code == 0
+
+
+class TestInheritedSettingsExtraction:
+    """Test hierarchical settings extraction and chain building."""
+
+    def test_extract_settings_full(self):
+        """Extract all inheritable fields from config dict."""
+        from sbkube.commands.apply import _extract_inherited_settings_from_config
+
+        config_data = {
+            "apiVersion": "sbkube/v1",
+            "settings": {
+                "kubeconfig": "~/.kube/prod",
+                "kubeconfig_context": "prod-cluster",
+                "namespace": "production",
+                "helm_repos": {"grafana": "https://grafana.github.io/helm-charts"},
+                "oci_registries": {"myoci": "oci://example.com/charts"},
+                "git_repos": {
+                    "myrepo": {
+                        "url": "https://example.com/repo.git",
+                        "branch": "main",
+                    }
+                },
+                "timeout": 600,
+            },
+        }
+
+        result = _extract_inherited_settings_from_config(config_data)
+
+        assert result["kubeconfig"] == "~/.kube/prod"
+        assert result["kubeconfig_context"] == "prod-cluster"
+        assert result["namespace"] == "production"
+        assert result["helm_repos"] == {
+            "grafana": "https://grafana.github.io/helm-charts"
+        }
+        assert result["oci_registries"] == {"myoci": "oci://example.com/charts"}
+        assert "timeout" not in result  # non-inheritable field
+
+    def test_extract_settings_empty(self):
+        """Extract from config with no settings section."""
+        from sbkube.commands.apply import _extract_inherited_settings_from_config
+
+        result = _extract_inherited_settings_from_config({})
+        assert result == {}
+
+    def test_extract_settings_partial(self):
+        """Extract from config with only kubeconfig_context."""
+        from sbkube.commands.apply import _extract_inherited_settings_from_config
+
+        config_data = {
+            "settings": {
+                "kubeconfig_context": "my-cluster",
+            },
+        }
+        result = _extract_inherited_settings_from_config(config_data)
+        assert result == {"kubeconfig_context": "my-cluster"}
+        assert "kubeconfig" not in result
+        assert "helm_repos" not in result
+
+    def test_build_chain_root_only(self):
+        """Chain with no intermediate config returns root settings."""
+        from sbkube.commands.apply import _build_inherited_settings_chain
+
+        root_data = {
+            "settings": {
+                "kubeconfig": "~/.kube/prod",
+                "kubeconfig_context": "prod-cluster",
+                "helm_repos": {"grafana": "https://grafana.example.com"},
+            },
+        }
+
+        result = _build_inherited_settings_chain(
+            root_data, intermediate_config_path=None
+        )
+        assert result["kubeconfig"] == "~/.kube/prod"
+        assert result["kubeconfig_context"] == "prod-cluster"
+
+    def test_build_chain_with_intermediate(self, tmp_path):
+        """Chain merges root and intermediate, intermediate overrides."""
+        from sbkube.commands.apply import _build_inherited_settings_chain
+
+        root_data = {
+            "settings": {
+                "kubeconfig": "~/.kube/prod",
+                "kubeconfig_context": "prod-cluster",
+                "namespace": "default",
+                "helm_repos": {
+                    "grafana": "https://grafana.example.com",
+                    "prometheus": "https://prometheus.example.com",
+                },
+            },
+        }
+
+        # Create intermediate sbkube.yaml
+        intermediate_dir = tmp_path / "ph2_observability"
+        intermediate_dir.mkdir()
+        intermediate_file = intermediate_dir / "sbkube.yaml"
+        intermediate_file.write_text(
+            yaml.dump(
+                {
+                    "apiVersion": "sbkube/v1",
+                    "settings": {
+                        "namespace": "monitoring",
+                        "helm_repos": {"loki": "https://loki.example.com"},
+                    },
+                }
+            )
+        )
+
+        result = _build_inherited_settings_chain(root_data, intermediate_file)
+
+        # Root values preserved
+        assert result["kubeconfig"] == "~/.kube/prod"
+        assert result["kubeconfig_context"] == "prod-cluster"
+        # Intermediate overrides namespace
+        assert result["namespace"] == "monitoring"
+        # Helm repos merged (root + intermediate)
+        assert result["helm_repos"]["grafana"] == "https://grafana.example.com"
+        assert result["helm_repos"]["prometheus"] == "https://prometheus.example.com"
+        assert result["helm_repos"]["loki"] == "https://loki.example.com"
+
+    def test_build_chain_intermediate_not_exists(self):
+        """Chain with non-existent intermediate returns root only."""
+        from pathlib import Path
+
+        from sbkube.commands.apply import _build_inherited_settings_chain
+
+        root_data = {
+            "settings": {
+                "kubeconfig_context": "my-cluster",
+            },
+        }
+
+        result = _build_inherited_settings_chain(
+            root_data, Path("/nonexistent/sbkube.yaml")
+        )
+        assert result["kubeconfig_context"] == "my-cluster"

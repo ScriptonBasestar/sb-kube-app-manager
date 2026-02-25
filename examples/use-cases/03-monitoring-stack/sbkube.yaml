@@ -1,0 +1,28 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 03-monitoring-stack
+settings:
+  cluster: monitoring-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    prometheus-community:
+      url: https://prometheus-community.github.io/helm-charts
+    grafana:
+      url: https://grafana.github.io/helm-charts
+  namespace: monitoring
+apps:
+  prometheus:
+    type: helm
+    chart: prometheus-community/prometheus
+    version: 25.3.1
+    values:
+    - prometheus-values.yaml
+  grafana:
+    type: helm
+    chart: grafana/grafana
+    version: 7.0.6
+    values:
+    - grafana-values.yaml
+    depends_on:
+    - prometheus

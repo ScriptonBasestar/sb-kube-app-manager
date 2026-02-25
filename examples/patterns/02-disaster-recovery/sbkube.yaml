@@ -1,0 +1,28 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 02-disaster-recovery
+settings:
+  cluster: dr-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    vmware-tanzu:
+      url: https://vmware-tanzu.github.io/helm-charts
+  namespace: dr-demo
+apps:
+  velero:
+    type: helm
+    chart: vmware-tanzu/velero
+    namespace: velero
+  backup-schedule:
+    type: yaml
+    files:
+    - manifests/schedule.yaml
+    depends_on:
+    - velero
+  recovery-plan:
+    type: yaml
+    files:
+    - manifests/recovery.yaml
+    depends_on:
+    - backup-schedule

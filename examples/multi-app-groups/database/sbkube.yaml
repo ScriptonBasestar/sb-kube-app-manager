@@ -1,0 +1,28 @@
+apiVersion: sbkube/v1
+metadata:
+  name: database
+settings:
+  namespace: multi-app-demo
+apps:
+  postgres-database:
+    type: helm
+    enabled: true
+    chart: prometheus-community/kube-state-metrics
+    version: 16.2.4
+    set_values:
+    - auth.database=appdb
+    - auth.username=appuser
+    - auth.password=changeme123
+    - primary.resources.requests.memory=256Mi
+    - primary.resources.requests.cpu=250m
+  redis-cache:
+    type: helm
+    enabled: true
+    chart: ot-helm/redis
+    version: 0.15.10
+    set_values:
+    - redisCluster.clusterSize=1
+    - kubernetesConfig.image=redis:7.2
+    - redisExporter.enabled=false
+    - kubernetesConfig.resources.requests.memory=128Mi
+    - kubernetesConfig.resources.requests.cpu=100m

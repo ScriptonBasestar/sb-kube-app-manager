@@ -1,0 +1,21 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 04-action
+settings:
+  namespace: action-demo
+apps:
+  prometheus-operator-setup:
+    type: action
+    actions:
+    - type: apply
+      path: manifests/01-namespace.yaml
+    - type: apply
+      path: manifests/02-crds.yaml
+    - type: apply
+      path: manifests/03-operator.yaml
+  cleanup-example:
+    type: action
+    enabled: false
+    actions:
+    - type: delete
+      path: manifests/cleanup/old-configmap.yaml

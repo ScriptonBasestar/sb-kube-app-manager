@@ -11,7 +11,7 @@ OCI registries are container registries that also support Helm charts. Unlike tr
 
 ## Configuration
 
-### sources.yaml
+### sbkube.yaml
 
 ```yaml
 oci_registries:
@@ -21,19 +21,19 @@ oci_registries:
     registry: oci://ghcr.io/gabe565/charts
 ```
 
-### config.yaml
+### sbkube.yaml
 
 ```yaml
 apps:
   browserless:
     type: helm
-    repo: browserless  # OCI registry name from sources.yaml
+    repo: browserless  # OCI registry name from sbkube.yaml
     chart: browserless-chrome  # Chart name only (not repo/chart)
     version: "1.0.0"
 ```
 
 **Important**: Unlike traditional Helm repos, you specify:
-- `repo:` - OCI registry name (as defined in sources.yaml)
+- `repo:` - OCI registry name (as defined in sbkube.yaml)
 - `chart:` - Chart name only (without registry prefix)
 
 ## Usage

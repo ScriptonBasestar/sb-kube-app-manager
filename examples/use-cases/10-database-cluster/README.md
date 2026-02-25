@@ -41,7 +41,7 @@ App → Pgpool → Primary (Write)
 
 ```bash
 # PostgreSQL HA 클러스터 배포
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/use-cases/10-database-cluster \
   --namespace db-cluster
 
@@ -148,7 +148,7 @@ kubectl exec -it postgresql-ha-postgresql-0 -n db-cluster -- \
   pg_basebackup -D /tmp/backup -Ft -z -P
 
 # PITR (Point-In-Time Recovery) 설정
-# config.yaml에 archive_mode: on
+# sbkube.yaml에 archive_mode: on
 ```
 
 ## 💡 실전 패턴

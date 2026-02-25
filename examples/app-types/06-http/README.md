@@ -11,7 +11,7 @@ HTTP URL에서 파일을 다운로드하는 예제입니다.
 
 ## 예제 1: GitHub에서 매니페스트 다운로드
 
-### config.yaml
+### sbkube.yaml
 ```yaml
 namespace: http-demo
 
@@ -33,7 +33,7 @@ apps:
 
 ## 예제 2: 여러 파일 다운로드
 
-### config.yaml
+### sbkube.yaml
 ```yaml
 namespace: http-demo
 
@@ -47,15 +47,15 @@ apps:
   # ConfigMap 다운로드
   download-config:
     type: http
-    url: https://example.com/configs/app-config.yaml
-    dest: configs/app-config.yaml
+    url: https://example.com/configs/app-sbkube.yaml
+    dest: configs/app-sbkube.yaml
 
   # 다운로드한 파일들 배포
   deploy-resources:
     type: yaml
     files:
       - crds/custom-resource.yaml
-      - configs/app-config.yaml
+      - configs/app-sbkube.yaml
     depends_on:
       - download-crd
       - download-config
@@ -63,7 +63,7 @@ apps:
 
 ## 예제 3: HTTP 헤더 사용
 
-### config.yaml
+### sbkube.yaml
 ```yaml
 namespace: http-demo
 
@@ -81,13 +81,13 @@ apps:
 
 ```bash
 # prepare 단계에서 파일 다운로드
-sbkube prepare --app-dir .
+sbkube prepare -f sbkube.yaml
 
 # 다운로드된 파일 확인
 ls -la downloaded/
 
 # 전체 워크플로우 실행
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 ```
 
 ## 주의사항
@@ -103,7 +103,7 @@ sbkube apply --app-dir .
 cat downloaded/nginx.yaml
 
 # 또는 template로 렌더링 테스트
-sbkube template --app-dir . --output-dir rendered/
+sbkube template -f sbkube.yaml --output-dir rendered/
 ```
 
 ### 3. HTTPS 사용 권장
@@ -120,7 +120,7 @@ sbkube template --app-dir . --output-dir rendered/
 # 환경 변수 설정
 export MANIFEST_VERSION=v1.2.3
 
-# config.yaml에서 사용 (템플릿 기능 필요시)
+# sbkube.yaml에서 사용 (템플릿 기능 필요시)
 # 현재는 정적 URL만 지원
 ```
 
@@ -169,7 +169,7 @@ apps:
 ## 정리
 
 ```bash
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 
 # 다운로드한 파일도 삭제
 rm -rf downloaded/ crds/ configs/

@@ -6,23 +6,23 @@ This example demonstrates multi-domain K3s deployments for different use cases.
 
 ```
 k3scode/
-├── sources.yaml              # Shared Helm repos for all domains
+├── sbkube.yaml              # Shared Helm repos for all domains
 ├── ai/                       # AI/ML infrastructure
-│   ├── config.yaml
+│   ├── sbkube.yaml
 │   └── values/
 │       ├── redis.yaml
 │       └── qdrant.yaml
 ├── devops/                   # DevOps monitoring stack
-│   ├── config.yaml
+│   ├── sbkube.yaml
 │   └── values/
 │       ├── prometheus.yaml
 │       └── grafana.yaml
 ├── memory/                   # In-memory caching
-│   ├── config.yaml
+│   ├── sbkube.yaml
 │   └── values/
 │       └── redis.yaml
 └── rdb/                      # Relational database
-    ├── config.yaml
+    ├── sbkube.yaml
     └── values/
         └── postgresql.yaml
 ```
@@ -47,16 +47,16 @@ k3scode/
 
 ```bash
 # Validate configuration
-sbkube validate --app-dir examples/k3scode/ai --source examples/k3scode/sources.yaml
+sbkube validate --app-dir examples/k3scode/ai --source examples/k3scode/sbkube.yaml
 
 # Deploy AI infrastructure
-sbkube apply --app-dir examples/k3scode/ai --source examples/k3scode/sources.yaml
+sbkube apply --app-dir examples/k3scode/ai --source examples/k3scode/sbkube.yaml
 
 # Deploy DevOps stack
-sbkube apply --app-dir examples/k3scode/devops --source examples/k3scode/sources.yaml
+sbkube apply --app-dir examples/k3scode/devops --source examples/k3scode/sbkube.yaml
 
 # Or run steps individually
-sbkube prepare --app-dir examples/k3scode/ai --source examples/k3scode/sources.yaml --force
+sbkube prepare --app-dir examples/k3scode/ai --source examples/k3scode/sbkube.yaml --force
 sbkube build --app-dir examples/k3scode/ai
 sbkube template --app-dir examples/k3scode/ai
 sbkube deploy --app-dir examples/k3scode/ai --dry-run
@@ -64,7 +64,7 @@ sbkube deploy --app-dir examples/k3scode/ai --dry-run
 
 ## Shared Configuration
 
-All domains share the same `sources.yaml` which defines:
+All domains share the same `sbkube.yaml` which defines:
 - Helm repository URLs (Bitnami, Grafana, Prometheus, etc.)
 - Cluster configuration
 - Default kubeconfig settings

@@ -42,7 +42,7 @@ Loki + Promtail + Grafana를 사용한 완전한 로그 집계 및 시각화 스
 ### 1. 전체 스택 배포
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/use-cases/05-logging-stack \
   --namespace logging
 ```
@@ -84,7 +84,7 @@ kubectl port-forward -n logging svc/grafana 3000:80
 
 ## 📖 설정 파일 설명
 
-### config.yaml
+### sbkube.yaml
 
 ```yaml
 namespace: logging
@@ -223,7 +223,7 @@ adminUser: admin
 adminPassword: admin-password  # 프로덕션에서는 변경 필수
 
 datasources:
-  datasources.yaml:
+  datasbkube.yaml:
     apiVersion: 1
     datasources:
       - name: Loki
@@ -427,7 +427,7 @@ securityContext:
 ```yaml
 # grafana-values.yaml
 datasources:
-  datasources.yaml:
+  datasbkube.yaml:
     datasources:
       - name: Loki
         url: http://loki:3100  # 정확한 서비스 이름

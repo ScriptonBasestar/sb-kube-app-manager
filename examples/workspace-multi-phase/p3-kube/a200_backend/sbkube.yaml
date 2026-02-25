@@ -1,0 +1,12 @@
+apiVersion: sbkube/v1
+metadata:
+  name: a200_backend
+settings:
+  namespace: apps
+apps:
+  backend:
+    type: yaml
+    enabled: true
+    manifests:
+    - deployment.yaml
+    - service.yaml

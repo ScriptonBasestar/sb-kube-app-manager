@@ -1,0 +1,30 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 07-cert-manager
+settings:
+  cluster: cert-manager-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    jetstack:
+      url: https://charts.jetstack.io
+  namespace: cert-manager-demo
+apps:
+  cert-manager:
+    type: helm
+    chart: jetstack/cert-manager
+    values:
+    - values/cert-manager-values.yaml
+  cluster-issuer:
+    type: yaml
+    manifests:
+    - manifests/cluster-issuer.yaml
+    depends_on:
+    - cert-manager
+  demo-app:
+    type: yaml
+    manifests:
+    - manifests/app.yaml
+    - manifests/ingress.yaml
+    depends_on:
+    - cluster-issuer

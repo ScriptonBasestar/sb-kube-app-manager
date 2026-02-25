@@ -370,13 +370,12 @@ SBKube의 Hook 시스템 진화 과정 (Phase 1-4):
 
 ## 🏗️ 예제 구조 이해하기
 
-모든 예제는 다음 구조를 따릅니다:
+모든 예제는 통합된 설정 포맷(`sbkube.yaml`)을 따릅니다 (v0.10.0+):
 
 ```
 example-dir/
 ├── README.md           # 예제 설명 및 사용법
-├── config.yaml         # SBKube 설정 (앱 정의)
-├── sources.yaml        # 외부 소스 정의 (Helm repos, Git repos)
+├── sbkube.yaml         # 통합 앱 배포 설정 (의존성, 소스, 릴리스 정의)
 ├── values/             # Helm values 파일들
 │   └── app-values.yaml
 ├── charts/             # ⚠️ sbkube prepare로 다운로드 (Git 미포함)
@@ -387,33 +386,27 @@ example-dir/
 
 > **📌 중요**: `charts/`, `repos/`, `build/`, `rendered/` 디렉토리는 **SBKube 명령 실행 시 자동 생성**되며, **Git 저장소에는 포함되지 않습니다** (.gitignore).
 >
-> 예제를 처음 사용할 때는 반드시 `sbkube prepare`를 먼저 실행하여 외부 소스를 다운로드해야 합니다.
+> 예제를 처음 사용할 때는 자동으로 `prepare` 단계가 포함된 `apply`를 실행하거나, 수동으로 `sbkube prepare -f sbkube.yaml`을 실행해야 합니다.
 
-### 핵심 파일 설명
+### 핵심 설정 예시
 
-#### config.yaml
+#### sbkube.yaml
 ```yaml
-namespace: my-namespace
-
+apiVersion: sbkube/v1
+metadata:
+  name: example-app
+settings:
+  namespace: my-namespace
+  helm_repos:
+    grafana:
+      url: https://grafana.github.io/helm-charts
 apps:
-  app-name:
+  grafana-app:
     type: helm
     chart: grafana/grafana
     version: "6.50.0"
     values:
-      - grafana-values.yaml
-```
-
-#### sources.yaml
-```yaml
-helm_repos:
-  grafana:
-    url: https://grafana.github.io/helm-charts
-
-git_repos:
-  my-charts:
-    url: https://github.com/org/charts.git
-    branch: main
+      - values/grafana-values.yaml
 ```
 
 ## 🔄 예제 실행 방법
@@ -421,36 +414,36 @@ git_repos:
 ### 1. 기본 실행 (권장)
 ```bash
 cd examples/use-cases/01-dev-environment
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 ```
 
 ### 2. 단계별 실행
 ```bash
 # 소스 준비 (Helm 차트 다운로드, Git 클론 등)
-sbkube prepare --app-dir .
+sbkube prepare -f sbkube.yaml
 
 # 앱 빌드 (차트 커스터마이징 등)
-sbkube build --app-dir .
+sbkube build -f sbkube.yaml
 
 # 템플릿 렌더링
-sbkube template --app-dir . --output-dir rendered/
+sbkube template -f sbkube.yaml --output-dir rendered/
 
 # 배포
-sbkube deploy --app-dir .
+sbkube deploy -f sbkube.yaml
 ```
 
 ### 3. 특정 앱만 배포
 ```bash
 # 하나만 배포
-sbkube apply --app-dir . --apps redis
+sbkube apply -f sbkube.yaml --apps redis
 
 # 여러 개 배포
-sbkube apply --app-dir . --apps redis,postgresql
+sbkube apply -f sbkube.yaml --apps redis,postgresql
 ```
 
 ### 4. 다른 네임스페이스에 배포
 ```bash
-sbkube apply --app-dir . --namespace custom-namespace
+sbkube apply -f sbkube.yaml --namespace custom-namespace
 ```
 
 ## 🧪 예제 테스트
@@ -473,7 +466,7 @@ kubectl get all -n <namespace>
 ### 정리
 ```bash
 # SBKube로 삭제
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 
 # 또는 네임스페이스 삭제
 kubectl delete namespace <namespace>
@@ -534,7 +527,7 @@ helm_repos:
 ## 📖 추가 자료
 
 - [SBKube Documentation](../docs/)
-- [Chart Customization Guide](../docs/03-configuration/chart-customization.md)
+- [Chart Customization Guide](../docs/03-configuration/config-schema.md)
 - [Configuration Schema](../docs/03-configuration/config-schema.md)
 - [Troubleshooting](../docs/07-troubleshooting/)
 

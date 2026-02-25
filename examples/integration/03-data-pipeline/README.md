@@ -18,7 +18,7 @@ Producer → Kafka → Spark Processing → MinIO (결과 저장)
 ## 🚀 빠른 시작
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/integration/03-data-pipeline \
   --namespace data-pipeline
 ```

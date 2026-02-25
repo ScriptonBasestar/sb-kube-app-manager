@@ -1,0 +1,13 @@
+apiVersion: sbkube/v1
+metadata:
+  name: memory
+settings:
+  namespace: k3scode-memory
+apps:
+  redis-cache:
+    type: helm
+    specs:
+      chart: bitnami/redis
+      version: 20.0.0
+      values:
+      - values/redis.yaml

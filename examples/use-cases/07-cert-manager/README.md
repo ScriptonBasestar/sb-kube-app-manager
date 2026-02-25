@@ -18,7 +18,7 @@ cert-manager로 Let's Encrypt TLS 인증서를 자동으로 발급하고 갱신�
 ## 🚀 빠른 시작
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/use-cases/07-cert-manager \
   --namespace cert-manager
 ```

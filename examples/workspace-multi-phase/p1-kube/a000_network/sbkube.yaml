@@ -1,0 +1,13 @@
+apiVersion: sbkube/v1
+metadata:
+  name: a000_network
+settings:
+  namespace: kube-system
+apps:
+  cilium:
+    type: helm
+    enabled: true
+    chart: cilium/cilium
+    version: 1.14.0
+    values:
+    - values.yaml

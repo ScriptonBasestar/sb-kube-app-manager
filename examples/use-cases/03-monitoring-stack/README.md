@@ -38,13 +38,13 @@ k3s 클러스터와 배포된 애플리케이션을 모니터링하기 위한 �
 
 ```bash
 # 전체 스택 배포
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 
 # Prometheus만 먼저 배포
-sbkube apply --app-dir . --apps prometheus
+sbkube apply -f sbkube.yaml --apps prometheus
 
 # Grafana 배포 (Prometheus 의존)
-sbkube apply --app-dir . --apps grafana
+sbkube apply -f sbkube.yaml --apps grafana
 ```
 
 ## 접근
@@ -122,7 +122,7 @@ kube_pod_status_phase{namespace="default"}
 
 ### Slack 연동 예제
 
-`alertmanager-config.yaml` 수정:
+`alertmanager-sbkube.yaml` 수정:
 ```yaml
 receivers:
   - name: 'slack'
@@ -273,7 +273,7 @@ kubectl get pvc -n monitoring
 
 ```bash
 # 전체 삭제
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 
 # PV도 삭제
 kubectl delete pvc -n monitoring --all

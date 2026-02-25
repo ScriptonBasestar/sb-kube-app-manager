@@ -39,7 +39,7 @@ Request → 압축 → 인증 → Rate Limit → Backend
 kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik
 
 # 예제 배포
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/use-cases/06-ingress-controller \
   --namespace ingress-demo
 ```

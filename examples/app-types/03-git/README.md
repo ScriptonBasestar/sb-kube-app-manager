@@ -10,7 +10,7 @@ Git 리포지토리에서 Helm 차트나 매니페스트를 가져오는 예제�
 
 ## 예제: Git 리포지토리에서 차트 가져오기
 
-### config.yaml
+### sbkube.yaml
 ```yaml
 namespace: git-demo
 
@@ -31,7 +31,7 @@ apps:
       - chart-source
 ```
 
-### sources.yaml
+### sbkube.yaml
 ```yaml
 git_repos:
   my-charts:
@@ -71,19 +71,19 @@ git_repos:
 
 ```bash
 # prepare 단계에서 Git 리포지토리 클론
-sbkube prepare --app-dir .
+sbkube prepare -f sbkube.yaml
 
 # 클론된 리포지토리 확인
 ls -la repos/my-charts/
 
 # 전체 워크플로우 실행
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 ```
 
 ## 정리
 
 ```bash
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 
 # 클론된 리포지토리도 삭제 (선택사항)
 rm -rf repos/

@@ -42,7 +42,7 @@ apps:
 └─────────────┴──────────┘
 ```
 
-**config.yaml**:
+**sbkube.yaml**:
 ```yaml
 apps:
   # Layer 1: 데이터 레이어
@@ -97,7 +97,7 @@ Frontend
 └─ Web UI (depends on Gateway)
 ```
 
-**config.yaml**:
+**sbkube.yaml**:
 ```yaml
 namespace: microservices
 
@@ -268,13 +268,13 @@ Error: Circular dependency detected: service-a -> service-b -> service-a
 
 ```bash
 # 의존성 순서대로 자동 배포
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 
 # 특정 앱만 (의존성 무시)
-sbkube apply --app-dir . --apps backend-api
+sbkube apply -f sbkube.yaml --apps backend-api
 
 # Dry-run으로 순서 확인
-sbkube apply --app-dir . --dry-run
+sbkube apply -f sbkube.yaml --dry-run
 ```
 
 ## 디버깅
@@ -283,7 +283,7 @@ sbkube apply --app-dir . --dry-run
 
 ```bash
 # verbose 모드로 실행
-sbkube apply --app-dir . --verbose
+sbkube apply -f sbkube.yaml --verbose
 
 # 출력 예시:
 # Resolving dependency order...
@@ -293,8 +293,8 @@ sbkube apply --app-dir . --verbose
 ### 의존성 그래프 시각화 (수동)
 
 ```bash
-# config.yaml에서 의존성 추출
-grep -A 3 "depends_on:" config.yaml
+# sbkube.yaml에서 의존성 추출
+grep -A 3 "depends_on:" sbkube.yaml
 ```
 
 ## 베스트 프랙티스
@@ -363,7 +363,7 @@ apps:
 ## 정리
 
 ```bash
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 ```
 
 ## 관련 예제

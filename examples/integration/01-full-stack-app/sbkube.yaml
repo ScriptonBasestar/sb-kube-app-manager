@@ -1,0 +1,42 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 01-full-stack-app
+settings:
+  cluster: full-stack-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos: []
+  namespace: fullstack
+apps:
+  postgresql:
+    type: yaml
+    files:
+    - manifests/postgresql.yaml
+    enabled: true
+  redis:
+    type: yaml
+    files:
+    - manifests/redis.yaml
+    enabled: true
+  backend:
+    type: yaml
+    files:
+    - manifests/backend.yaml
+    depends_on:
+    - postgresql
+    - redis
+    enabled: true
+  frontend:
+    type: yaml
+    files:
+    - manifests/frontend.yaml
+    depends_on:
+    - backend
+    enabled: true
+  ingress:
+    type: yaml
+    files:
+    - manifests/ingress.yaml
+    depends_on:
+    - frontend
+    enabled: true

@@ -1,0 +1,13 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 08-blue-green
+settings: {}
+apps: {}
+clusters:
+- name: local
+  context: default
+  default: true
+helm_sources:
+- name: bitnami
+  url: https://charts.bitnami.com/bitnami
+  type: https

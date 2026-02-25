@@ -1,0 +1,18 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 02-rbac
+settings:
+  namespace: rbac-demo
+apps:
+  rbac-resources:
+    type: yaml
+    files:
+    - manifests/serviceaccounts.yaml
+    - manifests/roles.yaml
+    - manifests/rolebindings.yaml
+  demo-apps:
+    type: yaml
+    files:
+    - manifests/demo-apps.yaml
+    depends_on:
+    - rbac-resources

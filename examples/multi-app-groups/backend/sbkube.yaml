@@ -1,0 +1,12 @@
+apiVersion: sbkube/v1
+metadata:
+  name: backend
+settings:
+  namespace: multi-app-demo
+apps:
+  api-server:
+    type: yaml
+    enabled: true
+    manifests:
+    - deployment.yaml
+    - service.yaml

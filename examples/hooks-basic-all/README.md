@@ -17,7 +17,7 @@
 ```
 hooks-basic-all/
 ├── README.md                    # 이 파일
-├── config.yaml                  # 모든 Hook 타입 포함
+├── sbkube.yaml                  # 모든 Hook 타입 포함
 └── manifests/
     ├── configmap-phase1.yaml    # Phase 1용 ConfigMap
     └── configmap-phase2.yaml    # Phase 2용 ConfigMap
@@ -92,7 +92,7 @@ kubectl delete namespace hooks-test
    └─ "Deployment completed for ALL apps"
 ```
 
-## 🔍 config.yaml 상세 설명
+## 🔍 sbkube.yaml 상세 설명
 
 ### Command-Level Hooks (객체 표기법)
 

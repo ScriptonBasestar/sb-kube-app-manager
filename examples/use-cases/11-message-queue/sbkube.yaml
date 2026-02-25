@@ -1,0 +1,34 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 11-message-queue
+settings:
+  cluster: message-queue-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    rabbitmq:
+      url: https://charts.rabbitmq.com/
+      description: RabbitMQ Cluster Operator
+  namespace: mq-demo
+apps:
+  rabbitmq:
+    type: helm
+    chart: rabbitmq/cluster-operator
+    version: 4.5.2
+    values:
+    - values/rabbitmq-values.yaml
+    enabled: true
+  producer:
+    type: yaml
+    manifests:
+    - manifests/producer.yaml
+    depends_on:
+    - rabbitmq
+    enabled: true
+  consumer:
+    type: yaml
+    manifests:
+    - manifests/consumer.yaml
+    depends_on:
+    - rabbitmq
+    enabled: true

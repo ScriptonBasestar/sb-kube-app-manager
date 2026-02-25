@@ -15,7 +15,7 @@ Kustomize를 사용하여 환경별로 다른 설정을 적용하는 예제입�
 
 ```
 07-kustomize/
-├── config.yaml           # SBKube 설정
+├── sbkube.yaml           # SBKube 설정
 ├── base/                 # 기본 매니페스트
 │   ├── kustomization.yaml
 │   ├── deployment.yaml
@@ -51,7 +51,7 @@ sbkube apply --app-dir examples/app-types/07-kustomize --namespace kustomize-dev
 ### 2. Prod 환경 배포
 
 ```bash
-# config.yaml에서 overlay_path를 'overlays/prod'로 변경 후
+# sbkube.yaml에서 overlay_path를 'overlays/prod'로 변경 후
 sbkube apply --app-dir examples/app-types/07-kustomize --namespace kustomize-prod
 ```
 
@@ -69,7 +69,7 @@ kubectl get svc -n kustomize-prod
 
 ## 📖 설정 파일 설명
 
-### config.yaml
+### sbkube.yaml
 
 ```yaml
 namespace: kustomize-dev
@@ -209,7 +209,7 @@ SBKube가 자동으로 처리합니다.
 
 ```bash
 # Dev 환경 배포
-sbkube apply --app-dir . --namespace kustomize-dev
+sbkube apply -f sbkube.yaml --namespace kustomize-dev
 
 # 확인 (replicas: 1)
 kubectl get pods -n kustomize-dev
@@ -218,9 +218,9 @@ kubectl get pods -n kustomize-dev
 ### 시나리오 2: Prod 환경 배포
 
 ```bash
-# config.yaml 수정: overlay_path: overlays/prod
+# sbkube.yaml 수정: overlay_path: overlays/prod
 # Prod 환경 배포
-sbkube apply --app-dir . --namespace kustomize-prod
+sbkube apply -f sbkube.yaml --namespace kustomize-prod
 
 # 확인 (replicas: 3)
 kubectl get pods -n kustomize-prod
@@ -229,7 +229,7 @@ kubectl get pods -n kustomize-prod
 ### 시나리오 3: 템플릿만 렌더링
 
 ```bash
-sbkube template --app-dir . --output-dir /tmp/kustomize-rendered
+sbkube template -f sbkube.yaml --output-dir /tmp/kustomize-rendered
 
 # 렌더링 결과 확인
 cat /tmp/kustomize-rendered/nginx-app.yaml
@@ -247,7 +247,7 @@ cat /tmp/kustomize-rendered/nginx-app.yaml
 cat base/kustomization.yaml
 
 # overlay_path 확인
-grep overlay_path config.yaml
+grep overlay_path sbkube.yaml
 ```
 
 ### 문제 2: Patch가 적용되지 않음
@@ -263,11 +263,11 @@ metadata:
 
 ### 문제 3: Namespace 충돌
 
-**원인**: overlay와 config.yaml의 namespace 불일치
+**원인**: overlay와 sbkube.yaml의 namespace 불일치
 
 **해결**:
 ```yaml
-# config.yaml
+# sbkube.yaml
 namespace: kustomize-dev
 
 # overlays/dev/kustomization.yaml

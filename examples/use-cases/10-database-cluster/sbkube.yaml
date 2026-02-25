@@ -1,0 +1,27 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 10-database-cluster
+settings:
+  cluster: database-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    cnpg:
+      url: https://cloudnative-pg.github.io/charts
+      description: CloudNativePG Operator
+  namespace: db-cluster
+apps:
+  postgresql-ha:
+    type: helm
+    chart: cnpg/cloudnative-pg
+    version: 0.22.1
+    values:
+    - values/postgresql-ha-values.yaml
+    enabled: true
+  demo-client:
+    type: yaml
+    manifests:
+    - manifests/demo-client.yaml
+    depends_on:
+    - postgresql-ha
+    enabled: true

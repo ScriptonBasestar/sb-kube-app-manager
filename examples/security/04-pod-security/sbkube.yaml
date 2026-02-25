@@ -1,0 +1,11 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 04-pod-security
+settings:
+  namespace: podsec-demo
+apps:
+  secure-pods:
+    type: yaml
+    files:
+    - manifests/secure-pod.yaml
+    - manifests/insecure-pod.yaml

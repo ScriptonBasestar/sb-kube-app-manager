@@ -1,0 +1,14 @@
+apiVersion: sbkube/v1
+metadata:
+  name: nginx
+settings:
+  namespace: web
+apps:
+  nginx:
+    type: helm
+    enabled: true
+    chart: grafana/nginx
+    version: 15.0.0
+    values:
+      service:
+        type: ClusterIP

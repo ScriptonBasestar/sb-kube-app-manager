@@ -49,7 +49,7 @@ Key benefits:
 
 ```
 07-canary-deployment/
-├── sources.yaml                    # Cluster connection config
+├── sbkube.yaml                    # Cluster connection config
 ├── config-stable.yaml              # Stable version only (100% stable)
 ├── config-canary-10.yaml           # Canary at 10% traffic
 ├── config-canary-50.yaml           # Canary at 50% traffic
@@ -259,16 +259,16 @@ Deploy specific phases manually:
 
 ```bash
 # Deploy stable only
-sbkube apply --app-dir . --config config-stable.yaml
+sbkube apply -f sbkube.yaml --config config-stable.yaml
 
 # Deploy canary at 10%
-sbkube apply --app-dir . --config config-canary-10.yaml
+sbkube apply -f sbkube.yaml --config config-canary-10.yaml
 
 # Deploy canary at 50%
-sbkube apply --app-dir . --config config-canary-50.yaml
+sbkube apply -f sbkube.yaml --config config-canary-50.yaml
 
 # Promote to stable
-sbkube apply --app-dir . --config config-promote.yaml
+sbkube apply -f sbkube.yaml --config config-promote.yaml
 ```
 
 ### Custom Traffic Percentages
@@ -380,7 +380,7 @@ Quick rollback at any phase:
 ./deploy-canary.sh stable
 
 # Or manually
-sbkube apply --app-dir . --config config-stable.yaml
+sbkube apply -f sbkube.yaml --config config-stable.yaml
 
 # Verify rollback
 kubectl get pods -n canary-demo -l app=backend
@@ -505,11 +505,11 @@ kubectl get pods -n canary-demo -l version=canary -o yaml | grep -A2 annotations
 
 ```bash
 # Option 1: Use stable config (canary not defined)
-sbkube apply --app-dir . --config config-stable.yaml
+sbkube apply -f sbkube.yaml --config config-stable.yaml
 
 # Option 2: Edit config and set enabled: false
 vim config-canary-50.yaml  # Set backend-canary.enabled: false
-sbkube apply --app-dir . --config config-canary-50.yaml
+sbkube apply -f sbkube.yaml --config config-canary-50.yaml
 
 # Option 3: Delete canary pods manually
 kubectl delete deployment -n canary-demo -l version=canary
@@ -589,7 +589,7 @@ echo "./deploy-canary.sh stable" > ROLLBACK.txt
 ## 📚 Additional Resources
 
 - [SBKube Configuration Schema](../../../docs/03-configuration/config-schema.md)
-- [Helm Chart Customization](../../../docs/03-configuration/chart-customization.md)
+- [Helm Chart Customization](../../../docs/03-configuration/config-schema.md)
 - [Kubernetes Canary Deployments](https://kubernetes.io/docs/concepts/cluster-administration/manage-deployment/#canary-deployments)
 - [Flagger - Progressive Delivery Operator](https://flagger.app/)
 - [Progressive Delivery Best Practices](https://www.weave.works/blog/progressive-delivery)

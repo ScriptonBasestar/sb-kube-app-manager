@@ -12,7 +12,7 @@
 
 ## 예제 1: 배포 전 검증
 
-### config.yaml
+### sbkube.yaml
 ```yaml
 namespace: exec-demo
 
@@ -48,7 +48,7 @@ apps:
 
 ## 예제 2: 데이터베이스 마이그레이션
 
-### config.yaml
+### sbkube.yaml
 ```yaml
 namespace: exec-demo
 
@@ -75,10 +75,10 @@ apps:
 
 ```bash
 # 전체 워크플로우 실행
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 
 # 특정 앱만 실행
-sbkube apply --app-dir . --apps pre-deployment-check
+sbkube apply -f sbkube.yaml --apps pre-deployment-check
 ```
 
 ## 주의사항
@@ -139,7 +139,7 @@ apps:
 ## 정리
 
 ```bash
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 ```
 
 ## 보안 고려사항

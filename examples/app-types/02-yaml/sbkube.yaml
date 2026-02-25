@@ -1,0 +1,12 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 02-yaml
+settings:
+  namespace: yaml-demo
+apps:
+  nginx:
+    type: yaml
+    files:
+    - manifests/deployment.yaml
+    - manifests/service.yaml
+    - manifests/configmap.yaml

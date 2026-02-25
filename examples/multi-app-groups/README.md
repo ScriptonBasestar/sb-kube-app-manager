@@ -3,7 +3,7 @@
 여러 앱 그룹을 관리하고 배포하는 방법을 시연합니다.
 
 이 예제는 다음을 보여줍니다:
-- **자동 탐색**: 모든 `config.yaml`이 있는 디렉토리 자동 발견
+- **자동 탐색**: 모든 `sbkube.yaml`이 있는 디렉토리 자동 발견
 - **선택적 배포**: `app_dirs`로 특정 그룹만 배포
 - **다중 앱 타입**: Helm과 YAML 매니페스트 혼합 사용
 - **계층적 구조**: 티어별(frontend, backend, database) 그룹화
@@ -12,30 +12,30 @@
 
 ```
 multi-app-groups/
-├── sources.yaml               # 자동 탐색 (모든 그룹)
+├── sbkube.yaml               # 자동 탐색 (모든 그룹)
 ├── sources-selective.yaml     # 선택적 배포 (일부 그룹만)
 ├── frontend/
-│   └── config.yaml           # Nginx 프론트엔드
+│   └── sbkube.yaml           # Nginx 프론트엔드
 ├── backend/
-│   ├── config.yaml           # API 서버 (YAML 매니페스트)
+│   ├── sbkube.yaml           # API 서버 (YAML 매니페스트)
 │   ├── deployment.yaml
 │   └── service.yaml
 └── database/
-    └── config.yaml           # PostgreSQL + Redis
+    └── sbkube.yaml           # PostgreSQL + Redis
 ```
 
 ## 🎯 배포 시나리오
 
 ### 시나리오 1: 모든 앱 그룹 배포 (자동 탐색)
 
-**sources.yaml** 사용 - `app_dirs` 미지정 시 자동으로 `frontend/`, `backend/`, `database/` 모두 발견
+**sbkube.yaml** 사용 - `app_dirs` 미지정 시 자동으로 `frontend/`, `backend/`, `database/` 모두 발견
 
 ```bash
 # 모든 그룹 자동 탐색 및 배포
 sbkube apply --app-dir examples/multi-app-groups
 
 # 또는 명시적으로
-sbkube apply --app-dir examples/multi-app-groups --source sources.yaml
+sbkube apply --app-dir examples/multi-app-groups --source sbkube.yaml
 ```
 
 **배포되는 앱**:
@@ -160,9 +160,9 @@ sbkube prepare --app-dir examples/multi-app-groups
 
 # 출력 예시:
 # Found app groups: frontend, backend, database
-# Processing: frontend/config.yaml
-# Processing: backend/config.yaml
-# Processing: database/config.yaml
+# Processing: frontend/sbkube.yaml
+# Processing: backend/sbkube.yaml
+# Processing: database/sbkube.yaml
 ```
 
 ## 💡 사용 사례
@@ -179,10 +179,10 @@ sbkube prepare --app-dir examples/multi-app-groups
 개발/스테이징/프로덕션 환경별로 다른 그룹 배포:
 ```bash
 # 개발 환경: 모든 서비스
-sbkube apply --app-dir . --source sources-dev.yaml
+sbkube apply -f sbkube.yaml --source sources-dev.yaml
 
 # 프로덕션: frontend + database만 (backend는 다른 클러스터)
-sbkube apply --app-dir . --source sources-prd.yaml
+sbkube apply -f sbkube.yaml --source sources-prd.yaml
 ```
 
 ### Use Case 3: 점진적 롤아웃
@@ -190,20 +190,20 @@ sbkube apply --app-dir . --source sources-prd.yaml
 단계적으로 서비스 배포:
 ```bash
 # Phase 1: 인프라 (database)
-sbkube apply --app-dir . --app-config-dir database
+sbkube apply -f sbkube.yaml --app-config-dir database
 
 # Phase 2: 백엔드 서비스
-sbkube apply --app-dir . --app-config-dir backend
+sbkube apply -f sbkube.yaml --app-config-dir backend
 
 # Phase 3: 프론트엔드 (사용자 트래픽 받음)
-sbkube apply --app-dir . --app-config-dir frontend
+sbkube apply -f sbkube.yaml --app-config-dir frontend
 ```
 
 ## 🎯 핵심 기능
 
 ### 1. 자동 탐색 (Auto-Discovery)
 
-**sources.yaml** - `app_dirs` 없음:
+**sbkube.yaml** - `app_dirs` 없음:
 ```yaml
 kubeconfig: ~/.kube/config
 kubeconfig_context: default
@@ -227,20 +227,20 @@ app_dirs:
 ### 3. 다중 앱 타입 혼합
 
 같은 네임스페이스에서 여러 앱 타입 사용:
-- **Helm 차트**: `frontend/config.yaml`, `database/config.yaml`
-- **YAML 매니페스트**: `backend/config.yaml`
+- **Helm 차트**: `frontend/sbkube.yaml`, `database/sbkube.yaml`
+- **YAML 매니페스트**: `backend/sbkube.yaml`
 
 ### 4. 계층적 구조
 
 ```
 multi-app-groups/
-├── sources.yaml        # 공통 설정 (kubeconfig, helm_repos)
+├── sbkube.yaml        # 공통 설정 (kubeconfig, helm_repos)
 ├── group1/
-│   └── config.yaml     # 그룹별 앱 설정
+│   └── sbkube.yaml     # 그룹별 앱 설정
 ├── group2/
-│   └── config.yaml
+│   └── sbkube.yaml
 └── group3/
-    └── config.yaml
+    └── sbkube.yaml
 ```
 
 ## 📋 우선순위 규칙
@@ -260,7 +260,7 @@ multi-app-groups/
    backend → database → frontend
    ```
 
-3. **그룹 내 앱 순서**: `config.yaml`의 apps 키 순서
+3. **그룹 내 앱 순서**: `sbkube.yaml`의 apps 키 순서
 
 ## 🐛 Troubleshooting
 
@@ -283,16 +283,16 @@ app_dirs:
 
 **증상**: `sbkube prepare`가 일부 그룹만 발견
 
-**원인**: `config.yaml` 파일이 없거나 잘못된 위치
+**원인**: `sbkube.yaml` 파일이 없거나 잘못된 위치
 
 **해결**:
 ```bash
-# 각 그룹 디렉토리에 config.yaml 존재 확인
-ls frontend/config.yaml
-ls backend/config.yaml
-ls database/config.yaml
+# 각 그룹 디렉토리에 sbkube.yaml 존재 확인
+ls frontend/sbkube.yaml
+ls backend/sbkube.yaml
+ls database/sbkube.yaml
 
-# 파일명 대소문자 확인 (config.yaml, not Config.yaml)
+# 파일명 대소문자 확인 (sbkube.yaml, not Config.yaml)
 ```
 
 ### 문제 3: app_dirs 검증 오류
@@ -322,13 +322,13 @@ app_dirs:     # ✅ 최소 1개 이상
 
 **해결**:
 ```yaml
-# frontend/config.yaml
+# frontend/sbkube.yaml
 namespace: multi-app-demo-frontend
 
-# backend/config.yaml
+# backend/sbkube.yaml
 namespace: multi-app-demo-backend
 
-# database/config.yaml
+# database/sbkube.yaml
 namespace: multi-app-demo-database
 ```
 
@@ -342,15 +342,15 @@ namespace: multi-app-demo-database
 ## 🔑 핵심 정리
 
 1. **자동 탐색 vs 명시적 지정**
-   - 자동: `app_dirs` 없음 → 모든 `config.yaml` 발견
+   - 자동: `app_dirs` 없음 → 모든 `sbkube.yaml` 발견
    - 명시: `app_dirs: [...]` → 지정된 그룹만
 
 2. **유연한 배포 제어**
-   - 전체 배포: `sbkube apply --app-dir .`
+   - 전체 배포: `sbkube apply -f sbkube.yaml`
    - 그룹 선택: `--source sources-selective.yaml`
    - 단일 그룹: `--app-config-dir <group>`
 
 3. **실용적인 구조**
    - 티어별 분리: frontend/backend/database
    - 앱 타입 혼합: Helm + YAML
-   - 공통 설정: sources.yaml에서 관리
+   - 공통 설정: sbkube.yaml에서 관리

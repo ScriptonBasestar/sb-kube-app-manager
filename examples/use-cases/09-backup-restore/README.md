@@ -46,7 +46,7 @@ tar -xvf velero-v1.12.0-linux-amd64.tar.gz
 sudo mv velero-v1.12.0-linux-amd64/velero /usr/local/bin/
 
 # SBKube로 Velero + MinIO + Demo App 배포
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/use-cases/09-backup-restore \
   --namespace velero-demo
 

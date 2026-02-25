@@ -1,0 +1,48 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 08-service-mesh
+settings:
+  cluster: service-mesh-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    linkerd:
+      url: https://helm.linkerd.io/stable
+      description: Linkerd Service Mesh official Helm repository
+  namespace: linkerd-demo
+apps:
+  linkerd-crds:
+    type: helm
+    chart: linkerd/linkerd-crds
+    namespace: linkerd
+    enabled: true
+  linkerd-control-plane:
+    type: helm
+    chart: linkerd/linkerd-control-plane
+    namespace: linkerd
+    values:
+    - values/linkerd-values.yaml
+    depends_on:
+    - linkerd-crds
+    enabled: true
+  linkerd-viz:
+    type: helm
+    chart: linkerd/linkerd-viz
+    namespace: linkerd-viz
+    depends_on:
+    - linkerd-control-plane
+    enabled: true
+  namespace-config:
+    type: yaml
+    manifests:
+    - manifests/namespace.yaml
+    depends_on:
+    - linkerd-control-plane
+  demo-services:
+    type: yaml
+    manifests:
+    - manifests/frontend.yaml
+    - manifests/backend.yaml
+    - manifests/database.yaml
+    depends_on:
+    - namespace-config

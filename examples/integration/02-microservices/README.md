@@ -23,7 +23,7 @@ Users Orders Products Payments Notifications
 ## 🚀 빠른 시작
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/integration/02-microservices \
   --namespace microservices
 ```

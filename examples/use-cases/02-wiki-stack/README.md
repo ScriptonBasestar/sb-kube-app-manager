@@ -57,7 +57,7 @@ sudo bash -c 'echo "127.0.0.1 wiki.local" >> /etc/hosts'
 
 ### 1. MySQL 먼저 배포
 ```bash
-sbkube apply --app-dir . --apps mysql
+sbkube apply -f sbkube.yaml --apps mysql
 ```
 
 ### 2. MySQL이 Ready 상태인지 확인
@@ -67,17 +67,17 @@ kubectl get pods -n wiki-stack -l app.kubernetes.io/name=mysql -w
 
 ### 3. MediaWiki 배포
 ```bash
-sbkube apply --app-dir . --apps mediawiki
+sbkube apply -f sbkube.yaml --apps mediawiki
 ```
 
 ### 4. Ingress 배포
 ```bash
-sbkube apply --app-dir . --apps wiki-ingress
+sbkube apply -f sbkube.yaml --apps wiki-ingress
 ```
 
 ### 또는 전체 한번에 배포 (depends_on 사용)
 ```bash
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 ```
 
 ## 접근
@@ -224,7 +224,7 @@ kubectl logs -n wiki-stack <pod-name> --previous
 
 ```bash
 # 전체 스택 삭제
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 
 # 또는
 kubectl delete namespace wiki-stack

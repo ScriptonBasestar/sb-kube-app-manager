@@ -40,7 +40,7 @@ Values 파일을 수정하지 않고 특정 값만 변경:
 ### 1. 기본 예제 배포
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/advanced-features/03-helm-customization \
   --namespace helm-custom
 ```
@@ -72,7 +72,7 @@ kubectl get pods -n helm-custom -l app.kubernetes.io/instance=grafana-prod
 
 ## 📖 설정 파일 설명
 
-### config.yaml
+### sbkube.yaml
 
 ```yaml
 namespace: helm-custom
@@ -306,7 +306,7 @@ set_values:
 
 ```bash
 # 배포
-sbkube apply --app-dir . --namespace helm-custom
+sbkube apply -f sbkube.yaml --namespace helm-custom
 
 # Helm 릴리스 확인
 helm list -n helm-custom
@@ -341,7 +341,7 @@ kubectl get pods -n helm-custom -l app.kubernetes.io/instance=grafana-prod
 ### 시나리오 4: 동적 값 변경
 
 ```yaml
-# config.yaml 수정
+# sbkube.yaml 수정
 apps:
   grafana-dev:
     set_values:
@@ -350,7 +350,7 @@ apps:
 
 ```bash
 # 재배포
-sbkube apply --app-dir . --namespace helm-custom
+sbkube apply -f sbkube.yaml --namespace helm-custom
 
 # 이미지 태그 확인
 kubectl get pod -n helm-custom -l app.kubernetes.io/instance=grafana-dev \

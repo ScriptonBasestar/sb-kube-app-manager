@@ -1,0 +1,38 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 01-enabled-flag
+settings:
+  cluster: local-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    prometheus-community:
+      url: https://prometheus-community.github.io/helm-charts
+  namespace: enabled-demo
+apps:
+  redis:
+    type: yaml
+    files:
+    - manifests/redis.yaml
+    enabled: true
+  memcached:
+    type: yaml
+    files:
+    - manifests/memcached.yaml
+    enabled: false
+  postgresql:
+    type: yaml
+    files:
+    - manifests/postgresql.yaml
+  monitoring:
+    type: helm
+    chart: prometheus-community/prometheus
+    enabled: false
+    depends_on:
+    - postgresql
+  experimental-feature:
+    type: exec
+    enabled: false
+    commands:
+    - echo "This is an experimental feature"
+    - kubectl get pods -n enabled-demo

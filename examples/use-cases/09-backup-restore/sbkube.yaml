@@ -1,0 +1,41 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 09-backup-restore
+settings:
+  cluster: backup-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    vmware-tanzu:
+      url: https://vmware-tanzu.github.io/helm-charts
+      description: VMware Tanzu Helm Charts (Velero)
+  namespace: velero-demo
+apps:
+  backup-storage:
+    type: yaml
+    manifests:
+    - manifests/nfs-storage.yaml
+    namespace: velero
+    enabled: true
+  velero:
+    type: helm
+    chart: vmware-tanzu/velero
+    namespace: velero
+    values:
+    - values/velero-values.yaml
+    depends_on:
+    - backup-storage
+    enabled: true
+  demo-app:
+    type: yaml
+    manifests:
+    - manifests/demo-app.yaml
+    enabled: true
+  backup-schedule:
+    type: yaml
+    manifests:
+    - manifests/backup-schedule.yaml
+    depends_on:
+    - velero
+    - demo-app
+    enabled: true

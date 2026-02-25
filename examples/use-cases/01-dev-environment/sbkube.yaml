@@ -1,0 +1,30 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 01-dev-environment
+settings:
+  cluster: dev-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    codecentric:
+      url: https://codecentric.github.io/helm-charts
+  namespace: dev-env
+apps:
+  redis:
+    type: yaml
+    manifests:
+    - manifests/redis.yaml
+  postgresql:
+    type: yaml
+    manifests:
+    - manifests/postgresql.yaml
+  mailhog:
+    type: helm
+    chart: codecentric/mailhog
+    version: 5.2.3
+    values:
+    - mailhog-values.yaml
+  localstack:
+    type: yaml
+    manifests:
+    - manifests/localstack.yaml

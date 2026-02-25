@@ -1,0 +1,13 @@
+apiVersion: sbkube/v1
+metadata:
+  name: a300_prometheus
+settings:
+  namespace: monitoring
+apps:
+  prometheus:
+    type: helm
+    enabled: true
+    chart: prometheus-community/prometheus
+    version: 25.0.0
+    values:
+    - values.yaml

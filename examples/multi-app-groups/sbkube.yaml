@@ -1,0 +1,10 @@
+apiVersion: sbkube/v1
+metadata:
+  name: multi-app-groups
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    ot-helm:
+      url: https://ot-container-kit.github.io/helm-charts/
+apps: {}

@@ -37,7 +37,7 @@ apps:
 
 ### 환경별 배포
 
-**개발 환경** (dev-config.yaml):
+**개발 환경** (dev-sbkube.yaml):
 ```yaml
 namespace: dev
 
@@ -58,7 +58,7 @@ apps:
     enabled: false  # 개발 환경에서는 비활성화
 ```
 
-**프로덕션 환경** (prod-config.yaml):
+**프로덕션 환경** (prod-sbkube.yaml):
 ```yaml
 namespace: prod
 
@@ -113,7 +113,7 @@ apps:
 
 ### 기본 배포 (enabled: true만)
 ```bash
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 ```
 
 ### 모든 앱 강제 배포 (enabled 무시)
@@ -123,7 +123,7 @@ sbkube apply --app-dir .
 ### 특정 앱만 배포
 ```bash
 # enabled 여부와 관계없이 특정 앱만
-sbkube apply --app-dir . --apps redis
+sbkube apply -f sbkube.yaml --apps redis
 ```
 
 ## depends_on과 함께 사용
@@ -170,12 +170,12 @@ apps:
 
 ```bash
 # 개발 환경
-cp config.dev.yaml config.yaml
-sbkube apply --app-dir .
+cp config.dev.yaml sbkube.yaml
+sbkube apply -f sbkube.yaml
 
 # 프로덕션 환경
-cp config.prod.yaml config.yaml
-sbkube apply --app-dir .
+cp config.prod.yaml sbkube.yaml
+sbkube apply -f sbkube.yaml
 ```
 
 ### 2. 주석 활용
@@ -225,7 +225,7 @@ apps:
 ## 정리
 
 ```bash
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 ```
 
 ## 주의사항

@@ -1,0 +1,58 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 05-chart-removes
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: k3d-sbkube
+  cluster: k3d-sbkube
+  helm_repos:
+    grafana:
+      url: https://grafana.github.io/helm-charts
+    bitnami:
+      url: https://charts.bitnami.com/bitnami
+  namespace: chart-removes-demo
+apps:
+  grafana-minimal:
+    type: helm
+    chart: grafana/grafana
+    version: 10.1.2
+    values:
+    - grafana-values.yaml
+    removes:
+    - templates/tests/*
+    - ci/*
+    - examples/*
+    - '*.md'
+    - OWNERS
+    - .helmignore
+  redis-core-only:
+    type: helm
+    chart: bitnami/redis
+    version: 18.0.0
+    values:
+    - redis-values.yaml
+    removes:
+    - templates/metrics/*
+    - templates/serviceaccount.yaml
+    - templates/networkpolicy.yaml
+    - templates/tls-secret.yaml
+    - ci/*
+    - '*.md'
+  prometheus-compact:
+    type: helm
+    chart: grafana/prometheus
+    version: 25.3.1
+    values:
+    - prometheus-values.yaml
+    removes:
+    - '**/*.md'
+    - '**/*test*.yaml'
+    - '**/examples/**'
+    - ci/**
+    - docs/**
+  nginx-full:
+    type: helm
+    chart: bitnami/nginx
+    version: 15.0.0
+    values:
+    - nginx-values.yaml

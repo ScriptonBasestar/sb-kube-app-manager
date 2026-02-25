@@ -1,0 +1,33 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 04-cicd-stack
+settings:
+  cluster: cicd-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    twuni:
+      url: https://helm.twun.io
+    gitlab:
+      url: https://charts.gitlab.io
+  namespace: cicd
+apps:
+  storage-setup:
+    type: yaml
+    manifests:
+    - manifests/storage-pv.yaml
+    enabled: true
+  docker-registry:
+    type: helm
+    chart: twuni/docker-registry
+    values:
+    - values/registry-values.yaml
+    depends_on:
+    - storage-setup
+  gitlab-runner:
+    type: helm
+    chart: gitlab/gitlab-runner
+    values:
+    - values/gitlab-runner-values.yaml
+    depends_on:
+    - docker-registry

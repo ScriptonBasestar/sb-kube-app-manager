@@ -1,0 +1,13 @@
+apiVersion: sbkube/v1
+metadata:
+  name: rdb
+settings:
+  namespace: k3scode-rdb
+apps:
+  postgresql:
+    type: helm
+    specs:
+      chart: bitnami/postgresql
+      version: 16.0.0
+      values:
+      - values/postgresql.yaml

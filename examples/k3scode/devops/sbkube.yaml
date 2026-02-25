@@ -1,0 +1,22 @@
+apiVersion: sbkube/v1
+metadata:
+  name: devops
+settings:
+  namespace: k3scode-devops
+apps:
+  prometheus:
+    type: helm
+    specs:
+      chart: prometheus-community/prometheus
+      version: 25.0.0
+      values:
+      - values/prometheus.yaml
+  grafana:
+    type: helm
+    specs:
+      chart: grafana/grafana
+      version: 8.0.0
+      values:
+      - values/grafana.yaml
+    depends_on:
+    - prometheus

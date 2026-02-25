@@ -1,0 +1,16 @@
+apiVersion: sbkube/v1
+metadata:
+  name: frontend
+settings:
+  namespace: multi-app-demo
+apps:
+  nginx-frontend:
+    type: helm
+    enabled: true
+    chart: grafana/nginx
+    version: 18.2.4
+    set_values:
+    - service.type=LoadBalancer
+    - replicaCount=2
+    - resources.requests.cpu=100m
+    - resources.requests.memory=128Mi

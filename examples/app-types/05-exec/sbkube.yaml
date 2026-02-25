@@ -1,0 +1,47 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 05-exec
+settings:
+  cluster: local-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    prometheus-community:
+      url: https://prometheus-community.github.io/helm-charts
+  namespace: exec-demo
+apps:
+  pre-deployment-check:
+    type: exec
+    commands:
+    - echo "=== Pre-deployment Health Check ==="
+    - kubectl version --client
+    - kubectl cluster-info
+    - kubectl get nodes
+    - echo "✅ Cluster is ready for deployment"
+  nginx:
+    type: yaml
+    files:
+    - manifests/nginx-deployment.yaml
+    - manifests/nginx-service.yaml
+    depends_on:
+    - pre-deployment-check
+  post-deployment-verify:
+    type: exec
+    commands:
+    - echo "=== Post-deployment Verification ==="
+    - sleep 5
+    - kubectl get pods -n exec-demo
+    - kubectl get svc -n exec-demo
+    - kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=nginx -n exec-demo
+      --timeout=60s
+    - echo "✅ Deployment completed successfully"
+    depends_on:
+    - nginx
+  cleanup-failed-pods:
+    type: exec
+    enabled: false
+    commands:
+    - echo "=== Cleaning up failed pods ==="
+    - kubectl delete pods --field-selector=status.phase=Failed -n exec-demo --ignore-not-found=true
+    - kubectl delete pods --field-selector=status.phase=Succeeded -n exec-demo --ignore-not-found=true
+    - echo "✅ Cleanup completed"

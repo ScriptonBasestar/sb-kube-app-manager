@@ -1,9 +1,0 @@
-namespace: helm-hooks-demo
-
-apps:
-  demo-app:
-    type: yaml
-    files:
-      - manifests/pre-install-hook.yaml
-      - manifests/app.yaml
-      - manifests/post-install-hook.yaml

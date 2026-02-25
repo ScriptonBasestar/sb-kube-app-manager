@@ -70,7 +70,7 @@ sbkube state list
 
 ## 📖 설정 파일 설명
 
-### config.yaml
+### sbkube.yaml
 
 ```yaml
 namespace: noop-demo
@@ -220,7 +220,7 @@ sbkube state list
 ### 시나리오 2: 의존성 체인 테스트
 
 ```yaml
-# config.yaml 수정
+# sbkube.yaml 수정
 apps:
   step1:
     type: noop
@@ -239,7 +239,7 @@ apps:
 
 ```bash
 # 배포 (step1 → step2 → app 순서)
-sbkube apply --app-dir . --namespace noop-demo
+sbkube apply -f sbkube.yaml --namespace noop-demo
 
 # 상태 확인 (모든 단계 기록됨)
 sbkube state list
@@ -282,10 +282,10 @@ kubectl get all -n <namespace> -l app=<noop-app-name>
 **해결**:
 ```bash
 # Noop 앱이 활성화되어 있는지 확인
-grep -A 3 "type: noop" config.yaml
+grep -A 3 "type: noop" sbkube.yaml
 
 # 의존성 체인 확인
-grep -A 5 "depends_on" config.yaml
+grep -A 5 "depends_on" sbkube.yaml
 ```
 
 ### 문제 3: "순서가 보장되지 않아요"

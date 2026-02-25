@@ -1,0 +1,29 @@
+apiVersion: sbkube/v1
+metadata:
+  name: helm-oci
+settings:
+  cluster: test-cluster
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos: {}
+  oci_registries:
+    browserless:
+      registry: oci://tccr.io/truecharts
+    gabe565:
+      registry: oci://ghcr.io/gabe565/charts
+  namespace: devops
+apps:
+  browserless:
+    type: helm
+    enabled: true
+    chart: browserless/browserless-chrome
+    version: 1.0.0
+    values:
+    - values/browserless.yaml
+  uptime-kuma:
+    type: helm
+    enabled: true
+    chart: gabe565/uptime-kuma
+    version: 2.0.0
+    values:
+    - values/uptime-kuma.yaml

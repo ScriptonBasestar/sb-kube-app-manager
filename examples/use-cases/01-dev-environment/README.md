@@ -35,10 +35,10 @@ k3s 클러스터에 개발 환경을 구축하는 실전 예제입니다.
 
 ```bash
 # 전체 환경 배포
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 
 # 특정 서비스만 배포
-sbkube apply --app-dir . --apps redis,postgresql
+sbkube apply -f sbkube.yaml --apps redis,postgresql
 ```
 
 ## 서비스 접근
@@ -141,7 +141,7 @@ const minioClient = new Minio.Client({
 
 ```bash
 # 전체 환경 삭제
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 
 # 또는
 kubectl delete namespace dev-env

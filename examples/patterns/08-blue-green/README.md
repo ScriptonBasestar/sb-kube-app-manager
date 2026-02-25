@@ -47,7 +47,7 @@ Key benefits:
 
 ```
 08-blue-green/
-├── sources.yaml                # Cluster connection config
+├── sbkube.yaml                # Cluster connection config
 ├── config-blue-active.yaml     # Blue active, green idle
 ├── config-green-active.yaml    # Green active, blue idle
 ├── values/

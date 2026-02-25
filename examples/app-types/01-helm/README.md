@@ -9,7 +9,7 @@ Helm 차트를 사용한 애플리케이션 배포 예제입니다.
 - 다중 values 파일 병합
 - 앱별 namespace 오버라이드 (optional)
 
-## 📋 config.yaml 주요 기능
+## 📋 sbkube.yaml 주요 기능
 
 ### 1. 기본 Helm 배포 (values 파일)
 
@@ -17,7 +17,7 @@ Helm 차트를 사용한 애플리케이션 배포 예제입니다.
 apps:
   grafana:
     type: helm
-    repo: grafana  # sources.yaml의 Helm 리포지토리 이름
+    repo: grafana  # sbkube.yaml의 Helm 리포지토리 이름
     chart: grafana
     version: "10.1.2"
     values:
@@ -130,7 +130,7 @@ apps:
 ### 1. 전체 워크플로우 (apply)
 
 ```bash
-# 현재 디렉토리의 config.yaml을 사용하여 배포
+# 현재 디렉토리의 sbkube.yaml을 사용하여 배포
 sbkube apply --app-dir examples/app-types/01-helm
 
 # 또는 특정 앱만 배포
@@ -153,7 +153,7 @@ sbkube template --app-dir examples/app-types/01-helm --output-dir rendered
 sbkube deploy --app-dir examples/app-types/01-helm
 ```
 
-### 3. 환경별 배포 (sources.yaml 변경)
+### 3. 환경별 배포 (sbkube.yaml 변경)
 
 ```bash
 # 개발 환경
@@ -187,8 +187,8 @@ set_values:
 
 ```
 app-types/01-helm/
-├── config.yaml                         # SBKube 설정
-├── sources.yaml                        # 기본 환경 (프로덕션)
+├── sbkube.yaml                         # SBKube 설정
+├── sbkube.yaml                        # 기본 환경 (프로덕션)
 ├── sources-dev.yaml                    # 개발 환경
 ├── sources-prd.yaml                    # 프로덕션 환경
 ├── grafana-values.yaml                 # Grafana values
@@ -273,8 +273,8 @@ version: "10.1.2"
 
 **해결**:
 ```bash
-# sources.yaml에 리포지토리 추가 확인
-yq '.helm_repos' sources.yaml
+# sbkube.yaml에 리포지토리 추가 확인
+yq '.helm_repos' sbkube.yaml
 
 # prepare 단계 실행
 sbkube prepare --app-dir examples/app-types/01-helm
@@ -290,7 +290,7 @@ sbkube prepare --app-dir examples/app-types/01-helm
 helm uninstall grafana -n helm-demo
 
 # 또는 release_name 변경
-# config.yaml:
+# sbkube.yaml:
 #   release_name: grafana-v2
 ```
 

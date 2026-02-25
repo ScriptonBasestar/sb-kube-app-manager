@@ -20,7 +20,7 @@ This example demonstrates how to use SBKube to manage multiple environments (dev
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌────────────────────────────────────────────────────┐   │
-│  │           Base Configuration (config.yaml)          │   │
+│  │           Base Configuration (sbkube.yaml)          │   │
 │  │  • Common app definitions                           │   │
 │  │  • Shared labels and settings                       │   │
 │  │  • Base Helm values (values/*-base.yaml)            │   │
@@ -41,8 +41,8 @@ This example demonstrates how to use SBKube to manage multiple environments (dev
 
 ```
 06-environment-configs/
-├── sources.yaml                    # Cluster connection config (shared)
-├── config.yaml                     # Base configuration (optional, for reference)
+├── sbkube.yaml                    # Cluster connection config (shared)
+├── sbkube.yaml                     # Base configuration (optional, for reference)
 ├── config-dev.yaml                 # Development environment config
 ├── config-staging.yaml             # Staging environment config
 ├── config-production.yaml          # Production environment config
@@ -185,10 +185,10 @@ vim values/backend-production.yaml
 
 ```bash
 # Validate dev configuration
-sbkube validate config-dev.yaml --schema-type config
+sbkube validate -f sbkube.yaml config-dev.yaml --schema-type config
 
 # Deploy to dev
-sbkube apply --app-dir . --config config-dev.yaml
+sbkube apply -f sbkube.yaml --config config-dev.yaml
 
 # Or use deployment script
 chmod +x deploy.sh
@@ -201,10 +201,10 @@ After testing in development:
 
 ```bash
 # Validate staging configuration
-sbkube validate config-staging.yaml --schema-type config
+sbkube validate -f sbkube.yaml config-staging.yaml --schema-type config
 
 # Deploy to staging
-sbkube apply --app-dir . --config config-staging.yaml
+sbkube apply -f sbkube.yaml --config config-staging.yaml
 
 # Or use deployment script
 ./deploy.sh staging
@@ -216,10 +216,10 @@ After successful staging validation:
 
 ```bash
 # Validate production configuration
-sbkube validate config-production.yaml --schema-type config
+sbkube validate -f sbkube.yaml config-production.yaml --schema-type config
 
 # Deploy to production
-sbkube apply --app-dir . --config config-production.yaml
+sbkube apply -f sbkube.yaml --config config-production.yaml
 
 # Or use deployment script
 ./deploy.sh production
@@ -231,13 +231,13 @@ Check status for each environment:
 
 ```bash
 # Dev status
-sbkube status --app-dir . --config config-dev.yaml
+sbkube status -f sbkube.yaml --config config-dev.yaml
 
 # Staging status
-sbkube status --app-dir . --config config-staging.yaml
+sbkube status -f sbkube.yaml --config config-staging.yaml
 
 # Production status
-sbkube status --app-dir . --config config-production.yaml
+sbkube status -f sbkube.yaml --config config-production.yaml
 ```
 
 ## 🔧 Advanced Usage
@@ -284,7 +284,7 @@ jobs:
       - name: Deploy to ${{ steps.env.outputs.environment }}
         run: |
           cd examples/patterns/06-environment-configs
-          sbkube apply --app-dir . --config config-${{ steps.env.outputs.environment }}.yaml
+          sbkube apply -f sbkube.yaml --config config-${{ steps.env.outputs.environment }}.yaml
 ```
 
 ### Progressive Rollout Strategy
@@ -482,7 +482,7 @@ Full-scale, highly available deployment:
 grep "^namespace:" config-production.yaml
 
 # Dry run to verify
-sbkube apply --app-dir . --config config-production.yaml --dry-run
+sbkube apply -f sbkube.yaml --config config-production.yaml --dry-run
 ```
 
 ### Issue: Value File Not Found
@@ -626,7 +626,7 @@ auth:
 ## 📚 Additional Resources
 
 - [SBKube Configuration Schema](../../../docs/03-configuration/config-schema.md)
-- [Helm Chart Customization](../../../docs/03-configuration/chart-customization.md)
+- [Helm Chart Customization](../../../docs/03-configuration/config-schema.md)
 - [Best Practices](../../../docs/05-best-practices/directory-structure.md)
 - [Helm Values Merging](https://helm.sh/docs/chart_template_guide/values_files/)
 

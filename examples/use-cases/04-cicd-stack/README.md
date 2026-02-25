@@ -52,8 +52,8 @@ GitLab 프로젝트 → Settings → CI/CD → Runners → Registration token
 ### 1. 설정 파일 준비
 
 ```bash
-# config.yaml 복사 및 수정
-cp examples/use-cases/04-cicd-stack/config.yaml my-cicd/config.yaml
+# sbkube.yaml 복사 및 수정
+cp examples/use-cases/04-cicd-stack/sbkube.yaml my-cicd/sbkube.yaml
 
 # GitLab Runner 토큰 설정
 # values/gitlab-runner-values.yaml 편집:
@@ -63,7 +63,7 @@ cp examples/use-cases/04-cicd-stack/config.yaml my-cicd/config.yaml
 ### 2. 전체 스택 배포
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/use-cases/04-cicd-stack \
   --namespace cicd
 ```
@@ -100,7 +100,7 @@ kubectl logs -n cicd -l app=gitlab-runner
 
 ## 📖 설정 파일 설명
 
-### config.yaml
+### sbkube.yaml
 
 ```yaml
 namespace: cicd
@@ -397,7 +397,7 @@ runnerRegistrationToken: "CORRECT_TOKEN"
 ```
 3. 재배포:
 ```bash
-sbkube apply --app-dir . --namespace cicd
+sbkube apply -f sbkube.yaml --namespace cicd
 ```
 
 ### 문제 2: "Registry에 이미지 푸시 실패"

@@ -44,7 +44,7 @@ spec:
 ### 1. 배포
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/security/03-network-policies \
   --namespace netpol-demo
 ```

@@ -1,0 +1,13 @@
+apiVersion: sbkube/v1
+metadata:
+  name: app-dirs-explicit
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: minikube
+  helm_repos:
+    ot-helm:
+      url: https://ot-container-kit.github.io/helm-charts/
+apps: {}
+app_dirs:
+- redis
+- postgres

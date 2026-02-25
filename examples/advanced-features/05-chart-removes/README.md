@@ -48,8 +48,8 @@ prepare → build (removes applied here) → template → deploy
 
 ```
 05-chart-removes/
-├── config.yaml                # Main configuration with 4 apps
-├── sources.yaml               # Cluster and Helm repo configuration
+├── sbkube.yaml                # Main configuration with 4 apps
+├── sbkube.yaml               # Cluster and Helm repo configuration
 ├── grafana-values.yaml        # Grafana minimal config
 ├── redis-values.yaml          # Redis core-only config
 ├── prometheus-values.yaml     # Prometheus compact config
@@ -156,7 +156,7 @@ nginx-full:
 ### 1. Validate Configuration
 
 ```bash
-sbkube validate examples/advanced-features/05-chart-removes/config.yaml
+sbkube validate -f sbkube.yaml examples/advanced-features/05-chart-removes/sbkube.yaml
 ```
 
 ### 2. Build and Check Removal
@@ -292,9 +292,9 @@ removes:
 Always test chart removal in dev/staging:
 ```bash
 # Build and verify chart still works
-sbkube build --app-dir .
-sbkube template --app-dir .
-sbkube apply --app-dir . --dry-run
+sbkube build -f sbkube.yaml
+sbkube template -f sbkube.yaml
+sbkube apply -f sbkube.yaml --dry-run
 ```
 
 ## 🔍 Common Removal Patterns
@@ -376,7 +376,7 @@ removes:
 ls -lah .sbkube/charts/grafana/grafana-10.1.2/
 
 # Check if patterns matched
-sbkube build --app-dir . --verbose
+sbkube build -f sbkube.yaml --verbose
 ```
 
 **Solution**: Use more specific or additional patterns
@@ -404,8 +404,8 @@ Real-world size reductions from popular charts:
 
 ## 🔗 Related Documentation
 
-- [Helm Chart Customization](../../03-configuration/chart-customization.md)
-- [Chart Overrides](../../03-configuration/chart-customization.md#overrides)
+- [Helm Chart Customization](../../03-configuration/config-schema.md)
+- [Chart Overrides](../../03-configuration/config-schema.md#overrides)
 - [Application Types](../../02-features/application-types.md#helm)
 - [Build Phase](../../02-features/commands.md#build)
 

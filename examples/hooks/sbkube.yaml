@@ -1,0 +1,56 @@
+apiVersion: sbkube/v1
+metadata:
+  name: hooks
+settings:
+  namespace: hooks-demo
+apps:
+  redis:
+    type: helm
+    chart: ot-helm/redis
+    version: 0.15.10
+    namespace: hooks-demo
+    set_values:
+    - redisCluster.clusterSize=1
+    - kubernetesConfig.image=redis:7.2
+    - redisExporter.enabled=false
+    hooks:
+      pre_deploy:
+      - echo "🚀 Preparing to deploy Redis..."
+      - echo "Checking if Redis is already running..."
+      - kubectl get redis -n hooks-demo || echo "Redis not found, proceeding with
+        deployment"
+      post_deploy:
+      - echo "✅ Redis deployed successfully!"
+      - echo "Waiting for Redis to be ready..."
+      - kubectl wait --for=condition=ready redis/redis -n hooks-demo --timeout=300s
+      - echo "Redis is ready!"
+      on_deploy_failure:
+      - echo "❌ Redis deployment failed!"
+      - echo "Checking Redis CR status..."
+      - kubectl get redis -n hooks-demo
+      - kubectl describe redis -n hooks-demo
+  nginx:
+    type: yaml
+    files:
+    - manifests/nginx-deployment.yaml
+    - manifests/nginx-service.yaml
+    namespace: hooks-demo
+    hooks:
+      post_deploy:
+      - echo "Running health check for Nginx..."
+      - sleep 5
+      - kubectl get svc nginx -n hooks-demo
+      - echo "Nginx service is up!"
+hooks:
+  deploy:
+    pre:
+    - echo "=== Deployment started at $(date) ==="
+    - echo "Checking cluster connectivity..."
+    - kubectl cluster-info
+    post:
+    - echo "=== Deployment completed at $(date) ==="
+    - echo "Listing all pods in namespace..."
+    - kubectl get pods -n hooks-demo
+    on_failure:
+    - echo "=== Deployment failed at $(date) ==="
+    - echo "Check the error messages above"

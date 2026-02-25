@@ -25,11 +25,11 @@
 ```
 hooks-pre-deploy-tasks/
 ├── README.md
-├── config.yaml
+├── sbkube.yaml
 ├── manifests/
 │   ├── namespace.yaml
 │   ├── secret.yaml
-│   └── app-config.yaml
+│   └── app-sbkube.yaml
 └── scripts/
     └── verify-environment.sh
 ```

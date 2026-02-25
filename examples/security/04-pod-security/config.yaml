@@ -1,9 +1,0 @@
-namespace: podsec-demo
-
-apps:
-  # 보안 강화된 Pod
-  secure-pods:
-    type: yaml
-    files:
-      - manifests/secure-pod.yaml
-      - manifests/insecure-pod.yaml

@@ -1,0 +1,22 @@
+apiVersion: sbkube/v1
+metadata:
+  name: k3scode
+settings:
+  cluster: k3scode-example
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    bitnami:
+      url: https://charts.bitnami.com/bitnami
+    grafana:
+      url: https://grafana.github.io/helm-charts
+    prometheus-community:
+      url: https://prometheus-community.github.io/helm-charts
+    qdrant:
+      url: https://qdrant.github.io/qdrant-helm
+    minio:
+      url: https://charts.min.io
+    gitlab:
+      url: https://charts.gitlab.io
+  git_repos: {}
+apps: {}

@@ -42,7 +42,7 @@ Multiple Producers → Queue → Multiple Consumers (라운드 로빈)
 
 ```bash
 # RabbitMQ 클러스터 배포
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/use-cases/11-message-queue \
   --namespace mq-demo
 

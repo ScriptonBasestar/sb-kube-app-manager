@@ -153,7 +153,7 @@ apps:
 
 ```
 examples/hooks-phase4/
-├── config.yaml                              # 메인 설정 파일
+├── sbkube.yaml                              # 메인 설정 파일
 ├── manifests/
 │   ├── cluster-issuer-letsencrypt-prd.yaml  # Production ClusterIssuer
 │   └── cluster-issuer-letsencrypt-stg.yaml  # Staging ClusterIssuer
@@ -189,8 +189,8 @@ examples/hooks-phase4/
 
 ```bash
 # Kubernetes 클러스터 필요 (k3s, kind, minikube 등)
-# sources.yaml에 Helm 리포지토리 추가
-cat > sources.yaml << EOF
+# sbkube.yaml에 Helm 리포지토리 추가
+cat > sbkube.yaml << EOF
 helm_repos:
   jetstack: https://charts.jetstack.io
 EOF

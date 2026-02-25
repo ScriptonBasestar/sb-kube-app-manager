@@ -19,7 +19,7 @@
 ### 디렉토리 구조
 ```
 .
-├── config.yaml
+├── sbkube.yaml
 ├── manifests/
 │   ├── 01-namespace.yaml
 │   ├── 02-crds.yaml
@@ -27,7 +27,7 @@
 └── README.md
 ```
 
-### config.yaml
+### sbkube.yaml
 ```yaml
 namespace: monitoring
 
@@ -61,7 +61,7 @@ apps:
 
 ```bash
 # 배포
-sbkube apply --app-dir .
+sbkube apply -f sbkube.yaml
 
 # 확인
 kubectl get crd | grep monitoring
@@ -102,12 +102,12 @@ actions:
 1. **순서 보장**: 액션은 정의된 순서대로 실행됩니다
 2. **에러 처리**: 중간에 실패하면 멈춥니다
 3. **멱등성**: `apply`는 멱등성이 있지만, `create`는 없습니다
-4. **네임스페이스**: config.yaml의 namespace 설정이 우선 적용됩니다
+4. **네임스페이스**: sbkube.yaml의 namespace 설정이 우선 적용됩니다
 
 ## 정리
 
 ```bash
-sbkube delete --app-dir .
+sbkube delete -f sbkube.yaml
 ```
 
 ## 관련 예제

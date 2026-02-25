@@ -1,0 +1,16 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 03-multi-cluster
+settings:
+  namespace: multi-cluster-demo
+apps:
+  cluster-config:
+    type: yaml
+    files:
+    - manifests/clusters.yaml
+  federated-app:
+    type: yaml
+    files:
+    - manifests/federated-deployment.yaml
+    depends_on:
+    - cluster-config

@@ -49,8 +49,8 @@ Set `helm_label_injection: false` for charts that:
 
 ```
 04-helm-label-injection/
-├── config.yaml                # Main configuration with 3 apps
-├── sources.yaml               # Cluster and Helm repo configuration
+├── sbkube.yaml                # Main configuration with 3 apps
+├── sbkube.yaml               # Cluster and Helm repo configuration
 ├── grafana-values.yaml        # Grafana config (injection enabled)
 ├── redis-values.yaml          # Redis config (injection disabled)
 ├── prometheus-values.yaml     # Prometheus config (injection enabled)
@@ -59,7 +59,7 @@ Set `helm_label_injection: false` for charts that:
 
 ## 🔧 Configuration Breakdown
 
-### config.yaml Structure
+### sbkube.yaml Structure
 
 ```yaml
 namespace: label-injection-demo
@@ -137,7 +137,7 @@ master:
 ### 1. Validate Configuration
 
 ```bash
-sbkube validate examples/advanced-features/04-helm-label-injection/config.yaml
+sbkube validate -f sbkube.yaml examples/advanced-features/04-helm-label-injection/sbkube.yaml
 ```
 
 ### 2. Deploy (Dry Run)
@@ -242,10 +242,10 @@ apps:
 Always test label injection behavior in dev/staging:
 ```bash
 # Dry-run to see if labels are injected correctly
-sbkube apply --app-dir . --dry-run
+sbkube apply -f sbkube.yaml --dry-run
 
 # Check rendered Helm values
-sbkube template --app-dir . | grep -A 5 "commonLabels"
+sbkube template -f sbkube.yaml | grep -A 5 "commonLabels"
 ```
 
 ### 5. Use Global Labels Wisely
@@ -293,7 +293,7 @@ apps:
 **Debug**:
 ```bash
 # Check if labels were passed to Helm
-sbkube template --app-dir . | grep -A 10 "commonLabels"
+sbkube template -f sbkube.yaml | grep -A 10 "commonLabels"
 
 # Check actual resource labels
 kubectl get deployment <name> -o jsonpath='{.metadata.labels}' | jq
@@ -369,7 +369,7 @@ apps:
 
 ## 🔗 Related Documentation
 
-- [Helm Chart Customization](../../03-configuration/chart-customization.md)
+- [Helm Chart Customization](../../03-configuration/config-schema.md)
 - [Global Labels/Annotations](../../03-configuration/config-schema.md#global-labels)
 - [Application Types](../../02-features/application-types.md#helm)
 - [Cluster Global Values](../../cluster-global-values/README.md)

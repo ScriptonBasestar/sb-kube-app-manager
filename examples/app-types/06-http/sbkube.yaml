@@ -1,0 +1,33 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 06-http
+settings:
+  namespace: http-demo
+apps:
+  download-example-crd:
+    type: http
+    url: https://raw.githubusercontent.com/kubernetes/examples/master/staging/pod
+    dest: downloaded/example-crd.yaml
+  deploy-crd:
+    type: action
+    actions:
+    - type: apply
+      path: downloaded/example-crd.yaml
+    depends_on:
+    - download-example-crd
+  download-configmap:
+    type: http
+    url: https://k8s.io/examples/configmap/configmap-multikeys.yaml
+    dest: downloaded/configmap.yaml
+  download-deployment:
+    type: http
+    url: https://k8s.io/examples/application/deployment.yaml
+    dest: downloaded/deployment.yaml
+  deploy-all:
+    type: yaml
+    files:
+    - downloaded/configmap.yaml
+    - downloaded/deployment.yaml
+    depends_on:
+    - download-configmap
+    - download-deployment

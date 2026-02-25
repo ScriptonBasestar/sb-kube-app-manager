@@ -8,7 +8,7 @@
 - 앱 레벨 lifecycle 관리
 - 다른 앱과의 의존성 설정 (depends_on)
 
-## 📋 config.yaml 주요 기능
+## 📋 sbkube.yaml 주요 기능
 
 ### 1. HookApp 기본 구조
 
@@ -62,7 +62,7 @@ tasks:
 
 ### 3. Task Type: inline
 
-config.yaml에 직접 YAML 포함:
+sbkube.yaml에 직접 YAML 포함:
 
 ```yaml
 tasks:
@@ -199,8 +199,8 @@ apps:
 
 ```
 app-types/09-hook/
-├── config.yaml              # HookApp 설정
-├── sources.yaml             # 클러스터 설정
+├── sbkube.yaml              # HookApp 설정
+├── sbkube.yaml             # 클러스터 설정
 ├── manifests/               # manifests task용 YAML 파일
 │   └── configmap.yaml
 └── README.md
@@ -222,7 +222,7 @@ sbkube apply --app-dir examples/app-types/09-hook --dry-run
 
 ```bash
 # 설정 검증
-sbkube validate examples/app-types/09-hook/config.yaml
+sbkube validate -f sbkube.yaml examples/app-types/09-hook/sbkube.yaml
 
 # 배포 상태 확인
 sbkube status --app-dir examples/app-types/09-hook

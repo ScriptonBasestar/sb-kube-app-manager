@@ -1,0 +1,28 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 06-llm-output-formats
+settings:
+  namespace: llm-demo
+apps:
+  redis-demo:
+    type: helm
+    chart: bitnami/redis
+    version: 18.0.0
+    values:
+    - redis-values.yaml
+    labels:
+      app: redis
+      component: cache
+    annotations:
+      description: Simple Redis deployment for LLM output format demonstration
+clusters:
+- name: local
+  context: default
+  default: true
+helm_sources:
+- name: bitnami
+  url: https://charts.bitnami.com/bitnami
+  type: https
+global_labels:
+  example: llm-output-formats
+  managed-by: sbkube

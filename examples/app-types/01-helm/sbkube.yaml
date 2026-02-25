@@ -1,0 +1,46 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 01-helm
+settings:
+  cluster: production-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    grafana:
+      url: https://grafana.github.io/helm-charts
+    prometheus-community:
+      url: https://prometheus-community.github.io/helm-charts
+    ot-helm:
+      url: https://ot-container-kit.github.io/helm-charts/
+  namespace: helm-demo
+apps:
+  grafana:
+    type: helm
+    enabled: true
+    chart: grafana/grafana
+    version: 10.1.2
+    values:
+    - grafana-values.yaml
+    set_values:
+    - adminPassword=admin123
+    - service.type=LoadBalancer
+    - persistence.enabled=false
+    release_name: my-custom-grafana
+    wait: false
+  prometheus:
+    type: helm
+    enabled: true
+    chart: prometheus-community/prometheus
+    version: 25.28.0
+    values:
+    - prometheus-values-base.yaml
+    - prometheus-values-override.yaml
+  redis:
+    type: helm
+    enabled: true
+    chart: ot-helm/redis
+    version: 0.15.10
+    set_values:
+    - redisCluster.clusterSize=1
+    - kubernetesConfig.image=redis:7.2
+    - redisExporter.enabled=false

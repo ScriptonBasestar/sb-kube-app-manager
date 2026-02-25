@@ -1,0 +1,13 @@
+apiVersion: sbkube/v1
+metadata:
+  name: p2-kube
+settings:
+  cluster: production-cluster
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: production-cluster
+  helm_repos:
+    cloudnative-pg:
+      url: https://cloudnative-pg.github.io/charts
+    bitnami:
+      url: https://charts.bitnami.com/bitnami
+apps: {}

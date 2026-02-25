@@ -1,0 +1,18 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 03-network-policies
+settings:
+  namespace: netpol-demo
+apps:
+  demo-apps:
+    type: yaml
+    files:
+    - manifests/frontend.yaml
+    - manifests/backend.yaml
+    - manifests/database.yaml
+  network-policies:
+    type: yaml
+    files:
+    - manifests/network-policies.yaml
+    depends_on:
+    - demo-apps

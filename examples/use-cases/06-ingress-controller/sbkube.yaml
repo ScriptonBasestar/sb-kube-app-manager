@@ -1,0 +1,27 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 06-ingress-controller
+settings:
+  namespace: ingress-demo
+apps:
+  traefik:
+    type: noop
+    description: k3s 기본 Traefik IngressController
+  demo-apps:
+    type: yaml
+    manifests:
+    - manifests/apps.yaml
+    depends_on:
+    - traefik
+  middlewares:
+    type: yaml
+    manifests:
+    - manifests/middlewares.yaml
+    depends_on:
+    - demo-apps
+  ingress-routes:
+    type: yaml
+    manifests:
+    - manifests/ingress-routes.yaml
+    depends_on:
+    - middlewares

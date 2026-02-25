@@ -1,0 +1,9 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 07-kustomize
+settings:
+  namespace: kustomize-dev
+apps:
+  nginx-app:
+    type: kustomize
+    path: overlays/dev

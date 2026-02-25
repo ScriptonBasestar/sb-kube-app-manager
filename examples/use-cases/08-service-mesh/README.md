@@ -45,7 +45,7 @@ export PATH=$PATH:$HOME/.linkerd2/bin
 linkerd check --pre
 
 # SBKube로 Linkerd 및 데모 앱 배포
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/use-cases/08-service-mesh \
   --namespace linkerd-demo
 
@@ -61,7 +61,7 @@ linkerd dashboard &
 ### 1. Linkerd Control Plane 설치
 
 ```yaml
-# config.yaml
+# sbkube.yaml
 linkerd-crds:
   type: helm
   chart: linkerd/linkerd-crds

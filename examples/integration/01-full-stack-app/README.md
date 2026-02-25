@@ -37,7 +37,7 @@ PostgreSQL  Redis
 
 ```bash
 # 전체 스택 배포
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/integration/01-full-stack-app \
   --namespace fullstack
 

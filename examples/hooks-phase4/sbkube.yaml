@@ -1,0 +1,182 @@
+apiVersion: sbkube/v1
+metadata:
+  name: hooks-phase4
+settings:
+  namespace: cert-manager
+apps:
+  cert-manager:
+    type: helm
+    chart: jetstack/cert-manager
+    version: v1.13.2
+    values:
+    - installCRDs: true
+      global:
+        leaderElection:
+          namespace: cert-manager
+  setup-issuers:
+    type: hook
+    depends_on:
+    - cert-manager
+    labels:
+      app: cert-manager-setup
+      component: issuers
+      managed-by: sbkube
+    annotations:
+      description: Let's Encrypt ClusterIssuers setup
+      version: 1.0.0
+    tasks:
+    - type: manifests
+      name: deploy-production-issuer
+      files:
+      - manifests/cluster-issuer-letsencrypt-prd.yaml
+      validation:
+        kind: ClusterIssuer
+        name: letsencrypt-prd
+        wait_for_ready: true
+        timeout: 120
+        conditions:
+        - type: Ready
+          status: 'True'
+      rollback:
+        enabled: true
+        on_failure: always
+        commands:
+        - kubectl delete clusterissuer letsencrypt-prd --ignore-not-found=true
+    - type: manifests
+      name: deploy-staging-issuer
+      files:
+      - manifests/cluster-issuer-letsencrypt-stg.yaml
+      validation:
+        kind: ClusterIssuer
+        name: letsencrypt-stg
+        wait_for_ready: true
+        timeout: 120
+      rollback:
+        enabled: true
+        on_failure: always
+        commands:
+        - kubectl delete clusterissuer letsencrypt-stg --ignore-not-found=true
+    rollback:
+      enabled: true
+      on_failure: always
+      commands:
+      - kubectl delete clusterissuer letsencrypt-prd letsencrypt-stg --ignore-not-found=true
+  create-certificates:
+    type: hook
+    depends_on:
+    - setup-issuers
+    labels:
+      app: cert-manager-setup
+      component: certificates
+      managed-by: sbkube
+    annotations:
+      description: Wildcard and API TLS certificates
+      version: 1.0.0
+    tasks:
+    - type: inline
+      name: create-wildcard-cert
+      content:
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: wildcard-cert
+          namespace: default
+        spec:
+          secretName: wildcard-cert-tls
+          issuerRef:
+            name: letsencrypt-stg
+            kind: ClusterIssuer
+          dnsNames:
+          - '*.example.com'
+          - example.com
+      validation:
+        kind: Certificate
+        name: wildcard-cert
+        namespace: default
+        wait_for_ready: true
+        timeout: 300
+      rollback:
+        enabled: true
+        on_failure: always
+        commands:
+        - kubectl delete certificate wildcard-cert -n default --ignore-not-found=true
+        - kubectl delete secret wildcard-cert-tls -n default --ignore-not-found=true
+    - type: inline
+      name: create-api-cert
+      content:
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: api-cert
+          namespace: default
+        spec:
+          secretName: api-cert-tls
+          issuerRef:
+            name: letsencrypt-stg
+            kind: ClusterIssuer
+          dnsNames:
+          - api.example.com
+      validation:
+        kind: Certificate
+        name: api-cert
+        namespace: default
+        wait_for_ready: true
+        timeout: 300
+      rollback:
+        enabled: true
+        on_failure: always
+        commands:
+        - kubectl delete certificate api-cert -n default --ignore-not-found=true
+        - kubectl delete secret api-cert-tls -n default --ignore-not-found=true
+    validation:
+      kind: Certificate
+      namespace: default
+      wait_for_ready: true
+      timeout: 300
+  verify-deployment:
+    type: hook
+    depends_on:
+    - create-certificates
+    labels:
+      app: cert-manager-setup
+      component: verification
+      managed-by: sbkube
+    annotations:
+      description: Post-deployment verification checks
+      version: 1.0.0
+    tasks:
+    - type: command
+      name: check-certificates
+      command: |
+        echo "Checking certificates..."
+        kubectl get certificates -n default
+        kubectl get certificaterequests -n default
+        kubectl get secrets -n default | grep -E "(wildcard-cert-tls|api-cert-tls)"
+      on_failure: warn
+    - type: command
+      name: verify-secrets
+      command: |
+        echo "Verifying TLS secrets..."
+        kubectl get secret wildcard-cert-tls -n default -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -text | grep -A 1 "Subject:"
+        kubectl get secret api-cert-tls -n default -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -text | grep -A 1 "Subject:"
+      retry:
+        max_attempts: 3
+        delay: 10
+      on_failure: warn
+    - type: command
+      name: verify-issuers
+      command: |
+        echo "Verifying ClusterIssuers..."
+        kubectl get clusterissuers
+        kubectl describe clusterissuer letsencrypt-prd | grep -A 3 "Status:"
+        kubectl describe clusterissuer letsencrypt-stg | grep -A 3 "Status:"
+      on_failure: warn
+    dependency:
+      depends_on:
+      - create-certificates
+      wait_for:
+      - kind: Certificate
+        namespace: default
+        label_selector: cert-manager.io/issuer-kind=ClusterIssuer
+        condition: Ready
+        timeout: 300

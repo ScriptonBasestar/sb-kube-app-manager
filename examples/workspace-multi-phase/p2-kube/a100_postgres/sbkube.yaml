@@ -1,0 +1,13 @@
+apiVersion: sbkube/v1
+metadata:
+  name: a100_postgres
+settings:
+  namespace: database
+apps:
+  postgresql:
+    type: helm
+    enabled: true
+    chart: cloudnative-pg/cloudnative-pg
+    version: 0.18.0
+    values:
+    - values.yaml

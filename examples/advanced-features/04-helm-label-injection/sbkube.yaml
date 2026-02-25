@@ -1,0 +1,54 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 04-helm-label-injection
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: k3d-sbkube
+  cluster: k3d-sbkube
+  helm_repos:
+    grafana:
+      url: https://grafana.github.io/helm-charts
+    bitnami:
+      url: https://charts.bitnami.com/bitnami
+  namespace: label-injection-demo
+apps:
+  grafana:
+    type: helm
+    chart: grafana/grafana
+    version: 10.1.2
+    values:
+    - grafana-values.yaml
+    labels:
+      app: grafana
+      component: monitoring
+    annotations:
+      description: Grafana dashboard for metrics visualization
+  redis:
+    type: helm
+    chart: bitnami/redis
+    version: 18.0.0
+    helm_label_injection: false
+    values:
+    - redis-values.yaml
+    labels:
+      app: redis
+      component: cache
+    annotations:
+      description: Redis cache for session storage
+      schema-strict: 'true'
+  prometheus:
+    type: helm
+    chart: grafana/prometheus
+    version: 25.3.1
+    values:
+    - prometheus-values.yaml
+    labels:
+      app: prometheus
+      component: monitoring
+global_labels:
+  environment: development
+  managed-by: sbkube
+  team: platform
+global_annotations:
+  contact: platform-team@example.com
+  documentation: https://docs.example.com

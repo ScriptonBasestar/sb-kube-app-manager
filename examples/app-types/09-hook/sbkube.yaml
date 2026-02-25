@@ -1,0 +1,83 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 09-hook
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: k3d-sbkube
+  cluster: k3d-sbkube
+  helm_repos: {}
+  namespace: default
+apps:
+  setup-resources:
+    type: hook
+    labels:
+      app: hook-example
+      component: setup
+      managed-by: sbkube
+    annotations:
+      description: Demonstrates all three HookApp task types
+      version: 1.0.0
+    tasks:
+    - type: manifests
+      name: deploy-configmap
+      files:
+      - manifests/configmap.yaml
+      validation:
+        kind: ConfigMap
+        name: app-config
+        namespace: default
+        wait_for_ready: true
+        timeout: 60
+      rollback:
+        enabled: true
+        on_failure: always
+        commands:
+        - kubectl delete configmap app-config -n default --ignore-not-found=true
+    - type: inline
+      name: create-secret
+      content:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: app-credentials
+          namespace: default
+          labels:
+            app: hook-example
+        type: Opaque
+        stringData:
+          username: admin
+          password: changeme
+          api-key: demo-api-key-12345
+      validation:
+        kind: Secret
+        name: app-credentials
+        namespace: default
+        wait_for_ready: true
+        timeout: 60
+      rollback:
+        enabled: true
+        on_failure: always
+        commands:
+        - kubectl delete secret app-credentials -n default --ignore-not-found=true
+    - type: command
+      name: verify-resources
+      command: |
+        echo "=== Verifying deployed resources ==="
+        echo ""
+        echo "ConfigMap:"
+        kubectl get configmap app-config -n default -o yaml | grep -A 5 "data:"
+        echo ""
+        echo "Secret:"
+        kubectl get secret app-credentials -n default -o jsonpath='{.metadata.name}' && echo " (exists)"
+        echo ""
+        echo "=== Verification complete ==="
+      retry:
+        max_attempts: 3
+        delay: 5
+      on_failure: warn
+    rollback:
+      enabled: true
+      on_failure: always
+      commands:
+      - kubectl delete configmap app-config -n default --ignore-not-found=true
+      - kubectl delete secret app-credentials -n default --ignore-not-found=true

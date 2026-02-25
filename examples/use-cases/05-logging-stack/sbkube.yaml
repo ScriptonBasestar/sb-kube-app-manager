@@ -1,0 +1,32 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 05-logging-stack
+settings:
+  cluster: logging-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    grafana:
+      url: https://grafana.github.io/helm-charts
+  namespace: logging
+apps:
+  loki:
+    type: helm
+    chart: grafana/loki
+    values:
+    - values/loki-values.yaml
+    enabled: true
+  promtail:
+    type: helm
+    chart: grafana/promtail
+    values:
+    - values/promtail-values.yaml
+    depends_on:
+    - loki
+  grafana:
+    type: helm
+    chart: grafana/grafana
+    values:
+    - values/grafana-values.yaml
+    depends_on:
+    - loki

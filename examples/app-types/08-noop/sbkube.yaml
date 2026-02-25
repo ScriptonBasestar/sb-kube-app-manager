@@ -1,0 +1,16 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 08-noop
+settings:
+  namespace: noop-demo
+apps:
+  manual-setup:
+    type: noop
+    description: 수동으로 설정된 네트워크 정책 (이미 완료)
+    enabled: true
+  nginx:
+    type: yaml
+    files:
+    - manifests/nginx-deployment.yaml
+    depends_on:
+    - manual-setup

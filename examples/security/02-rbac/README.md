@@ -41,7 +41,7 @@ Kubernetes RBAC를 사용하여 세밀한 권한 관리를 구현하는 예제�
 ### 1. 전체 배포
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/security/02-rbac \
   --namespace rbac-demo
 ```

@@ -1,6 +1,0 @@
-namespace: kustomize-dev
-
-apps:
-  nginx-app:
-    type: kustomize
-    path: overlays/dev  # 환경별로 변경: overlays/dev 또는 overlays/prod

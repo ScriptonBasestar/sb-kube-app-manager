@@ -1,0 +1,46 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 03-helm-customization
+settings:
+  cluster: local-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    ingress-nginx:
+      url: https://kubernetes.github.io/ingress-nginx
+  namespace: helm-custom
+apps:
+  nginx-dev:
+    type: helm
+    chart: ingress-nginx/ingress-nginx
+    version: 4.12.0
+    release_name: nginx-dev
+    values:
+    - values/base-values.yaml
+    - values/dev-values.yaml
+    set_values:
+      controller.replicaCount: '1'
+      controller.resources.limits.memory: 256Mi
+  nginx-staging:
+    type: helm
+    chart: ingress-nginx/ingress-nginx
+    version: 4.12.0
+    release_name: nginx-staging
+    values:
+    - values/base-values.yaml
+    - values/staging-values.yaml
+    set_values:
+      controller.replicaCount: '2'
+      controller.service.type: LoadBalancer
+  nginx-prod:
+    type: helm
+    chart: ingress-nginx/ingress-nginx
+    version: 4.12.0
+    release_name: nginx-prod
+    values:
+    - values/base-values.yaml
+    - values/prod-values.yaml
+    set_values:
+      controller.replicaCount: '3'
+      controller.autoscaling.enabled: 'true'
+      controller.autoscaling.maxReplicas: '10'

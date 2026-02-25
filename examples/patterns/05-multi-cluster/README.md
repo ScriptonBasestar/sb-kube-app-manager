@@ -624,7 +624,7 @@ done
 ## 📚 Additional Resources
 
 - [SBKube Configuration Schema](../../../docs/03-configuration/config-schema.md)
-- [Helm Chart Customization](../../../docs/03-configuration/chart-customization.md)
+- [Helm Chart Customization](../../../docs/03-configuration/config-schema.md)
 - [Multi-Cluster Best Practices](../../../docs/05-best-practices/directory-structure.md)
 - [Deployment Guide](../../../docs/06-deployment/deployment-guide.md)
 

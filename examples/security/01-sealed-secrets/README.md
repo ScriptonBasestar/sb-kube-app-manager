@@ -57,7 +57,7 @@ spec:
 ### 1. 전체 스택 배포
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/security/01-sealed-secrets \
   --namespace sealed-secrets
 ```
@@ -87,7 +87,7 @@ kubectl exec -n sealed-secrets -it <pod-name> -- env | grep DATABASE
 
 ## 📖 설정 파일 설명
 
-### config.yaml
+### sbkube.yaml
 
 ```yaml
 namespace: sealed-secrets

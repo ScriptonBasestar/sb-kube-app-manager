@@ -1,0 +1,57 @@
+apiVersion: sbkube/v1
+metadata:
+  name: hooks-basic-all
+settings:
+  namespace: hooks-test
+apps:
+  redis:
+    type: helm
+    enabled: true
+    chart: grafana/redis
+    version: 17.11.3
+    values:
+    - redis-values.yaml
+    hooks:
+      pre_deploy:
+      - echo "[App-Level Shell] Redis - App-level pre-deploy hook"
+      - echo "App Name - $SBKUBE_APP_NAME"
+      - echo "App Type - $SBKUBE_APP_TYPE"
+      post_deploy:
+      - echo "[App-Level Shell] Redis - App-level post-deploy hook"
+      - kubectl get pods -n $SBKUBE_NAMESPACE -l app.kubernetes.io/name=redis
+      pre_deploy_manifests:
+      - manifests/configmap-phase1.yaml
+      post_deploy_tasks:
+      - type: manifests
+        name: deploy-phase2-cm
+        files:
+        - manifests/configmap-phase2.yaml
+      - type: inline
+        name: create-inline-cm
+        content:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: basic-inline-cm
+            namespace: hooks-test
+          data:
+            message: This ConfigMap was created by Phase 2 Inline Task
+            timestamp: '2025-10-31'
+      - type: command
+        name: verify-deployment
+        command: |
+          echo "[Phase 2 Command] Verifying deployment..."
+          kubectl get configmap -n hooks-test basic-phase1-cm
+          kubectl get configmap -n hooks-test basic-phase2-cm
+          kubectl get configmap -n hooks-test basic-inline-cm
+          echo "All ConfigMaps created successfully!"
+hooks:
+  deploy:
+    pre:
+    - echo "[Command-Level] Starting deployment for ALL apps"
+    - echo "Namespace - $SBKUBE_NAMESPACE"
+    - echo "Phase - $SBKUBE_PHASE"
+    post:
+    - echo "[Command-Level] Deployment completed for ALL apps"
+    on_failure:
+    - echo "[Command-Level] Deployment FAILED"

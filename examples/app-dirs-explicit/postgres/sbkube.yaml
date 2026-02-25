@@ -1,0 +1,15 @@
+apiVersion: sbkube/v1
+metadata:
+  name: postgres
+settings:
+  namespace: data
+apps:
+  postgresql:
+    type: helm
+    enabled: true
+    chart: prometheus-community/kube-state-metrics
+    version: 15.0.0
+    values:
+      auth:
+        enablePostgresUser: true
+        postgresPassword: testpassword

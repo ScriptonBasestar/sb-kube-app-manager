@@ -25,8 +25,8 @@ kubectl apply -f storageclass.yaml
 
 - `storageclass.yaml`: StorageClass definition (no-provisioner)
 - `pv-postgresql.yaml`: Manual PV for PostgreSQL
-- `config.yaml`: SBKube app configuration
-- `sources.yaml`: Helm repository configuration
+- `sbkube.yaml`: SBKube app configuration
+- `sbkube.yaml`: Helm repository configuration
 
 ## Workflow
 
@@ -39,7 +39,7 @@ kubectl apply -f storageclass.yaml
 ### Step 2: Validate (will fail without PV)
 
 ```bash
-sbkube validate
+sbkube validate -f sbkube.yaml
 
 # Expected output:
 # ❌ 1개의 PV가 없습니다:
@@ -81,7 +81,7 @@ kubectl get pv
 ### Step 5: Validate again (should pass)
 
 ```bash
-sbkube validate
+sbkube validate -f sbkube.yaml
 
 # Expected output:
 # ✅ 모든 필요한 PV 존재 확인 (1개)
@@ -91,7 +91,7 @@ sbkube validate
 ### Step 6: Deploy
 
 ```bash
-sbkube apply
+sbkube apply -f sbkube.yaml
 ```
 
 ### Step 7: Verify deployment

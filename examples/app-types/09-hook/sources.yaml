@@ -1,6 +1,0 @@
-# Kubernetes cluster configuration
-kubeconfig: ~/.kube/config
-kubeconfig_context: k3d-sbkube  # 사용할 Kubernetes 컨텍스트
-cluster: k3d-sbkube
-
-helm_repos: {}  # HookApp은 Helm 리포지토리 불필요

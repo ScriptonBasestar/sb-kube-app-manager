@@ -53,7 +53,7 @@ securityContext:
 ## 🚀 빠른 시작
 
 ```bash
-sbkube apply \
+sbkube apply -f sbkube.yaml \
   --app-dir examples/security/04-pod-security \
   --namespace podsec-demo
 ```

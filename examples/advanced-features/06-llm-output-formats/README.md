@@ -82,8 +82,8 @@ YAML format output (requires PyYAML).
 
 ```
 06-llm-output-formats/
-├── config.yaml          # Simple Redis deployment
-├── sources.yaml         # Cluster and Helm repo config
+├── sbkube.yaml          # Simple Redis deployment
+├── sbkube.yaml         # Cluster and Helm repo config
 ├── redis-values.yaml    # Minimal Redis configuration
 └── README.md            # This file
 ```
@@ -341,7 +341,7 @@ os.environ["SBKUBE_OUTPUT_FORMAT"] = "llm"
 # All subsequent commands use LLM format automatically
 subprocess.run(["sbkube", "apply", "--app-dir", "examples/advanced-features/06-llm-output-formats"])
 subprocess.run(["sbkube", "status", "--app-dir", "examples/advanced-features/06-llm-output-formats"])
-subprocess.run(["sbkube", "validate", "examples/advanced-features/06-llm-output-formats/config.yaml"])
+subprocess.run(["sbkube", "validate", "examples/advanced-features/06-llm-output-formats/sbkube.yaml"])
 ```
 
 ## 🔧 CI/CD Integration
@@ -548,13 +548,13 @@ Validate the configuration before deployment:
 
 ```bash
 # Validate with default (human) output
-uv run sbkube validate examples/advanced-features/06-llm-output-formats/config.yaml
+uv run sbkube validate -f sbkube.yaml examples/advanced-features/06-llm-output-formats/sbkube.yaml
 
 # Validate with LLM output
-uv run sbkube --format llm validate examples/advanced-features/06-llm-output-formats/config.yaml
+uv run sbkube --format llm validate examples/advanced-features/06-llm-output-formats/sbkube.yaml
 
 # Validate with JSON output
-uv run sbkube --format json validate examples/advanced-features/06-llm-output-formats/config.yaml
+uv run sbkube --format json validate examples/advanced-features/06-llm-output-formats/sbkube.yaml
 ```
 
 Expected output (LLM format):
@@ -562,13 +562,13 @@ Expected output (LLM format):
 ```
 VALIDATION: passed ✅
 
-CONFIG: examples/advanced-features/06-llm-output-formats/config.yaml
+CONFIG: examples/advanced-features/06-llm-output-formats/sbkube.yaml
 NAMESPACE: llm-demo
 APPS: 1
 
 CHECKS:
-- config.yaml: valid YAML ✅
-- sources.yaml: found ✅
+- sbkube.yaml: valid YAML ✅
+- sbkube.yaml: found ✅
 - redis-values.yaml: found ✅
 - modern format (v0.5.0+): ✅
 - app names: valid ✅
@@ -583,7 +583,7 @@ ERRORS: none
 
 ```bash
 # 1. Validate (human format for development)
-uv run sbkube validate examples/advanced-features/06-llm-output-formats/config.yaml
+uv run sbkube validate -f sbkube.yaml examples/advanced-features/06-llm-output-formats/sbkube.yaml
 
 # 2. Dry run (LLM format for quick check)
 uv run sbkube --format llm apply --app-dir examples/advanced-features/06-llm-output-formats --dry-run

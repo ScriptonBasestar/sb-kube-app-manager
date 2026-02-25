@@ -1,9 +1,0 @@
-namespace: yaml-demo
-
-apps:
-  nginx:
-    type: yaml
-    files:
-      - manifests/deployment.yaml
-      - manifests/service.yaml
-      - manifests/configmap.yaml

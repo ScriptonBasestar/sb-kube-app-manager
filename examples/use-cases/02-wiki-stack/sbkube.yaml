@@ -1,0 +1,26 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 02-wiki-stack
+settings:
+  cluster: wiki-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos: []
+  namespace: wiki-stack
+apps:
+  mysql:
+    type: yaml
+    manifests:
+    - manifests/mysql.yaml
+  mediawiki:
+    type: yaml
+    manifests:
+    - manifests/mediawiki.yaml
+    depends_on:
+    - mysql
+  wiki-ingress:
+    type: yaml
+    manifests:
+    - manifests/ingress.yaml
+    depends_on:
+    - mediawiki

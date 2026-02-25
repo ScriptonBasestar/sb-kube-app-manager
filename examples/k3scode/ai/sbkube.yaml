@@ -1,0 +1,20 @@
+apiVersion: sbkube/v1
+metadata:
+  name: ai
+settings:
+  namespace: k3scode-ai
+apps:
+  redis-ai:
+    type: helm
+    specs:
+      chart: bitnami/redis
+      version: 20.0.0
+      values:
+      - values/redis.yaml
+  qdrant:
+    type: helm
+    specs:
+      chart: qdrant/qdrant
+      version: 1.11.0
+      values:
+      - values/qdrant.yaml

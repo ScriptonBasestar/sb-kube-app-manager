@@ -1,0 +1,9 @@
+apiVersion: sbkube/v1
+metadata:
+  name: p3-kube
+settings:
+  cluster: production-cluster
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: production-cluster
+  helm_repos: {}
+apps: {}

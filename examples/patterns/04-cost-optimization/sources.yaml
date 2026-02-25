@@ -1,9 +1,0 @@
-# 클러스터 설정 (필수, v0.4.10+)
-cluster: cost-opt-k3s
-kubeconfig: ~/.kube/config
-kubeconfig_context: default
-
-# Helm 리포지토리
-helm_repos:
-  metrics-server:
-    url: https://kubernetes-sigs.github.io/metrics-server/

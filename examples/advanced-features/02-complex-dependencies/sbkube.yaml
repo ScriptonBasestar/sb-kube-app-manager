@@ -1,0 +1,76 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 02-complex-dependencies
+settings:
+  cluster: local-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos: []
+  namespace: complex-deps
+apps:
+  infra-setup:
+    type: action
+    actions:
+    - type: apply
+      path: manifests/namespace.yaml
+  postgresql:
+    type: yaml
+    files:
+    - manifests/postgresql.yaml
+    depends_on:
+    - infra-setup
+  redis:
+    type: yaml
+    files:
+    - manifests/redis.yaml
+    depends_on:
+    - infra-setup
+  auth-service:
+    type: yaml
+    files:
+    - manifests/auth-service.yaml
+    depends_on:
+    - postgresql
+  user-service:
+    type: yaml
+    files:
+    - manifests/user-service.yaml
+    depends_on:
+    - postgresql
+    - auth-service
+  order-service:
+    type: yaml
+    files:
+    - manifests/order-service.yaml
+    depends_on:
+    - postgresql
+    - redis
+    - user-service
+  api-gateway:
+    type: yaml
+    files:
+    - manifests/api-gateway.yaml
+    depends_on:
+    - auth-service
+    - user-service
+    - order-service
+  frontend:
+    type: yaml
+    files:
+    - manifests/frontend.yaml
+    depends_on:
+    - api-gateway
+  monitoring:
+    type: exec
+    commands:
+    - echo "Setting up monitoring..."
+    - kubectl get pods -n complex-deps
+  smoke-test:
+    type: exec
+    commands:
+    - echo "=== Running smoke tests ==="
+    - sleep 5
+    - kubectl get pods -n complex-deps
+    - echo "✅ All services deployed"
+    depends_on:
+    - frontend

@@ -1,0 +1,24 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 03-git
+settings:
+  cluster: local-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  git_repos:
+    example-charts:
+      url: https://github.com/example/helm-charts.git
+      branch: main
+  namespace: git-demo
+apps:
+  chart-source:
+    type: git
+    repo: example-charts
+    path: charts
+  example-app:
+    type: helm
+    chart: ./repos/example-charts/charts/nginx
+    values:
+    - example-values.yaml
+    depends_on:
+    - chart-source

@@ -1,0 +1,25 @@
+apiVersion: sbkube/v1
+metadata:
+  name: manual-pv-hostpath
+settings:
+  helm_repos:
+    grafana: https://grafana.github.io/helm-charts
+  namespace: database
+apps:
+  postgresql:
+    type: helm
+    chart: prometheus-community/kube-state-metrics
+    version: 13.0.0
+    values:
+      auth:
+        postgresPassword: changeme123
+        database: myapp
+      persistence:
+        enabled: true
+        storageClass: postgresql-hostpath
+        size: 8Gi
+      primary:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi

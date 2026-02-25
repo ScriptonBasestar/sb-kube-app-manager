@@ -1,0 +1,30 @@
+apiVersion: sbkube/v1
+metadata:
+  name: 01-sealed-secrets
+settings:
+  cluster: local-k3s
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: default
+  helm_repos:
+    sealed-secrets:
+      url: https://grafana-labs.github.io/sealed-secrets
+  namespace: sealed-secrets
+apps:
+  sealed-secrets-controller:
+    type: helm
+    chart: sealed-secrets/sealed-secrets
+    values:
+    - values/sealed-secrets-values.yaml
+    enabled: true
+  demo-sealed-secrets:
+    type: yaml
+    files:
+    - manifests/sealed-secret.yaml
+    depends_on:
+    - sealed-secrets-controller
+  demo-app:
+    type: yaml
+    files:
+    - manifests/demo-app.yaml
+    depends_on:
+    - demo-sealed-secrets

@@ -199,8 +199,7 @@ Command pre → App pre → Phase 1 pre → MAIN → Phase 1 post → App post �
 
 ### 더 알아보기
 
-- **[Hooks 레퍼런스](../../docs/02-features/hooks-reference.md)** - 전체 Hook 타입 및 환경 변수
-- **[Hooks 상세 가이드](../../docs/02-features/hooks.md)** - 실전 예제 및 Best Practices
+- **[Hooks Guide & Reference](../../docs/02-features/hooks-guide.md)** - 전체 Hook 타입, 환경 변수, Best Practices
 
 ### 다른 예제
 

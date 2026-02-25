@@ -1,692 +1,245 @@
-______________________________________________________________________
+---
+type: API Reference
+audience: End User
+topics: [cli, commands, reference]
+llm_priority: high
+last_updated: 2026-02-25
+---
 
-## type: API Reference audience: End User topics: [commands, cli, workflow, deployment, kubernetes] llm_priority: high last_updated: 2025-01-06
+# ⌨️ SBKube Commands Reference
 
-# 📋 SBKube 명령어 상세 가이드
-
-> **주의**: 이 문서는 명령어 사용자 가이드입니다. 기술적 구현 상세는 [ARCHITECTURE.md](../../docs/10-modules/sbkube/ARCHITECTURE.md)를 우선
-> 참조하세요.
+> SBKube CLI 명령어 전체 참조 문서입니다.
 
 ## TL;DR
 
-- **Purpose**: Complete reference for all SBKube CLI commands and their options
-- **Version**: v0.7.0 (개발 중), v0.6.0 (안정)
-- **Key Points**:
-  - Main workflow: `sbkube apply` (runs prepare→build→template→deploy)
-  - Quick start: `sbkube init` → `sbkube doctor` → `sbkube apply`
-  - Validation: `sbkube validate` for config checks, `--dry-run` for safe testing
-  - Troubleshooting: `sbkube doctor` for comprehensive system diagnostics
-  - All commands support `--format` option for LLM-friendly output
-- **Quick Reference**: See command table below
+- **Version**: v0.11.0
+- **Core Workflow**: `sbkube apply -f sbkube.yaml` (prepare → build → template → deploy)
+- **Config Format**: `sbkube.yaml` (unified format)
+- **Output Formats**: `--format human|llm|json|yaml`
 - **Related**:
-  - ****상위 문서**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 아키텍처 (어떻게)
-  - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
-  - **설정 참조**: [config-schema.md](../03-configuration/config-schema.md)
-  - **LLM 통합**: [llm-friendly-output.md](llm-friendly-output.md)
+  - **Config Schema**: [config-schema.md](../03-configuration/config-schema.md)
+  - **App Types**: [application-types.md](application-types.md)
 
-## 🚀 Quick Reference Table
-
-| Command | Category | Purpose | Key Options | |---------|----------|---------|-------------| | **apply** ⭐ | 통합 |
-Complete workflow (prepare→build→template→deploy) | --dry-run, --profile, --from-step, --resume | | **prepare** | 핵심 |
-Download sources (Helm charts, Git repos) | --app, --force | | **build** | 핵심 | Build and customize applications |
---app, overrides support | | **template** | 핵심 | Render Kubernetes manifests | --app, --output-dir | | **deploy** | 핵심 |
-Deploy to k3s cluster | --app, --dry-run | | **init** | 유틸리티 | Initialize project structure | --template, --force | |
-**validate** | 유틸리티 | Validate configuration files | --strict, --app-dir | | **doctor** | 유틸리티 | System diagnostics |
---detailed, --check | | **status** ⭐ | 상태관리 | Check deployment status (v0.6.0+) | --by-group, --managed, --unhealthy | |
-**history** | 상태관리 | View deployment history (v0.6.0+) | --show, --diff, --values-diff | | **rollback** | 상태관리 |
-Rollback to previous revision (v0.6.0+) | --dry-run, --force | | **upgrade** | 관리 | Upgrade Helm releases | --app | |
-**delete** | 관리 | Delete deployed resources | --app, --dry-run, --skip-not-found | | **check-updates** ⭐ | 관리 | Check for available chart updates (v0.9.1+) | --all, --update-config | | **version** | 유틸리티 | Show version
-info | |
-
-### 워크플로우별 명령어 조합
-
-```bash
-# 📦 처음 시작하기
-sbkube init                    # 1. 프로젝트 초기화
-sbkube doctor                  # 2. 환경 진단
-sbkube apply --dry-run         # 3. 배포 계획 확인
-sbkube apply                   # 4. 실제 배포
-
-# 🔄 일상적인 배포
-sbkube validate               # 1. 설정 검증
-sbkube apply --profile production  # 2. 프로덕션 배포
-
-# 🐛 문제 해결
-sbkube doctor --detailed      # 상세 진단
-sbkube status --unhealthy     # 문제 리소스 확인
-
-# 🔄 업데이트 관리 (v0.9.1+)
-sbkube check-updates          # 사용 가능한 차트 업데이트 확인
-sbkube check-updates --update-config  # config.yaml 자동 업데이트
-sbkube status --check-updates # 상태 확인과 동시에 업데이트 체크
-
-# 🧹 정리 및 재배포
-sbkube delete --dry-run       # 삭제 대상 확인
-sbkube delete && sbkube apply # 재배포
-```
+---
 
 ## Common Options
 
-### 전역 옵션 (All commands)
+모든 명령어에 사용 가능한 옵션:
 
-- `--kubeconfig PATH`: Kubernetes config file (env: KUBECONFIG)
-- `--context NAME`: Kubernetes context to use
-- `--namespace NS`: Default namespace (env: KUBE_NAMESPACE)
-- `-v, --verbose`: Enable verbose logging
-- `--format {human|llm|json|yaml}`: Output format (default: human)
-- `--help`: Show command help
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--format` | 출력 형식: `human`, `llm`, `json`, `yaml` | `human` |
+| `--verbose` / `-v` | 상세 로깅 | `false` |
+| `--kubeconfig` | kubeconfig 경로 | 설정 파일 값 |
+| `--context` | kubectl 컨텍스트 | 설정 파일 값 |
+| `--help` / `-h` | 도움말 | - |
 
-### 공통 워크플로우 옵션
+---
 
-- `--app-dir PATH`: Configuration directory (default: current directory)
-- `--base-dir PATH`: Working directory (default: .)
-- `--app NAME`: Process specific app only
-- `--config-file NAME`: Custom config filename
+## Core Workflow Commands
 
-### 배포 관련 옵션
+### ⭐ apply — 통합 배포
 
-- `--dry-run`: Preview changes without applying
-- `--profile NAME`: Use specific configuration profile (development/staging/production)
-- `--quiet`: Minimal output (suppress progress, show only results)
-
-## Detailed Command Reference
-
-### 🔄 Core Workflow Commands
-
-#### apply ⭐
-
-**Purpose**: Execute complete deployment workflow (prepare → build → template → deploy)
-
-**Usage**: `sbkube apply [OPTIONS]`
-
-**Unique Options**:
-
-- `--from-step {prepare|build|template|deploy}`: Start from specific step
-- `--to-step {prepare|build|template|deploy}`: End at specific step
-- `--only STEP`: Execute only specific step
-- `--continue-from STEP`: Restart from specific step
-- `--retry-failed`: Retry only failed apps
-- `--resume`: Auto-resume from last failure point
-- `--skip-deps-check`: Skip app group dependency validation
-
-**Examples**:
+가장 많이 사용하는 명령어. `prepare → build → template → deploy`를 순차 실행합니다.
 
 ```bash
-# Standard deployment
+# 기본 사용 (현재 디렉토리의 sbkube.yaml 자동 탐지)
 sbkube apply
 
-# Environment-specific
-sbkube apply --profile production
+# 설정 파일 지정
+sbkube apply -f sbkube.yaml
 
-# Step control
-sbkube apply --from-step template  # Start from template
-sbkube apply --only build          # Only run build
+# Dry-run
+sbkube apply -f sbkube.yaml --dry-run
 
-# Recovery
-sbkube apply --resume              # Auto-resume from failure
-sbkube apply --retry-failed        # Retry failed apps only
+# 특정 앱만
+sbkube apply -f sbkube.yaml --app grafana
+
+# 특정 Phase만
+sbkube apply -f sbkube.yaml --phase p1-infra
 ```
 
-**Features**:
+**Options**:
+- `-f, --file` — 설정 파일 경로
+- `--app` — 특정 앱만 실행
+- `--phase` — 특정 Phase만 실행
+- `--dry-run` — 실제 배포 없이 검증
+- `--skip-prepare` — prepare 단계 건너뜀
+- `--skip-build` — build 단계 건너뜀
 
-- Automatic 4-step execution
-- Smart restart from failure point
-- Profile-based environment management
-- Real-time progress tracking
-- State saved in `.sbkube/runs/`
-- Auto dependency validation via `deps` field
+### prepare — 소스 준비
 
-**Error Handling** (v0.6.1+): Enhanced error messages with solutions for:
-
-- DatabaseAuthenticationError
-- DatabaseConnectionError
-- HelmReleaseError
-- KubernetesConnectionError
-- NamespaceNotFoundError
-
-**See Also**: prepare, build, template, deploy
-
-______________________________________________________________________
-
-#### prepare
-
-**Purpose**: Download and prepare sources (Helm charts, Git repositories)
-
-**Usage**: `sbkube prepare [OPTIONS]`
-
-**Unique Options**:
-
-- `--source FILE`: Source config file (default: sources.yaml)
-- `--force`: Force re-download existing resources
-
-**Idempotency** (v0.4.6+):
-
-- Default: Skip existing charts/repos
-- `--force`: Delete and re-download
-- Safe for re-execution
-
-**Examples**:
+Helm 차트 pull, Git clone, HTTP 다운로드를 실행합니다.
 
 ```bash
-sbkube prepare               # Download all sources (idempotent)
-sbkube prepare --app nginx   # Specific app
-sbkube prepare --force       # Force re-download
+sbkube prepare -f sbkube.yaml
+sbkube prepare -f sbkube.yaml --app grafana
 ```
 
-**Creates**: `.sbkube/charts/`, `.sbkube/repos/`
+### build — 차트 빌드
 
-______________________________________________________________________
-
-#### build
-
-**Purpose**: Build deployment-ready artifacts from prepared sources
-
-**Usage**: `sbkube build [OPTIONS]`
-
-**Override System**:
-
-- Overrides must be explicitly listed in `config.yaml`
-- Supports file replacement and additions
-- Glob patterns supported (v0.4.9+)
-
-**Examples**:
+Overrides/Removes를 적용하여 배포 가능한 차트를 생성합니다.
 
 ```bash
-sbkube build                 # Build all apps
-sbkube build --app database  # Specific app
+sbkube build -f sbkube.yaml
+sbkube build -f sbkube.yaml --app grafana
 ```
 
-**Important**: Override files in `overrides/` directory are NOT auto-discovered. Must be listed in `config.yaml`:
+### template — 템플릿 렌더링
 
-```yaml
-apps:
-  myapp:
-    overrides:
-      - templates/*.yaml     # Glob pattern
-      - files/config.txt     # Explicit file
-```
-
-**Creates**: `.sbkube/build/`
-
-**See Also**: [config-schema.md](../03-configuration/config-schema.md) for override details
-
-______________________________________________________________________
-
-#### template
-
-**Purpose**: Render Helm charts and YAML to final manifests
-
-**Usage**: `sbkube template [OPTIONS]`
-
-**Unique Options**:
-
-- `--output-dir DIR`: Output directory (default: .sbkube/rendered)
-
-**Examples**:
+Helm template을 실행하여 최종 YAML을 생성합니다.
 
 ```bash
-sbkube template                         # Render all
-sbkube template --namespace production  # With namespace
-sbkube template --output-dir /tmp/out  # Custom output
+sbkube template -f sbkube.yaml
+sbkube template -f sbkube.yaml --app grafana --output-dir rendered/
 ```
 
-**Creates**: `.sbkube/rendered/`
+### deploy — 배포 실행
 
-**Automatic Manifest Cleanup** (v0.7.0+):
-
-Template command automatically removes server-managed metadata fields that may cause deployment failures.
-
-**Applies to**:
-
-- Helm apps (all rendered manifests)
-- YAML apps (all manifest files)
-- HTTP apps (YAML files only, non-YAML files unchanged)
-
-**Removed fields**:
-
-- `metadata.managedFields` (Server-Side Apply tracking)
-- `metadata.creationTimestamp` (auto-generated timestamp)
-- `metadata.resourceVersion` (cluster resource version)
-- `metadata.uid` (unique identifier)
-- `metadata.generation` (modification counter)
-- `metadata.selfLink` (deprecated API link)
-- `status` (entire section, managed by controllers)
-
-This prevents common errors like:
-
-```text
-Error: admission webhook denied the request: metadata.managedFields is not allowed
-```
-
-______________________________________________________________________
-
-#### deploy
-
-**Purpose**: Deploy applications to Kubernetes cluster
-
-**Usage**: `sbkube deploy [OPTIONS]`
-
-**Supports**:
-
-- `helm`: Helm chart installation
-- `yaml`: kubectl apply
-- `action`: Custom scripts
-- `exec`: Arbitrary commands
-
-**Examples**:
+빌드된 차트/매니페스트를 클러스터에 배포합니다.
 
 ```bash
-sbkube deploy             # Deploy all
-sbkube deploy --dry-run   # Preview only
-sbkube deploy --app web   # Specific app
+sbkube deploy -f sbkube.yaml
+sbkube deploy -f sbkube.yaml --app grafana --dry-run
 ```
 
-### 📊 State Management Commands (v0.6.0+)
+---
 
-#### status ⭐
+## Status & Management Commands
 
-**Purpose**: Comprehensive cluster and deployment status
+### status — 배포 상태
 
-**Usage**: `sbkube status [APP_GROUP] [OPTIONS]`
-
-**Unique Options**:
-
-- `--by-group`: Group by app-groups
-- `--managed`: Show only sbkube-managed apps
-- `--unhealthy`: Show only problematic resources
-- `--deps`: Visualize dependency tree (Phase 6)
-- `--health-check`: Detailed pod health (Phase 7)
-- `--check-updates`: Check for available chart updates (v0.9.1+)
-- `--refresh`: Force cache refresh
-- `--watch`: Auto-refresh every 10s
-
-**Cache Files** (v0.6.2+):
-
-Single shared base cache file for all views:
-
-```
-.sbkube/cluster_status/
-└── {context}_{cluster}.yaml
-    ├── helm_releases: [with labels for app-group classification]
-    ├── nodes: [cluster node status]
-    ├── namespaces: [list of namespaces]
-    └── ...
-```
-
-**App-group Classification** (v0.6.2+):
-
-Releases are classified by app-group using priority:
-
-1. **Label** (recommended): `sbkube.io/app-group=app_000_infra_network`
-
-   - Set at Helm release install time
-   - Most reliable and explicit
-
-1. **State DB**: Previous deployment records from sbkube
-
-   - Falls back if label not present
-
-1. **Name pattern**: Release name like `app_000_...`
-
-   - Auto-extracted from name
-
-1. **Namespace pattern**: Namespace like `app_000_...`
-
-   - Last resort fallback
-
-**Example**: Deploy with label
+현재 배포 상태를 확인합니다.
 
 ```bash
-helm install myapp chart/ \
-  --set-string='podAnnotations.sbkube\.io/app-group=app_000_infra_network'
+sbkube status -f sbkube.yaml
+sbkube status -f sbkube.yaml --app grafana
 ```
 
-Cache expires in 5 minutes (TTL-based). Use `--refresh` to force update.
+### history — 배포 이력
 
-**Examples**:
+배포 이력을 조회합니다.
 
 ```bash
-sbkube status                           # Overall status
-sbkube status --by-group                # Grouped view
-sbkube status --unhealthy               # Problems only
-sbkube status app_000_infra_network     # Specific group
-sbkube status --deps                    # Dependency tree
-
-# Force refresh and create new cache
-sbkube status --by-group --refresh
+sbkube history -f sbkube.yaml
+sbkube history -f sbkube.yaml --limit 10
 ```
 
-**Replaces**: `sbkube cluster status` (deprecated)
+### rollback — 롤백
 
-______________________________________________________________________
-
-#### history
-
-**Purpose**: View and compare deployment history
-
-**Usage**: `sbkube history [APP_GROUP] [OPTIONS]`
-
-**Unique Options**:
-
-- `--show ID`: Show deployment details
-- `--diff ID1,ID2`: Compare deployments (Phase 5)
-- `--values-diff ID1,ID2`: Compare Helm values (Phase 5)
-- `--cluster NAME`: Filter by cluster
-- `--limit N`: Limit results (default: 50)
-
-**Examples**:
+이전 배포 상태로 롤백합니다.
 
 ```bash
-sbkube history                          # Recent deployments
-sbkube history --show dep_123           # Deployment details
-sbkube history --diff dep_123,dep_456   # Compare deployments
-sbkube history --values-diff old,new    # Compare Helm values
+sbkube rollback -f sbkube.yaml --app grafana
+sbkube rollback -f sbkube.yaml --app grafana --revision 3
 ```
 
-**Replaces**: `sbkube state list/show` (deprecated)
+### destroy — 리소스 삭제
 
-______________________________________________________________________
-
-#### rollback
-
-**Purpose**: Rollback to previous deployment
-
-**Usage**: `sbkube rollback <DEPLOYMENT_ID> [OPTIONS]`
-
-**Unique Options**:
-
-- `--list`: Show rollback candidates
-- `--scope {app|phase|all}`: Rollback scope (v0.11.0+)
-  - `app`: Rollback specific app(s) only (default)
-  - `phase`: Rollback all apps deployed in a specific phase
-  - `all`: Rollback entire deployment (all apps)
-- `--phase/-p`: Phase name to rollback (requires `--scope=phase`)
-- `--app/-a`: Specific app(s) to rollback (can be specified multiple times)
-- `--target`: Specific deployment ID to rollback to
-
-**Examples**:
+배포된 리소스를 삭제합니다.
 
 ```bash
-# List rollback candidates
-sbkube rollback --list --cluster prod --namespace kube-system
-
-# Rollback specific app only (scope=app, default)
-sbkube rollback dep_123 --app traefik --dry-run
-
-# Rollback entire phase (scope=phase)
-sbkube rollback dep_123 --scope phase --phase p1-infra
-
-# Rollback entire deployment (scope=all)
-sbkube rollback dep_123 --scope all
-
-# Force rollback (ignore warnings)
-sbkube rollback dep_123 --force
+sbkube destroy -f sbkube.yaml
+sbkube destroy -f sbkube.yaml --app grafana
+sbkube destroy -f sbkube.yaml --yes  # 확인 없이 삭제
 ```
 
-**Replaces**: `sbkube state rollback` (deprecated)
+---
 
-### 🛠️ Utility Commands
+## Utility Commands
 
-#### init
+### validate — 설정 검증
 
-**Purpose**: Initialize new SBKube project
-
-**Usage**: `sbkube init [OPTIONS]`
-
-**Unique Options**:
-
-- `--template {basic|web-app|microservice}`: Project template (default: basic)
-- `--name NAME`: Project name (default: directory name)
-- `--non-interactive`: Skip prompts
-
-**Creates**: `config.yaml`, `sources.yaml`, `.sbkube/`
-
-______________________________________________________________________
-
-#### validate
-
-**Purpose**: Validate configuration files
-
-**Usage**: `sbkube validate [FILE] [OPTIONS]`
-
-**Unique Options**:
-
-- `--schema-type {config|sources}`: Schema type (auto-detected)
-- `--schema-path PATH`: Custom schema file
-
-**Examples**:
+설정 파일의 문법/스키마를 검증합니다.
 
 ```bash
-sbkube validate                         # Current directory
-sbkube validate config.yaml             # Specific file
-sbkube validate --app-dir redis         # App directory
+sbkube validate
+sbkube validate -f sbkube.yaml
 ```
 
-**Validates**:
-
-- JSON schema compliance
-- Pydantic model validation
-- Required fields
-- App group dependencies
-
-______________________________________________________________________
-
-#### doctor
-
-**Purpose**: Comprehensive system diagnostics
-
-**Usage**: `sbkube doctor [OPTIONS]`
-
-**Unique Options**:
-
-- `--detailed`: Verbose diagnostics
-- `--check NAME`: Run specific check only
-
-**Checks**:
-
-- Kubernetes connectivity
-- Helm installation
-- Configuration validity
-- Permissions and resources
-
-**Examples**:
+### version — 버전 정보
 
 ```bash
-sbkube doctor                           # Basic diagnostics
-sbkube doctor --detailed                # Verbose output
-sbkube doctor --check k8s_connectivity  # Specific check
+sbkube version
+# sbkube, version 0.11.0
 ```
 
-______________________________________________________________________
+### doctor — 환경 진단
 
-#### version
-
-**Purpose**: Show SBKube version
-
-**Usage**: `sbkube version`
-
-### 🔧 Management Commands
-
-#### upgrade
-
-**Purpose**: Upgrade Helm releases
-
-**Usage**: `sbkube upgrade [OPTIONS]`
-
-**Supports**: Helm releases only
-
-**Examples**:
+시스템 요구사항(kubectl, helm, git 등)을 확인합니다.
 
 ```bash
-sbkube upgrade                # Upgrade all
-sbkube upgrade --app database # Specific app
+sbkube doctor
 ```
 
-______________________________________________________________________
+---
 
-#### delete
-
-**Purpose**: Delete deployed resources
-
-**Usage**: `sbkube delete [OPTIONS]`
-
-**Unique Options**:
-
-- `--skip-not-found`: Ignore missing resources
-
-**Supports**:
-
-- `helm`: helm uninstall
-- `yaml`: kubectl delete
-- `action`: Custom uninstall scripts
-
-**Examples**:
+## Output Formats
 
 ```bash
-sbkube delete --dry-run        # Preview deletion
-sbkube delete --app nginx      # Delete specific app
-sbkube delete --skip-not-found # Ignore if not found
+# Rich console (기본)
+sbkube --format human apply -f sbkube.yaml
+
+# LLM에 최적화된 간결 출력 (토큰 80-90% 절감)
+sbkube --format llm apply -f sbkube.yaml
+
+# 구조화된 JSON
+sbkube --format json status -f sbkube.yaml
+
+# YAML
+sbkube --format yaml status -f sbkube.yaml
 ```
 
-______________________________________________________________________
+> 상세 LLM 출력 가이드: [llm-friendly-output.md](llm-friendly-output.md)
 
-#### check-updates ⭐
+---
 
-**Purpose**: Check for available Helm chart updates
+## Workflow Patterns
 
-**Usage**: `sbkube check-updates [OPTIONS]`
-
-**Version**: Added in v0.9.1
-
-**Unique Options**:
-
-- `--all`: Check all Helm releases in cluster (not just sbkube-managed apps)
-- `--update-config`: Update config.yaml with latest versions (prompts for confirmation)
-
-**Features**:
-
-- Compares currently deployed chart versions with latest available in repositories
-- Semantic version comparison (identifies major/minor/patch updates)
-- Shows upgrade commands for easy updating
-- Can automatically update config.yaml with latest versions
-- Supports both sbkube-managed apps and all cluster Helm releases
-
-**Output Information**:
-
-- Current version → Latest version
-- Update type (Major 🔴 / Minor 🟡 / Patch 🟢)
-- Upgrade command suggestion
-- Summary of updates available
-
-**Examples**:
+### 표준 배포 (권장)
 
 ```bash
-# Check sbkube-managed apps for updates
-sbkube check-updates
-
-# Check all Helm releases in cluster
-sbkube check-updates --all
-
-# Update config.yaml with latest versions (interactive)
-sbkube check-updates --update-config
-
-# Integrate with status command
-sbkube status --check-updates
-
-# LLM-friendly output
-sbkube check-updates --format llm
+sbkube apply -f sbkube.yaml
 ```
 
-**Integration**:
-
-The `check-updates` functionality is also available as part of the `status` command:
+### 단계별 디버깅
 
 ```bash
-# Check status and available updates in one command
-sbkube status --check-updates
+sbkube validate -f sbkube.yaml     # 1. 설정 검증
+sbkube prepare -f sbkube.yaml      # 2. 소스 준비
+sbkube build -f sbkube.yaml        # 3. 차트 빌드
+sbkube template -f sbkube.yaml     # 4. 렌더링 확인
+sbkube deploy -f sbkube.yaml --dry-run  # 5. Dry-run
+sbkube deploy -f sbkube.yaml       # 6. 실제 배포
 ```
 
-**Version Comparison Logic**:
-
-- **Major update** (🔴): Breaking changes expected (e.g., 1.x.x → 2.x.x)
-- **Minor update** (🟡): New features, backward compatible (e.g., 1.0.x → 1.1.x)
-- **Patch update** (🟢): Bug fixes only (e.g., 1.0.0 → 1.0.1)
-
-## Advanced Usage Patterns
-
-### Environment Management
+### 특정 앱만 재배포
 
 ```bash
-# Development → Staging → Production
-sbkube apply --profile development
-sbkube apply --profile staging
-sbkube apply --profile production
+sbkube apply -f sbkube.yaml --app grafana --skip-prepare
 ```
 
-### Failure Recovery
+### Multi-Phase 배포
 
 ```bash
-# Auto-resume from failure
-sbkube apply --resume
+# 전체 Phase 순서대로
+sbkube apply -f sbkube.yaml
 
-# Retry only failed apps
-sbkube apply --retry-failed
-
-# Start from specific step
-sbkube apply --continue-from template
+# 특정 Phase만
+sbkube apply -f sbkube.yaml --phase p1-infra
 ```
 
-### Dependency Management
-
-Apps can declare dependencies via `deps` field:
-
-```yaml
-apps:
-  - name: app_020_backend
-    deps:
-      - app_000_network
-      - app_010_database
-```
-
-Apply automatically validates dependencies are deployed.
-
-## Command Output Formats
-
-All commands support multiple output formats via `--format`:
-
-- `human` (default): Rich formatted output for terminals
-- `llm`: Structured text optimized for AI parsing
-- `json`: Machine-readable JSON
-- `yaml`: YAML format
-
-Example:
-
-```bash
-sbkube status --format llm
-sbkube history --format json
-```
-
-See [llm-friendly-output.md](llm-friendly-output.md) for details.
-
-## Deprecated Commands
-
-The following will be removed in v1.0.0:
-
-| Old (Deprecated) | New (Recommended) | |-----------------|-------------------| | `sbkube cluster status` |
-`sbkube status` | | `sbkube state list` | `sbkube history` | | `sbkube state show <id>` | `sbkube history --show <id>` |
-| `sbkube state rollback <id>` | `sbkube rollback <id>` |
-
-______________________________________________________________________
+---
 
 ## Related Documentation
 
-- ****상위 문서**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 아키텍처 (어떻게)
-- **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
-- **기능 명세**: [../00-product/product-spec.md](../00-product/product-spec.md) - 전체 기능 상세
-- **설정 참조**: [config-schema.md](../03-configuration/config-schema.md) - 설정 파일 스키마
-- **LLM 통합**: [llm-friendly-output.md](llm-friendly-output.md) - LLM 친화적 출력
-- **문제 해결**: [../07-troubleshooting/deployment-failures.md](../07-troubleshooting/deployment-failures.md) - 배포 문제 해결
+- **Config Schema**: [config-schema.md](../03-configuration/config-schema.md)
+- **App Types**: [application-types.md](application-types.md)
+- **Hooks**: [hooks-guide.md](hooks-guide.md)
+- **Troubleshooting**: [../07-troubleshooting/README.md](../07-troubleshooting/README.md)
 
-______________________________________________________________________
+---
 
-**문서 버전**: 1.1 **마지막 업데이트**: 2025-01-06 **담당자**: archmagece@users.noreply.github.com
+**Document Version**: 3.0
+**Last Updated**: 2026-02-25
+**SBKube Version**: 0.11.0

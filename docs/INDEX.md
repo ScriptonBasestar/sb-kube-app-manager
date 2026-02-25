@@ -1,230 +1,163 @@
 ---
-type: Navigation Index
-audience: End User, Developer, AI Agent
-topics: [navigation, index, documentation-map]
-llm_priority: high
-always_load: true
+type: Index
+audience: All
+topics: [documentation, index, navigation]
+llm_priority: critical
 last_updated: 2026-02-25
 ---
 
 # 📚 SBKube Documentation Index
 
-> Kubernetes deployment automation CLI tool for k3s with Helm, YAML, and Git integration
+> SBKube v0.11.0 문서 탐색 허브입니다.
 
-**SBKube** is a CLI tool for automating Kubernetes deployments on k3s clusters. It integrates Helm charts, YAML manifests, and Git repositories into a unified declarative configuration.
+## Quick Navigation
 
-**SBKube**는 YAML, Helm, Git 리소스를 로컬에서 정의하고 Kubernetes 환경에 일관되게 배포할 수 있는 CLI 도구입니다.
-
----
-
-## 🔍 Quick Navigation
-
-| I want to... | Go to |
-|--------------|-------|
-| **Understand SBKube** | [PRODUCT.md](../PRODUCT.md) |
-| **Install and use** | [Getting Started](01-getting-started/README.md) |
-| **Configure deployments** | [Configuration Guide](03-configuration/config-schema.md) |
-| **Learn commands** | [Commands Reference](02-features/commands.md) |
-| **Troubleshoot** | [Troubleshooting](07-troubleshooting/README.md) |
-| **Contribute code** | [Developer Guide](04-development/README.md) |
-| **Understand architecture** | [Architecture](10-modules/sbkube/ARCHITECTURE.md) |
+| 목적 | 문서 |
+|------|------|
+| **프로젝트 개요** | [PRODUCT.md](../PRODUCT.md) |
+| **아키텍처** | [ARCHITECTURE.md](../ARCHITECTURE.md) |
+| **기술 스택** | [TECH_STACK.md](../TECH_STACK.md) |
+| **설정 스키마** | [03-configuration/config-schema.md](03-configuration/config-schema.md) |
+| **명령어 참조** | [02-features/commands.md](02-features/commands.md) |
+| **앱 타입** | [02-features/application-types.md](02-features/application-types.md) |
+| **Hooks** | [02-features/hooks-guide.md](02-features/hooks-guide.md) |
+| **마이그레이션** | [03-configuration/migration-guide.md](03-configuration/migration-guide.md) |
+| **문제 해결** | [07-troubleshooting/README.md](07-troubleshooting/README.md) |
+| **개발 가이드** | [04-development/README.md](04-development/README.md) |
+| **AI 작업 가이드** | [CLAUDE.md](../CLAUDE.md) |
 
 ---
 
-## 📋 문서 구조
-
-### 🚀 [시작하기](01-getting-started/)
-
-- 설치 및 환경 설정
-- 빠른 시작 가이드
-- 기본 사용 예제
-
-### ⚙️ [기능 설명](02-features/)
-
-- [전체 기능 개요](02-features/README.md)
-- [명령어 참조](02-features/commands.md)
-- [Hooks 가이드](02-features/hooks-guide.md)
-- [Hooks 참조](02-features/hooks-reference.md)
-- [LLM-Friendly Output](02-features/llm-friendly-output.md)
-- 지원 애플리케이션 타입 설명
-
-### 🔧 [설정 가이드](03-configuration/)
-
-- 설정 파일 스키마 (config.yaml, sources.yaml)
-- [설정 마이그레이션](03-configuration/migration-guide.md)
-- JSON 스키마 검증
-
-### 👨‍💻 [개발자 가이드](04-development/)
-
-- [개발 환경 구성](04-development/README.md)
-- [테스트 가이드](04-development/testing.md)
-- 기여 방법 및 코드 스타일
-
-### 🚀 [배포 가이드](06-deployment/)
-
-- [배포 가이드](06-deployment/deployment-guide.md)
-- PyPI 패키지 배포
-- 로컬 개발 환경 설치
-- 프로덕션 배포 방법
-
-### 🔍 [문제 해결](07-troubleshooting/)
-
-- [일반적인 문제 및 해결책](07-troubleshooting/README.md)
-- [자주 묻는 질문 (FAQ)](07-troubleshooting/faq.md)
-- 디버깅 가이드
-
-### 📚 [튜토리얼](08-tutorials/)
-
-- [첫 번째 배포](08-tutorials/01-getting-started.md)
-- [다중 앱 배포](08-tutorials/02-multi-app-deployment.md)
-- [프로덕션 배포](08-tutorials/03-production-deployment.md)
-- [고급 커스터마이징](08-tutorials/04-customization.md)
-- [문제 해결 실습](08-tutorials/05-troubleshooting.md)
-
----
-
-## 🎯 주요 특징
-
-### 다단계 워크플로우
+## 문서 구조
 
 ```
-prepare → build → template → deploy
+docs/
+├── INDEX.md                          ← 현재 문서
+│
+├── 00-product/                       # 제품 정의
+│   ├── product-spec.md               # 제품 사양
+│   ├── target-users.md               # 대상 사용자
+│   └── vision-roadmap.md             # 비전/로드맵
+│
+├── 01-getting-started/               # 시작하기
+│   └── README.md
+│
+├── 02-features/                      # 기능 참조
+│   ├── README.md
+│   ├── commands.md                   # CLI 명령어 참조
+│   ├── application-types.md          # 9가지 앱 타입
+│   ├── hooks-guide.md                # Hooks 통합 가이드
+│   └── llm-friendly-output.md        # LLM 출력 형식
+│
+├── 03-configuration/                 # 설정
+│   ├── config-schema.md              # sbkube.yaml 스키마 (Primary)
+│   └── migration-guide.md            # 버전별 마이그레이션
+│
+├── 04-development/                   # 개발
+│   ├── README.md
+│   ├── coding-standards.md
+│   ├── quick-commands.md
+│   └── testing.md
+│
+├── 05-best-practices/                # 모범 사례
+│   ├── directory-structure.md
+│   └── storage-management.md
+│
+├── 06-deployment/                    # 배포
+│   └── deployment-guide.md
+│
+├── 07-troubleshooting/               # 문제 해결
+│   ├── README.md                     # Quick reference
+│   ├── error-reference.md            # 에러 전체 목록
+│   ├── common-dev-issues.md          # 개발 환경 이슈
+│   ├── deployment-failures.md        # 배포 실패
+│   ├── chart-collision-issues.md     # 차트 충돌
+│   ├── storage-issues.md             # 스토리지 이슈
+│   └── faq.md
+│
+├── 08-tutorials/                     # 튜토리얼
+│   ├── README.md                     # 학습 경로
+│   ├── 02-multi-app-deployment.md
+│   ├── 03-production-deployment.md
+│   ├── 04-customization.md
+│   ├── 05-version-migration.md
+│   └── 06-using-llm-output.md
+│
+├── 10-modules/sbkube/                # 모듈 기술 문서
+│   ├── ARCHITECTURE.md               # 내부 아키텍처
+│   ├── MODULE.md                     # 모듈 개요
+│   └── API_CONTRACT.md               # API 계약
+│
+└── 99-internal/                      # 내부 문서
+    ├── documentation-guidelines.md
+    └── archive/                      # 아카이브
+        ├── hooks-improvement-phase1-3.md
+        ├── unified-config-design-v0.10.md
+        └── registry-design-future.md
 ```
-
-### 지원 애플리케이션 타입
-
-- **helm** / **git** / **http** - 소스 준비
-
-- **helm** / **yaml** / **action** / **exec** - 배포 방법
-
-### 설정 파일
-
-- **sbkube.yaml** - 통합 설정 (v0.10.0+, 권장)
-- **config.yaml** + **sources.yaml** - 레거시 분리 설정
-- **values/** - Helm 값 파일 디렉토리
 
 ---
 
-## 🚀 빠른 시작
+## Core Concepts
+
+### SBKube란?
+
+k3s 기반 Kubernetes 클러스터에 애플리케이션을 선언적으로 배포하는 CLI 도구입니다.
+
+### Core Workflow
+
+```
+sbkube apply -f sbkube.yaml
+  └─ prepare → build → template → deploy
+```
+
+### Config Format
+
+단일 `sbkube.yaml` 파일로 모든 설정을 관리합니다:
+
+```yaml
+apiVersion: sbkube/v1
+metadata:
+  name: my-cluster
+settings:
+  kubeconfig: ~/.kube/config
+  namespace: production
+  helm_repos:
+    grafana: https://grafana.github.io/helm-charts
+apps:
+  grafana:
+    type: helm
+    chart: grafana/grafana
+    version: "10.1.2"
+phases:
+  p1-infra:
+    source: p1-infra/sbkube.yaml
+```
+
+### 9 App Types
+
+`helm` · `yaml` · `git` · `http` · `action` · `exec` · `kustomize` · `noop` · `hook`
+
+### Installation
 
 ```bash
-# 설치
-pip install sbkube
-
-# 기본 워크플로우
-sbkube prepare --base-dir . --app-dir config
-sbkube build --base-dir . --app-dir config  
-sbkube template --base-dir . --app-dir config --output-dir rendered/
-sbkube deploy --base-dir . --app-dir config --namespace <namespace>
+uv tool install sbkube
+sbkube version
 ```
 
 ---
 
-## 🏗️ 아키텍처 개요
+## LLM Priority Guide
 
-### 핵심 구조
+AI/LLM이 참조할 때 우선순위:
 
-- **sbkube/** - 메인 Python 패키지
-  - **cli.py** - Click 기반 CLI 엔트리포인트
-  - **commands/** - 개별 명령어 구현
-  - **models/** - Pydantic 데이터 모델
-  - **utils/** - 공통 유틸리티
-
-### 실행 중 디렉토리 구조
-
-- **charts/** - 다운로드된 Helm 차트 (prepare 단계)
-- **repos/** - 클론된 Git 저장소 (prepare 단계)
-- **build/** - 빌드된 애플리케이션 아티팩트 (build 단계)
-- **rendered/** - 템플릿된 YAML 출력 (template 단계)
+1. **Critical**: 이 INDEX.md, config-schema.md, commands.md
+2. **High**: application-types.md, ARCHITECTURE.md
+3. **Medium**: hooks-guide.md, migration-guide.md
+4. **Low**: tutorials, troubleshooting (필요 시 참조)
 
 ---
 
-## 📚 관련 자료
-
-### 공식 저장소
-
-- 🏠 [GitHub Repository](https://github.com/ScriptonBasestar/kube-app-manaer)
-- 📦 [PyPI Package](https://pypi.org/project/sbkube/)
-
-### 개발 정보
-
-- 🏢 **개발**: [ScriptonBasestar](https://github.com/ScriptonBasestar)
-- 📄 **라이선스**: MIT License
-- 🐍 **Python**: 3.14 이상 required
-- 🛠️ **의존성**: Click, Pydantic, PyYAML, GitPython
-
----
-
-## 💬 지원 및 기여
-
-- 📋 [이슈 트래커](https://github.com/ScriptonBasestar/kube-app-manaer/issues)
-- 📧 **문의**: archmagece@users.noreply.github.com
-- 🤝 **기여**: [개발자 가이드](04-development/README.md) 참조
-
----
-
-## 🔗 내부 문서 (개발팀용)
-
-### [99-internal/](99-internal/) *(메인 인덱스에서 제외)*
-
-> 💡 **Note**: 99-internal 디렉토리는 내부 작업 문서로, 공식 문서에서 제외됩니다.
-> 개발 중 임시 노트, 백로그, 작업 메모 등을 포함합니다.
-
-- 개발 백로그 및 향후 구현 예정 기능
-- 문서 업데이트 필요 항목 추적
-- 임시 작업 노트 및 메모
-
-### AI 작업 가이드
-
-- [CLAUDE.md](../CLAUDE.md) - AI 에이전트를 위한 통합 작업 가이드
-
----
-
-## 🤖 Context7 Integration (For LLMs)
-
-This documentation is optimized for Context7 and AI agent access:
-
-### Library Information
-- **Library ID**: `/archmagece/sbkube` (registration pending)
-- **Repository**: https://github.com/archmagece/sb-kube-app-manager
-- **Documentation URL**: https://github.com/archmagece/sb-kube-app-manager/tree/main/docs
-- **Primary Language**: English (with Korean translations)
-- **Code Examples**: 100+ snippets across documentation
-
-### Key Topics for LLM Queries
-
-**Commands**:
-- `prepare` - Download Helm charts and Git repositories
-- `build` - Build Docker images
-- `template` - Render Kubernetes manifests
-- `deploy` - Apply manifests to cluster
-- `apply` - Unified workflow (all stages)
-- `status` - Check deployment status
-- `history` - View deployment history
-- `rollback` - Rollback to previous version
-
-**Configuration**:
-- `config.yaml` - Application definitions and deployment specs
-- `sources.yaml` - External sources (Helm repos, Git repos)
-- Helm chart customization - `overrides` and `removes`
-- Dependency management - `depends_on` configuration
-
-**Architecture**:
-- Multi-stage workflow: prepare → build → template → deploy
-- Pydantic-based validation
-- SQLAlchemy state management
-- Click CLI framework
-
-### Document Priority for AI Agents
-
-1. **Product Understanding**: [PRODUCT.md](../PRODUCT.md) → [product-spec.md](00-product/product-spec.md)
-2. **Implementation**: [ARCHITECTURE.md](10-modules/sbkube/ARCHITECTURE.md) → [API_CONTRACT.md](10-modules/sbkube/API_CONTRACT.md)
-3. **Usage**: [commands.md](02-features/commands.md) → [config-schema.md](03-configuration/config-schema.md)
-4. **Troubleshooting**: [troubleshooting/](07-troubleshooting/)
-
-See [CLAUDE.md](../CLAUDE.md) for complete AI agent guidelines.
-
----
-
-*📅 Last Updated: 2026-02-25 | 📋 Documentation Version: v2.0*
-*🎯 SBKube v0.11.0 | 🌐 English + Korean*
+**Document Version**: 3.0
+**Last Updated**: 2026-02-25
+**SBKube Version**: 0.11.0

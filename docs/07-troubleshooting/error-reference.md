@@ -212,8 +212,8 @@ apps:
 
 **Related:**
 
-- [config-schema.md#oci-registry](../03-configuration/config-schema.md#oci-registry) - Detailed OCI usage guide
-- [sources-schema.md](../03-configuration/sources-schema.md) - sources.yaml schema
+- [config-schema.md#oci-registry](../03-configuration/config-schema.md#oci-registry) - OCI registry configuration
+- [config-schema.md](../03-configuration/config-schema.md) - Configuration schema
 - [examples/prepare/helm-oci/](../../examples/prepare/helm-oci/) - Complete OCI example
 
 ______________________________________________________________________
@@ -1343,9 +1343,7 @@ post_deploy_tasks:
 
 **Related Documentation:**
 
-- **[Hooks Reference](../02-features/hooks-reference.md)** - All hook types and environment variables
-- **[Hooks Guide](../02-features/hooks-guide.md)** - Practical examples and best practices
-- **[Hooks Migration Guide](../02-features/hooks-migration-guide.md)** - Phase transition guide
+- **[Hooks Guide & Reference](../02-features/hooks-guide.md)** - All hook types, environment variables, and best practices
 
 ______________________________________________________________________
 

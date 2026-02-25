@@ -478,7 +478,7 @@ sbkube status --unhealthy && exit 1
 - **Complete Command Reference**: [Commands Documentation](docs/02-features/commands.md)
 - **Application Types**: [App Types Guide](docs/02-features/application-types.md)
 - **Hooks System**: [Hooks Guide](docs/02-features/hooks-guide.md)
-- **Unified Multi-Phase Guide**: [Unified Config Schema](docs/03-configuration/unified-config-schema.md)
+- **Unified Multi-Phase Guide**: [Config Schema](docs/03-configuration/config-schema.md)
 - **Troubleshooting**: [Common Issues](docs/07-troubleshooting/README.md)
 - **Examples**: [Example Configurations](examples/)
 

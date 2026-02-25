@@ -228,5 +228,5 @@ global:
 
 ## See Also
 
-- [sources-schema.md](../../docs/03-configuration/sources-schema.md) - sources.yaml specification
+- [config-schema.md](../../docs/03-configuration/config-schema.md) - Configuration schema
 - [config-schema.md](../../docs/03-configuration/config-schema.md) - config.yaml specification

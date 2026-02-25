@@ -1,953 +1,560 @@
-______________________________________________________________________
+---
+type: API Reference
+audience: End User
+topics: [configuration, schema, sbkube-yaml, unified-config]
+llm_priority: high
+last_updated: 2026-02-25
+---
 
-## type: API Reference audience: End User topics: [configuration, schema, yaml, validation, apps] llm_priority: high last_updated: 2025-01-06
+# 📋 SBKube Configuration Schema (v0.11.0)
 
-# 📋 config.yaml 스키마 가이드
-
-> **주의**: 이 문서는 설정 스키마의 사용자 가이드입니다. 기술적 구현 상세는 [ARCHITECTURE.md](../../docs/10-modules/sbkube/ARCHITECTURE.md)를 참조하세요.
+> **단일 설정 파일** `sbkube.yaml`로 모든 배포 설정을 관리합니다.
 
 ## TL;DR
 
-- **Purpose**: Complete schema reference for SBKube's main configuration file (config.yaml)
-- **Version**: v0.7.0 (개발 중), v0.6.0 (안정)
+- **Format**: `sbkube.yaml` (apiVersion: sbkube/v1)
+- **Version**: v0.11.0
 - **Key Points**:
-  - Apps use dictionary structure with name as key (not list)
-  - Support 7 app types: helm, yaml, git, http, kustomize, local-chart, oci
-  - Global namespace with per-app overrides
-  - Strong validation with Pydantic models
-  - Dependency management at both global and app level (`deps` field)
-- **Quick Reference**: See "📂 파일 구조 개요" for basic structure
+  - 단일 파일로 클러스터 설정 + 앱 정의 + Phase 오케스트레이션 통합
+  - Settings 상속: global → phase → app
+  - 9가지 앱 타입: helm, yaml, git, http, action, exec, kustomize, noop, hook
+  - Phase 의존성 기반 다단계 배포
+  - Pydantic `extra="forbid"` 강타입 검증
 - **Related**:
-  - ****상위 문서**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 아키텍처 (어떻게)
-  - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
-  - **소스 설정**: [sources-schema.md](sources-schema.md) - sources.yaml 스키마
-  - **명령어**: [../02-features/commands.md](../02-features/commands.md)
-  - **예제**: [../../examples/](../../examples/)
+  - **App Types**: [application-types.md](../02-features/application-types.md)
+  - **Commands**: [commands.md](../02-features/commands.md)
+  - **Migration**: [migration-guide.md](migration-guide.md)
 
-SBKube의 메인 설정 파일인 `config.yaml`의 완전한 스키마 문서입니다.
+> ⚠️ **Legacy Format Deprecated**: `sources.yaml` + `config.yaml` 분리 형식은 deprecated입니다.
+> v0.11.0부터 `sbkube.yaml` 통합 형식을 사용하세요. 마이그레이션은 [migration-guide.md](migration-guide.md) 참조.
 
-> **주요 기능** (v0.6.0+):
->
-> - Apps는 이름을 key로 사용하는 dict 구조 (list → dict)
-> - `specs` 필드 제거 (필드 평탄화)
-> - `helm` + `helm` → 단일 `helm` 타입
-> - 지원 타입 단순화 (10개 → 7개)
-> - 앱 그룹 의존성 (`deps` 필드)
+---
 
-______________________________________________________________________
-
-## 📂 파일 구조 개요
+## 기본 구조
 
 ```yaml
-# config.yaml 기본 구조
-namespace: string              # 전역 기본 네임스페이스 (필수)
-deps: [string]                 # 앱 그룹 의존성 (선택, v0.4.10+)
+# sbkube.yaml
+apiVersion: sbkube/v1
 
-apps:                          # 애플리케이션 딕셔너리 (필수)
+metadata:
+  name: my-deployment
+  environment: production
+  description: Production k3s cluster deployment
+
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: production
+  namespace: default
+  timeout: 600
+  on_failure: stop
+  rollback_scope: app
+
+  helm_repos:
+    grafana: https://grafana.github.io/helm-charts
+
+apps:
+  nginx:
+    type: helm
+    chart: bitnami/nginx
+    version: "15.0.0"
+
+phases:
+  p1-infra:
+    source: p1-infra/sbkube.yaml
+  p2-app:
+    source: p2-app/sbkube.yaml
+    depends_on: [p1-infra]
+```
+
+---
+
+## Settings Reference
+
+### UnifiedSettings
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `kubeconfig` | string | null | kubeconfig 파일 경로 |
+| `kubeconfig_context` | string | null | Kubernetes context |
+| `namespace` | string | `"default"` | 기본 네임스페이스 |
+| `timeout` | int | `600` | 배포 타임아웃 (초, 1-7200) |
+| `on_failure` | string | `"stop"` | 실패 정책: `stop`, `continue`, `rollback` |
+| `rollback_scope` | string | `"app"` | 롤백 범위: `app`, `phase`, `all` |
+| `execution_order` | string | `"apps_first"` | 실행 순서: `apps_first`, `phases_first` |
+| `parallel` | bool | `false` | Phase 병렬 실행 |
+| `parallel_apps` | bool | `false` | Phase 내 앱 병렬 실행 |
+| `max_workers` | int | `4` | 최대 병렬 워커 (1-32) |
+| `helm_label_injection` | bool | `true` | Helm 라벨 자동 주입 |
+| `incompatible_charts` | list | `[]` | 라벨 주입 제외 차트 |
+| `force_label_injection` | list | `[]` | 라벨 주입 강제 차트 |
+| `cleanup_metadata` | bool | `true` | 서버 관리 메타데이터 자동 제거 |
+| `helm_repos` | dict | `{}` | Helm 저장소 |
+| `oci_registries` | dict | `{}` | OCI 레지스트리 |
+| `git_repos` | dict | `{}` | Git 저장소 |
+
+### on_failure 옵션
+
+- **stop**: 첫 번째 실패 시 즉시 중단 (기본값)
+- **continue**: 나머지 앱/Phase 계속 실행
+- **rollback**: `rollback_scope`에 따라 롤백
+
+### rollback_scope 옵션
+
+- **app**: 실패한 앱만 롤백 (기본값)
+- **phase**: 실패한 Phase 전체 롤백
+- **all**: 전체 배포 롤백
+
+### execution_order 옵션
+
+- **apps_first**: 루트 앱 실행 → Phase 실행 (기본값)
+- **phases_first**: Phase 실행 → 루트 앱 실행
+
+---
+
+## Helm Repository Configuration
+
+### Simple Format
+
+```yaml
+settings:
+  helm_repos:
+    grafana: https://grafana.github.io/helm-charts
+    prometheus: https://prometheus-community.github.io/helm-charts
+```
+
+### Detailed Format (인증 포함)
+
+```yaml
+settings:
+  helm_repos:
+    private-repo:
+      url: https://charts.example.com
+      username: myuser
+      password: mypassword
+
+    tls-repo:
+      url: https://secure-charts.example.com
+      ca_file: /path/to/ca.crt
+      cert_file: /path/to/client.crt
+      key_file: /path/to/client.key
+
+    insecure-repo:
+      url: https://self-signed.example.com
+      insecure_skip_tls_verify: true
+```
+
+### OCI Registry
+
+```yaml
+settings:
+  oci_registries:
+    ghcr:
+      url: ghcr.io/myorg
+      username: ${GITHUB_USER}
+      password: ${GITHUB_TOKEN}
+
+    harbor:
+      registry: harbor.example.com
+      username: admin
+      password: Harbor12345
+```
+
+**Auto-prefixing**: `ghcr.io` → `oci://ghcr.io`
+
+### Git Repository
+
+```yaml
+settings:
+  git_repos:
+    my-charts:
+      url: https://github.com/example/helm-charts.git
+      branch: main
+
+    ssh-repo:
+      url: git@github.com:example/charts.git
+      branch: main
+      ssh_key: ~/.ssh/id_rsa
+```
+
+---
+
+## App Configuration
+
+### 공통 필드
+
+모든 앱 타입이 공유하는 필드:
+
+```yaml
+apps:
   app-name:                    # 앱 이름 (key)
     type: enum                 # 앱 타입 (필수)
     enabled: boolean           # 활성화 여부 (기본: true)
     depends_on: [string]       # 앱 간 의존성 (선택)
     namespace: string          # 앱별 네임스페이스 (선택)
-    notes: string              # 앱 설명/메모 (선택)
-    # ... 타입별 필드
+    notes: string              # 설명/메모 (선택)
+    labels: dict               # 커스텀 라벨 (선택)
+    annotations: dict          # 커스텀 어노테이션 (선택)
 ```
 
-**이전 버전과의 차이점**:
+**Namespace 상속 규칙:**
 
-- `apps`가 list가 아닌 dict
-- `name` 필드 제거 (key가 이름)
-- `specs` 필드 제거 (평탄화)
+1. **앱별 namespace** (최우선): `app.namespace`
+2. **전역 namespace** (폴백): `settings.namespace`
+3. **kubectl 기본값**: `default`
 
-______________________________________________________________________
+### 앱 타입별 설정
 
-## 🌐 전역 설정
+> 상세 앱 타입 가이드: [application-types.md](../02-features/application-types.md)
 
-### namespace (string, 필수)
-
-모든 앱에 적용되는 기본 네임스페이스입니다.
-
-```yaml
-namespace: default
-```
-
-또는
-
-```yaml
-namespace: production
-```
-
-**규칙**:
-
-- Kubernetes 네임스페이스 명명 규칙 준수
-- 소문자와 하이픈만 사용 (`[a-z0-9-]+`)
-- 앱별 `namespace` 필드로 재정의 가능
-
-### deps (list[string], 선택, v0.4.10+)
-
-이 앱 그룹이 의존하는 다른 앱 그룹 목록입니다.
-
-```yaml
-namespace: harbor
-deps:
-  - a000_infra_network    # Ingress 및 Storage
-  - a101_data_rdb         # PostgreSQL 데이터베이스
-  - a100_data_memory      # Redis 캐시
-
-apps:
-  harbor:
-    type: helm
-    chart: harbor/harbor
-```
-
-**동작 방식** (v0.6.0+):
-
-- **파싱**: 설정 파일에서 `deps` 필드를 읽어들임
-- **문서화**: 의존성 정보를 config.yaml에 명시적으로 기록
-- **디렉토리 검증** (`sbkube doctor`): deps에 명시된 앱 그룹 디렉토리가 실제로 존재하는지 확인
-- **배포 상태 검증** (`sbkube apply`): deps에 명시된 앱 그룹이 실제로 배포되었는지 확인하여 미배포 시 배포 중단
-
-**검증 동작**:
-
-```bash
-# 1. sbkube doctor: 디렉토리 존재 여부 확인
-$ sbkube doctor
-✅ Config Validity
-   - namespace: harbor ✓
-   - apps: 3 apps defined ✓
-   - deps: a000_infra_network ✓
-   - deps: a101_data_rdb ✗ (directory not found)  # 에러 발생
-
-# 2. sbkube apply: 배포 상태 확인
-$ sbkube apply --app-dir a302_devops
-🔍 Checking app-group dependencies...
-❌ Error: 2 dependencies not deployed:
-  - a101_data_rdb (never deployed)
-  - a100_data_memory (last status: failed)
-
-💡 Deploy missing dependencies first:
-  sbkube apply --app-dir a101_data_rdb
-  sbkube apply --app-dir a100_data_memory
-
-Tip: Use --skip-deps-check to override this check
-```
-
-**강제 배포**:
-
-```bash
-# 의존성 검증을 건너뛰고 강제로 배포 (CI/CD 등)
-sbkube apply --app-dir a302_devops --skip-deps-check
-```
-
-**향후 기능** (예정):
-
-- 자동 배포 순서 결정 (`--recursive`)
-- 의존성 그래프 시각화
-- 순환 의존성 감지
-
-**사용 사례**:
-
-```yaml
-# 예제 1: 데이터베이스 의존성
-# a302_devops/config.yaml
-namespace: harbor
-deps:
-  - a101_data_rdb       # PostgreSQL 필요
-  - a100_data_memory    # Redis 필요
-apps:
-  harbor:
-    type: helm
-    chart: harbor/harbor
-
-# 예제 2: 전체 인프라 의존성
-# a400_airflow/config.yaml
-namespace: airflow
-deps:
-  - a000_infra_network  # NFS storage, Ingress
-  - a101_data_rdb       # Airflow metadata DB
-  - a100_data_memory    # Celery executor
-apps:
-  airflow:
-    type: helm
-    chart: apache-airflow/airflow
-```
-
-**주의사항**:
-
-- 앱 그룹 이름(디렉토리 이름)을 사용 (예: `a000_infra_network`)
-- 경로가 아닌 이름만 지정 (예: `../a000_infra_network` ❌)
-- 현재는 문서화 목적이며 실제 검증은 향후 버전에서 구현 예정
-
-______________________________________________________________________
-
-## 📱 앱 설정 (apps)
-
-현재 버전에서 `apps`는 **딕셔너리**입니다. 앱 이름이 key가 됩니다.
-
-### 기본 구조
-
-```yaml
-apps:
-  app-name:                    # 앱 이름 (key)
-    type: helm                 # 타입 (필수)
-    enabled: true              # 활성화 여부 (선택, 기본: true)
-    depends_on: []             # 의존성 (선택)
-```
-
-### 필수 필드
-
-#### type (enum, 필수)
-
-앱 타입을 지정합니다. 현재 버전에서는 **7가지 타입**을 지원합니다.
-
-| 타입 | 설명 | 이전 버전 타입 | |------|------|------------------| | `helm` | Helm 차트 (원격/로컬) | helm + helm | | `yaml` | YAML
-매니페스트 | yaml | | `git` | Git 리포지토리 | pull-git | | `http` | HTTP 파일 다운로드 | pull-http | | `action` | 커스텀 액션 | action | |
-`exec` | 커스텀 명령어 | exec | | `noop` | No Operation | (신규) |
-
-### 선택적 필드
-
-#### enabled (boolean, 기본값: true)
-
-앱의 활성화 여부를 제어합니다.
+#### helm — Helm 차트
 
 ```yaml
 apps:
   grafana:
     type: helm
-    chart: grafana/grafana
-    enabled: true              # 활성화 (기본값)
-
-  old-app:
-    type: helm
-    chart: ingress-nginx/ingress-nginx
-    enabled: false             # 비활성화 (건너뜀)
-```
-
-#### depends_on (array of strings, 선택)
-
-이 앱이 의존하는 다른 앱들의 이름 목록입니다.
-
-```yaml
-apps:
-  database:
-    type: helm
-    chart: cloudnative-pg/cloudnative-pg
-
-  backend:
-    type: helm
-    chart: ./charts/backend
-    depends_on:
-      - database              # database 완료 후 실행
-```
-
-**의존성 규칙**:
-
-- 순환 의존성은 자동으로 감지되어 오류 발생
-- 의존성 순서대로 배포 실행
-- 의존성이 실패하면 의존하는 앱도 건너뜀
-
-#### namespace (string, 선택)
-
-앱별 네임스페이스입니다. 전역 `namespace`를 재정의합니다.
-
-```yaml
-namespace: default            # 전역 네임스페이스
-
-apps:
-  grafana:
-    type: helm
-    chart: grafana/grafana
-    namespace: monitoring     # 이 앱만 monitoring 네임스페이스에 배포
-```
-
-**Namespace 상속 규칙 (v0.6.1+)**:
-
-모든 앱 타입 (helm, yaml, action, kustomize)에서 동일하게 동작합니다:
-
-1. **명시적 앱 네임스페이스 우선**: `app.namespace`가 설정되어 있으면 이를 사용
-1. **전역 네임스페이스 폴백**: `app.namespace`가 `None`이면 `config.namespace` 사용
-1. **kubectl 기본값**: 둘 다 없으면 `default` 네임스페이스 (kubectl 기본 동작)
-
-**예제**:
-
-```yaml
-# config.yaml
-namespace: production  # 전역 네임스페이스
-
-apps:
-  # 1. 전역 네임스페이스 사용 (production)
-  app1:
-    type: yaml
-    manifests:
-      - manifests/app1.yaml
-    # namespace 필드 없음 → production 사용
-
-  # 2. 앱별 네임스페이스 오버라이드
-  app2:
-    type: yaml
-    manifests:
-      - manifests/app2.yaml
-    namespace: staging  # production 대신 staging 사용
-
-  # 3. Helm 앱도 동일한 규칙 적용
-  app3:
-    type: helm
-    chart: my/chart
-    # namespace 필드 없음 → production 사용
-```
-
-**이전 버전과의 차이 (v0.6.0 이하)**:
-
-- **v0.6.0 이하**: YAML/Action/Kustomize 타입은 전역 네임스페이스를 자동 상속하지 않음 (버그)
-- **v0.6.1+**: 모든 앱 타입이 동일하게 전역 네임스페이스를 상속 (수정됨)
-
-**권장 사항**:
-
-- 대부분의 경우 전역 `namespace`만 설정하고 앱별 `namespace`는 생략
-- 특정 앱만 다른 네임스페이스가 필요한 경우에만 앱별 오버라이드 사용
-
-#### notes (string, 선택)
-
-앱에 대한 설명이나 메모를 기록합니다. Documentation as Code 패턴을 지원합니다.
-
-```yaml
-apps:
-  victoria-metrics:
-    type: helm
-    chart: vm/victoria-metrics-single
-    notes: |
-      High-performance Prometheus-compatible TSDB
-      - 20x faster than Prometheus
-      - 7x less storage space
-      - Full PromQL support
-
-  thanos:
-    type: helm
-    chart: bitnami/thanos
-    enabled: false
-    notes: |
-      Long-term storage for Prometheus
-      - Deploy AFTER Prometheus (Phase 6)
-      - Requires S3/GCS/Azure storage bucket
-```
-
-**활용 방법**:
-
-- **설계 결정 기록**: 왜 이 솔루션을 선택했는지 문서화
-- **배포 순서**: 의존성이나 배포 순서에 대한 중요 정보 기록
-- **운영 정보**: 담당자, 백업 일정, DR 절차 등
-- **마이그레이션 가이드**: 설정 변경 이력이나 업그레이드 절차
-
-**표시 방법**:
-
-```bash
-# Notes 필드와 함께 상태 확인
-sbkube status --show-notes
-```
-
-#### labels (dict, 선택)
-
-앱에 적용할 커스텀 라벨입니다.
-
-```yaml
-apps:
-  grafana:
-    type: helm
-    chart: grafana/grafana
-    labels:
-      environment: production
-      team: platform
-```
-
-#### annotations (dict, 선택)
-
-앱에 적용할 커스텀 어노테이션입니다.
-
-```yaml
-apps:
-  grafana:
-    type: helm
-    chart: grafana/grafana
-    annotations:
-      description: "Production Grafana"
-      owner: "platform-team"
-```
-
-______________________________________________________________________
-
-## 🎯 타입별 설정
-
-### 1. helm - Helm 차트
-
-Helm 차트를 준비하고 배포합니다 (원격 또는 로컬).
-
-#### 필수 필드
-
-```yaml
-apps:
-  grafana:
-    type: helm
-    chart: grafana/grafana     # 필수: 차트 경로
-```
-
-#### 모든 필드
-
-```yaml
-apps:
-  grafana:
-    type: helm
-    chart: grafana/grafana     # 필수: <repo>/<chart> 또는 ./path
-    version: 6.50.0            # 선택: 차트 버전 (원격만)
-    values:                    # 선택: values 파일 목록
-      - grafana-values.yaml
-      - grafana-production.yaml
-    overrides:                 # 선택: 파일 교체
-      templates/secret.yaml: custom-secret.yaml
-    removes:                   # 선택: 파일 삭제
-      - templates/serviceaccount.yaml
+    chart: grafana/grafana          # repo/chart (원격) 또는 ./path (로컬)
+    version: "10.1.2"               # 차트 버전 (원격만)
+    values:                         # values 파일 목록
+      - values/grafana.yaml
+    overrides:                      # 차트 파일 교체 (Glob 지원)
+      - templates/secret.yaml
+      - templates/*.yaml
+    removes:                        # 차트 파일 삭제
       - templates/tests/
-    namespace: monitoring      # 선택: 네임스페이스
-    context: prod-cluster      # 선택: Kubernetes context (v0.6.1+)
-    release_name: my-grafana   # 선택: 릴리스 이름 (기본: 앱 이름)
+    release_name: my-grafana        # Helm 릴리스 이름 (기본: 앱 이름)
+    wait: true                      # 준비 완료 대기 (기본: true)
+    timeout: "5m"                   # 대기 타임아웃 (기본: 5m)
+    atomic: false                   # 실패 시 자동 롤백 (기본: false)
+    helm_label_injection: true      # 라벨 자동 주입 (기본: true)
 ```
 
-**chart 필드 형식**:
+**chart 필드 형식:**
 
-- 원격: `<repo>/<chart>` (예: `grafana/grafana`)
-- 로컬 (상대): `./charts/app`
-- 로컬 (절대): `/absolute/path/to/chart`
-- 이름만: `chart-name` (로컬 차트로 간주)
+| 형식 | 타입 | 예시 |
+|------|------|------|
+| `repo/chart` | 원격 | `grafana/grafana` |
+| `./path` | 로컬 (상대) | `./charts/my-app` |
+| `/path` | 로컬 (절대) | `/opt/charts/app` |
 
-**overrides** (선택, 리스트):
+**Overrides 시스템** (build 단계에서 적용):
 
-차트 파일을 교체하거나 새로 추가할 파일 목록 (v0.4.9+에서 Glob 패턴 지원)
+```
+overrides/<app-name>/templates/secret.yaml  →  build/<app-name>/templates/secret.yaml
+```
+
+- `overrides/` 디렉토리의 파일이 차트 파일을 교체
+- Glob 패턴 지원: `*`, `?`, `**`
+- config에 명시된 파일만 적용 (자동 탐색 없음)
+
+**OCI 레지스트리 차트**: `settings.oci_registries`에 등록 후 `registry-name/chart-name` 형식 사용
 
 ```yaml
-overrides:
-  - templates/deployment.yaml       # 기존 파일 교체
-  - templates/*.yaml                # Glob: 모든 YAML 템플릿
-  - templates/**/*.yaml             # Glob: 재귀적 (서브디렉토리 포함)
-  - files/config.toml               # files 디렉토리 파일 추가
-```
-
-**디렉토리 구조**:
-
-```
-app-dir/
-├── config.yaml
-└── overrides/
-    └── grafana/            # 앱 이름과 일치해야 함
-        ├── templates/deployment.yaml      # 교체할 파일
-        └── files/config.toml              # 추가할 파일
-```
-
-**동작**: `sbkube build` 시 차트를 `build/grafana/`로 복사 후, 명시된 파일을 `overrides/grafana/`에서 복사하여 덮어쓰기 또는 추가
-
-**주의사항**:
-
-- `overrides/` 디렉토리가 있어도 config.yaml에 명시 필수
-- Glob 와일드카드: `*` (다중 문자), `?` (단일 문자), `**` (재귀)
-
-**관련 문서**:
-
-- [commands.md - Override 사용법](../02-features/commands.md#-override-%EB%94%94%EB%A0%89%ED%86%A0%EB%A6%AC-%EC%82%AC%EC%9A%A9-%EC%8B%9C-%EC%A3%BC%EC%9D%98%EC%82%AC%ED%95%AD)
-- [troubleshooting.md - Override 문제 해결](../07-troubleshooting/README.md)
-
-**removes**:
-
-- 차트에서 제거할 파일/디렉토리 목록
-- 와일드카드 지원 (예: `templates/tests/`)
-- `build` 단계에서 적용
-
-**context** (선택, v0.6.1+):
-
-앱을 배포할 Kubernetes 컨텍스트를 지정합니다.
-
-```yaml
+settings:
+  oci_registries:
+    ghcr:
+      registry: oci://ghcr.io/myorg/charts
 apps:
-  prod-app:
+  my-app:
     type: helm
-    chart: myapp/app
-    context: prod-cluster      # 이 앱은 prod-cluster에 배포
-    namespace: production
-
-  staging-app:
-    type: helm
-    chart: myapp/app
-    context: staging-cluster   # 이 앱은 staging-cluster에 배포
-    namespace: staging
-```
-
-**Context 우선순위**:
-
-1. **app.context** (최우선): config.yaml의 앱별 context 필드
-1. **sources.yaml context**: 프로젝트 기본 context (kubeconfig_context)
-1. **현재 context**: kubectl의 현재 활성 context
-
-**사용 사례**:
-
-- 멀티 클러스터 관리: 하나의 config.yaml로 여러 클러스터에 배포
-- 개발/스테이징/프로덕션 분리: 앱별로 다른 클러스터 지정
-- 마이그레이션: 일부 앱만 새 클러스터로 이동
-
-**주의사항**:
-
-- context는 ~/.kube/config 또는 KUBECONFIG 환경변수의 kubeconfig 파일에 정의되어 있어야 합니다
-- app.context 지정 시 sources.yaml의 kubeconfig는 사용되지 않습니다 (시스템 기본 kubeconfig 사용)
-
-#### OCI Registry 사용법 {#oci-registry}
-
-**중요**: OCI 레지스트리의 Helm 차트를 사용하려면 **2단계 설정**이 필요합니다.
-
-**❌ 잘못된 방법 (지원하지 않음)**:
-
-```yaml
-# config.yaml - 이 방식은 에러가 발생합니다
-apps:
-  supabase:
-    type: helm
-    chart: oci://ghcr.io/grafana/helm-charts/supabase  # ❌ 에러!
-```
-
-**✅ 올바른 방법**:
-
-**Step 1: sources.yaml에 OCI 레지스트리 등록**
-
-```yaml
-# sources.yaml
-oci_registries:
-  grafana:
-    registry: oci://ghcr.io/grafana/helm-charts
-
-  truecharts:
-    registry: oci://tccr.io/truecharts
-
-  ghcr:
-    registry: oci://ghcr.io/myorg/charts
-```
-
-**Step 2: config.yaml에서 repo/chart 형식 사용**
-
-```yaml
-# config.yaml
-namespace: platform
-
-apps:
-  # grafana Supabase from Docker Hub
-  supabase:
-    type: helm
-    chart: grafana/grafana  # ✅ registry-name/chart-name 형식
+    chart: ghcr/my-chart       # OCI 레지스트리 참조
     version: "1.0.0"
-    values:
-      - values/supabase.yaml
-
-  # TrueCharts chart
-  browserless:
-    type: helm
-    chart: truecharts/browserless-chrome  # ✅ registry-name/chart-name
-    version: "2.0.0"
 ```
 
-**주요 OCI 레지스트리**:
-
-- **Docker Hub grafana**: `oci://ghcr.io/grafana/helm-charts`
-- **TrueCharts**: `oci://tccr.io/truecharts`
-- **GitHub Container Registry**: `oci://ghcr.io/org-name/charts`
-- **GitLab Container Registry**: `oci://registry.gitlab.com/project/charts`
-
-**인증이 필요한 경우**:
-
-```yaml
-# sources.yaml
-oci_registries:
-  private-registry:
-    registry: oci://my-registry.com/charts
-    username: myuser
-    password: mypass
-```
-
-또는 `helm registry login` 수동 실행:
-
-```bash
-echo $PASSWORD | helm registry login oci://my-registry.com -u $USERNAME --password-stdin
-```
-
-**참고 문서**:
-
-- [examples/prepare/helm-oci/](../../examples/prepare/helm-oci/) - OCI 레지스트리 예제
-- [sources-schema.md](sources-schema.md) - sources.yaml 상세 스키마
-- [Helm OCI Support](https://helm.sh/docs/topics/registries/) - Helm 공식 문서
-
-______________________________________________________________________
-
-### 2. yaml - YAML 매니페스트
-
-Kubernetes YAML 매니페스트를 직접 배포합니다.
-
-#### 필수 필드
+#### yaml — YAML 매니페스트
 
 ```yaml
 apps:
   nginx:
-    type: yaml
-    manifests:                 # 필수: YAML 파일 목록
-      - manifests/deployment.yaml
-      - manifests/service.yaml
-```
-
-#### 모든 필드
-
-```yaml
-apps:
-  nginx:
-    type: yaml
-    manifests:                 # 필수: YAML 파일 목록 (비어있으면 안됨)
-      - manifests/deployment.yaml
-      - manifests/service.yaml
-      - manifests/ingress.yaml
-    namespace: web             # 선택: 네임스페이스
-    context: prod-cluster      # 선택: Kubernetes context (v0.6.1+)
-```
-
-#### 변수 치환 (v0.6.0+)
-
-Git 리포지토리 내부의 파일을 참조할 때 `${repos.app-name}` 변수를 사용할 수 있습니다.
-
-```yaml
-apps:
-  # 1. Git 리포지토리 클론
-  olm:
-    type: git
-    repo: olm
-    branch: master
-    enabled: true
-
-  # 2. Git 리포지토리 내부 YAML 파일 참조
-  olm-operator:
     type: yaml
     manifests:
-      - ${repos.olm}/deploy/upstream/quickstart/crds.yaml
-      - ${repos.olm}/deploy/upstream/quickstart/olm.yaml
-    namespace: ""
-    depends_on:
-      - olm
+      - manifests/deployment.yaml
+      - manifests/service.yaml
+      - ${repos.olm}/deploy/crds.yaml    # Git 리포 변수 참조
 ```
 
-**변수 치환 규칙**:
-
-- `${repos.app-name}` 형식: `app-name`은 git 타입 앱의 이름
-- 자동 확장: `.sbkube/repos/app-name`으로 변환
-- 검증: 참조된 앱이 존재하고 git 타입인지 검증
-- 하위 호환성: 기존 상대경로 방식도 계속 지원
-
-**장점**:
-
-- **유지보수성**: 명시적이고 깨지지 않는 경로
-- **가독성**: 의도가 명확 (어떤 리포지토리의 파일인지)
-- **안전성**: 설정 로드 시 변수 구문 검증
-
-______________________________________________________________________
-
-### 3. git - Git 리포지토리
-
-Git 리포지토리를 클론하여 차트/매니페스트를 가져옵니다.
-
-#### 필수 필드
+#### git — Git 리포지토리
 
 ```yaml
 apps:
   source:
     type: git
-    repo: my-app               # 필수: sources.yaml의 Git 저장소 이름
+    repo: my-app               # settings.git_repos의 저장소 이름
+    path: charts/app           # 리포지토리 내 경로 (선택)
 ```
 
-#### 모든 필드
-
-```yaml
-apps:
-  source:
-    type: git
-    repo: my-app               # 필수: sources.yaml의 저장소 이름
-    path: charts/app           # 선택: 리포지토리 내 경로
-```
-
-**sources.yaml 예제**:
-
-```yaml
-git_repos:
-  my-app:
-    url: https://github.com/example/myapp.git
-    branch: main
-```
-
-**사용 패턴**:
-
-```yaml
-apps:
-  # 1. Git 클론
-  source:
-    type: git
-    repo: my-app
-    path: charts/myapp
-
-  # 2. 클론된 차트 사용
-  app:
-    type: helm
-    chart: ./repos/my-app/charts/myapp
-    depends_on:
-      - source
-```
-
-______________________________________________________________________
-
-### 4. http - HTTP 파일 다운로드
-
-HTTP(S) URL에서 파일을 다운로드합니다.
-
-#### 필수 필드
+#### http — HTTP 파일 다운로드
 
 ```yaml
 apps:
   download:
     type: http
-    url: https://example.com/manifest.yaml  # 필수: 다운로드 URL
-    dest: manifest.yaml                     # 필수: 저장 경로
-```
-
-#### 모든 필드
-
-```yaml
-apps:
-  download:
-    type: http
-    url: https://example.com/manifest.yaml  # 필수: URL
-    dest: manifest.yaml                     # 필수: 저장 경로
-    headers:                                # 선택: HTTP 헤더
+    url: https://example.com/manifest.yaml
+    dest: manifest.yaml
+    headers:
       Authorization: "Bearer token"
-      User-Agent: "SBKube/0.4.10"
 ```
 
-**사용 패턴**:
-
-```yaml
-apps:
-  # 1. 파일 다운로드
-  download:
-    type: http
-    url: https://example.com/crd.yaml
-    dest: crd.yaml
-
-  # 2. 다운로드된 파일 적용
-  apply:
-    type: yaml
-    files:
-      - crd.yaml
-    depends_on:
-      - download
-```
-
-______________________________________________________________________
-
-### 5. action - 커스텀 액션
-
-복잡한 배포 시나리오를 위한 커스텀 액션 시퀀스입니다.
-
-#### 필수 필드
+#### action — 커스텀 액션
 
 ```yaml
 apps:
   setup:
     type: action
-    actions:                   # 필수: 액션 목록
+    actions:
       - type: apply
         path: manifests/crd.yaml
+      - type: delete
+        path: manifests/old.yaml
 ```
 
-#### 모든 필드
-
-```yaml
-apps:
-  setup:
-    type: action
-    actions:                   # 필수: 액션 목록 (비어있으면 안됨)
-      - type: apply            # apply 또는 delete
-        path: manifests/namespace.yaml
-      - type: apply
-        path: manifests/crd.yaml
-      - type: apply
-        path: manifests/deployment.yaml
-      - type: delete           # 선택: 기존 리소스 삭제
-        path: manifests/old-resource.yaml
-```
-
-**액션 타입**:
-
-- `apply`: `kubectl apply -f <path>` 실행
-- `delete`: `kubectl delete -f <path>` 실행
-
-______________________________________________________________________
-
-### 6. exec - 커스텀 명령어 실행
-
-임의의 명령어를 실행합니다 (초기화, 정리 등).
-
-> **보안 주의**: `exec` 타입은 **로컬 머신**에서 임의 명령어를 실행합니다. 신뢰된 설정만 사용하세요.
-> `SBKUBE_ALLOW_EXEC=false` 환경변수로 `exec`/hook 실행을 비활성화할 수 있습니다.
-
-#### 필수 필드
+#### exec — 커스텀 명령어
 
 ```yaml
 apps:
   check:
     type: exec
-    commands:                  # 필수: 명령어 목록
-      - echo "Checking..."
-      - kubectl get nodes
-```
-
-#### 모든 필드
-
-```yaml
-apps:
-  pre-check:
-    type: exec
-    commands:                  # 필수: 명령어 목록 (비어있으면 안됨)
-      - echo "Starting pre-deployment checks..."
+    commands:
       - kubectl get nodes
       - helm list -A
-      - echo "Pre-deployment checks completed!"
 ```
 
-______________________________________________________________________
+> ⚠️ **보안 주의**: `exec` 타입은 로컬 머신에서 임의 명령어를 실행합니다.
+> `SBKUBE_ALLOW_EXEC=false`로 비활성화 가능.
 
-### 7. noop - No Operation
-
-실제 동작 없이 의존성 관리에만 사용됩니다.
-
-#### 필드
+#### noop — No Operation
 
 ```yaml
 apps:
-  base-setup:
+  manual-step:
     type: noop
-    description: "Base setup completed manually"  # 선택: 설명
+    notes: "수동 설정 완료 표시용"
 ```
 
-______________________________________________________________________
-
-## 📝 완전한 예제
-
-### 기본 예제
+#### hook — HookApp (v0.8.0+)
 
 ```yaml
-namespace: production
-
 apps:
-  grafana:
-    type: helm
-    chart: grafana/grafana
-    version: 6.50.0
-    values:
-      - grafana-values.yaml
-
-  backend:
-    type: helm
-    chart: ./charts/backend
-    depends_on:
-      - grafana
+  setup-issuers:
+    type: hook
+    hooks:
+      post_deploy_tasks:
+        - type: manifests
+          paths:
+            - manifests/cluster-issuer.yaml
 ```
 
-### 고급 예제
+---
+
+## Phase Reference
+
+Phase로 다단계 배포를 오케스트레이션합니다.
+
+### 외부 참조
 
 ```yaml
-namespace: production
-
-apps:
-  # Git 리포지토리 클론
-  app-source:
-    type: git
-    repo: my-app
-    path: charts/myapp
-
-  # HTTP 다운로드
-  crd-download:
-    type: http
-    url: https://example.com/crd.yaml
-    dest: crd.yaml
-
-  # CRD 적용
-  crd-setup:
-    type: yaml
-    files:
-      - crd.yaml
-    depends_on:
-      - crd-download
-
-  # 데이터베이스 배포 (차트 커스터마이징)
-  database:
-    type: helm
-    chart: cloudnative-pg/cloudnative-pg
-    namespace: data
-    overrides:
-      templates/secret.yaml: custom-secret.yaml
-    removes:
-      - templates/serviceaccount.yaml
-    depends_on:
-      - crd-setup
-
-  # 백엔드 배포 (Git 소스 사용)
-  backend:
-    type: helm
-    chart: ./repos/my-app/charts/myapp
-    values:
-      - backend-values.yaml
-    labels:
-      environment: production
-      team: backend
-    depends_on:
-      - app-source
-      - database
-
-  # 배포 후 정리
-  cleanup:
-    type: exec
-    commands:
-      - kubectl delete pods --field-selector=status.phase=Succeeded -n production
-    depends_on:
-      - backend
+phases:
+  p1-infra:
+    description: Infrastructure components
+    source: p1-infra/sbkube.yaml
+    depends_on: []
 ```
 
-______________________________________________________________________
+### 인라인 정의
 
-## ⚠️ 주의사항
+```yaml
+phases:
+  p1-infra:
+    description: Infrastructure components
+    apps:
+      traefik:
+        type: helm
+        chart: traefik/traefik
+        version: "25.0.0"
+```
 
-### 필수 검증
+### Phase 옵션
 
-SBKube는 Pydantic을 사용하여 설정을 검증합니다:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `description` | string | No | Phase 설명 |
+| `source` | string | No* | 외부 sbkube.yaml 경로 |
+| `apps` | dict | No* | 인라인 앱 정의 |
+| `depends_on` | list | No | Phase 의존성 |
+| `settings` | object | No | Phase 설정 오버라이드 |
 
-- **타입 검증**: 필드 타입 불일치 시 오류
-- **필수 필드**: 누락 시 오류
-- **순환 의존성**: 자동 감지 및 오류
-- **앱 이름 중복**: 중복 시 오류
+\* `source` 또는 `apps` 중 하나 필수.
 
-### 검증 명령어
+---
+
+## Settings Inheritance
+
+Settings는 부모 → 자식으로 상속됩니다:
+
+- **Scalars**: 자식이 부모를 오버라이드
+- **Lists**: 병합 후 중복 제거
+- **Dicts**: Deep merge
+
+```yaml
+# Root sbkube.yaml
+settings:
+  timeout: 600
+  namespace: default
+  helm_repos:
+    bitnami: https://charts.bitnami.com/bitnami
+
+phases:
+  p1-infra:
+    source: p1-infra/sbkube.yaml
+    settings:
+      timeout: 300              # timeout만 오버라이드
+```
+
+```yaml
+# p1-infra/sbkube.yaml
+settings:
+  namespace: kube-system        # namespace 오버라이드
+  helm_repos:
+    traefik: https://helm.traefik.io/traefik  # 부모 repos에 추가
+
+apps:
+  traefik:
+    type: helm
+    chart: traefik/traefik
+    # 최종 설정: timeout=300, namespace=kube-system
+    # helm_repos: {bitnami: ..., traefik: ...}
+```
+
+---
+
+## Recursive Execution
+
+```
+sbkube.yaml (root)
+├── apps (root-level)
+└── phases
+    ├── p1-infra/sbkube.yaml
+    │   ├── apps
+    │   └── phases (nested)
+    └── p2-app/sbkube.yaml
+        └── apps
+```
+
+**실행 흐름:**
+
+1. 부모 settings와 현재 settings 머지
+2. `execution_order`에 따라:
+   - `apps_first`: 루트 앱 실행 → Phase 실행
+   - `phases_first`: Phase 실행 → 루트 앱 실행
+3. 각 Phase (의존성 순서):
+   - 참조 config 로드 (source)
+   - 상속된 settings로 재귀 실행
+
+---
+
+## Manifest Metadata Cleanup
+
+`cleanup_metadata: true` (기본값) 시 template 단계에서 자동 제거되는 필드:
+
+- `metadata.managedFields`
+- `metadata.creationTimestamp`
+- `metadata.resourceVersion`
+- `metadata.uid`
+- `metadata.generation`
+- `metadata.selfLink`
+- `status` (전체)
+
+이 필드들은 Kubernetes API 서버가 관리하며, 사용자 매니페스트에 포함 시 배포 실패를 유발합니다.
+
+---
+
+## Complete Example
+
+```yaml
+apiVersion: sbkube/v1
+
+metadata:
+  name: production-cluster
+  environment: production
+  version: "1.0.0"
+
+settings:
+  kubeconfig: ~/.kube/config
+  kubeconfig_context: production-k3s
+  namespace: default
+  timeout: 600
+  on_failure: rollback
+  rollback_scope: phase
+  execution_order: phases_first
+  parallel: true
+  max_workers: 4
+
+  helm_repos:
+    bitnami:
+      url: https://charts.bitnami.com/bitnami
+    traefik:
+      url: https://helm.traefik.io/traefik
+
+  incompatible_charts:
+    - traefik/traefik
+    - jetstack/cert-manager
+
+apps:
+  monitoring-crd:
+    type: helm
+    chart: prometheus-community/kube-prometheus-stack-crds
+
+phases:
+  p1-infra:
+    description: Core infrastructure
+    source: phases/p1-infra/sbkube.yaml
+
+  p2-networking:
+    description: Networking
+    source: phases/p2-networking/sbkube.yaml
+    depends_on: [p1-infra]
+
+  p3-apps:
+    description: Applications
+    source: phases/p3-apps/sbkube.yaml
+    depends_on: [p1-infra, p2-networking]
+
+  p4-monitoring:
+    description: Monitoring (inline)
+    apps:
+      prometheus:
+        type: helm
+        chart: prometheus-community/kube-prometheus-stack
+        namespace: monitoring
+    depends_on: [p1-infra]
+```
+
+---
+
+## Validation
 
 ```bash
-# 설정 파일 검증
-sbkube validate --app-dir config
+# 설정 검증
+sbkube validate
+
+# Dry-run 검증
+sbkube apply -f sbkube.yaml --dry-run
+
+# 환경 진단
+sbkube doctor
 ```
 
-______________________________________________________________________
+---
 
 ## Related Documentation
 
-- ****상위 문서**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 아키텍처 (어떻게)
-- **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
-- **소스 설정**: [sources-schema.md](sources-schema.md) - sources.yaml 스키마
-- **앱 타입**: [../02-features/application-types.md](../02-features/application-types.md) - 지원 앱 타입 상세
-- **명령어**: [../02-features/commands.md](../02-features/commands.md) - CLI 참조
-- **예제**: [../../examples/](../../examples/) - 실전 예제
+- **앱 타입 상세**: [application-types.md](../02-features/application-types.md)
+- **명령어 참조**: [commands.md](../02-features/commands.md)
+- **마이그레이션**: [migration-guide.md](migration-guide.md)
+- **Hooks**: [hooks-guide.md](../02-features/hooks-guide.md)
+- **아키텍처**: [ARCHITECTURE.md](../../ARCHITECTURE.md)
 
-______________________________________________________________________
+---
 
-**문서 버전**: 1.1 **마지막 업데이트**: 2025-01-06 **담당자**: archmagece@users.noreply.github.com
+**Document Version**: 3.0
+**Last Updated**: 2026-02-25
+**SBKube Version**: 0.11.0

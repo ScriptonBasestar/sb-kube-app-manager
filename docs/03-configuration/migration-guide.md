@@ -15,7 +15,7 @@ ______________________________________________________________________
 - **Major Changes**: v0.11.0 (unified apply workflow), v0.10.0 (unified config), v0.7.1 (cluster global values)
 - **Migration Path**: Manual conversion to unified `sbkube.yaml` (v0.11.0 기준)
 - **Recommended Format**: `sbkube.yaml` (unified config)
-- **Related**: [Unified Config Schema](unified-config-schema.md), [Config Schema](config-schema.md)
+- **Related**: [Config Schema](config-schema.md)
 
 > **⚠️ Important**: Starting with v0.10.0, the legacy configuration format (`sources.yaml` + `config.yaml`)
 > is deprecated. Convert to the new unified format (`sbkube.yaml`) manually.
@@ -280,7 +280,7 @@ ______________________________________________________________________
 - **Parallel Execution**: Execute phases and apps in parallel
 - **App Group Dependencies**: Define dependencies between app groups
 
-See [Unified Config Schema](unified-config-schema.md) for details.
+See [Config Schema](config-schema.md) for details.
 
 ______________________________________________________________________
 
@@ -342,7 +342,7 @@ global_values:  # Inline values (higher priority)
    # Check rendered YAML for cluster global values
    ```
 
-**See:** [sources-schema.md](sources-schema.md#cluster-global-values),
+**See:** [config-schema.md](config-schema.md),
 [examples/cluster-global-values/](../../examples/cluster-global-values/)
 
 **2. helm_label_injection Control**

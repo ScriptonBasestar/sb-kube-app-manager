@@ -720,9 +720,7 @@ apps:
 
 **참고 문서**:
 
-- [Hooks 레퍼런스](../02-features/hooks-reference.md) - 전체 Hook 타입 및 환경 변수
-- [Hooks 상세 가이드](../02-features/hooks.md) - 실전 예제 및 Best Practices
-- [Hooks 마이그레이션 가이드](../02-features/hooks-migration-guide.md) - Phase 간 전환 방법
+- [Hooks Guide & Reference](../02-features/hooks-guide.md) - 전체 Hook 타입, 환경 변수, Best Practices
 
 ### 6.8 Helm Hooks와의 차이
 

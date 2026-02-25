@@ -120,7 +120,7 @@ sbkube apply -f sbkube.yaml
 sbkube apply -f sbkube.yaml --phase p2-data
 ```
 
-**See**: [Unified Config Schema](docs/03-configuration/unified-config-schema.md)
+**See**: [Config Schema](docs/03-configuration/config-schema.md)
 
 **Full Release Notes**: [CHANGELOG.md](CHANGELOG.md)
 

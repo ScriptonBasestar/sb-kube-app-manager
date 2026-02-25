@@ -4,7 +4,7 @@ ______________________________________________________________________
 
 # 📋 SBKube 명령어 상세 가이드
 
-> **주의**: 이 문서는 [SPEC.md](../../SPEC.md) Section 3 (워크플로우) 및 Section 5 (API 명세)의 사용자 가이드 버전입니다. 기술적 구현 상세는 SPEC.md를 우선
+> **주의**: 이 문서는 명령어 사용자 가이드입니다. 기술적 구현 상세는 [ARCHITECTURE.md](../../docs/10-modules/sbkube/ARCHITECTURE.md)를 우선
 > 참조하세요.
 
 ## TL;DR
@@ -19,7 +19,7 @@ ______________________________________________________________________
   - All commands support `--format` option for LLM-friendly output
 - **Quick Reference**: See command table below
 - **Related**:
-  - **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+  - ****상위 문서**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 아키텍처 (어떻게)
   - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
   - **설정 참조**: [config-schema.md](../03-configuration/config-schema.md)
   - **LLM 통합**: [llm-friendly-output.md](llm-friendly-output.md)
@@ -680,7 +680,7 @@ ______________________________________________________________________
 
 ## Related Documentation
 
-- **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+- ****상위 문서**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 아키텍처 (어떻게)
 - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
 - **기능 명세**: [../00-product/product-spec.md](../00-product/product-spec.md) - 전체 기능 상세
 - **설정 참조**: [config-schema.md](../03-configuration/config-schema.md) - 설정 파일 스키마

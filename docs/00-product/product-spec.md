@@ -20,7 +20,7 @@ ______________________________________________________________________
 - **Quick Reference**: Section 1 covers workflow automation, Section 2-5 detail each component
 - **Related**:
   - **상위 문서**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
-  - **기술 명세**: [SPEC.md](../../SPEC.md) - 기술 구현 (어떻게)
+  - ****아키텍처**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 시스템 아키텍처 (어떻게)
   - **아키텍처**: [ARCHITECTURE.md](../10-modules/sbkube/ARCHITECTURE.md) - 시스템 설계
   - **설정 스키마**: [config-schema.md](../03-configuration/config-schema.md) - 설정 상세
 
@@ -864,7 +864,7 @@ ______________________________________________________________________
 ## 관련 문서
 
 - **상위 문서**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
-- **기술 명세**: [SPEC.md](../../SPEC.md) - 기술 구현 (어떻게)
+- ****아키텍처**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 시스템 아키텍처 (어떻게)
 - **제품 정의**: [PRODUCT.md](../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
 - **아키텍처**: [../10-modules/sbkube/ARCHITECTURE.md](../10-modules/sbkube/ARCHITECTURE.md) - 시스템 설계
 - **명령어 참조**: [../02-features/commands.md](../02-features/commands.md) - 전체 명령어

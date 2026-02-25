@@ -8,7 +8,7 @@ last_updated: 2026-02-25
 
 # SBKube 모듈 아키텍처
 
-> **주의**: 이 문서는 [SPEC.md](../../../SPEC.md) Section 2 (시스템 아키텍처)의 구현 상세 버전입니다.
+> **주의**: 이 문서는 SBKube 모듈의 상세 아키텍처 설계를 다룹니다.
 > 전체 아키텍처 개요는 [ARCHITECTURE.md](../../../ARCHITECTURE.md)를 우선 참조하세요.
 
 ## TL;DR
@@ -25,11 +25,11 @@ last_updated: 2026-02-25
   - Comprehensive exception hierarchy (20+ exception types)
   - Retry pattern with exponential backoff for external tool calls
 - **Quick Reference**: Layer architecture diagram shows CLI→Command→Model→State flow
-- **Related**: [ARCHITECTURE.md](../../../ARCHITECTURE.md), [SPEC.md](../../../SPEC.md), [MODULE.md](MODULE.md), [API_CONTRACT.md](API_CONTRACT.md)
+- **Related**: [ARCHITECTURE.md](../../../ARCHITECTURE.md), [MODULE.md](MODULE.md), [API_CONTRACT.md](API_CONTRACT.md)
 
 ## 개요
 
-이 문서는 SBKube 모듈의 상세한 아키텍처 설계를 다룹니다. 전체 시스템 아키텍처 요약은 [ARCHITECTURE.md](../../../ARCHITECTURE.md)를, 기술 명세는 [SPEC.md](../../../SPEC.md) Section 2를 참조하세요.
+이 문서는 SBKube 모듈의 상세한 아키텍처 설계를 다룹니다. 전체 시스템 아키텍처 요약은 [ARCHITECTURE.md](../../../ARCHITECTURE.md)를, 
 
 ## 아키텍처 원칙
 
@@ -684,7 +684,7 @@ result = run_helm_command_with_retry(["helm", "pull", chart])
 ## 관련 문서
 
 - **아키텍처 요약**: [ARCHITECTURE.md](../../../ARCHITECTURE.md) — 프로젝트 전체 아키텍처 요약
-- **기술 명세**: [SPEC.md](../../../SPEC.md) — 기술 명세 (어떻게)
+- **
 - **제품 정의**: [PRODUCT.md](../../../PRODUCT.md) — 제품 개요 (무엇을, 왜)
 - **기술 스택**: [TECH_STACK.md](../../../TECH_STACK.md) — 기술 스택 상세
 - **모듈 개요**: [MODULE.md](MODULE.md) — 모듈 정의 및 경계

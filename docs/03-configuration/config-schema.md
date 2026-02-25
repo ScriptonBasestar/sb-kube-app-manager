@@ -4,7 +4,7 @@ ______________________________________________________________________
 
 # 📋 config.yaml 스키마 가이드
 
-> **주의**: 이 문서는 [SPEC.md](../../SPEC.md) Section 4 (설정 관리)의 사용자 가이드 버전입니다. 기술적 구현 상세(Pydantic 모델 등)는 SPEC.md를 우선 참조하세요.
+> **주의**: 이 문서는 설정 스키마의 사용자 가이드입니다. 기술적 구현 상세는 [ARCHITECTURE.md](../../docs/10-modules/sbkube/ARCHITECTURE.md)를 참조하세요.
 
 ## TL;DR
 
@@ -18,7 +18,7 @@ ______________________________________________________________________
   - Dependency management at both global and app level (`deps` field)
 - **Quick Reference**: See "📂 파일 구조 개요" for basic structure
 - **Related**:
-  - **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+  - ****상위 문서**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 아키텍처 (어떻게)
   - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
   - **소스 설정**: [sources-schema.md](sources-schema.md) - sources.yaml 스키마
   - **명령어**: [../02-features/commands.md](../02-features/commands.md)
@@ -941,7 +941,7 @@ ______________________________________________________________________
 
 ## Related Documentation
 
-- **상위 문서**: [SPEC.md](../../SPEC.md) - 기술 명세 (어떻게)
+- ****상위 문서**: [ARCHITECTURE.md](../../ARCHITECTURE.md) - 아키텍처 (어떻게)
 - **제품 개요**: [PRODUCT.md](../../PRODUCT.md) - 제품 정의 (무엇을, 왜)
 - **소스 설정**: [sources-schema.md](sources-schema.md) - sources.yaml 스키마
 - **앱 타입**: [../02-features/application-types.md](../02-features/application-types.md) - 지원 앱 타입 상세

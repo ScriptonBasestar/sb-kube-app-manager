@@ -9,8 +9,8 @@ AI navigation hub for SBKube project. **Always load this file first.**
 | Query | Primary → Secondary |
 |-------|---------------------|
 | **What/Why** | [PRODUCT.md](PRODUCT.md) → [docs/00-product/](docs/00-product/) |
-| **How/Implementation** | [SPEC.md](SPEC.md) → [docs/10-modules/sbkube/](docs/10-modules/sbkube/) |
-| Architecture | [SPEC.md](SPEC.md) §2 → [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
+| **How/Implementation** | [ARCHITECTURE.md](ARCHITECTURE.md) → [docs/10-modules/sbkube/](docs/10-modules/sbkube/) |
+| Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) → [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md) |
 | Commands | [docs/02-features/commands.md](docs/02-features/commands.md) → `make help` |
 | Config schema | [docs/03-configuration/config-schema.md](docs/03-configuration/config-schema.md) |
 | Migration | [docs/03-configuration/migration-guide.md](docs/03-configuration/migration-guide.md) |
@@ -19,7 +19,7 @@ AI navigation hub for SBKube project. **Always load this file first.**
 | Dev setup | [docs/04-development/README.md](docs/04-development/README.md) |
 | External AI ref | [USAGE.md](USAGE.md) + `--format llm` |
 
-**SSOT**: PRODUCT.md (무엇을/왜) + SPEC.md (어떻게) → 하위 문서는 상세화만
+**SSOT**: PRODUCT.md (무엇을/왜) + ARCHITECTURE.md (어떻게) → 하위 문서는 상세화만
 
 ---
 
@@ -152,7 +152,7 @@ SbkubeError → ConfigValidationError | CliToolNotFoundError | HelmExecutionErro
 ### Starting Work
 
 1. **PRODUCT.md** → what/why overview
-2. **SPEC.md** → how/implementation
+2. **ARCHITECTURE.md** → how/implementation
 3. **Source code** → specific implementation
 
 ### Code Change Checklist

@@ -162,9 +162,8 @@ ______________________________________________________________________
 ### 📘 Core Documentation (Start Here)
 
 - **[PRODUCT.md](PRODUCT.md)** - 제품 개요 (무엇을, 왜): 문제 정의, 사용자 시나리오, 핵심 기능
-- **[SPEC.md](SPEC.md)** - 기술 명세 (어떻게): 시스템 아키텍처, 워크플로우, API 명세
 
-> 💡 PRODUCT.md는 "무엇을 만들고 왜 만드는가"를, SPEC.md는 "어떻게 구현하는가"를 설명합니다.
+> 💡 PRODUCT.md는 "무엇을 만들고 왜 만드는가"를, ARCHITECTURE.md는 "어떻게 구현하는가"를 설명합니다.
 
 ### 📖 Product & Planning
 
@@ -185,8 +184,8 @@ ______________________________________________________________________
 
 - 👨‍💻 [Developer Guide](docs/04-development/) - 개발 환경 설정
 - 🤖 [AI Agent Guide](CLAUDE.md) - AI 에이전트 통합 가이드
-- 🏗️ [Architecture](docs/10-modules/sbkube/ARCHITECTURE.md) - 상세 아키텍처 설계 (SPEC.md 기반)
-- 📄 [API Contract](docs/10-modules/sbkube/API_CONTRACT.md) - API 참조 (SPEC.md 기반)
+- 🏗️ [Architecture](docs/10-modules/sbkube/ARCHITECTURE.md) - 상세 아키텍처 설계 
+- 📄 [API Contract](docs/10-modules/sbkube/API_CONTRACT.md) - API 참조 
 
 ### 🤖 AI Integration
 

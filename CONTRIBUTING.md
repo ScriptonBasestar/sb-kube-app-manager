@@ -418,7 +418,7 @@ By contributing to SBKube, you agree that your contributions will be licensed un
 - **Coding Standards**: [docs/04-development/coding-standards.md](docs/04-development/coding-standards.md)
 - **Testing Guide**: [docs/04-development/testing.md](docs/04-development/testing.md)
 - **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
-- **Technical Spec**: [SPEC.md](SPEC.md)
+- **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ---
 

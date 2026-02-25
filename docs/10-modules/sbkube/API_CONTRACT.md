@@ -8,8 +8,7 @@ last_updated: 2025-01-06
 
 # SBKube API 계약 명세
 
-> **주의**: 이 문서는 [SPEC.md](../../../SPEC.md) Section 5 (API 명세)의 구현 상세 버전입니다.
-> 전체 API 개요는 SPEC.md를 우선 참조하세요.
+> **주의**: 이 문서는 SBKube API 계약 및 인터페이스 참조 문서입니다.
 
 ## 개요
 
@@ -586,7 +585,7 @@ def cmd(ctx, ...):
 
 ## 관련 문서
 
-- **상위 문서**: [SPEC.md](../../../SPEC.md) - 기술 명세 (어떻게)
+- ****상위 문서**: [ARCHITECTURE.md](../../../ARCHITECTURE.md) - 아키텍처 (어떻게)
 - **제품 정의**: [PRODUCT.md](../../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
 - **모듈 개요**: [MODULE.md](MODULE.md) - 모듈 정의 및 경계
 - **아키텍처**: [ARCHITECTURE.md](ARCHITECTURE.md) - 시스템 설계

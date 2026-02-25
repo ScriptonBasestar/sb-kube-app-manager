@@ -8,7 +8,7 @@ last_updated: 2025-01-06
 
 # SBKube 의존성 명세
 
-> **주의**: 이 문서는 [SPEC.md](../../../SPEC.md) 및 [MODULE.md](MODULE.md)에서 참조하는 의존성 상세 명세입니다.
+> **주의**: 이 문서는 SBKube 의존성 상세 명세입니다.
 > 기본 의존성 정보는 해당 문서들을 우선 참조하세요.
 
 ## 개요
@@ -403,7 +403,7 @@ apk add gcc musl-dev python3-dev libffi-dev openssl-dev
 
 ## 관련 문서
 
-- **상위 문서**: [SPEC.md](../../../SPEC.md) - 기술 명세 (어떻게)
+- ****상위 문서**: [ARCHITECTURE.md](../../../ARCHITECTURE.md) - 아키텍처 (어떻게)
 - **모듈 개요**: [MODULE.md](MODULE.md) - 모듈 정의 및 경계
 - **아키텍처**: [ARCHITECTURE.md](ARCHITECTURE.md) - 시스템 설계
 - **API 계약**: [API_CONTRACT.md](API_CONTRACT.md) - API 명세

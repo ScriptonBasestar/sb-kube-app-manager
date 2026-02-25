@@ -459,9 +459,9 @@ Troubleshooting:
 ### 📚 Documentation
 
 - ✅ **NEW**: [sources-schema.md](docs/03-configuration/sources-schema.md) - Complete sources.yaml reference
-- ✅ **UPDATED**: [PRODUCT.md](PRODUCT.md) and [SPEC.md](SPEC.md) as comprehensive root documents (SSOT)
+- ✅ **UPDATED**: [PRODUCT.md](PRODUCT.md) as comprehensive root documents (SSOT)
 - ✅ **UPDATED**: [CLAUDE.md](CLAUDE.md) with architecture patterns and development commands
-- ✅ **SYNCED**: All documentation layers aligned with PRODUCT.md and SPEC.md
+- ✅ **SYNCED**: All documentation layers aligned with PRODUCT.md and ARCHITECTURE.md
 
 ______________________________________________________________________
 

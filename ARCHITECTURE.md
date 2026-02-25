@@ -115,17 +115,25 @@ prepare → build → template → deploy
 소스준비  커스터마이징 템플릿화  클러스터배포
 ```
 
+## Security Considerations
+
+- **Kubernetes 인증**: kubeconfig 파일 의존 (표준 메커니즘)
+- **Helm 저장소**: HTTPS 강제 (HTTP는 경고)
+- **Git 리포지토리**: SSH 키 또는 토큰 인증
+- **Secrets**: Kubernetes Secrets 사용 (SBKube는 직접 관리 X)
+- **로그**: 민감 정보 마스킹 (비밀번호, 토큰 등)
+- **RBAC**: 최소 권한 원칙 — 대상 네임스페이스에 대한 생성/수정/삭제 권한만 필요
+
 ---
 
 ## Related Documents
 
 - **상세 아키텍처**: [docs/10-modules/sbkube/ARCHITECTURE.md](docs/10-modules/sbkube/ARCHITECTURE.md)
 - **기술 스택**: [TECH_STACK.md](TECH_STACK.md)
-- **기술 명세**: [SPEC.md](SPEC.md) Section 2
 - **API 참조**: [docs/10-modules/sbkube/API_CONTRACT.md](docs/10-modules/sbkube/API_CONTRACT.md)
 
 ---
 
-**Document Version**: 3.0
+**Document Version**: 3.1
 **Last Updated**: 2026-02-25
 **SBKube Version**: 0.11.0

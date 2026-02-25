@@ -23,7 +23,7 @@ last_updated: 2025-01-13
 - **Required Fields**: `kubeconfig`, `kubeconfig_context`
 - **Related**:
   - [config-schema.md](config-schema.md) - Application configuration
-  - [SPEC.md](../../SPEC.md) - Technical specification
+  - [ARCHITECTURE.md](../../ARCHITECTURE.md) - Architecture overview
 
 ______________________________________________________________________
 
@@ -597,7 +597,7 @@ ______________________________________________________________________
 
 - [config-schema.md](config-schema.md) - Application configuration
 - [PRODUCT.md](../../PRODUCT.md) - Product overview
-- [SPEC.md](../../SPEC.md) - Technical specification
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) - Architecture overview
 - [examples/cluster-global-values/](../../examples/cluster-global-values/) - Cluster values example
 
 ______________________________________________________________________

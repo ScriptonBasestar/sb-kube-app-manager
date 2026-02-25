@@ -589,7 +589,7 @@ def cmd(ctx, ...):
 - **제품 정의**: [PRODUCT.md](../../../PRODUCT.md) - 제품 개요 (무엇을, 왜)
 - **모듈 개요**: [MODULE.md](MODULE.md) - 모듈 정의 및 경계
 - **아키텍처**: [ARCHITECTURE.md](ARCHITECTURE.md) - 시스템 설계
-- **의존성**: [DEPENDENCIES.md](DEPENDENCIES.md) - 외부 의존성 상세
+- ****의존성**: [TECH_STACK.md](../../../TECH_STACK.md) - 기술 스택 및 의존성
 
 ---
 

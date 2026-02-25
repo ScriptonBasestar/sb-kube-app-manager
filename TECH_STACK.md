@@ -187,18 +187,66 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 ## Performance Characteristics
 
 ### Resource Usage
+
 - **Memory**: ~50-100 MB typical usage
 - **Disk**: SQLite database (<10 MB for typical deployments)
 - **Network**: Minimal (Helm repo queries, chart downloads)
 
 ### Scalability
+
 - **Apps per deployment**: Tested with 50+ apps
 - **Concurrent operations**: Parallel phase execution (workspace mode)
 - **Database**: SQLite sufficient for single-user workflows
 
 ### Profiling
+
 - **Built-in**: `SBKUBE_PERF=1` enables subprocess timing and summary
 - **Output**: JSONL event log at `tmp/perf/`
+
+## Licenses
+
+All dependencies use permissive licenses compatible with SBKube's MIT license:
+
+| Package | License |
+|---------|---------|
+| click | BSD-3-Clause |
+| pyyaml | MIT |
+| pydantic | MIT |
+| rich | MIT |
+| sqlalchemy | MIT |
+| requests | Apache-2.0 |
+| gitpython | BSD-3-Clause |
+| jinja2 | BSD-3-Clause |
+
+## Dependency Troubleshooting
+
+### Pydantic v1/v2 Conflict
+
+**Symptom**: `ImportError: cannot import name 'BaseModel' from 'pydantic'`
+
+```bash
+uv pip install "pydantic>=2.11"
+```
+
+### SQLAlchemy 2.0 Migration
+
+**Symptom**: `AttributeError: 'Engine' object has no attribute 'execute'`
+
+```bash
+uv pip install "sqlalchemy>=2.0.40"
+```
+
+### macOS ARM64 (Apple Silicon)
+
+```bash
+arch -arm64 uv pip install sbkube
+```
+
+### Linux Alpine (musl libc)
+
+```bash
+apk add gcc musl-dev python3-dev libffi-dev openssl-dev
+```
 
 ## Related Documentation
 
@@ -210,6 +258,6 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 
 ---
 
-**Document Version**: 2.0
+**Document Version**: 3.0
 **Last Updated**: 2026-02-25
 **SBKube Version**: 0.11.0

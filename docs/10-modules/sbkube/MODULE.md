@@ -57,7 +57,7 @@ last_updated: 2026-02-25
 ## 관련 문서
 
 - **아키텍처**: [ARCHITECTURE.md](ARCHITECTURE.md) — 상세 레이어, 패턴, 예외 계층
-- **의존성**: [DEPENDENCIES.md](DEPENDENCIES.md) — Python 패키지 및 시스템 도구
+- ****의존성**: [TECH_STACK.md](../../../TECH_STACK.md) — 기술 스택 및 의존성
 - **API 계약**: [API_CONTRACT.md](API_CONTRACT.md) — 인터페이스 명세
 - ****아키텍처**: [ARCHITECTURE.md](../../../ARCHITECTURE.md) — 시스템 아키텍처
 

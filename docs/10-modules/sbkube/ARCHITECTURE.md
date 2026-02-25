@@ -689,7 +689,7 @@ result = run_helm_command_with_retry(["helm", "pull", chart])
 - **기술 스택**: [TECH_STACK.md](../../../TECH_STACK.md) — 기술 스택 상세
 - **모듈 개요**: [MODULE.md](MODULE.md) — 모듈 정의 및 경계
 - **API 계약**: [API_CONTRACT.md](API_CONTRACT.md) — API 계약 명세
-- **의존성**: [DEPENDENCIES.md](DEPENDENCIES.md) — 모듈 의존성
+- ****의존성**: [TECH_STACK.md](../../../TECH_STACK.md) — 기술 스택 및 의존성
 
 ---
 

@@ -925,6 +925,7 @@ def cmd(
                 ctx.obj["kubeconfig"] = parent_inherited["kubeconfig"]
             if not ctx.obj.get("context") and parent_inherited.get("kubeconfig_context"):
                 ctx.obj["context"] = parent_inherited["kubeconfig_context"]
+            ctx.obj["inherited_settings"] = parent_inherited
 
     # Detect config format
     detected = detect_config_file(BASE_DIR, config_file)

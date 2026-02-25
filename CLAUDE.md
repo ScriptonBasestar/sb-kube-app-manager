@@ -17,7 +17,7 @@ AI navigation hub for SBKube project. **Always load this file first.**
 | Testing | [docs/04-development/testing.md](docs/04-development/testing.md) |
 | Troubleshooting | [docs/07-troubleshooting/README.md](docs/07-troubleshooting/README.md) |
 | Dev setup | [docs/04-development/README.md](docs/04-development/README.md) |
-| External AI ref | [LLM_GUIDE.md](LLM_GUIDE.md) |
+| External AI ref | [USAGE.md](USAGE.md) + `--format llm` |
 
 **SSOT**: PRODUCT.md (무엇을/왜) + SPEC.md (어떻게) → 하위 문서는 상세화만
 
@@ -26,7 +26,7 @@ AI navigation hub for SBKube project. **Always load this file first.**
 ## 1. Essential Project Info
 
 - **Product**: SBKube - Kubernetes deployment automation CLI (k3s)
-- **Tech Stack**: Python 3.12+, Click, Pydantic, SQLAlchemy, Rich
+- **Tech Stack**: Python 3.14+, Click, Pydantic, SQLAlchemy, Rich
 - **Version**: v0.11.0
 - **Core Workflow**: `prepare → build → template → deploy` (또는 `sbkube apply -f sbkube.yaml`)
 
@@ -203,7 +203,7 @@ chart: grafana/grafana    # ✅ correct
 | Rule | Requirement |
 |------|-------------|
 | Package manager | `uv` only (no `pip`, no `requirements.txt`) |
-| Python version | 3.12+ strict |
+| Python version | 3.14+ strict |
 | Temp files | `tmp/` or `tmp/scripts/` only |
 | Build artifacts | `build/`, `tmp/bin/`, `dist/` only |
 | Auto-push | ❌ PROHIBITED |

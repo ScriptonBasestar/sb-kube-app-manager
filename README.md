@@ -190,11 +190,9 @@ ______________________________________________________________________
 
 ### 🤖 AI Integration
 
-- 🤖 [LLM Guide](LLM_GUIDE.md) - AI 최적화 참조 (다른 프로젝트에서 SBKube 사용 시)
-  - 빠른 명령어 참조
-  - 설정 예제
-  - 일반 패턴 및 문제 해결
-  - AI 어시스턴트용 설계 (Claude, ChatGPT 등)
+- 🤖 [AI Agent Guide](CLAUDE.md) — AI 에이전트 통합 가이드
+- `sbkube --format llm apply` — LLM 최적화 출력 (80-90% 토큰 절감)
+- [LLM-Friendly Output Guide](docs/02-features/llm-friendly-output.md) — 상세 가이드
 
 **전체 문서 인덱스**: [docs/INDEX.md](docs/INDEX.md)
 

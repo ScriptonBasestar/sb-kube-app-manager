@@ -729,206 +729,39 @@ apps:
     namespace: staging
 ```
 
-## [0.6.1] - 2025-10-31
-
-### 🎨 Code Quality
-
-**Linting and Formatting**
-
-- ✅ Fixed 63 import formatting errors with ruff auto-fix
-- ✅ Standardized multi-line import syntax across codebase
-- ✅ Organized import order (stdlib → third-party → local)
-- ✅ Removed unused imports
-- ✅ Reformatted 16 files (88 files already compliant)
-- ✅ Applied mdformat to markdown documentation
-
-**Verification**
-
-- ✅ ruff check: 0 errors remaining
-- ✅ mypy: Type checking passed on 61 source files
-- ✅ bandit: Security checks passed
-- ✅ All critical module imports tested successfully
-
-### ✨ Improved
-
-**Help 화면 개선**
-
-- ✅ 명령어를 카테고리별로 그룹화하여 가독성 향상
-  - 🔄 핵심 워크플로우: prepare, build, template, deploy
-  - ⚡ 통합 명령어: apply
-  - 📊 상태 관리: status, history, rollback
-  - 🔧 업그레이드/삭제: upgrade, delete
-  - 🛠️ 유틸리티: init, validate, doctor, version
-- ✅ 카테고리별 이모지 추가로 시각적 구분 강화
-- ✅ 명령어 발견성 및 학습 곡선 개선
-
-## [0.6.0] - 2025-10-31
-
-### 🎯 New Features
-
-**App-Group Dependency Validation**
-
-- ✅ Automatic namespace detection for `deps` field validation
-- ✅ Cross-namespace dependency checking (e.g., infra apps in `infra` namespace, data apps in `postgresql` namespace)
-- ✅ Integration with `validate` command (non-blocking warnings)
-- ✅ Integration with `apply` command (blocking errors)
-- ✅ State-first approach using `.sbkube/deployments.db` for reliable dependency tracking
-- ✅ New database method: `get_latest_deployment_any_namespace()` for namespace-agnostic queries
-
-**Deployment Checker Enhancement**
-
-- ✅ Automatic namespace detection in `DeploymentChecker.check_app_group_deployed()`
-- ✅ Graceful fallback: namespace-specific query → any-namespace query
-- ✅ Deployment status messages now include actual deployed namespace
-
-**Validate Command Enhancement** (2025-10-31)
-
-- ✅ Added `--app-dir` option for directory-based validation
-- ✅ Added `--config-file` option (default: config.yaml)
-- ✅ 3-level file resolution priority:
-  1. Explicit file path (backward compatible)
-  1. `--app-dir` + `--config-file` combination
-  1. Current directory fallback (./config.yaml)
-- ✅ Clear error messages with actionable solutions
-- ✅ Comprehensive test suite added (15 test cases)
-
-**Doctor Command Safety Improvements** (2025-10-31)
-
-- ✅ Improved kubectl/helm detection using `shutil.which()` (fixes false negatives)
-- ✅ Changed messaging from "자동 수정 가능" to "권장 해결 방법"
-- ✅ Links to official documentation instead of shell commands
-- ✅ Added safety warnings: "위 명령어는 참고용입니다. 실행 전 반드시 확인하세요"
-
-### 🗑️ Breaking Changes
-
-**Doctor Command** (2025-10-31):
-
-- ❌ `--fix` option removed (security improvement)
-  - **Reason**: Automatic system modifications can damage user environments
-  - **Alternative**: Follow suggested commands manually after verification
-
-### 🐛 Bug Fixes
-
-- ✅ Fixed `pyproject.toml`: Moved `dependencies` from `[project.urls]` to `[project]` section
-- ✅ Fixed kubectl detection false negative (kubectl exists but reported as missing)
-
-### 🗑️ Breaking Changes (Previous)
-
-**Removed Deprecated Commands**:
-
-- ❌ `sbkube cluster` command removed → Use `sbkube status` instead
-- ❌ `sbkube state` command removed → Use `sbkube history` and `sbkube rollback` instead
-
-**Migration Guide**:
-
-```bash
-# Old commands (REMOVED in v0.6.0)
-sbkube cluster status              # ❌ No longer available
-sbkube state list                  # ❌ No longer available
-sbkube state show dep_123          # ❌ No longer available
-sbkube state rollback dep_123      # ❌ No longer available
-
-# New commands (use these instead)
-sbkube status                      # ✅ Cluster and app status
-sbkube history                     # ✅ Deployment history
-sbkube history --show dep_123      # ✅ Show specific deployment
-sbkube rollback dep_123            # ✅ Rollback to deployment
-```
-
-### 📝 Documentation
-
-- ✅ Updated `product-spec.md` with namespace auto-detection feature
-- ✅ Added comprehensive validation examples in documentation
-- ✅ Updated all command references from deprecated to new commands
-
-### 🧪 Testing
-
-- ✅ Added 3 new unit tests for namespace auto-detection
-- ✅ Fixed 6 existing tests for new mock patterns
-- ✅ All 19 tests passing in `test_deployment_checker.py`
-
-______________________________________________________________________
-
-______________________________________________________________________
-
-## 과거 버전 요약 (v0.3.0 ~ v0.5.1)
+## 과거 버전 요약
 
 <details>
-<summary>📦 v0.5.1 (2025-10-31) - 예제 개선 및 Redis Operator 전환</summary>
+<summary>📦 v0.6.x (2025-10-31) — App-Group Dependencies, State Management, Code Quality</summary>
 
-- grafana Redis → OpsTree Redis Operator로 예제 교체 (17개 파일)
-- 벤더 중립적 오픈소스 차트 사용, Kubernetes Operator 패턴 적용
-- 기존 코드와 완전 호환
+**v0.6.1**: Linting/formatting cleanup (63 import fixes, ruff/mypy/bandit passes), help 화면 카테고리 그룹화
+
+**v0.6.0**: App-Group dependency validation (`deps` field), deployment checker enhancement with namespace auto-detection, validate command `--app-dir` option, doctor command safety improvements, removed deprecated `sbkube cluster` and `sbkube state` commands
 
 </details>
 
 <details>
-<summary>🚀 v0.5.0 (2025-10-31) - Breaking Changes 및 주요 기능 추가</summary>
+<summary>📦 v0.5.x (2025-10-31) — Breaking Changes, Hooks System, OCI Support</summary>
 
-**Breaking Changes**:
+**v0.5.1**: Redis → OpsTree Redis Operator 예제 전환
 
-- Helm Chart 설정: `repo` + `chart` → 단일 `chart` 필드 (`grafana/grafana`)
-- CLI 옵션: `--env` → `--profile`, `--sources` → `--source`
-
-**새로운 기능**:
-
-- Hooks 시스템 (pre/post/on_failure 지원)
-- OCI Registry 지원 (TrueCharts, GHCR 등)
-- 고급 차트 커스터마이징 (`overrides`, `removes`)
-- 의존성 관리 (`depends_on`, 토폴로지 정렬)
-
-**문서 및 예제**:
-
-- 38개 실전 예제, 5개 튜토리얼 완성
-- API 계약 명세 추가
-- 마이그레이션 가이드 제공
-
-**보안 및 성능**:
-
-- `shell=True` 제거 (보안 개선)
-- Pydantic 2.7+ 업그레이드
-- Python 3.12+ 지원
+**v0.5.0** (**Breaking**): Helm `repo`+`chart` → 단일 `chart` 필드, `--env`→`--profile`, Hooks 시스템, OCI Registry 지원, 고급 차트 커스터마이징, 의존성 관리, 38개 예제, `shell=True` 제거
 
 </details>
 
 <details>
-<summary>📊 v0.4.x 시리즈 - 예제 및 개발자 경험 개선</summary>
+<summary>📦 v0.4.x — Examples, DX Improvements</summary>
 
-**v0.4.10**: deps 필드 지원 (앱 그룹 간 의존성 선언) **v0.4.9**: Glob 패턴 지원 (overrides에 `*.yaml` 등 사용 가능) **v0.4.8**: Override 디렉토리
-자동 감지 및 경고 시스템 **v0.4.7**: sources.yaml 자동 탐색 기능 (monorepo 지원 개선) **v0.4.6**: prepare 명령어 멱등성 개선 (재실행 안전성) **v0.4.5**:
-Kustomize 예제 완성, 예제 커버리지 100% 달성 **v0.4.4**: 워크플로우 예제 4개 추가 (apply, force-update, git, state-management) **v0.4.3**: 8개
-예제 디렉토리 README 추가 (문서 커버리지 100%) **v0.4.1**: helm_repos dict 포맷 통일, Pydantic shorthand 지원 **v0.4.0**: `--force` 옵션,
-validate/prepare 버그 수정
+v0.4.10: deps 필드, v0.4.9: Glob 패턴, v0.4.8: Override 자동 감지, v0.4.7: sources.yaml 자동 탐색, v0.4.6: prepare 멱등성, v0.4.5: Kustomize 예제 100%, v0.4.4: 워크플로우 예제, v0.4.3: README 커버리지 100%, v0.4.1: helm_repos dict 통일, v0.4.0: --force 옵션
 
 </details>
 
 <details>
-<summary>🎉 v0.3.0 (2025-10-22) - 메이저 리팩토링 (Breaking Changes)</summary>
+<summary>📦 v0.3.0 (2025-10-22) — Major Refactoring (Breaking)</summary>
 
-**설정 파일 간소화**:
-
-- Apps list → dict 변경 (앱 이름이 키)
-- `pull-helm` + `install-helm` → 단일 `helm` 타입 통합
-- `specs` 제거 (필드 평탄화)
-- 설정 파일 길이 50% 감소
-
-**새로운 기능**:
-
-- HTTP 파일 다운로드 지원
-- 의존성 자동 해결 (토폴로지 정렬, 순환 의존성 검출)
-- `sbkube migrate` 명령어 (자동 마이그레이션)
-
-**제거된 기능**:
-
-- `copy-*` 타입들 (copy-app, copy-repo, copy-chart, copy-root)
-- `render` → `template` 명령어로 대체
-
-**통계**:
-
-- 신규 파일 9개, 추가 라인 ~3,000
-- 설정 간소화: 필수 항목 30% 감소, 중첩 레벨 3→2
-- 테스트 커버리지 86%
+Apps list→dict, `pull-helm`+`install-helm`→단일 `helm`, `specs` 제거, HTTP 다운로드, 의존성 자동 해결, `sbkube migrate`, `copy-*` 제거, `render`→`template`, 설정 길이 50% 감소
 
 </details>
 
-______________________________________________________________________
+---
+

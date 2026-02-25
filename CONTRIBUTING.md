@@ -11,7 +11,7 @@ Thank you for your interest in contributing to SBKube! This document provides es
 ## Quick Start
 
 ### Prerequisites
-- **Python 3.12+** (required)
+- **Python 3.14+** (required)
 - **uv** package manager (recommended)
 - **Git**
 - **kubectl** (for testing)

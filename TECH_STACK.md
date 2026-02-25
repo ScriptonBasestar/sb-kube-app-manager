@@ -13,7 +13,7 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 ## Core Technologies
 
 ### Language & Runtime
-- **Python 3.12+** (required)
+- **Python 3.14+** (required)
 - **Type Hints**: Full type coverage with mypy strict mode
 - **Async/Await**: Modern Python async patterns where applicable
 
@@ -25,7 +25,7 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
   - Global exception handling with auto-fix prompts
 
 ### Configuration & Validation
-- **Pydantic 2.7.1+**: Data validation and settings management
+- **Pydantic 2.11+**: Data validation and settings management
   - Strict type validation (`extra="forbid"`)
   - JSON schema generation
   - Model inheritance for app types
@@ -35,11 +35,11 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 - **Jinja2**: Template rendering
 
 ### Kubernetes & Helm
-- **kubernetes 28.1.0+**: Official Kubernetes Python client
+- **kubernetes 32.0.0+**: Official Kubernetes Python client
   - Cluster connectivity
   - Resource querying
   - Namespace management
-- **Helm 3.x** (external): Chart management via subprocess
+- **Helm 4.x** (external): Chart management via subprocess
   - Repository management (including OCI registries)
   - Chart pulling and templating
   - Release deployment
@@ -69,7 +69,7 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 
 ### Utilities
 - **GitPython**: Git repository management
-- **requests 2.31.0+**: HTTP client for file downloads
+- **requests 2.32.0+**: HTTP client for file downloads
 - **packaging 25.0+**: Semantic version comparison
 - **toml 0.10.2+**: TOML configuration parsing
 
@@ -122,8 +122,8 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 ## External Dependencies
 
 ### Required System Tools
-- **kubectl**: Kubernetes CLI (tested with v1.28+)
-- **helm**: Helm CLI (v3.x required)
+- **kubectl**: Kubernetes CLI (tested with v1.32+)
+- **helm**: Helm CLI (v4.x required)
 - **git**: Version control
 
 ### Optional Tools
@@ -170,14 +170,14 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 ## Version Compatibility
 
 ### Python Support
-- **Minimum**: Python 3.12
-- **Recommended**: Python 3.12 (latest stable)
-- **Testing**: CI tested on Python 3.12
+- **Minimum**: Python 3.14
+- **Recommended**: Python 3.14 (latest stable)
+- **Testing**: CI tested on Python 3.14
 
 ### Kubernetes Support
-- **Minimum**: Kubernetes 1.24+
-- **Recommended**: Kubernetes 1.28+
-- **Tested**: k3s v1.28+, k3d, kind
+- **Minimum**: Kubernetes 1.28+
+- **Recommended**: Kubernetes 1.32+
+- **Tested**: k3s v1.32+, k3d, kind
 
 ### Operating Systems
 - **Primary**: Linux (POSIX)

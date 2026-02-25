@@ -4,7 +4,7 @@ version = "0.11.0"
 license = "MIT"
 description = "k3s용 헬름+yaml+git 배포 자동화 CLI 도구"
 authors = [{ name = "archmagece", email = "archmagece@users.noreply.github.com" }]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 readme = "README.md"
 keywords = ["kubernetes", "k3s", "helm", "deployment", "cli", "devops", "automation"]
 classifiers = [
@@ -14,20 +14,20 @@ classifiers = [
     "Topic :: Software Development :: Build Tools",
     "Topic :: System :: Systems Administration",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: POSIX :: Linux",
 ]
 dependencies = [
-  "click>=8.1,<9",
-  "pyyaml<7",
-  "gitpython<4",
-  "jinja2<4",
-  "rich<15",
+  "click>=8.2,<9",
+  "pyyaml>=6.0.2,<7",
+  "gitpython>=3.1.44,<4",
+  "jinja2>=3.1.5,<4",
+  "rich>=14.0,<15",
   "toml>=0.10.2,<1.0",
   "jsonschema>=4.23.0,<5",
-  "pydantic>=2.7.1,<3",
-  "sqlalchemy>=2.0.0,<3",
-  "requests>=2.31.0,<3",
+  "pydantic>=2.11,<3",
+  "sqlalchemy>=2.0.40,<3",
+  "requests>=2.32.0,<3",
   "packaging>=25.0,<27",
 ]
 
@@ -36,7 +36,7 @@ Homepage = "https://github.com/archmagece/sb-kube-app-manager"
 Documentation = "https://github.com/archmagece/sb-kube-app-manager/tree/main/docs"
 Repository = "https://github.com/archmagece/sb-kube-app-manager"
 "Bug Tracker" = "https://github.com/archmagece/sb-kube-app-manager/issues"
-"Product Definition" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/00-product/product-definition.md"
+"Product Overview" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/PRODUCT.md"
 "API Reference" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/10-modules/sbkube/API_CONTRACT.md"
 "Getting Started" = "https://github.com/archmagece/sb-kube-app-manager/blob/main/docs/01-getting-started/README.md"
 

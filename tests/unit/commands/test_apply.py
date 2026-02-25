@@ -15,6 +15,7 @@ Note: Tests use unified sbkube.yaml format (v0.10.0+).
 Legacy sources.yaml + config.yaml format is no longer supported.
 """
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -718,7 +719,7 @@ class TestApplyProgressTracking:
 
 
 class TestInheritedSettingsExtraction:
-    """Test hierarchical settings extraction and chain building."""
+    """Test hierarchical settings extraction, merge, and chain building."""
 
     def test_extract_settings_full(self):
         """Extract all inheritable fields from config dict."""
@@ -746,11 +747,11 @@ class TestInheritedSettingsExtraction:
 
         assert result["kubeconfig"] == "~/.kube/prod"
         assert result["kubeconfig_context"] == "prod-cluster"
-        assert result["namespace"] == "production"
         assert result["helm_repos"] == {
             "grafana": "https://grafana.github.io/helm-charts"
         }
         assert result["oci_registries"] == {"myoci": "oci://example.com/charts"}
+        assert "namespace" not in result  # not inheritable via this mechanism
         assert "timeout" not in result  # non-inheritable field
 
     def test_extract_settings_empty(self):
@@ -774,6 +775,27 @@ class TestInheritedSettingsExtraction:
         assert "kubeconfig" not in result
         assert "helm_repos" not in result
 
+    def test_merge_inherited_settings(self):
+        """_merge_inherited_settings correctly merges two dicts."""
+        from sbkube.commands.apply import _merge_inherited_settings
+
+        base = {
+            "kubeconfig": "~/.kube/base",
+            "kubeconfig_context": "base-ctx",
+            "helm_repos": {"a": "https://a.com", "b": "https://b.com"},
+        }
+        override = {
+            "kubeconfig_context": "override-ctx",
+            "helm_repos": {"b": "https://b-new.com", "c": "https://c.com"},
+        }
+        result = _merge_inherited_settings(base, override)
+
+        assert result["kubeconfig"] == "~/.kube/base"  # not overridden
+        assert result["kubeconfig_context"] == "override-ctx"
+        assert result["helm_repos"]["a"] == "https://a.com"
+        assert result["helm_repos"]["b"] == "https://b-new.com"  # overridden
+        assert result["helm_repos"]["c"] == "https://c.com"  # added
+
     def test_build_chain_root_only(self):
         """Chain with no intermediate config returns root settings."""
         from sbkube.commands.apply import _build_inherited_settings_chain
@@ -786,21 +808,18 @@ class TestInheritedSettingsExtraction:
             },
         }
 
-        result = _build_inherited_settings_chain(
-            root_data, intermediate_config_path=None
-        )
+        result = _build_inherited_settings_chain(root_data, None)
         assert result["kubeconfig"] == "~/.kube/prod"
         assert result["kubeconfig_context"] == "prod-cluster"
 
-    def test_build_chain_with_intermediate(self, tmp_path):
-        """Chain merges root and intermediate, intermediate overrides."""
+    def test_build_chain_with_single_intermediate(self, tmp_path):
+        """Chain merges root and single intermediate."""
         from sbkube.commands.apply import _build_inherited_settings_chain
 
         root_data = {
             "settings": {
                 "kubeconfig": "~/.kube/prod",
                 "kubeconfig_context": "prod-cluster",
-                "namespace": "default",
                 "helm_repos": {
                     "grafana": "https://grafana.example.com",
                     "prometheus": "https://prometheus.example.com",
@@ -808,7 +827,6 @@ class TestInheritedSettingsExtraction:
             },
         }
 
-        # Create intermediate sbkube.yaml
         intermediate_dir = tmp_path / "ph2_observability"
         intermediate_dir.mkdir()
         intermediate_file = intermediate_dir / "sbkube.yaml"
@@ -817,7 +835,6 @@ class TestInheritedSettingsExtraction:
                 {
                     "apiVersion": "sbkube/v1",
                     "settings": {
-                        "namespace": "monitoring",
                         "helm_repos": {"loki": "https://loki.example.com"},
                     },
                 }
@@ -826,18 +843,65 @@ class TestInheritedSettingsExtraction:
 
         result = _build_inherited_settings_chain(root_data, intermediate_file)
 
-        # Root values preserved
         assert result["kubeconfig"] == "~/.kube/prod"
         assert result["kubeconfig_context"] == "prod-cluster"
-        # Intermediate overrides namespace
-        assert result["namespace"] == "monitoring"
-        # Helm repos merged (root + intermediate)
         assert result["helm_repos"]["grafana"] == "https://grafana.example.com"
         assert result["helm_repos"]["prometheus"] == "https://prometheus.example.com"
         assert result["helm_repos"]["loki"] == "https://loki.example.com"
 
+    def test_build_chain_multi_level(self, tmp_path):
+        """Chain merges root + level1 + level2, each overriding its parent."""
+        from sbkube.commands.apply import _build_inherited_settings_chain
+
+        root_data = {
+            "settings": {
+                "kubeconfig": "~/.kube/prod",
+                "kubeconfig_context": "root-ctx",
+                "helm_repos": {"repo-a": "https://a.example.com"},
+            },
+        }
+
+        level1 = tmp_path / "ph2"
+        level1.mkdir()
+        (level1 / "sbkube.yaml").write_text(
+            yaml.dump(
+                {
+                    "apiVersion": "sbkube/v1",
+                    "settings": {
+                        "kubeconfig_context": "level1-ctx",
+                        "helm_repos": {"repo-b": "https://b.example.com"},
+                    },
+                }
+            )
+        )
+
+        level2 = level1 / "sub"
+        level2.mkdir()
+        (level2 / "sbkube.yaml").write_text(
+            yaml.dump(
+                {
+                    "apiVersion": "sbkube/v1",
+                    "settings": {
+                        "kubeconfig_context": "level2-ctx",
+                        "helm_repos": {"repo-c": "https://c.example.com"},
+                    },
+                }
+            )
+        )
+
+        result = _build_inherited_settings_chain(
+            root_data,
+            [level1 / "sbkube.yaml", level2 / "sbkube.yaml"],
+        )
+
+        assert result["kubeconfig"] == "~/.kube/prod"
+        assert result["kubeconfig_context"] == "level2-ctx"
+        assert result["helm_repos"]["repo-a"] == "https://a.example.com"
+        assert result["helm_repos"]["repo-b"] == "https://b.example.com"
+        assert result["helm_repos"]["repo-c"] == "https://c.example.com"
+
     def test_build_chain_intermediate_not_exists(self):
-        """Chain with non-existent intermediate returns root only."""
+        """Chain with non-existent intermediate skips it."""
         from pathlib import Path
 
         from sbkube.commands.apply import _build_inherited_settings_chain
@@ -849,6 +913,119 @@ class TestInheritedSettingsExtraction:
         }
 
         result = _build_inherited_settings_chain(
-            root_data, Path("/nonexistent/sbkube.yaml")
+            root_data, [Path("/nonexistent/sbkube.yaml")]
         )
         assert result["kubeconfig_context"] == "my-cluster"
+
+
+class TestCollectParentInheritedSettings:
+    """Test bottom-up parent settings collection."""
+
+    @staticmethod
+    def _create_hierarchy(root_dir):
+        """Create root + phase + app hierarchy."""
+        (root_dir / "sbkube.yaml").write_text(
+            yaml.dump(
+                {
+                    "apiVersion": "sbkube/v1",
+                    "settings": {
+                        "kubeconfig": "~/.kube/test",
+                        "kubeconfig_context": "root-ctx",
+                        "helm_repos": {"grafana": "https://grafana.example.com"},
+                    },
+                    "phases": {
+                        "ph2": {"source": "ph2/sbkube.yaml"},
+                    },
+                }
+            )
+        )
+
+        phase_dir = root_dir / "ph2"
+        phase_dir.mkdir()
+        (phase_dir / "sbkube.yaml").write_text(
+            yaml.dump(
+                {
+                    "apiVersion": "sbkube/v1",
+                    "settings": {"namespace": "monitoring"},
+                    "phases": {
+                        "app_095": {"source": "app_095/sbkube.yaml"},
+                    },
+                }
+            )
+        )
+
+        app_dir = phase_dir / "app_095"
+        app_dir.mkdir()
+        (app_dir / "sbkube.yaml").write_text(
+            yaml.dump(
+                {
+                    "apiVersion": "sbkube/v1",
+                    "settings": {"namespace": "monitoring"},
+                    "apps": {
+                        "prom": {
+                            "type": "helm",
+                            "enabled": True,
+                            "chart": "prometheus-community/kube-prometheus-stack",
+                            "namespace": "monitoring",
+                        },
+                    },
+                }
+            )
+        )
+
+    def test_from_app_level(self, tmp_path):
+        """From app dir, collects root + phase settings."""
+        from sbkube.commands.apply import _collect_parent_inherited_settings
+
+        self._create_hierarchy(tmp_path)
+
+        result = _collect_parent_inherited_settings(tmp_path / "ph2" / "app_095")
+        assert result["kubeconfig"] == "~/.kube/test"
+        assert result["kubeconfig_context"] == "root-ctx"
+        assert result["helm_repos"]["grafana"] == "https://grafana.example.com"
+
+    def test_from_phase_level(self, tmp_path):
+        """From phase dir, collects root settings only."""
+        from sbkube.commands.apply import _collect_parent_inherited_settings
+
+        self._create_hierarchy(tmp_path)
+
+        result = _collect_parent_inherited_settings(tmp_path / "ph2")
+        assert result["kubeconfig"] == "~/.kube/test"
+        assert result["kubeconfig_context"] == "root-ctx"
+
+    def test_from_root_level(self, tmp_path):
+        """From root dir, no parents to collect."""
+        from sbkube.commands.apply import _collect_parent_inherited_settings
+
+        self._create_hierarchy(tmp_path)
+
+        result = _collect_parent_inherited_settings(tmp_path)
+        assert result == {}
+
+    @patch("sbkube.commands.workspace.WorkspaceDeployCommand")
+    def test_cmd_target_phase_dir_gets_inherited(self, mock_ws_cmd, tmp_path):
+        """sbkube apply ph2 → WorkspaceDeployCommand gets parent settings."""
+        self._create_hierarchy(tmp_path)
+
+        mock_instance = MagicMock()
+        mock_instance.execute.return_value = True
+        mock_ws_cmd.return_value = mock_instance
+
+        runner = CliRunner()
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            result = runner.invoke(
+                cmd,
+                [str(tmp_path / "ph2")],
+                obj={"format": "human"},
+            )
+
+        assert mock_ws_cmd.called
+        call_kwargs = mock_ws_cmd.call_args
+        inherited = call_kwargs.kwargs.get("inherited_settings")
+
+        assert inherited is not None
+        assert inherited["kubeconfig"] == "~/.kube/test"
+        assert inherited["kubeconfig_context"] == "root-ctx"
+        assert inherited["helm_repos"]["grafana"] == "https://grafana.example.com"
+        assert result.exit_code == 0

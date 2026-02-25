@@ -13,7 +13,6 @@ from rich.table import Table
 from rich.tree import Tree
 
 from sbkube.exceptions import ConfigValidationError
-from sbkube.models.config_model import SBKubeConfig
 from sbkube.models.unified_config_model import PhaseReference, UnifiedConfig
 from sbkube.models.workspace_state import (
     PhaseDeploymentCreate,
@@ -1347,23 +1346,8 @@ class WorkspaceDeployCommand:
                     self.console.print(
                         f"  [cyan]📦 App config detected: {source_path.name}[/cyan]"
                     )
-                    # Support both unified (settings.namespace) and legacy (namespace) formats
-                    if 'apiVersion' in nested_data and str(nested_data.get('apiVersion', '')).startswith('sbkube/'):
-                        nested_config = UnifiedConfig(**nested_data)
-                    elif 'namespace' in nested_data:
-                        # Legacy format: convert namespace to settings.namespace
-                        legacy_config = SBKubeConfig(**nested_data)
-                        unified_data = {
-                            'settings': {'namespace': legacy_config.namespace},
-                            'apps': nested_data['apps'],
-                        }
-                        if nested_data.get('deps') is not None:
-                            unified_data['deps'] = nested_data['deps']
-                        if nested_data.get('hooks') is not None:
-                            unified_data['hooks'] = nested_data['hooks']
-                        nested_config = UnifiedConfig(**unified_data)
-                    else:
-                        nested_config = UnifiedConfig(**nested_data)
+                    nested_config = UnifiedConfig(**nested_data)
+                    list(nested_config.apps.keys())
                     enabled_apps = [
                         name for name, app in nested_config.apps.items()
                         if app.enabled

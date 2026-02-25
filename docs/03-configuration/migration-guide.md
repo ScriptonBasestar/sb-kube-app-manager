@@ -231,13 +231,8 @@ mv legacy-phase.yaml legacy-backup/
 | `sources.yaml` | `settings:` section |
 | `config.yaml` | `apps:` section |
 | `legacy-phase.yaml` | `metadata:` + `phases:` sections |
-| `namespace:` (top-level) | `settings.namespace:` |
-| `kubeconfig:` (top-level) | `settings.kubeconfig:` |
-| `kubeconfig_context:` (top-level) | `settings.kubeconfig_context:` |
 | `helm_repos:` (list) | `settings.helm_repos:` (dict) |
 | `repos:` | `settings.helm_repos:` |
-| `global_labels:` | `apps.<app>.labels:` |
-| `global_annotations:` | `apps.<app>.annotations:` |
 
 #### New Features in v0.10.0
 
@@ -1017,43 +1012,6 @@ Update scripts to use new paths and options.
 ______________________________________________________________________
 
 ## Troubleshooting
-
-### Issue: "Extra inputs are not permitted" (namespace 등)
-
-**Cause**: 레거시 `config.yaml` 필드를 통합 `sbkube.yaml`의 최상위에 사용
-
-**Example**:
-
-```yaml
-# ❌ 레거시 (SBKubeConfig 형식) — "Extra inputs are not permitted" 오류
-namespace: monitoring
-apps:
-  loki:
-    type: helm
-    chart: grafana/loki
-
-# ✅ 통합 (UnifiedConfig 형식)
-apiVersion: sbkube/v1
-settings:
-  namespace: monitoring
-apps:
-  loki:
-    type: helm
-    chart: grafana/loki
-```
-
-**주요 필드 위치 변경:**
-
-| Legacy (top-level) | Unified (v0.10.0+) |
-|---------------------|---------------------|
-| `namespace:` | `settings.namespace:` |
-| `kubeconfig:` | `settings.kubeconfig:` |
-| `kubeconfig_context:` | `settings.kubeconfig_context:` |
-| `helm_repos:` | `settings.helm_repos:` |
-
-> v0.11.0+ 코드는 레거시 필드를 감지하면 마이그레이션 안내 메시지를 표시합니다.
-
-______________________________________________________________________
 
 ### Issue: "Unknown field 'repo'"
 

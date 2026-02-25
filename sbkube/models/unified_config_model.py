@@ -26,21 +26,6 @@ from .base_model import ConfigBaseModel
 from .config_model import AppConfig
 from .sources_model import GitRepoScheme, HelmRepoScheme, OciRepoScheme
 
-# Legacy field names from SBKubeConfig that should be under settings: in UnifiedConfig
-LEGACY_FIELD_HINTS: dict[str, str] = {
-    "namespace": "settings.namespace",
-    "global_labels": "apps.<app>.labels",
-    "global_annotations": "apps.<app>.annotations",
-    "helm_repos": "settings.helm_repos",
-    "kubeconfig": "settings.kubeconfig",
-    "kubeconfig_context": "settings.kubeconfig_context",
-}
-
-# Top-level fields that are valid in UnifiedConfig
-_UNIFIED_TOP_LEVEL_FIELDS = {
-    "apiVersion", "metadata", "settings", "apps", "phases", "deps", "hooks",
-}
-
 # ============================================================================
 # Unified Settings
 # ============================================================================
@@ -564,29 +549,6 @@ class UnifiedConfig(ConfigBaseModel):
             description="Global command hooks (e.g., hooks.apply.pre, hooks.deploy.post)",
         ),
     ] = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def detect_legacy_fields(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """Detect legacy SBKubeConfig fields at the top level and suggest migration."""
-        if not isinstance(values, dict):
-            return values
-
-        found = []
-        for field, target in LEGACY_FIELD_HINTS.items():
-            if field in values and field not in _UNIFIED_TOP_LEVEL_FIELDS:
-                found.append(f"  - '{field}' → '{target}'")
-
-        if found:
-            msg = (
-                "Legacy config fields detected at top level.\n"
-                "Migrate to unified sbkube.yaml (v0.10.0+) format:\n"
-                + "\n".join(found)
-                + "\n\nSee: docs/03-configuration/migration-guide.md"
-            )
-            raise ValueError(msg)
-
-        return values
 
     @field_validator("metadata", mode="before")
     @classmethod

@@ -1,4 +1,9 @@
 ---
+archived-at: 2026-02-25T16:05:01+09:00
+verified-at: 2026-02-25T16:05:01+09:00
+verification-summary: |
+  - Verified: Deprecated legacy options warnings integration.
+  - Evidence: Checked `deprecation.py` and its usage in various CLI commands to output warnings for legacy options.
 type: feature
 priority: medium
 status: todo

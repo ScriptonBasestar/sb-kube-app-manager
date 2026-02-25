@@ -1,4 +1,9 @@
 ---
+archived-at: 2026-02-25T16:05:01+09:00
+verified-at: 2026-02-25T16:05:01+09:00
+verification-summary: |
+  - Verified: Unified config support in all core workflow commands.
+  - Evidence: Verified common_options.py and related click commands (prepare, build, template, deploy) use the shared target option logic. Documentation aligned.
 type: feature
 priority: high
 status: todo

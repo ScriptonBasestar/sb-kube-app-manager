@@ -1,4 +1,9 @@
 ---
+archived-at: 2026-02-25T16:05:01+09:00
+verified-at: 2026-02-25T16:05:01+09:00
+verification-summary: |
+  - Verified: CLI redesign tasks functionality. Target and config parameters resolution.
+  - Evidence: Validation of sbkube/commands/*.py implementation matching task requirements and docs updated to feature positional target args.
 type: feature
 priority: high
 status: todo

@@ -43,14 +43,16 @@ last_updated: 2026-02-25
 가장 많이 사용하는 명령어. `prepare → build → template → deploy`를 순차 실행합니다.
 
 ```bash
-# 기본 사용 (현재 디렉토리의 sbkube.yaml 자동 탐지)
+# 옵션 1: 특정 타겟 지정 (가장 권장됨)
+sbkube apply ./my-app
+sbkube apply ~/project/app-group
+
+# 옵션 2: 현재 디렉토리의 sbkube.yaml 자동 탐지
 sbkube apply
 
-# 설정 파일 지정
+# 옵션 3: 설정 파일 직접 지정
 sbkube apply -f sbkube.yaml
-
-# Dry-run
-sbkube apply -f sbkube.yaml --dry-run
+sbkube apply -f ~/project/sbkube.yaml ./my-app
 
 # 특정 앱만
 sbkube apply -f sbkube.yaml --app grafana
@@ -72,7 +74,7 @@ sbkube apply -f sbkube.yaml --phase p1-infra
 Helm 차트 pull, Git clone, HTTP 다운로드를 실행합니다.
 
 ```bash
-sbkube prepare -f sbkube.yaml
+sbkube prepare [TARGET]
 sbkube prepare -f sbkube.yaml --app grafana
 ```
 
@@ -81,7 +83,7 @@ sbkube prepare -f sbkube.yaml --app grafana
 Overrides/Removes를 적용하여 배포 가능한 차트를 생성합니다.
 
 ```bash
-sbkube build -f sbkube.yaml
+sbkube build [TARGET]
 sbkube build -f sbkube.yaml --app grafana
 ```
 
@@ -90,7 +92,7 @@ sbkube build -f sbkube.yaml --app grafana
 Helm template을 실행하여 최종 YAML을 생성합니다.
 
 ```bash
-sbkube template -f sbkube.yaml
+sbkube template [TARGET]
 sbkube template -f sbkube.yaml --app grafana --output-dir rendered/
 ```
 
@@ -99,7 +101,7 @@ sbkube template -f sbkube.yaml --app grafana --output-dir rendered/
 빌드된 차트/매니페스트를 클러스터에 배포합니다.
 
 ```bash
-sbkube deploy -f sbkube.yaml
+sbkube deploy [TARGET]
 sbkube deploy -f sbkube.yaml --app grafana --dry-run
 ```
 
@@ -199,34 +201,35 @@ sbkube --format yaml status -f sbkube.yaml
 ### 표준 배포 (권장)
 
 ```bash
-sbkube apply -f sbkube.yaml
+sbkube apply [TARGET]
+# 예: sbkube apply ./ph1-infra
 ```
 
 ### 단계별 디버깅
 
 ```bash
-sbkube validate -f sbkube.yaml     # 1. 설정 검증
-sbkube prepare -f sbkube.yaml      # 2. 소스 준비
-sbkube build -f sbkube.yaml        # 3. 차트 빌드
-sbkube template -f sbkube.yaml     # 4. 렌더링 확인
-sbkube deploy -f sbkube.yaml --dry-run  # 5. Dry-run
-sbkube deploy -f sbkube.yaml       # 6. 실제 배포
+sbkube validate [TARGET]           # 1. 설정 검증
+sbkube prepare [TARGET]            # 2. 소스 준비
+sbkube build [TARGET]              # 3. 차트 빌드
+sbkube template [TARGET]           # 4. 렌더링 확인
+sbkube deploy [TARGET] --dry-run   # 5. Dry-run
+sbkube deploy [TARGET]             # 6. 실제 배포
 ```
 
 ### 특정 앱만 재배포
 
 ```bash
-sbkube apply -f sbkube.yaml --app grafana --skip-prepare
+sbkube apply [TARGET] --app grafana --skip-prepare
 ```
 
 ### Multi-Phase 배포
 
 ```bash
 # 전체 Phase 순서대로
-sbkube apply -f sbkube.yaml
+sbkube apply [TARGET]
 
 # 특정 Phase만
-sbkube apply -f sbkube.yaml --phase p1-infra
+sbkube apply [TARGET] --phase p1-infra
 ```
 
 ---

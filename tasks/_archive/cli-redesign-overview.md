@@ -1,4 +1,9 @@
 ---
+archived-at: 2026-02-25T16:05:01+09:00
+verified-at: 2026-02-25T16:05:01+09:00
+verification-summary: |
+  - Verified: Epic completion of CLI redesign removing legacy dir options and migrating to positional Target.
+  - Evidence: All 5 child tasks implemented. Documentation in docs/02-features/commands.md fully reflects changes.
 type: epic
 priority: high
 status: todo

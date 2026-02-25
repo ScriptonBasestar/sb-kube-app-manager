@@ -372,10 +372,10 @@ global_values:  # Inline values (higher priority)
 
 - `sbkube/utils/dict_merge.py` - Deep merge utility
 - `tests/unit/utils/test_dict_merge.py` - Test suite
-- `docs/03-configuration/sources-schema.md` - Complete sources.yaml documentation
+- `docs/03-configuration/config-schema.md` - Complete sources.yaml documentation
 - `examples/cluster-global-values/` - Working examples
 
-**See:** [sources-schema.md](docs/03-configuration/sources-schema.md)
+**See:** [config-schema.md](docs/03-configuration/config-schema.md)
 
 **helm_label_injection Control** (2025-01-06)
 
@@ -458,7 +458,7 @@ Troubleshooting:
 
 ### 📚 Documentation
 
-- ✅ **NEW**: [sources-schema.md](docs/03-configuration/sources-schema.md) - Complete sources.yaml reference
+- ✅ **NEW**: [config-schema.md](docs/03-configuration/config-schema.md) - Complete sources.yaml reference
 - ✅ **UPDATED**: [PRODUCT.md](PRODUCT.md) as comprehensive root documents (SSOT)
 - ✅ **UPDATED**: [CLAUDE.md](CLAUDE.md) with architecture patterns and development commands
 - ✅ **SYNCED**: All documentation layers aligned with PRODUCT.md and ARCHITECTURE.md

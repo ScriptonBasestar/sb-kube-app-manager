@@ -1,4 +1,9 @@
 ---
+archived-at: 2026-02-25T16:05:01+09:00
+verified-at: 2026-02-25T16:05:01+09:00
+verification-summary: |
+  - Verified: Workspace deploy integrated with apply.
+  - Evidence: Verified in CLI `workspace deploy` deprecation logic redirecting to `apply`. Workspace integration validated.
 type: feature
 priority: medium
 status: todo

@@ -12,7 +12,7 @@ from pathlib import Path
 import click
 
 from sbkube.models.config_model import GitApp, HelmApp, HookApp, HttpApp, SBKubeConfig
-from sbkube.models.sources_model import HelmRepoScheme, OciRepoScheme, SourceScheme
+from sbkube.models.sources_model import GitRepoScheme, HelmRepoScheme, OciRepoScheme, SourceScheme
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.utils.cluster_config import (
@@ -677,8 +677,10 @@ def prepare_git_app(
             output.print_error(f"Git repo '{app.repo}' not found in sources.yaml")
             return False
         repo_config = git_sources[app.repo]
-        # repo_config는 dict 형태: {url: ..., branch: ...}
-        if isinstance(repo_config, dict):
+        if isinstance(repo_config, GitRepoScheme):
+            repo_url = repo_config.url
+            branch = app.branch or app.ref or repo_config.branch or "main"
+        elif isinstance(repo_config, dict):
             repo_url = repo_config.get("url")
             if not repo_url:
                 output.print_error(f"Missing 'url' for Git repo: {app.repo}")
@@ -686,7 +688,7 @@ def prepare_git_app(
             branch = app.branch or app.ref or repo_config.get("branch", "main")
         else:
             # 구버전 호환: 단순 URL string
-            repo_url = repo_config
+            repo_url = str(repo_config)
             branch = app.branch or app.ref or "main"
         repo_alias = app.repo
 

@@ -17,6 +17,7 @@ from sbkube.exceptions import KubernetesConnectionError
 from sbkube.models.config_model import (
     ActionApp,
     ExecApp,
+    GitApp,
     HelmApp,
     HookApp,
     KustomizeApp,
@@ -1488,6 +1489,12 @@ def cmd(
                         config.namespace,  # config에서 namespace 가져옴
                         dry_run,
                     )
+                elif isinstance(app, GitApp):
+                    # Git apps are handled in prepare phase, skip silently in deploy
+                    output.print(
+                        f"⏭️  Git app skipped (handled in prepare): {app_name_iter}"
+                    )
+                    success = True
                 else:
                     output.print_warning(
                         f"Unsupported app type '{app.type}': {app_name_iter}"

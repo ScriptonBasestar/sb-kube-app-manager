@@ -8,6 +8,7 @@ from sbkube.models.config_model import HelmApp, SBKubeConfig
 from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.utils.common import run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
+from sbkube.utils.global_options import global_options
 from sbkube.utils.file_loader import load_config_file
 
 console = Console()
@@ -34,6 +35,7 @@ console = Console()
     default=False,
     help="릴리스가 존재하지 않을 경우 새로 설치하지 않음 (helm upgrade의 --install 플래그 비활성화)",
 )
+@global_options
 @click.pass_context
 def cmd(
     ctx: click.Context,

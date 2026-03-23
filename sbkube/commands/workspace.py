@@ -21,7 +21,8 @@ from sbkube.models.workspace_state import (
 from sbkube.state.database import DeploymentDatabase
 from sbkube.state.workspace_tracker import WorkspaceStateTracker
 from sbkube.utils.file_loader import load_config_file
-from sbkube.utils.logger import LogLevel, logger, setup_logging_from_context
+from sbkube.utils.global_options import global_options
+from sbkube.utils.logger import LogLevel, logger
 
 
 # SBKube version for tracking
@@ -437,14 +438,11 @@ def workspace_group() -> None:
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
     default="sbkube.yaml",
 )
-@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@global_options
 @click.pass_context
 def validate_cmd(
     ctx: click.Context,
     workspace_file: str,
-    verbose: int,
-    debug: bool,
 ) -> None:
     """sbkube.yaml 파일을 검증합니다.
 
@@ -457,9 +455,7 @@ def validate_cmd(
 
     """
     ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["debug"] = debug
-    setup_logging_from_context(ctx)
+    ctx.ensure_object(dict)
 
     validate_command = WorkspaceValidateCommand(workspace_file)
     validate_command.execute()
@@ -471,14 +467,11 @@ def validate_cmd(
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
     default="sbkube.yaml",
 )
-@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@global_options
 @click.pass_context
 def graph_cmd(
     ctx: click.Context,
     workspace_file: str,
-    verbose: int,
-    debug: bool,
 ) -> None:
     """Phase 의존성 그래프를 시각화합니다.
 
@@ -491,9 +484,7 @@ def graph_cmd(
 
     """
     ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["debug"] = debug
-    setup_logging_from_context(ctx)
+    ctx.ensure_object(dict)
 
     graph_command = WorkspaceGraphCommand(workspace_file)
     graph_command.execute()
@@ -510,15 +501,12 @@ def graph_cmd(
     is_flag=True,
     help="대화형 입력 없이 기본 템플릿 생성",
 )
-@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@global_options
 @click.pass_context
 def init_cmd(
     ctx: click.Context,
     output_file: str,
     non_interactive: bool,
-    verbose: int,
-    debug: bool,
 ) -> None:
     """sbkube.yaml 템플릿을 생성합니다.
 
@@ -534,9 +522,7 @@ def init_cmd(
 
     """
     ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["debug"] = debug
-    setup_logging_from_context(ctx)
+    ctx.ensure_object(dict)
 
     init_command = WorkspaceInitCommand(
         output_file=output_file,
@@ -1989,8 +1975,7 @@ class WorkspaceStatusCommand:
     default=4,
     help="최대 병렬 워커 수 (기본: 4)",
 )
-@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@global_options
 @click.pass_context
 def deploy_cmd(
     ctx: click.Context,
@@ -2002,14 +1987,10 @@ def deploy_cmd(
     parallel: bool | None,
     parallel_apps: bool | None,
     max_workers: int,
-    verbose: int,
-    debug: bool,
 ) -> None:
     """Deprecated alias for `sbkube apply` workspace deployment."""
     ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["debug"] = debug
-    setup_logging_from_context(ctx)
+    ctx.ensure_object(dict)
 
     click.echo(
         "WARNING: 'sbkube workspace deploy' is deprecated. "
@@ -2053,15 +2034,12 @@ def deploy_cmd(
     default=None,
     help="특정 Phase만 조회",
 )
-@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@global_options
 @click.pass_context
 def status_cmd(
     ctx: click.Context,
     workspace_file: str,
     phase: str | None,
-    verbose: int,
-    debug: bool,
 ) -> None:
     """Workspace 상태를 조회합니다.
 
@@ -2074,9 +2052,7 @@ def status_cmd(
 
     """
     ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["debug"] = debug
-    setup_logging_from_context(ctx)
+    ctx.ensure_object(dict)
 
     status_command = WorkspaceStatusCommand(
         workspace_file=workspace_file,
@@ -2294,16 +2270,13 @@ class WorkspaceHistoryCommand:
     default=10,
     help="조회할 최대 배포 수 (기본: 10)",
 )
-@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@global_options
 @click.pass_context
 def history_cmd(
     ctx: click.Context,
     workspace: str | None,
     deployment_id: str | None,
     limit: int,
-    verbose: int,
-    debug: bool,
 ) -> None:
     """Workspace 배포 히스토리를 조회합니다.
 
@@ -2322,9 +2295,7 @@ def history_cmd(
 
     """
     ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["debug"] = debug
-    setup_logging_from_context(ctx)
+    ctx.ensure_object(dict)
 
     history_command = WorkspaceHistoryCommand(
         workspace_name=workspace,
@@ -2471,8 +2442,7 @@ class WorkspaceCleanupCommand:
     is_flag=True,
     help="실제 삭제 없이 시뮬레이션",
 )
-@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력")
+@global_options
 @click.pass_context
 def cleanup_cmd(
     ctx: click.Context,
@@ -2480,8 +2450,6 @@ def cleanup_cmd(
     keep: int,
     deployment_id: str | None,
     dry_run: bool,
-    verbose: int,
-    debug: bool,
 ) -> None:
     """오래된 배포 히스토리를 정리합니다.
 
@@ -2500,9 +2468,7 @@ def cleanup_cmd(
 
     """
     ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["debug"] = debug
-    setup_logging_from_context(ctx)
+    ctx.ensure_object(dict)
 
     cleanup_command = WorkspaceCleanupCommand(
         max_age_days=max_age,

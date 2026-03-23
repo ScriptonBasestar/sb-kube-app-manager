@@ -22,6 +22,7 @@ from sbkube.utils.file_loader import (
     load_config_file,
 )
 from sbkube.utils.hook_executor import HookExecutor
+from sbkube.utils.global_options import global_options
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.perf import perf_timer
 from sbkube.utils.progress_tracker import ProgressTracker
@@ -844,6 +845,7 @@ def _match_phase_by_scope(config_data: dict, scope_path: str) -> str | None:
     default=4,
     help="최대 병렬 워커 수 (멀티-페이즈 모드, 기본: 4)",
 )
+@global_options
 @click.pass_context
 def cmd(
     ctx: click.Context,

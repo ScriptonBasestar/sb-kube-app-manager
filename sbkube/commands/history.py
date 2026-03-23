@@ -17,6 +17,7 @@ from sbkube.models.deployment_state import (
     DeploymentSummary,
 )
 from sbkube.state.database import DeploymentDatabase
+from sbkube.utils.global_options import global_options
 from sbkube.utils.output_manager import OutputManager
 
 if TYPE_CHECKING:
@@ -48,11 +49,11 @@ STATUS_ICONS = {
     help="Maximum number of deployments to show",
 )
 @click.option(
-    "--format",
+    "--display-format",
     "format_override",
     type=click.Choice(["table", "human", "llm", "json", "yaml"], case_sensitive=False),
     default=None,
-    help="Override output format (deprecated: prefer `sbkube --format`).",
+    help="Override output format (deprecated: prefer `sbkube --format` or `sbkube history --format`).",
 )
 @click.option(
     "--show",
@@ -70,6 +71,7 @@ STATUS_ICONS = {
     help="Compare Helm values between two deployments (format: ID1,ID2)",
 )
 @click.argument("app_group", required=False)
+@global_options
 @click.pass_context
 def cmd(
     ctx: click.Context,

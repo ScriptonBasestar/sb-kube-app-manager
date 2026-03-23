@@ -20,6 +20,7 @@ import click
 from sbkube.exceptions import RollbackError
 from sbkube.models.deployment_state import RollbackRequest
 from sbkube.state.rollback import RollbackManager
+from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import logger
 
 
@@ -66,6 +67,7 @@ RollbackScope = Literal["app", "phase", "all"]
 @click.option(
     "--limit", default=10, help="Maximum rollback points to show (for --list)"
 )
+@global_options
 def cmd(
     deployment_id: str | None,
     target: str | None,

@@ -12,6 +12,7 @@ from sbkube.utils.cli_check import (
 from sbkube.utils.cluster_config import resolve_cluster_config
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
+from sbkube.utils.global_options import global_options
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts
 
@@ -36,6 +37,7 @@ console = Console()
     is_flag=True,
     help="실제로 삭제하지 않고 삭제될 리소스를 미리 확인합니다.",
 )
+@global_options
 @click.pass_context
 def cmd(
     ctx: click.Context,

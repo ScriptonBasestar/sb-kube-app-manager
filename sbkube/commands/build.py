@@ -20,6 +20,7 @@ from sbkube.utils.chart_path_resolver import (
 )
 from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.global_options import global_options
 from sbkube.utils.hook_helpers import (
     create_hook_executor,
     execute_app_post_hook,
@@ -330,6 +331,7 @@ def build_http_app(
     default=False,
     help="Dry-run 모드 (실제 파일 복사/수정하지 않음)",
 )
+@global_options
 @click.pass_context
 def cmd(
     ctx: click.Context,

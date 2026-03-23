@@ -9,7 +9,8 @@ from pydantic import ValidationError as PydanticValidationError
 from sbkube.models.config_model import SBKubeConfig
 from sbkube.models.sources_model import SourceScheme
 from sbkube.utils.file_loader import load_config_file
-from sbkube.utils.logger import logger, setup_logging_from_context
+from sbkube.utils.global_options import global_options
+from sbkube.utils.logger import logger
 
 
 def load_json_schema(path: Path) -> dict:
@@ -306,8 +307,7 @@ class ValidateCommand:
     type=click.Path(exists=True, dir_okay=False, resolve_path=True),
     help="사용자 정의 JSON 스키마 파일 경로 (지정 시 schema-type 무시)",
 )
-@click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세)")
-@click.option("--debug", is_flag=True, help="디버그 로그 출력 (추가 기능용)")
+@global_options
 @click.option(
     "--skip-deps",
     is_flag=True,
@@ -339,8 +339,6 @@ def cmd(
     target_file: str | None,
     schema_type: str | None,
     custom_schema_path: str | None,
-    verbose: int,
-    debug: bool,
     skip_deps: bool,
     strict_deps: bool,
     skip_storage_check: bool,
@@ -376,9 +374,6 @@ def cmd(
 
     """
     ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["debug"] = debug
-    setup_logging_from_context(ctx)
 
     # Validate conflicting options
     if skip_deps and strict_deps:

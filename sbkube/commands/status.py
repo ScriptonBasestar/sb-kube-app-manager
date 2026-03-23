@@ -22,6 +22,7 @@ from sbkube.utils.cluster_grouping import (
     group_releases_by_app_group,
 )
 from sbkube.utils.cluster_status import ClusterStatusCollector
+from sbkube.utils.global_options import global_options
 from sbkube.utils.output_manager import OutputManager
 
 DEFAULT_CACHE_TTL_SECONDS = 300
@@ -86,6 +87,7 @@ DEFAULT_CACHE_TTL_SECONDS = 300
     help="Check for available Helm chart updates",
 )
 @click.argument("app_group", required=False)
+@global_options
 @click.pass_context
 def cmd(
     ctx,

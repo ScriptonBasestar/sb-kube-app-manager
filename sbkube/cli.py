@@ -184,6 +184,13 @@ class SbkubeGroup(click.Group):
     help="출력 형식 (human: Rich Console, llm: LLM 친화적, json: JSON, yaml: YAML). 환경변수: SBKUBE_OUTPUT_FORMAT",
 )
 @click.option("-v", "--verbose", count=True, help="로깅 상세도 (-v: 정보, -vv: 상세).")
+@click.option(
+    "--log-level",
+    "log_level",
+    type=click.Choice(["info", "debug", "verbose", "warn"], case_sensitive=False),
+    default=None,
+    help="로그 레벨 명시 지정. -v/--verbose와 동시 사용 불가.",
+)
 @click.pass_context
 def main(
     ctx: click.Context,
@@ -194,17 +201,33 @@ def main(
     namespace: str | None,
     output_format: str,
     verbose: int,
+    log_level: str | None,
 ) -> None:
     """sbkube: Kubernetes 애플리케이션 관리를 위한 CLI 도구.
 
     Helm 차트, YAML 매니페스트, Git 저장소 등을 사용하여 애플리케이션을 준비, 빌드, 배포, 업그레이드, 삭제합니다.
     """
+    from sbkube.utils.global_options import LOG_LEVEL_MAP
+
     ctx.ensure_object(dict)
     ctx.obj["kubeconfig"] = kubeconfig
     ctx.obj["context"] = context
     ctx.obj["namespace"] = namespace
     ctx.obj["format"] = output_format
     ctx.obj["verbose"] = verbose
+
+    # --log-level과 -v 충돌 감지 (그룹 레벨)
+    log_level_source = ctx.get_parameter_source("log_level")
+    verbose_source = ctx.get_parameter_source("verbose")
+    if (
+        log_level_source == click.core.ParameterSource.COMMANDLINE
+        and verbose_source == click.core.ParameterSource.COMMANDLINE
+        and verbose > 0
+    ):
+        raise click.UsageError(
+            "--log-level and -v/--verbose cannot be used together. "
+            "Use one or the other."
+        )
 
     # Optional perf profiling (SBKUBE_PERF=1)
     from sbkube.utils.perf import enable_from_env
@@ -217,7 +240,17 @@ def main(
     else:
         ctx.obj["sources_file"] = source
 
-    if verbose >= 2:
+    # Log level 설정: --log-level 우선, 없으면 -v 사용
+    if log_level is not None:
+        level = LOG_LEVEL_MAP[log_level]
+        logger.set_level(level)
+        if level <= LogLevel.DEBUG:
+            logging.basicConfig(
+                level=logging.DEBUG,
+                format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+            )
+        ctx.obj["verbose"] = 2 if level <= LogLevel.VERBOSE else (1 if level <= LogLevel.INFO else 0)
+    elif verbose >= 2:
         logging.basicConfig(
             level=logging.DEBUG,
             format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",

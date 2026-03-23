@@ -7,6 +7,7 @@ import click
 from jinja2 import Environment, FileSystemLoader
 
 from sbkube.utils.base_command import BaseCommand
+from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import logger
 
 
@@ -477,6 +478,7 @@ sbkube validate
     show_default=True,
     help="생성할 설정 포맷 (unified: sbkube.yaml, legacy: config.yaml + sources.yaml)",
 )
+@global_options
 @click.pass_context
 def cmd(ctx, template, name, non_interactive, force, config_format) -> None:
     r"""새 프로젝트를 초기화합니다.

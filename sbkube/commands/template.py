@@ -16,6 +16,7 @@ from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.common import run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.global_options import global_options
 from sbkube.utils.helm_command_builder import build_helm_template_command
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.manifest_cleaner import clean_manifest_metadata
@@ -366,6 +367,7 @@ def template_http_app(
     default=False,
     help="Dry-run 모드 (훅 실행 시뮬레이션)",
 )
+@global_options
 @click.pass_context
 def cmd(
     ctx: click.Context,

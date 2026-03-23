@@ -14,6 +14,7 @@ from sbkube.diagnostics.kubernetes_checks import (
     ResourceAvailabilityCheck,
 )
 from sbkube.utils.diagnostic_system import DiagnosticEngine
+from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import logger
 
 console = Console()
@@ -23,6 +24,7 @@ console = Console()
 @click.option("--detailed", is_flag=True, help="상세한 진단 결과 표시")
 @click.option("--check", help="특정 검사만 실행 (예: k8s_connectivity)")
 @click.option("--config-dir", default=".", help="설정 파일 디렉토리")
+@global_options
 @click.pass_context
 def cmd(ctx, detailed, check, config_dir) -> None:
     r"""SBKube 시스템 종합 진단.

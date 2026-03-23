@@ -21,6 +21,7 @@ from sbkube.utils.helm_util import (
     get_latest_chart_version,
     search_helm_chart,
 )
+from sbkube.utils.global_options import global_options
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.version_compare import (
     VersionComparison,
@@ -63,6 +64,7 @@ class ChartUpdate:
     is_flag=True,
     help="Update config.yaml with latest versions (prompts for confirmation)",
 )
+@global_options
 @click.pass_context
 def cmd(
     ctx,

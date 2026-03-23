@@ -23,6 +23,7 @@ from sbkube.utils.cluster_config import (
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.global_options import global_options
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.workspace_resolver import SbkubeDirectories
@@ -760,6 +761,7 @@ def prepare_git_app(
     default=False,
     help="Helm 저장소 사전 검증을 건너뜀",
 )
+@global_options
 @click.pass_context
 def cmd(
     ctx: click.Context,

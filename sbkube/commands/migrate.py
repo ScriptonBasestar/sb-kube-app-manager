@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.table import Table
 
 from sbkube.utils.common import run_command
+from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import logger
 
 console = Console()
@@ -342,6 +343,7 @@ def _migrate_release(
     is_flag=True,
     help="리소스별 managedFields 상세 검사 (느림)",
 )
+@global_options
 @click.pass_context
 def cmd(
     ctx: click.Context,

@@ -210,6 +210,46 @@ class TestHelmCommandBuilderUpgrade:
         assert "--create-namespace" in result.command
 
 
+    def test_upgrade_with_force_adopt(self, tmp_path: Path) -> None:
+        """Test upgrade command with --force-adopt flag."""
+        result = (
+            HelmCommandBuilder(HelmCommand.UPGRADE)
+            .with_release_name("traefik")
+            .with_chart_path(tmp_path / "chart")
+            .with_force_adopt()
+            .build()
+        )
+
+        assert "--force-adopt" in result.command
+
+    def test_force_adopt_independent_of_force_conflicts(self, tmp_path: Path) -> None:
+        """Test force_adopt and force_conflicts are independent flags."""
+        result = (
+            HelmCommandBuilder(HelmCommand.UPGRADE)
+            .with_release_name("traefik")
+            .with_chart_path(tmp_path / "chart")
+            .with_force_adopt()
+            .build()
+        )
+
+        assert "--force-adopt" in result.command
+        assert "--force-conflicts" not in result.command
+
+    def test_both_force_flags(self, tmp_path: Path) -> None:
+        """Test both --force-adopt and --force-conflicts together."""
+        result = (
+            HelmCommandBuilder(HelmCommand.UPGRADE)
+            .with_release_name("traefik")
+            .with_chart_path(tmp_path / "chart")
+            .with_force_adopt()
+            .with_force_conflicts()
+            .build()
+        )
+
+        assert "--force-adopt" in result.command
+        assert "--force-conflicts" in result.command
+
+
 class TestHelmCommandBuilderPull:
     """Test HelmCommandBuilder for pull command."""
 

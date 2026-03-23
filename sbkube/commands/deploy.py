@@ -13,7 +13,7 @@ from typing import Any
 
 import click
 
-from sbkube.exceptions import KubernetesConnectionError
+from sbkube.exceptions import KubernetesConnectionError, SSAConflictError
 from sbkube.models.config_model import (
     ActionApp,
     ExecApp,
@@ -58,6 +58,36 @@ from sbkube.utils.logger import LogLevel, logger
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.security import is_exec_allowed
 from sbkube.utils.workspace_resolver import resolve_sbkube_directories
+
+_SSA_CONFLICT_KEYWORDS: tuple[str, ...] = (
+    "conflicts with",
+    "apply failed with",
+    "field is owned by",
+    "field manager conflict",
+)
+
+
+def _parse_ssa_conflict_info(stderr: str) -> tuple[str | None, list[str]]:
+    """stderr에서 충돌 field manager 이름과 필드 목록 추출.
+
+    Args:
+        stderr: Helm 명령의 stderr 출력
+
+    Returns:
+        (conflicting_manager, conflicting_fields) 튜플
+
+    """
+    import re
+
+    # field manager 이름 추출 (예: "kubectl-client-side-apply")
+    manager_match = re.search(r'conflicts with "([^"]+)"', stderr)
+    manager = manager_match.group(1) if manager_match else None
+
+    # 충돌 필드 목록 추출 (예: "- .data.traefik2.toml")
+    fields = re.findall(r"^- (\.\S+)", stderr, re.MULTILINE)
+
+    return manager, fields
+
 
 _CONNECTION_ERROR_KEYWORDS: tuple[str, ...] = (
     "connection refused",
@@ -258,6 +288,7 @@ def deploy_helm_app(
         .with_wait(app.wait)
         .with_atomic(app.atomic)
         .with_force_conflicts(app.force_conflicts)
+        .with_force_adopt(app.force_adopt)
         .with_timeout(app.timeout)
         .with_cluster_global_values(cluster_global_values)
     )
@@ -461,8 +492,43 @@ def deploy_helm_app(
                     f"{'─' * 60}"
                 )
                 output.print_error("Schema validation failed", error=stderr + label_hint)
-            else:
-                output.print_error("Failed to deploy", error=stderr)
+                return False
+
+            # Check for SSA field manager conflicts (Helm 3→4 migration)
+            is_ssa_conflict = any(
+                keyword in error_lower for keyword in _SSA_CONFLICT_KEYWORDS
+            )
+            if is_ssa_conflict:
+                manager, fields = _parse_ssa_conflict_info(stderr)
+                fields_display = "\n".join(f"  {f}" for f in fields) if fields else "  (필드 정보를 파싱할 수 없음)"
+                ssa_hint = (
+                    f"\n\n"
+                    f"{'─' * 60}\n"
+                    f"💡 SSA Field Manager Conflict Detected\n"
+                    f"{'─' * 60}\n"
+                    f"\n"
+                    f"원인: Helm 4 SSA에서 기존 field manager와 충돌\n"
+                    f"충돌 관리자: {manager or '알 수 없음'}\n"
+                    f"충돌 필드:\n{fields_display}\n"
+                    f"\n"
+                    f"즉시 해결: sbkube.yaml에 다음 추가\n"
+                    f"\n"
+                    f"  {app_name}:\n"
+                    f"    force_conflicts: true  # SSA 충돌 무시\n"
+                    f"\n"
+                    f"영구 해결: sbkube migrate 명령어 실행\n"
+                    f"  sbkube migrate --dry-run  # 마이그레이션 미리보기\n"
+                    f"{'─' * 60}"
+                )
+                output.print_error("SSA conflict", error=stderr + ssa_hint)
+                raise SSAConflictError(
+                    release_name=release_name,
+                    namespace=namespace,
+                    conflicting_manager=manager,
+                    conflicting_fields=fields,
+                )
+
+            output.print_error("Failed to deploy", error=stderr)
             return False
 
         if progress_tracker:

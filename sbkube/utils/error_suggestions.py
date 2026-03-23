@@ -344,6 +344,33 @@ apps:
         "quick_fix": "kubectl get svc,pods -n <namespace>",
         "auto_recoverable": False,
     },
+    "SSAConflictError": {
+        "title": "Helm SSA(Server-Side Apply) 필드 관리자 충돌",
+        "suggestions": [
+            "Helm 4는 SSA가 기본값 → Helm 3에서 업그레이드 시 필드 소유권 충돌 발생",
+            "즉시 해결: sbkube.yaml의 해당 app에 force_conflicts: true 추가",
+            "영구 해결: sbkube migrate 명령어로 필드 관리자 마이그레이션",
+            "충돌 release 확인 → helm list -A | grep failed",
+            "진단 실행 → sbkube doctor (helm_field_manager 검사)",
+            "수동 해결 → kubectl apply --server-side --force-conflicts --field-manager=helm",
+        ],
+        "commands": {
+            "migrate": "Helm 3→4 SSA 필드 관리자 마이그레이션",
+            "doctor": "시스템 진단 및 SSA 충돌 확인",
+        },
+        "doc_link": "docs/07-troubleshooting/ssa-migration.md",
+        "quick_fix": "sbkube migrate --dry-run",
+        "auto_recoverable": False,
+        "example_fix": """
+# sbkube.yaml에서 즉시 해결:
+apps:
+  traefik:
+    force_conflicts: true  # SSA 충돌 무시
+
+# 또는 영구 마이그레이션:
+sbkube migrate ph1_infra/app_010_infra_network
+""",
+    },
     "HelmReleaseError": {
         "title": "Helm 릴리스 배포 실패",
         "suggestions": [

@@ -269,6 +269,42 @@ class HelmInstallationError(HelmError):
         )
 
 
+class SSAConflictError(HelmError):
+    """Helm 4 SSA(Server-Side Apply) 필드 관리자 충돌.
+
+    Helm 3에서 4로 업그레이드 시, 기존 리소스의 field manager가
+    'kubectl-client-side-apply'로 등록되어 있어 충돌이 발생합니다.
+    """
+
+    def __init__(
+        self,
+        release_name: str,
+        namespace: str | None = None,
+        conflicting_manager: str | None = None,
+        conflicting_fields: list[str] | None = None,
+    ) -> None:
+        self.release_name = release_name
+        self.namespace = namespace
+        self.conflicting_manager = conflicting_manager
+        self.conflicting_fields = conflicting_fields or []
+
+        message = f"SSA field manager conflict for release '{release_name}'"
+        if namespace:
+            message += f" in namespace '{namespace}'"
+        if conflicting_manager:
+            message += f" (conflicts with '{conflicting_manager}')"
+
+        super().__init__(
+            message,
+            {
+                "release_name": release_name,
+                "namespace": namespace,
+                "conflicting_manager": conflicting_manager,
+                "conflicting_fields": conflicting_fields or [],
+            },
+        )
+
+
 class GitError(SbkubeError):
     """Base class for Git-related errors."""
 

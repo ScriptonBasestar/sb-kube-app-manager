@@ -87,6 +87,7 @@ class HelmCommandBuilder:
         self._wait: bool = False
         self._atomic: bool = False
         self._force_conflicts: bool = False
+        self._force_adopt: bool = False
         self._timeout: str | None = None
         self._values_files: list[Path] = []
         self._set_values: dict[str, str] = {}
@@ -154,6 +155,15 @@ class HelmCommandBuilder:
         causing field ownership conflicts on subsequent upgrades.
         """
         self._force_conflicts = force
+        return self
+
+    def with_force_adopt(self, force: bool = True) -> "HelmCommandBuilder":
+        """Enable --force-adopt flag (Helm 4.x one-time migration).
+
+        Adopts existing resources into Helm's server-side apply management.
+        Use once when migrating from Helm 3 (client-side apply) to Helm 4 (SSA).
+        """
+        self._force_adopt = force
         return self
 
     def with_timeout(self, timeout: str | None) -> "HelmCommandBuilder":
@@ -260,6 +270,12 @@ class HelmCommandBuilder:
         if app.timeout:
             self.with_timeout(app.timeout)
 
+        # SSA options
+        if app.force_conflicts:
+            self.with_force_conflicts()
+        if app.force_adopt:
+            self.with_force_adopt()
+
         # Cluster global values (lowest priority - added first)
         if include_cluster_values and cluster_global_values:
             self.with_cluster_global_values(cluster_global_values)
@@ -356,6 +372,9 @@ class HelmCommandBuilder:
 
         if self._force_conflicts:
             cmd.append("--force-conflicts")
+
+        if self._force_adopt:
+            cmd.append("--force-adopt")
 
         if self._timeout:
             cmd.extend(["--timeout", self._timeout])

@@ -133,6 +133,16 @@ class HelmInstallationCheck(DiagnosticCheck):
                     "Helm v3 업그레이드 가이드",
                 )
 
+            if "v4." in version_output:
+                return self.create_result(
+                    DiagnosticLevel.INFO,
+                    f"Helm v4 감지: {version_output}",
+                    "Helm 4는 Server-Side Apply(SSA)가 기본값입니다. "
+                    "Helm 3에서 업그레이드한 경우 필드 관리자 충돌이 발생할 수 있습니다.",
+                    "sbkube migrate --dry-run 으로 마이그레이션 필요 여부를 확인하세요.",
+                    "Helm 4 SSA 마이그레이션 가이드",
+                )
+
             return self.create_result(
                 DiagnosticLevel.SUCCESS, f"Helm 설치 상태 정상: {version_output}"
             )

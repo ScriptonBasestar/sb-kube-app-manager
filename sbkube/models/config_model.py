@@ -671,6 +671,12 @@ class HelmApp(ConfigBaseModel):
         "Use when operators modify Helm-managed resources at runtime (e.g., Percona PXC Operator). "
         "Maps to Helm 4.x --force-conflicts flag.",
     )
+    force_adopt: bool = Field(
+        default=False,
+        description="One-time Helm 3→4 SSA migration flag. "
+        "Adopts existing resources into Helm's server-side apply management. "
+        "Maps to Helm 4.x --force-adopt flag.",
+    )
     helm_label_injection: bool = Field(
         default=True,
         description="Enable automatic label/annotation injection via commonLabels/commonAnnotations. "

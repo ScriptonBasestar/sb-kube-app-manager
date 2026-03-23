@@ -131,13 +131,26 @@ All commands inherit from `EnhancedBaseCommand` (`sbkube/utils/base_command.py`)
 - `self.hook_executor` → `HookExecutor`
 - `self.config_manager` → `ConfigManager`
 
-### Output Format
+### Output Format & Log Level
+
+Global options available on **all subcommands** (via `@global_options` decorator):
 
 ```bash
-sbkube --format human apply   # Rich console (default)
-sbkube --format llm apply     # Token-optimized (80-90% reduction)
-sbkube --format json status   # Structured JSON
+# --format: group-level OR subcommand-level
+sbkube --format llm apply            # group-level (before subcommand)
+sbkube apply --format llm            # subcommand-level (after subcommand)
+sbkube --format json apply --format llm  # subcommand overrides group → llm
+
+# --log-level: explicit log level
+sbkube apply --log-level debug       # explicit debug level
+sbkube apply -v                      # verbose shorthand (INFO)
+sbkube apply -vv                     # verbose shorthand (VERBOSE/DEBUG)
+
+# CONFLICT: --log-level + -v → UsageError (즉시 종료)
+sbkube apply --log-level debug -v    # ❌ Error: cannot use together
 ```
+
+**Rule**: 상호 배타적 옵션이 동시 지정되면 `click.UsageError`로 즉시 종료. 추측 실행 금지.
 
 ### Exception Hierarchy
 

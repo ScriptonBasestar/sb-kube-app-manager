@@ -125,6 +125,7 @@ data/
 lint-output.txt
 *-output.txt
 tmp/
+.last_built_commit
 
 # ───────────────
 # 🔧 SBKube 다운로드 디렉토리 (prepare 명령 결과)

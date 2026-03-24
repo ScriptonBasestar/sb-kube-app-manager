@@ -9,13 +9,24 @@ from typing import Any
 
 from rich.console import Console
 
+from sbkube.utils.logger import LogLevel, logger
 from sbkube.utils.output_formatter import OutputFormatter
+
+# OutputManager level string → LogLevel mapping
+_LEVEL_MAP: dict[str, LogLevel] = {
+    "debug": LogLevel.DEBUG,
+    "verbose": LogLevel.VERBOSE,
+    "info": LogLevel.INFO,
+    "warning": LogLevel.WARNING,
+    "error": LogLevel.ERROR,
+    "success": LogLevel.INFO,  # success는 INFO 레벨에서 출력
+}
 
 
 class OutputManager:
     """Human/LLM/JSON/YAML 출력을 통합 관리하는 매니저.
 
-    - human 모드: Rich Console로 컬러풀한 출력 (즉시 출력)
+    - human 모드: Rich Console로 컬러풀한 출력 (로그 레벨에 따라 필터링)
     - llm/json/yaml 모드: 구조화된 데이터 수집 후 최종 출력
 
     Usage:
@@ -40,6 +51,21 @@ class OutputManager:
         self.deployments: list[dict[str, Any]] = []  # Deployment 정보 추적
         self.error_messages: list[str] = []  # 에러 메시지 누적
         self._finalized = False
+
+    def _should_print(self, level: str) -> bool:
+        """현재 로그 레벨에서 출력 여부를 결정.
+
+        Args:
+            level: 메시지 레벨 (debug, verbose, info, warning, error, success)
+
+        Returns:
+            True이면 출력, False이면 억제
+
+        """
+        if self.format_type != "human":
+            return True  # 비-human 모드는 항상 수집
+        required_level = _LEVEL_MAP.get(level, LogLevel.INFO)
+        return logger.get_level() <= required_level
 
     @staticmethod
     def _strip_markup(text: str) -> str:
@@ -76,13 +102,14 @@ class OutputManager:
 
         Args:
             message: 출력할 메시지
-            level: 로그 레벨 (info, warning, error, success)
+            level: 로그 레벨 (debug, verbose, info, warning, error, success)
             emoji: 이모지 (human 모드에서만 사용)
             **metadata: 추가 메타데이터 (LLM/JSON/YAML 모드에서 사용)
 
         """
         if self.format_type == "human":
-            self.console.print(message)
+            if self._should_print(level):
+                self.console.print(message)
         else:
             # 구조화된 이벤트로 수집
             self.events.append(
@@ -185,15 +212,20 @@ class OutputManager:
                 }
             )
 
-    def print_list(self, items: list[str], title: str | None = None) -> None:
+    def print_list(
+        self, items: list[str], title: str | None = None, level: str = "info"
+    ) -> None:
         """리스트 출력.
 
         Args:
             items: 출력할 항목 리스트
             title: 리스트 제목 (선택)
+            level: 로그 레벨 (기본: info)
 
         """
         if self.format_type == "human":
+            if not self._should_print(level):
+                return
             if title:
                 self.console.print(f"\n[cyan]{title}:[/cyan]")
             for item in items:
@@ -212,6 +244,7 @@ class OutputManager:
         content: str,
         title: str | None = None,
         style: str | None = None,
+        level: str = "info",
     ) -> None:
         """패널 출력 (모드 정보, 알림 등).
 
@@ -219,9 +252,12 @@ class OutputManager:
             content: 패널 내용
             title: 패널 제목 (선택)
             style: Rich 스타일 (선택, human 모드에서만 사용)
+            level: 로그 레벨 (기본: info)
 
         """
         if self.format_type == "human":
+            if not self._should_print(level):
+                return
             from rich.panel import Panel
 
             panel_kwargs: dict[str, Any] = {}
@@ -245,6 +281,7 @@ class OutputManager:
         rows: list[list[str]],
         title: str | None = None,
         column_styles: list[str | None] | None = None,
+        level: str = "info",
     ) -> None:
         """테이블 출력.
 
@@ -253,9 +290,12 @@ class OutputManager:
             rows: 행 데이터 리스트 (각 행은 문자열 리스트)
             title: 테이블 제목 (선택)
             column_styles: 컬럼별 Rich 스타일 (선택, human 모드에서만 사용)
+            level: 로그 레벨 (기본: info)
 
         """
         if self.format_type == "human":
+            if not self._should_print(level):
+                return
             from rich.table import Table
 
             table = Table(show_header=True, header_style="bold magenta", title=title)

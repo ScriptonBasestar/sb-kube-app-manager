@@ -592,7 +592,7 @@ class WorkspaceDeployCommand:
 
     def _info_print(self, msg: str) -> None:
         """INFO 레벨 이하일 때만 출력."""
-        if logger._level <= LogLevel.INFO:
+        if logger.get_level() <= LogLevel.INFO:
             self.output.print(msg, level="info")
 
     def execute(self) -> bool:
@@ -624,16 +624,17 @@ class WorkspaceDeployCommand:
             self.output.print_panel(
                 "[yellow]DRY-RUN MODE[/yellow]: 실제 배포가 실행되지 않습니다.",
                 style="yellow",
+                level="warning",
             )
 
-        if self.parallel and logger._level <= LogLevel.INFO:
+        if self.parallel:
             self.output.print_panel(
                 "[cyan]PARALLEL MODE[/cyan]: 독립적인 Phase들을 병렬로 실행합니다.\n"
                 f"Max workers: {self.max_workers}",
                 style="cyan",
             )
 
-        if self.parallel_apps and logger._level <= LogLevel.INFO:
+        if self.parallel_apps:
             self.output.print_panel(
                 "[magenta]PARALLEL-APPS MODE[/magenta]: Phase 내 App groups를 병렬로 실행합니다.\n"
                 f"Max workers: {self.max_workers}\n"
@@ -887,7 +888,7 @@ class WorkspaceDeployCommand:
             bool: 전체 성공 여부
 
         """
-        if logger._level <= LogLevel.INFO:
+        if logger.get_level() <= LogLevel.INFO:
             self.output.print_section(f"Deploying {len(phase_order)} Phase(s)")
         self._info_print(f"Execution order: {' → '.join(phase_order)}\n")
 
@@ -966,7 +967,7 @@ class WorkspaceDeployCommand:
             bool: 전체 성공 여부
 
         """
-        if logger._level <= LogLevel.INFO:
+        if logger.get_level() <= LogLevel.INFO:
             self.output.print_section(f"Parallel Deploying {len(phase_order)} Phase(s)")
 
         # 1. Build dependency graph and calculate levels
@@ -984,7 +985,7 @@ class WorkspaceDeployCommand:
 
         # 2. Execute level by level
         for level_idx, level_phases in enumerate(levels, 1):
-            if logger._level <= LogLevel.INFO:
+            if logger.get_level() <= LogLevel.INFO:
                 self.output.print_section(
                     f"Level {level_idx}/{len(levels)} ({len(level_phases)} phase(s))"
                 )
@@ -1221,10 +1222,7 @@ class WorkspaceDeployCommand:
 
         """
         # Note: Console output may interleave in parallel mode
-        # For dry-run, we just return True with original app_groups
-        if self.dry_run:
-            return (True, phase_config.app_groups)
-
+        # dry-run도 _deploy_phase를 통과시켜 검증 수행 (실제 배포만 건너뜀)
         return self._deploy_phase(phase_name, phase_config, workspace)
 
     def _deploy_phase(
@@ -1252,7 +1250,7 @@ class WorkspaceDeployCommand:
             if self.dry_run:
                 self.output.print(
                     f"  [yellow]🔍 [DRY-RUN] Deploying {len(phase_config.apps)} inline apps[/yellow]",
-                    level="info",
+                    level="warning",
                 )
                 self._complete_phase_tracking(
                     phase_name, True, completed_app_groups=len(phase_config.apps)
@@ -1357,7 +1355,7 @@ class WorkspaceDeployCommand:
                     if self.dry_run:
                         self.output.print(
                             f"  [yellow]🔍 [DRY-RUN] Would deploy {len(enabled_apps)} app(s)[/yellow]",
-                            level="info",
+                            level="warning",
                         )
                         self._complete_phase_tracking(
                             phase_name, True, completed_app_groups=len(enabled_apps)
@@ -1437,7 +1435,7 @@ class WorkspaceDeployCommand:
         self._start_phase_tracking(phase_name)
 
         if self.dry_run:
-            self.output.print("  [yellow]🔍 [DRY-RUN] sbkube apply[/yellow]", level="info")
+            self.output.print("  [yellow]🔍 [DRY-RUN] sbkube apply[/yellow]", level="warning")
             for group in app_groups:
                 target_path = base_dir / group
                 self.output.print(f"     sbkube --source {source_path.name} apply {target_path}", level="info")

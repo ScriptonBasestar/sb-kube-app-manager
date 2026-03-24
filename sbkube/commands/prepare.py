@@ -123,7 +123,7 @@ def preflight_check_helm_repos(
     # 4. missing_locally 자동 등록 시도
     auto_register_failed: list[str] = []
     if missing_locally:
-        output.print("🔧 로컬에 없는 Helm 저장소 자동 등록 중...")
+        output.print("🔧 로컬에 없는 Helm 저장소 자동 등록 중...", level="info")
         for repo in missing_locally:
             repo_config = helm_sources[repo]
             if isinstance(repo_config, HelmRepoScheme):
@@ -133,13 +133,13 @@ def preflight_check_helm_repos(
             else:
                 url = str(repo_config)
 
-            output.print(f"  helm repo add {repo} {url}")
+            output.print(f"  helm repo add {repo} {url}", level="info")
             rc, _, stderr = run_command(["helm", "repo", "add", repo, url])
             if rc != 0 and "already exists" not in stderr.lower():
                 output.print_error(f"  자동 등록 실패: {stderr}")
                 auto_register_failed.append(repo)
             else:
-                output.print(f"  ✅ '{repo}' 등록 완료")
+                output.print(f"  ✅ '{repo}' 등록 완료", level="info")
 
     # 5. 결과 출력
     if missing_in_sources or auto_register_failed:
@@ -147,16 +147,16 @@ def preflight_check_helm_repos(
 
         if missing_in_sources:
             output.print_error(f"sources에 정의되지 않은 저장소: {', '.join(missing_in_sources)}")
-            output.print("   helm_repos에 다음을 추가하세요:")
+            output.print("   helm_repos에 다음을 추가하세요:", level="warning")
             for repo in missing_in_sources:
-                output.print(f"     {repo}: https://example.com/charts")
+                output.print(f"     {repo}: https://example.com/charts", level="warning")
 
         if auto_register_failed:
             output.print_error(f"자동 등록 실패한 저장소: {', '.join(auto_register_failed)}")
 
         return False, issues
 
-    output.print("✅ Helm 저장소 사전 검증 통과")
+    output.print("✅ Helm 저장소 사전 검증 통과", level="info")
     return True, []
 
 
@@ -195,7 +195,7 @@ def prepare_oci_chart(
         성공 여부
 
     """
-    output.print(f"[cyan]📦 Preparing OCI chart: {app_name}[/cyan]")
+    output.print(f"[cyan]📦 Preparing OCI chart: {app_name}[/cyan]", level="info")
 
     # OCI 레지스트리 설정 가져오기
     oci_config = oci_sources[repo_name]
@@ -227,7 +227,7 @@ def prepare_oci_chart(
     # 인증이 필요한 경우 (추후 구현)
     if username and password:
         output.print_warning("OCI registry authentication is not yet supported")
-        output.print("   Using public registry access")
+        output.print("   Using public registry access", level="info")
 
     # Chart pull (repo/chart-version 구조)
     chart_dir = app.get_chart_path(charts_dir)
@@ -236,18 +236,18 @@ def prepare_oci_chart(
     # Check if chart already exists (skip if not --force)
     if chart_yaml.exists() and not force:
         output.print_warning(f"Chart already exists, skipping: {chart_dir.name}")
-        output.print("    Use --force to re-download")
+        output.print("    Use --force to re-download", level="warning")
         return True
 
     if dry_run:
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would pull OCI chart: {oci_chart_url} → {chart_dir}[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would pull OCI chart: {oci_chart_url} → {chart_dir}[/yellow]", level="warning"
         )
         if app.version:
-            output.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]")
+            output.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]", level="warning")
         if force:
             output.print(
-                "[yellow]🔍 [DRY-RUN] Would remove existing chart (--force)[/yellow]"
+                "[yellow]🔍 [DRY-RUN] Would remove existing chart (--force)[/yellow]", level="warning"
             )
     else:
         # If force flag is set, remove existing chart directory
@@ -257,7 +257,7 @@ def prepare_oci_chart(
 
         chart_dir.parent.mkdir(parents=True, exist_ok=True)
 
-        output.print(f"  Pulling OCI chart: {oci_chart_url} → {chart_dir}")
+        output.print(f"  Pulling OCI chart: {oci_chart_url} → {chart_dir}", level="info")
 
         # Helm pull with temporary extraction, then move to versioned directory
         # Use UUID suffix to prevent concurrent execution conflicts
@@ -281,18 +281,18 @@ def prepare_oci_chart(
 
         if return_code != 0:
             output.print_error(f"Failed to pull OCI chart: {stderr}")
-            output.print("[yellow]💡 Possible reasons:[/yellow]")
-            output.print(f"   1. OCI registry URL might be incorrect: {registry_url}")
-            output.print(f"   2. Chart '{chart_name}' does not exist in the registry")
+            output.print("[yellow]💡 Possible reasons:[/yellow]", level="warning")
+            output.print(f"   1. OCI registry URL might be incorrect: {registry_url}", level="warning")
+            output.print(f"   2. Chart '{chart_name}' does not exist in the registry", level="warning")
             output.print(
-                "   3. Authentication might be required (check username/password in sources.yaml)"
+                "   3. Authentication might be required (check username/password in sources.yaml)", level="warning"
             )
-            output.print("   4. Registry might not support OCI format")
-            output.print("[yellow]💡 Verify OCI registry:[/yellow]")
+            output.print("   4. Registry might not support OCI format", level="warning")
+            output.print("[yellow]💡 Verify OCI registry:[/yellow]", level="warning")
             output.print(
-                f"   • Test pull manually: [cyan]helm pull {oci_chart_url}[/cyan]"
+                f"   • Test pull manually: [cyan]helm pull {oci_chart_url}[/cyan]", level="warning"
             )
-            output.print("   • Check registry documentation for correct OCI path")
+            output.print("   • Check registry documentation for correct OCI path", level="warning")
             # Cleanup temp directory on failure
             if temp_extract_dir.exists():
                 shutil.rmtree(temp_extract_dir)
@@ -352,7 +352,7 @@ def prepare_helm_app(
         성공 여부
 
     """
-    output.print(f"[cyan]📦 Preparing Helm app: {app_name}[/cyan]")
+    output.print(f"[cyan]📦 Preparing Helm app: {app_name}[/cyan]", level="info")
 
     # 로컬 차트는 prepare 불필요
     if not app.is_remote_chart():
@@ -401,22 +401,22 @@ def prepare_helm_app(
     # 일반 Helm 레지스트리 체크
     if repo_name not in helm_sources:
         output.print_error(f"Helm repo '{repo_name}' not found in sources.yaml")
-        output.print("[yellow]💡 Solutions:[/yellow]")
+        output.print("[yellow]💡 Solutions:[/yellow]", level="warning")
         output.print(
-            f"   1. Check for typos in sources.yaml (e.g., '{repo_name}' → similar name?)"
+            f"   1. Check for typos in sources.yaml (e.g., '{repo_name}' → similar name?)", level="warning"
         )
         output.print(
-            f"   2. Search for '{chart_name}' chart: https://artifacthub.io/packages/search?ts_query_web={chart_name}"
+            f"   2. Search for '{chart_name}' chart: https://artifacthub.io/packages/search?ts_query_web={chart_name}", level="warning"
         )
-        output.print("   3. Add repository to sources.yaml:")
-        output.print("      [cyan]helm_repos:[/cyan]")
+        output.print("   3. Add repository to sources.yaml:", level="warning")
+        output.print("      [cyan]helm_repos:[/cyan]", level="warning")
         output.print(
-            f"      [cyan]  {repo_name}: https://example.com/helm-charts[/cyan]"
+            f"      [cyan]  {repo_name}: https://example.com/helm-charts[/cyan]", level="warning"
         )
-        output.print("   4. Or check if it's an OCI registry:")
-        output.print("      [cyan]oci_registries:[/cyan]")
+        output.print("   4. Or check if it's an OCI registry:", level="warning")
+        output.print("      [cyan]oci_registries:[/cyan]", level="warning")
         output.print(
-            f"      [cyan]  {repo_name}: oci://registry.example.com/charts[/cyan]"
+            f"      [cyan]  {repo_name}: oci://registry.example.com/charts[/cyan]", level="warning"
         )
         return False
 
@@ -440,14 +440,14 @@ def prepare_helm_app(
 
     if dry_run:
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would add Helm repo: {repo_name} ({repo_url})[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would add Helm repo: {repo_name} ({repo_url})[/yellow]", level="warning"
         )
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would update Helm repo: {repo_name}[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would update Helm repo: {repo_name}[/yellow]", level="warning"
         )
     else:
         # Helm repo 추가
-        output.print(f"  Adding Helm repo: {repo_name} ({repo_url})")
+        output.print(f"  Adding Helm repo: {repo_name} ({repo_url})", level="info")
         cmd = ["helm", "repo", "add", repo_name, repo_url]
         cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
         return_code, stdout, stderr = run_command(cmd)
@@ -455,13 +455,13 @@ def prepare_helm_app(
         if return_code != 0:
             # "already exists" 에러는 무시, 그 외는 상세 출력
             if "already exists" in stderr.lower():
-                output.print(f"    ℹ️  Repo '{repo_name}' already exists, updating...")
+                output.print(f"    ℹ️  Repo '{repo_name}' already exists, updating...", level="info")
             else:
                 output.print_error(f"Failed to add repo '{repo_name}': {stderr}")
                 return False
 
         # Helm repo 업데이트
-        output.print(f"  Updating Helm repo: {repo_name}")
+        output.print(f"  Updating Helm repo: {repo_name}", level="info")
         cmd = ["helm", "repo", "update", repo_name]
         cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
         return_code, stdout, stderr = run_command(cmd)
@@ -477,18 +477,18 @@ def prepare_helm_app(
     # Check if chart already exists (skip if not --force)
     if chart_yaml.exists() and not force:
         output.print_warning(f"Chart already exists, skipping: {chart_dir.name}")
-        output.print("    Use --force to re-download")
+        output.print("    Use --force to re-download", level="warning")
         return True
 
     if dry_run:
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would pull chart: {app.chart} → {chart_dir}[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would pull chart: {app.chart} → {chart_dir}[/yellow]", level="warning"
         )
         if app.version:
-            output.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]")
+            output.print(f"[yellow]🔍 [DRY-RUN] Chart version: {app.version}[/yellow]", level="warning")
         if force:
             output.print(
-                "[yellow]🔍 [DRY-RUN] Would remove existing chart (--force)[/yellow]"
+                "[yellow]🔍 [DRY-RUN] Would remove existing chart (--force)[/yellow]", level="warning"
             )
     else:
         # If force flag is set, remove existing chart directory
@@ -498,7 +498,7 @@ def prepare_helm_app(
 
         chart_dir.parent.mkdir(parents=True, exist_ok=True)
 
-        output.print(f"  Pulling chart: {app.chart} → {chart_dir}")
+        output.print(f"  Pulling chart: {app.chart} → {chart_dir}", level="info")
 
         # Helm pull with temporary extraction, then move to versioned directory
         # Use UUID suffix to prevent concurrent execution conflicts
@@ -522,18 +522,18 @@ def prepare_helm_app(
 
         if return_code != 0:
             output.print_error(f"Failed to pull chart: {stderr}")
-            output.print("[yellow]💡 Possible reasons:[/yellow]")
+            output.print("[yellow]💡 Possible reasons:[/yellow]", level="warning")
             output.print(
-                f"   1. Chart '{chart_name}' does not exist in '{repo_name}' repository"
+                f"   1. Chart '{chart_name}' does not exist in '{repo_name}' repository", level="warning"
             )
-            output.print("   2. Repository might be deprecated or moved")
-            output.print("   3. Chart name might be different (check exact name)")
-            output.print("[yellow]💡 Search for the chart:[/yellow]")
+            output.print("   2. Repository might be deprecated or moved", level="warning")
+            output.print("   3. Chart name might be different (check exact name)", level="warning")
+            output.print("[yellow]💡 Search for the chart:[/yellow]", level="warning")
             output.print(
-                f"   • Artifact Hub: https://artifacthub.io/packages/search?ts_query_web={chart_name}"
+                f"   • Artifact Hub: https://artifacthub.io/packages/search?ts_query_web={chart_name}", level="warning"
             )
             output.print(
-                f"   • List charts in repo: [cyan]helm search repo {repo_name}/[/cyan]"
+                f"   • List charts in repo: [cyan]helm search repo {repo_name}/[/cyan]", level="warning"
             )
             # Cleanup temp directory on failure
             if temp_extract_dir.exists():
@@ -583,7 +583,7 @@ def prepare_http_app(
         성공 여부
 
     """
-    output.print(f"[cyan]📦 Preparing HTTP app: {app_name}[/cyan]")
+    output.print(f"[cyan]📦 Preparing HTTP app: {app_name}[/cyan]", level="info")
 
     # 다운로드 대상 경로
     dest_path = app_config_dir / app.dest
@@ -595,16 +595,16 @@ def prepare_http_app(
 
     if dry_run:
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would download: {app.url} → {dest_path}[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would download: {app.url} → {dest_path}[/yellow]", level="warning"
         )
         if app.headers:
-            output.print(f"[yellow]🔍 [DRY-RUN] Headers: {app.headers}[/yellow]")
+            output.print(f"[yellow]🔍 [DRY-RUN] Headers: {app.headers}[/yellow]", level="warning")
     else:
         # 디렉토리 생성
         dest_path.parent.mkdir(parents=True, exist_ok=True)
 
         # HTTP 다운로드 (curl 사용)
-        output.print(f"  Downloading: {app.url} → {dest_path}")
+        output.print(f"  Downloading: {app.url} → {dest_path}", level="info")
         cmd = ["curl", "-L", "-o", str(dest_path), app.url]
 
         # Headers 추가
@@ -651,7 +651,7 @@ def prepare_git_app(
         성공 여부
 
     """
-    output.print(f"[cyan]📦 Preparing Git app: {app_name}[/cyan]")
+    output.print(f"[cyan]📦 Preparing Git app: {app_name}[/cyan]", level="info")
 
     # sources.yaml에서 repo URL 찾기 (passed parameters take precedence)
     if git_repos is not None:
@@ -699,16 +699,16 @@ def prepare_git_app(
     # Check if repository already exists (skip if not --force)
     if git_dir.exists() and not force:
         output.print_warning(f"Repository already exists, skipping: {repo_alias}")
-        output.print("    Use --force to re-clone")
+        output.print("    Use --force to re-clone", level="warning")
         return True
 
     if dry_run:
         output.print(
-            f"[yellow]🔍 [DRY-RUN] Would clone: {repo_url} (branch: {branch}) → {dest_dir}[/yellow]"
+            f"[yellow]🔍 [DRY-RUN] Would clone: {repo_url} (branch: {branch}) → {dest_dir}[/yellow]", level="warning"
         )
         if force and dest_dir.exists():
             output.print(
-                "[yellow]🔍 [DRY-RUN] Would remove existing repository (--force)[/yellow]"
+                "[yellow]🔍 [DRY-RUN] Would remove existing repository (--force)[/yellow]", level="warning"
             )
     else:
         # If force flag is set, remove existing repository
@@ -719,7 +719,7 @@ def prepare_git_app(
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         # Git clone
-        output.print(f"  Cloning: {repo_url} (branch: {branch}) → {dest_dir}")
+        output.print(f"  Cloning: {repo_url} (branch: {branch}) → {dest_dir}", level="info")
         cmd = ["git", "clone", repo_url, str(dest_dir)]
 
         if branch:
@@ -817,7 +817,7 @@ def cmd(
     overall_success = True
     for APP_CONFIG_DIR in app_config_dirs:
         output.print(
-            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]"
+            f"\n[bold cyan]━━━ Processing app group: {APP_CONFIG_DIR.name} ━━━[/bold cyan]", level="info"
         )
 
         config_file_path = APP_CONFIG_DIR / config_file_name
@@ -830,13 +830,13 @@ def cmd(
 
         if not sources_file_path:
             output.print_error("sources.yaml not found in:")
-            output.print(f"  - {APP_CONFIG_DIR / sources_file_name_resolved}")
-            output.print(f"  - {APP_CONFIG_DIR.parent / sources_file_name_resolved}")
-            output.print(f"  - {BASE_DIR / sources_file_name_resolved}")
+            output.print(f"  - {APP_CONFIG_DIR / sources_file_name_resolved}", level="warning")
+            output.print(f"  - {APP_CONFIG_DIR.parent / sources_file_name_resolved}", level="warning")
+            output.print(f"  - {BASE_DIR / sources_file_name_resolved}", level="warning")
             overall_success = False
             continue
 
-        output.print(f"[cyan]📄 Using sources file: {sources_file_path}[/cyan]")
+        output.print(f"[cyan]📄 Using sources file: {sources_file_path}[/cyan]", level="info")
 
         # sources.yaml 로드 및 클러스터 설정 해석
         sources_data = load_config_file(sources_file_path)
@@ -846,7 +846,7 @@ def cmd(
         if api_version.startswith("sbkube/"):
             # 통합 포맷: settings 섹션에서 SourceScheme 필드만 추출
             full_settings = sources_data.get("settings", {})
-            output.print(f"[cyan]📄 Unified format detected (apiVersion: {api_version})[/cyan]")
+            output.print(f"[cyan]📄 Unified format detected (apiVersion: {api_version})[/cyan]", level="info")
 
             # SourceScheme에서 허용하는 필드만 추출
             source_scheme_fields = {
@@ -967,7 +967,7 @@ def cmd(
                 merged_namespace = current_namespace
 
             config_data = {"apps": apps_data, "namespace": merged_namespace}
-            output.print(f"[cyan]📄 Loading apps from unified config: {sources_file_path}[/cyan]")
+            output.print(f"[cyan]📄 Loading apps from unified config: {sources_file_path}[/cyan]", level="info")
         else:
             # 레거시 포맷: 별도 config.yaml 로드
             if not config_file_path.exists():
@@ -975,7 +975,7 @@ def cmd(
                 overall_success = False
                 continue
 
-            output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+            output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info")
             config_data = load_config_file(config_file_path)
 
         try:
@@ -1001,7 +1001,7 @@ def cmd(
 
         # ========== Preflight: Helm 저장소 사전 검증 ==========
         if skip_preflight:
-            output.print("ℹ️  Helm 저장소 사전 검증 건너뜀 (--skip-preflight)")
+            output.print("ℹ️  Helm 저장소 사전 검증 건너뜀 (--skip-preflight)", level="info")
         else:
             preflight_ok, preflight_issues = preflight_check_helm_repos(
                 config=config,

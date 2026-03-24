@@ -195,11 +195,11 @@ class TestValidateMultiAppGroup:
         mock_config.apps = {}
         mock_config_class.return_value = mock_config
 
-        # Act
+        # Act - use monkeypatch to set cwd for auto-discovery (no --base-dir)
         runner = CliRunner()
-        result = runner.invoke(
-            cmd, ["--base-dir", str(base_dir)], obj={"format": "human"}
-        )
+        with pytest.MonkeyPatch.context() as mp:
+            mp.chdir(base_dir)
+            result = runner.invoke(cmd, [], obj={"format": "human"})
 
         # Assert
         assert result.exit_code == 0
@@ -217,7 +217,7 @@ class TestValidateMultiAppGroup:
         mock_resolve_app_dirs,
         multi_app_structure,
     ):
-        """Test validation of a specific app group with --app-dir."""
+        """Test validation of a specific app group by passing directory as TARGET_FILE."""
         # Arrange
         base_dir, app_dirs = multi_app_structure
         mock_resolve_app_dirs.return_value = [app_dirs[0]]  # Only redis
@@ -227,11 +227,11 @@ class TestValidateMultiAppGroup:
         mock_config.apps = {}
         mock_config_class.return_value = mock_config
 
-        # Act
+        # Act - pass specific app dir as positional TARGET_FILE
         runner = CliRunner()
         result = runner.invoke(
             cmd,
-            ["--base-dir", str(base_dir), "--app-dir", "redis"],
+            [str(app_dirs[0])],
             obj={"format": "human"},
         )
 
@@ -377,11 +377,11 @@ class TestValidateErrorHandling:
         # Arrange
         mock_resolve.side_effect = ValueError("No app directories found")
 
-        # Act
+        # Act - use monkeypatch to set cwd for auto-discovery
         runner = CliRunner()
-        result = runner.invoke(
-            cmd, ["--base-dir", str(base_dir)], obj={"format": "human"}
-        )
+        with pytest.MonkeyPatch.context() as mp:
+            mp.chdir(base_dir)
+            result = runner.invoke(cmd, [], obj={"format": "human"})
 
         # Assert
         assert result.exit_code != 0
@@ -409,11 +409,11 @@ class TestValidateErrorHandling:
             Exception("Load failed"),
         ]
 
-        # Act
+        # Act - use monkeypatch to set cwd for auto-discovery
         runner = CliRunner()
-        result = runner.invoke(
-            cmd, ["--base-dir", str(base_dir)], obj={"format": "human"}
-        )
+        with pytest.MonkeyPatch.context() as mp:
+            mp.chdir(base_dir)
+            result = runner.invoke(cmd, [], obj={"format": "human"})
 
         # Assert
         assert result.exit_code != 0

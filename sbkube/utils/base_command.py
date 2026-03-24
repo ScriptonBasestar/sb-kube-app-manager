@@ -432,7 +432,7 @@ class EnhancedBaseCommand:
                     f"Unexpected error {operation_name} app '{app_info.name}': {e}",
                 )
                 failed_apps.append(app_info.name)
-                if logger._level.value <= LogLevel.DEBUG.value:
+                if logger.get_level().value <= LogLevel.DEBUG.value:
                     import traceback
 
                     logger.debug(traceback.format_exc())

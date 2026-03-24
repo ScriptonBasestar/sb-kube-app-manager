@@ -409,7 +409,8 @@ current-context: test-context
 
         # Assert - should skip disabled app
         assert result.exit_code == 0
-        assert "skip" in result.output.lower() or "disabled" in result.output.lower()
+        # Disabled apps are silently skipped; verify the app group completed with 0 apps
+        assert "app group 'config' prepared: 0/0" in result.output.lower()
 
 
 class TestPrepareCommandErrors:

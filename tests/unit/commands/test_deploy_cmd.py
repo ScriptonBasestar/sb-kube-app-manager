@@ -193,7 +193,7 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "deploying helm app: nginx" in result.output.lower()
+        assert "helm app deployed: nginx" in result.output.lower()
 
     @patch("sbkube.commands.deploy.run_command")
     @patch("sbkube.commands.deploy.check_kubectl_installed_or_exit")
@@ -1110,4 +1110,5 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "skipping disabled app" in result.output.lower() or "disabled" in result.output.lower()
+        # Disabled apps are silently skipped; verify the app group completed with 0 apps
+        assert "app group 'config' deployed: 0/0" in result.output.lower()

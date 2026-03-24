@@ -111,8 +111,7 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "building helm app: nginx" in result.output.lower()
-        assert "all app groups built successfully" in result.output.lower()
+        assert "helm app built: nginx" in result.output.lower()
 
         # Verify build directory created
         build_dir = sbkube_dir / "build" / "nginx"
@@ -162,8 +161,7 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "building http app: my-manifest" in result.output.lower()
-        assert "all app groups built successfully" in result.output.lower()
+        assert "http app built: my-manifest" in result.output.lower()
 
         # Verify build directory created
         sbkube_dir = tmp_path / ".sbkube"
@@ -218,8 +216,8 @@ cluster: test-cluster
             print(f"Exit code: {result.exit_code}")
             print(f"Output: {result.output}")
         assert result.exit_code == 0
-        assert "hookapp does not require build" in result.output.lower()
-        assert "all app groups built successfully" in result.output.lower()
+        # HookApp is silently skipped; verify the app group completed successfully
+        assert "app group 'config' built:" in result.output.lower()
 
 
 class TestBuildCommandOptions:
@@ -271,7 +269,8 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "dry-run" in result.output.lower()
+        # dry-run mode still shows success messages; verify build completed
+        assert "helm app built: nginx" in result.output.lower()
 
         # Verify build directory NOT created
         build_dir = sbkube_dir / "build" / "nginx"
@@ -333,7 +332,7 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "building helm app: nginx" in result.output.lower()
+        assert "helm app built: nginx" in result.output.lower()
         # Redis should not be mentioned in build output (not built)
         assert "redis" not in result.output.lower() or "skipping" in result.output.lower()
 
@@ -435,9 +434,8 @@ cluster: test-cluster
             print(f"Exit code: {result.exit_code}")
             print(f"Output: {result.output}")
         assert result.exit_code == 0
-        # Disabled apps are not logged in build output (they're silently skipped)
-        # Just verify build succeeded
-        assert "all app groups built successfully" in result.output.lower()
+        # Disabled apps are silently skipped; verify the app group completed
+        assert "app group 'config' built:" in result.output.lower()
 
 
 class TestBuildCommandInvalidConfig:
@@ -543,7 +541,8 @@ cluster: test-cluster
         # Assert
         assert result.exit_code == 0
         assert "config1" in result.output.lower() or "config2" in result.output.lower()
-        assert "all app groups built successfully" in result.output.lower()
+        # Verify app groups completed (per-group success messages visible)
+        assert "app group" in result.output.lower() and "built:" in result.output.lower()
 
 
 class TestBuildCommandDependencyOrder:
@@ -658,9 +657,8 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        # Local chart without customization is skipped
-        assert "skipping helm app" in result.output.lower() or "no customization" in result.output.lower()
-        assert "all app groups built successfully" in result.output.lower()
+        # Local chart without customization - verify the app group completed
+        assert "app group 'config' built:" in result.output.lower()
 
 
 class TestBuildCommandHooks:
@@ -716,7 +714,7 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "all app groups built successfully" in result.output.lower()
+        assert "app group 'config' built:" in result.output.lower()
 
     def test_build_with_global_post_hook(self, runner, tmp_path) -> None:
         """Test global post-build hook execution."""
@@ -768,7 +766,7 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "all app groups built successfully" in result.output.lower()
+        assert "app group 'config' built:" in result.output.lower()
 
     def test_build_with_app_level_pre_hook(self, runner, tmp_path) -> None:
         """Test app-level pre-build hook execution."""
@@ -818,7 +816,7 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "all app groups built successfully" in result.output.lower()
+        assert "app group 'config' built:" in result.output.lower()
 
     def test_build_with_app_level_post_hook(self, runner, tmp_path) -> None:
         """Test app-level post-build hook execution."""
@@ -868,7 +866,7 @@ cluster: test-cluster
 
         # Assert
         assert result.exit_code == 0
-        assert "all app groups built successfully" in result.output.lower()
+        assert "app group 'config' built:" in result.output.lower()
 
     def test_build_hook_failure_triggers_on_failure(self, runner, tmp_path) -> None:
         """Test on_failure hook is triggered when build fails."""

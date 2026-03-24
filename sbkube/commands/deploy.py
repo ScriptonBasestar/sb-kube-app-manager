@@ -106,13 +106,13 @@ _CONNECTION_ERROR_KEYWORDS: tuple[str, ...] = (
 
 def _info_print(console, msg, **kwargs) -> None:
     """INFO 레벨 이하일 때만 console.print 출력."""
-    if logger._level <= LogLevel.INFO:
+    if logger.get_level() <= LogLevel.INFO:
         console.print(msg, **kwargs)
 
 
 def _verbose_print(console, msg, **kwargs) -> None:
     """VERBOSE 레벨 이하일 때만 console.print 출력."""
-    if logger._level <= LogLevel.VERBOSE:
+    if logger.get_level() <= LogLevel.VERBOSE:
         console.print(msg, **kwargs)
 
 
@@ -192,7 +192,7 @@ def deploy_helm_app(
             )
 
     if not progress_tracker:
-        output.print(f"[cyan]🚀 Deploying Helm app: {app_name}[/cyan]")
+        output.print(f"[cyan]🚀 Deploying Helm app: {app_name}[/cyan]", level="info")
 
     _update_progress("Resolving chart path")
 
@@ -233,13 +233,13 @@ def deploy_helm_app(
                 output.print_warning(
                     "This chart was downloaded with an older version of SBKube"
                 )
-                console.print(
-                    "[yellow]💡 Migration required (v0.8.0 path structure):[/yellow]"
+                output.print(
+                    "[yellow]💡 Migration required (v0.8.0 path structure):[/yellow]", level="warning"
                 )
-                console.print(f"   1. Remove old charts: rm -rf {charts_dir}")
-                console.print("   2. Re-download charts: sbkube prepare --force")
-                console.print(
-                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.8.0 migration)"
+                output.print(f"   1. Remove old charts: rm -rf {charts_dir}", level="warning")
+                output.print("   2. Re-download charts: sbkube prepare --force", level="warning")
+                output.print(
+                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.8.0 migration)", level="warning"
                 )
             elif legacy_v070_path.exists():
                 output.print_error(
@@ -248,11 +248,11 @@ def deploy_helm_app(
                 output.print_warning(
                     "This chart was downloaded with a very old version of SBKube"
                 )
-                console.print("[yellow]💡 Migration required:[/yellow]")
-                console.print(f"   1. Remove old charts: rm -rf {charts_dir}")
-                console.print("   2. Re-download charts: sbkube prepare --force")
-                console.print(
-                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.8.0 migration)"
+                output.print("[yellow]💡 Migration required:[/yellow]", level="warning")
+                output.print(f"   1. Remove old charts: rm -rf {charts_dir}", level="warning")
+                output.print("   2. Re-download charts: sbkube prepare --force", level="warning")
+                output.print(
+                    "\n📚 See: docs/05-best-practices/directory-structure.md (v0.8.0 migration)", level="warning"
                 )
             else:
                 output.print_error(f"Chart not found: {source_path}")
@@ -298,7 +298,7 @@ def deploy_helm_app(
     for values_file in app.values:
         values_path = app_config_dir / values_file
         if not values_path.exists():
-            console.print(f"[yellow]⚠️ Values file not found: {values_path}[/yellow]")
+            output.print(f"[yellow]⚠️ Values file not found: {values_path}[/yellow]", level="warning")
         else:
             helm_builder.with_values_file(values_path)
 
@@ -423,7 +423,7 @@ def deploy_helm_app(
 
     if dry_run:
         cmd.append("--dry-run")
-        console.print("[yellow]🔍 Dry-run mode enabled[/yellow]")
+        output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="warning")
 
     # Apply cluster configuration
     cmd = apply_cluster_config_to_command(cmd, kubeconfig, context)
@@ -591,7 +591,7 @@ def deploy_yaml_app(
     from sbkube.utils.path_resolver import expand_repo_variables
 
     console = output.get_console()
-    output.print(f"[cyan]🚀 Deploying YAML app: {app_name}[/cyan]")
+    output.print(f"[cyan]🚀 Deploying YAML app: {app_name}[/cyan]", level="info")
 
     # 네임스페이스 해석: app.namespace가 명시되면 우선, 없으면 config.namespace 사용
     namespace = app.namespace or config_namespace
@@ -753,7 +753,7 @@ def deploy_action_app(
 
     """
     console = output.get_console()
-    output.print(f"[cyan]🚀 Deploying Action app: {app_name}[/cyan]")
+    output.print(f"[cyan]🚀 Deploying Action app: {app_name}[/cyan]", level="info")
 
     # 네임스페이스 해석: app.namespace가 명시되면 우선, 없으면 config.namespace 사용
     namespace = app.namespace or config_namespace
@@ -880,7 +880,7 @@ def deploy_exec_app(
 
     """
     console = output.get_console()
-    output.print(f"[cyan]🚀 Executing commands: {app_name}[/cyan]")
+    output.print(f"[cyan]🚀 Executing commands: {app_name}[/cyan]", level="info")
 
     if not dry_run and not is_exec_allowed():
         output.print_error(
@@ -891,7 +891,7 @@ def deploy_exec_app(
 
     for command in app.commands:
         if dry_run:
-            console.print(f"  [DRY-RUN] {command}")
+            output.print(f"  [DRY-RUN] {command}", level="warning")
             continue
 
         _info_print(console, f"  Running: {command}")
@@ -940,7 +940,7 @@ def deploy_kustomize_app(
 
     """
     console = output.get_console()
-    output.print(f"[cyan]🚀 Deploying Kustomize app: {app_name}[/cyan]")
+    output.print(f"[cyan]🚀 Deploying Kustomize app: {app_name}[/cyan]", level="info")
 
     kustomize_path = app_config_dir / app.path
     # 네임스페이스 해석: app.namespace가 명시되면 우선, 없으면 config.namespace 사용
@@ -1066,7 +1066,7 @@ def deploy_noop_app(
 
     """
     console = output.get_console()
-    output.print(f"[cyan]🚀 Processing Noop app: {app_name}[/cyan]")
+    output.print(f"[cyan]🚀 Processing Noop app: {app_name}[/cyan]", level="info")
 
     if app.description:
         _verbose_print(console, f"  Description: {app.description}")
@@ -1109,7 +1109,7 @@ def deploy_hook_app(
 
     """
     console = output.get_console()
-    output.print(f"[cyan]🪝 Deploying Hook app: {app_name}[/cyan]")
+    output.print(f"[cyan]🪝 Deploying Hook app: {app_name}[/cyan]", level="info")
 
     # HookApp의 tasks가 비어있으면 경고
     if not app.tasks:
@@ -1189,7 +1189,7 @@ def cmd(
     output_format = ctx.obj.get("format", "human")
     output = OutputManager(format_type=output_format)
 
-    output.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]")
+    output.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]", level="warning")
 
     # kubectl 설치 확인 (cluster connectivity는 나중에 확인)
     check_kubectl_installed_or_exit()
@@ -1244,7 +1244,7 @@ def cmd(
         sources = None
         cluster_global_values = None
         if sources_file_path and sources_file_path.exists():
-            output.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]")
+            output.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]", level="info")
             try:
                 from sbkube.models.sources_model import SourceScheme
 
@@ -1306,7 +1306,7 @@ def cmd(
                 )
                 if cluster_global_values:
                     output.print(
-                        "[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]"
+                        "[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]", level="info"
                     )
             except Exception as e:
                 output.print_error(f"Invalid sources file: {e}")
@@ -1337,7 +1337,7 @@ def cmd(
             overall_success = False
             continue
 
-        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]")
+        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info")
         raw_data = load_config_file(config_file_path)
 
         # 통합 sbkube.yaml 포맷 감지 (apiVersion이 sbkube/로 시작)
@@ -1560,7 +1560,7 @@ def cmd(
                 elif isinstance(app, GitApp):
                     # Git apps are handled in prepare phase, skip silently in deploy
                     output.print(
-                        f"⏭️  Git app skipped (handled in prepare): {app_name_iter}"
+                        f"⏭️  Git app skipped (handled in prepare): {app_name_iter}", level="info"
                     )
                     success = True
                 else:

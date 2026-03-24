@@ -31,6 +31,10 @@ class SbkubeLogger:
         """로그 레벨 설정."""
         self._level = level
 
+    def get_level(self) -> LogLevel:
+        """현재 로그 레벨 반환."""
+        return self._level
+
     def debug(self, message: str, **kwargs) -> None:
         """디버그 메시지 출력."""
         if self._level <= LogLevel.DEBUG:

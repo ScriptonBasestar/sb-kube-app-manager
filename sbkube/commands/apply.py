@@ -891,7 +891,7 @@ def cmd(
     output.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]", level="info")
 
     if dry_run:
-        output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="info")
+        output.print("[yellow]🔍 Dry-run mode enabled[/yellow]", level="warning")
 
     if target and phase_name:
         output.print_error("Cannot use positional TARGET and --phase together.")

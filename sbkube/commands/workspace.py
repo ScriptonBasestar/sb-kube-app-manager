@@ -23,6 +23,7 @@ from sbkube.state.workspace_tracker import WorkspaceStateTracker
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import LogLevel, logger
+from sbkube.utils.output_manager import OutputManager
 
 
 # SBKube version for tracking
@@ -550,6 +551,7 @@ class WorkspaceDeployCommand:
         parallel_apps: bool | None = None,
         max_workers: int = 4,
         inherited_settings: dict | None = None,
+        output: OutputManager | None = None,
     ) -> None:
         """Initialize workspace deploy command.
 
@@ -563,6 +565,7 @@ class WorkspaceDeployCommand:
             parallel_apps: App group 병렬 실행 모드 (None=workspace 설정 사용)
             max_workers: 최대 병렬 워커 수 (기본: 4)
             inherited_settings: Settings inherited from parent workspace
+            output: OutputManager instance (None이면 human format으로 생성)
 
         """
         self.workspace_file = Path(workspace_file)
@@ -577,7 +580,8 @@ class WorkspaceDeployCommand:
         self.parallel_apps = parallel_apps if parallel_apps is not None else True
         self.max_workers = max_workers
         self.inherited_settings = inherited_settings or {}
-        self.console = Console()
+        self.output = output or OutputManager(format_type="human")
+        self.console = self.output.get_console()
         self.phase_results: dict[str, dict[str, Any]] = {}
         self._results_lock = threading.Lock()
 
@@ -586,10 +590,10 @@ class WorkspaceDeployCommand:
         self.workspace_deployment_id: str | None = None
         self.phase_names: list[str] = []
 
-    def _info_print(self, msg, **kwargs) -> None:
-        """INFO 레벨 이하일 때만 console.print 출력."""
+    def _info_print(self, msg: str) -> None:
+        """INFO 레벨 이하일 때만 출력."""
         if logger._level <= LogLevel.INFO:
-            self.console.print(msg, **kwargs)
+            self.output.print(msg, level="info")
 
     def execute(self) -> bool:
         """Execute workspace deployment.
@@ -617,30 +621,24 @@ class WorkspaceDeployCommand:
             self.parallel_apps = workspace.settings.parallel_apps
 
         if self.dry_run:
-            self.console.print(
-                Panel(
-                    "[yellow]DRY-RUN MODE[/yellow]: 실제 배포가 실행되지 않습니다.",
-                    style="yellow",
-                )
+            self.output.print_panel(
+                "[yellow]DRY-RUN MODE[/yellow]: 실제 배포가 실행되지 않습니다.",
+                style="yellow",
             )
 
-        if self.parallel:
-            self._info_print(
-                Panel(
-                    "[cyan]PARALLEL MODE[/cyan]: 독립적인 Phase들을 병렬로 실행합니다.\n"
-                    f"Max workers: {self.max_workers}",
-                    style="cyan",
-                )
+        if self.parallel and logger._level <= LogLevel.INFO:
+            self.output.print_panel(
+                "[cyan]PARALLEL MODE[/cyan]: 독립적인 Phase들을 병렬로 실행합니다.\n"
+                f"Max workers: {self.max_workers}",
+                style="cyan",
             )
 
-        if self.parallel_apps:
-            self._info_print(
-                Panel(
-                    "[magenta]PARALLEL-APPS MODE[/magenta]: Phase 내 App groups를 병렬로 실행합니다.\n"
-                    f"Max workers: {self.max_workers}\n"
-                    "app_group_deps로 의존성 정의 가능",
-                    style="magenta",
-                )
+        if self.parallel_apps and logger._level <= LogLevel.INFO:
+            self.output.print_panel(
+                "[magenta]PARALLEL-APPS MODE[/magenta]: Phase 내 App groups를 병렬로 실행합니다.\n"
+                f"Max workers: {self.max_workers}\n"
+                "app_group_deps로 의존성 정의 가능",
+                style="magenta",
             )
 
         # 2. Phase 실행 순서 계산
@@ -889,9 +887,8 @@ class WorkspaceDeployCommand:
             bool: 전체 성공 여부
 
         """
-        self._info_print(
-            f"\n[bold cyan]━━━ Deploying {len(phase_order)} Phase(s) ━━━[/bold cyan]"
-        )
+        if logger._level <= LogLevel.INFO:
+            self.output.print_section(f"Deploying {len(phase_order)} Phase(s)")
         self._info_print(f"Execution order: {' → '.join(phase_order)}\n")
 
         all_success = True
@@ -969,9 +966,8 @@ class WorkspaceDeployCommand:
             bool: 전체 성공 여부
 
         """
-        self._info_print(
-            f"\n[bold cyan]━━━ Parallel Deploying {len(phase_order)} Phase(s) ━━━[/bold cyan]"
-        )
+        if logger._level <= LogLevel.INFO:
+            self.output.print_section(f"Parallel Deploying {len(phase_order)} Phase(s)")
 
         # 1. Build dependency graph and calculate levels
         levels = self._calculate_parallel_levels(workspace, phase_order)
@@ -988,10 +984,10 @@ class WorkspaceDeployCommand:
 
         # 2. Execute level by level
         for level_idx, level_phases in enumerate(levels, 1):
-            self._info_print(
-                f"[bold magenta]━━━ Level {level_idx}/{len(levels)} "
-                f"({len(level_phases)} phase(s)) ━━━[/bold magenta]"
-            )
+            if logger._level <= LogLevel.INFO:
+                self.output.print_section(
+                    f"Level {level_idx}/{len(levels)} ({len(level_phases)} phase(s))"
+                )
 
             if len(level_phases) == 1:
                 # Single phase - execute sequentially
@@ -1158,9 +1154,10 @@ class WorkspaceDeployCommand:
         """
         results: dict[str, bool] = {}
 
-        self.console.print(
+        self.output.print(
             f"[cyan]Executing {len(phases)} phases in parallel: "
-            f"{', '.join(phases)}[/cyan]"
+            f"{', '.join(phases)}[/cyan]",
+            level="info",
         )
 
         with ThreadPoolExecutor(max_workers=min(self.max_workers, len(phases))) as executor:
@@ -1253,8 +1250,9 @@ class WorkspaceDeployCommand:
             self._start_phase_tracking(phase_name)
 
             if self.dry_run:
-                self.console.print(
-                    f"  [yellow]🔍 [DRY-RUN] Deploying {len(phase_config.apps)} inline apps[/yellow]"
+                self.output.print(
+                    f"  [yellow]🔍 [DRY-RUN] Deploying {len(phase_config.apps)} inline apps[/yellow]",
+                    level="info",
                 )
                 self._complete_phase_tracking(
                     phase_name, True, completed_app_groups=len(phase_config.apps)
@@ -1262,9 +1260,7 @@ class WorkspaceDeployCommand:
                 return (True, list(phase_config.apps.keys()))
 
             # TODO: Implement inline apps deployment
-            self.console.print(
-                "  [yellow]⚠️  Inline apps deployment not yet implemented[/yellow]"
-            )
+            self.output.print_warning(f"Inline apps deployment not yet implemented")
             self._complete_phase_tracking(phase_name, False, "Inline apps not supported yet")
             return (False, list(phase_config.apps.keys()))
 
@@ -1277,8 +1273,9 @@ class WorkspaceDeployCommand:
                 nested_data = load_config_file(str(source_path))
                 if 'phases' in nested_data:
                     # This is a nested workspace - deploy recursively
-                    self.console.print(
-                        f"  [magenta]🔄 Nested workspace detected: {source_path.name}[/magenta]"
+                    self.output.print(
+                        f"  [magenta]🔄 Nested workspace detected: {source_path.name}[/magenta]",
+                        level="info",
                     )
                     nested_workspace = UnifiedConfig(**nested_data)
                     nested_phases = list(nested_workspace.phases.keys())
@@ -1314,6 +1311,7 @@ class WorkspaceDeployCommand:
                         force=self.force,
                         skip_validation=True,  # Already validated parent
                         inherited_settings=nested_inherited_settings,
+                        output=self.output,
                     )
 
                     # Execute nested workspace
@@ -1329,8 +1327,9 @@ class WorkspaceDeployCommand:
 
                 elif 'apps' in nested_data and nested_data['apps']:
                     # This is an app config (sbkube.yaml with apps) - deploy using ApplyCommand
-                    self.console.print(
-                        f"  [cyan]📦 App config detected: {source_path.name}[/cyan]"
+                    self.output.print(
+                        f"  [cyan]📦 App config detected: {source_path.name}[/cyan]",
+                        level="info",
                     )
                     nested_config = UnifiedConfig(**nested_data)
                     list(nested_config.apps.keys())
@@ -1340,23 +1339,25 @@ class WorkspaceDeployCommand:
                     ]
 
                     if not enabled_apps:
-                        self.console.print(
-                            f"  [yellow]⚠️  No enabled apps in {source_path.name}[/yellow]"
+                        self.output.print_warning(
+                            f"No enabled apps in {source_path.name}"
                         )
                         self._start_phase_tracking(phase_name)
                         self._complete_phase_tracking(phase_name, True, completed_app_groups=0)
                         return (True, [])
 
-                    self.console.print(
-                        f"  [cyan]   Apps: {', '.join(enabled_apps)}[/cyan]"
+                    self.output.print(
+                        f"  [cyan]   Apps: {', '.join(enabled_apps)}[/cyan]",
+                        level="info",
                     )
 
                     # Start phase tracking for this phase
                     self._start_phase_tracking(phase_name)
 
                     if self.dry_run:
-                        self.console.print(
-                            f"  [yellow]🔍 [DRY-RUN] Would deploy {len(enabled_apps)} app(s)[/yellow]"
+                        self.output.print(
+                            f"  [yellow]🔍 [DRY-RUN] Would deploy {len(enabled_apps)} app(s)[/yellow]",
+                            level="info",
                         )
                         self._complete_phase_tracking(
                             phase_name, True, completed_app_groups=len(enabled_apps)
@@ -1400,15 +1401,15 @@ class WorkspaceDeployCommand:
                         )
                         return (success, enabled_apps)
                     except Exception as e:
-                        self.console.print(
-                            f"  [red]❌ App deployment failed: {e}[/red]"
+                        self.output.print_error(
+                            f"App deployment failed: {e}"
                         )
                         self._complete_phase_tracking(phase_name, False, str(e))
                         return (False, [])
 
             except Exception as e:
-                self.console.print(
-                    f"  [yellow]⚠️  Could not parse nested config: {e}[/yellow]"
+                self.output.print_warning(
+                    f"Could not parse nested config: {e}"
                 )
                 # Fall through to normal processing
 
@@ -1428,18 +1429,18 @@ class WorkspaceDeployCommand:
                     f"{', '.join(app_groups)}[/cyan]"
                 )
             else:
-                self.console.print(
-                    f"  [yellow]⚠️  No app groups found in {base_dir}[/yellow]"
+                self.output.print_warning(
+                    f"No app groups found in {base_dir}"
                 )
 
         # Start phase tracking
         self._start_phase_tracking(phase_name)
 
         if self.dry_run:
-            self.console.print("  [yellow]🔍 [DRY-RUN] sbkube apply[/yellow]")
+            self.output.print("  [yellow]🔍 [DRY-RUN] sbkube apply[/yellow]", level="info")
             for group in app_groups:
                 target_path = base_dir / group
-                self.console.print(f"     sbkube --source {source_path.name} apply {target_path}")
+                self.output.print(f"     sbkube --source {source_path.name} apply {target_path}", level="info")
             # Complete phase tracking (dry-run is always success)
             self._complete_phase_tracking(
                 phase_name, True, completed_app_groups=len(app_groups)
@@ -1777,14 +1778,11 @@ class WorkspaceDeployCommand:
             phase_order: Phase execution order
 
         """
-        self.console.print("\n[bold cyan]━━━ Deployment Summary ━━━[/bold cyan]")
+        self.output.print_section("Deployment Summary")
 
-        # 결과 테이블
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Phase", style="cyan")
-        table.add_column("Status", justify="center")
-        table.add_column("App Groups", style="green")
-
+        # 결과 데이터 수집
+        headers = ["Phase", "Status", "App Groups"]
+        rows: list[list[str]] = []
         success_count = 0
         fail_count = 0
         skipped_count = 0
@@ -1795,33 +1793,46 @@ class WorkspaceDeployCommand:
                 groups = ", ".join(result["app_groups"]) if result["app_groups"] else "-"
 
                 if result.get("skipped"):
+                    plain_status = "skipped"
                     status = "[yellow]⏭ Skipped[/yellow]"
                     skipped_count += 1
                 elif result["success"]:
+                    plain_status = "success"
                     status = "[green]✓ Success[/green]"
                     success_count += 1
                 else:
+                    plain_status = "failed"
                     status = "[red]✗ Failed[/red]"
                     fail_count += 1
             else:
+                plain_status = "not_run"
                 status = "[dim]- Not run[/dim]"
                 phase_config = workspace.phases[phase_name]
                 groups = ", ".join(phase_config.app_groups) if phase_config.app_groups else "-"
 
-            table.add_row(phase_name, status, groups)
+            rows.append([phase_name, status, groups])
+            self.output.add_deployment(
+                name=phase_name,
+                namespace="",
+                status=plain_status,
+                notes=groups,
+            )
 
-        self.console.print(table)
+        self.output.print_table(
+            headers, rows,
+            column_styles=["cyan", None, "green"],
+        )
 
         # 전체 결과
         total = success_count + fail_count + skipped_count
         if fail_count == 0:
             skipped_msg = f" ({skipped_count} skipped)" if skipped_count > 0 else ""
-            self.console.print(
-                f"\n[bold green]✅ Workspace deployment completed: {success_count}/{total} phases succeeded{skipped_msg}[/bold green]"
+            self.output.print_success(
+                f"Workspace deployment completed: {success_count}/{total} phases succeeded{skipped_msg}"
             )
         else:
-            self.console.print(
-                f"\n[bold red]❌ Workspace deployment failed: {fail_count}/{total} phases failed[/bold red]"
+            self.output.print_error(
+                f"Workspace deployment failed: {fail_count}/{total} phases failed"
             )
 
 

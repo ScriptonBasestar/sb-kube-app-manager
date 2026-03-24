@@ -968,10 +968,13 @@ def cmd(
                             parallel_apps=parallel_apps,
                             max_workers=max_workers,
                             inherited_settings=root_inherited,
+                            output=output,
                         )
                         success = workspace_cmd.execute()
                         if not success:
+                            output.finalize(status="failed")
                             raise click.Abort
+                        output.finalize(status="success")
                         return
                     output.print_error(
                         f"sbkube.yaml not found: {app_config_file}",
@@ -1017,10 +1020,13 @@ def cmd(
                         parallel_apps=parallel_apps,
                         max_workers=max_workers,
                         inherited_settings=target_inherited,
+                        output=output,
                     )
                     success = workspace_cmd.execute()
                     if not success:
+                        output.finalize(status="failed")
                         raise click.Abort
+                    output.finalize(status="success")
                     return
                 # No phases: single app group mode
                 # Inject inherited settings into ctx.obj for downstream use
@@ -1055,10 +1061,13 @@ def cmd(
                     parallel_apps=parallel_apps,
                     max_workers=max_workers,
                     inherited_settings=parent_inherited or None,
+                    output=output,
                 )
                 success = workspace_cmd.execute()
                 if not success:
+                    output.finalize(status="failed")
                     raise click.Abort
+                output.finalize(status="success")
                 return
 
         # Single app group mode with unified config - process apps directly

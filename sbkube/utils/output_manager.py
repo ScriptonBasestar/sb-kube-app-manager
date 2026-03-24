@@ -207,6 +207,80 @@ class OutputManager:
                 }
             )
 
+    def print_panel(
+        self,
+        content: str,
+        title: str | None = None,
+        style: str | None = None,
+    ) -> None:
+        """패널 출력 (모드 정보, 알림 등).
+
+        Args:
+            content: 패널 내용
+            title: 패널 제목 (선택)
+            style: Rich 스타일 (선택, human 모드에서만 사용)
+
+        """
+        if self.format_type == "human":
+            from rich.panel import Panel
+
+            panel_kwargs: dict[str, Any] = {}
+            if title:
+                panel_kwargs["title"] = title
+            if style:
+                panel_kwargs["style"] = style
+            self.console.print(Panel(content, **panel_kwargs))
+        else:
+            self.events.append(
+                {
+                    "type": "panel",
+                    "title": title,
+                    "content": self._strip_markup(content),
+                }
+            )
+
+    def print_table(
+        self,
+        headers: list[str],
+        rows: list[list[str]],
+        title: str | None = None,
+        column_styles: list[str | None] | None = None,
+    ) -> None:
+        """테이블 출력.
+
+        Args:
+            headers: 컬럼 헤더 리스트
+            rows: 행 데이터 리스트 (각 행은 문자열 리스트)
+            title: 테이블 제목 (선택)
+            column_styles: 컬럼별 Rich 스타일 (선택, human 모드에서만 사용)
+
+        """
+        if self.format_type == "human":
+            from rich.table import Table
+
+            table = Table(show_header=True, header_style="bold magenta", title=title)
+            for i, header in enumerate(headers):
+                style = (
+                    column_styles[i]
+                    if column_styles and i < len(column_styles)
+                    else None
+                )
+                table.add_column(header, style=style)
+            for row in rows:
+                table.add_row(*row)
+            self.console.print(table)
+        else:
+            self.events.append(
+                {
+                    "type": "table",
+                    "title": title,
+                    "headers": headers,
+                    "rows": [
+                        [self._strip_markup(cell) for cell in row] for row in rows
+                    ],
+                }
+            )
+
     def add_deployment(
         self,
         name: str,

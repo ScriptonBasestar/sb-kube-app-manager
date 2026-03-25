@@ -338,6 +338,11 @@ class OutputManager:
         status: str,
         version: str | None = None,
         notes: str | None = None,
+        chart: str | None = None,
+        release: str | None = None,
+        error: str | None = None,
+        stderr: str | None = None,
+        suggestion: str | None = None,
     ) -> None:
         """배포 정보 기록 (LLM/JSON/YAML 출력용).
 
@@ -347,16 +352,32 @@ class OutputManager:
             status: 배포 상태 (deployed, failed, skipped 등)
             version: 차트 버전 (선택)
             notes: 앱 설명/메모 (선택)
+            chart: 차트 참조 (선택, e.g. "grafana/grafana")
+            release: Helm 릴리스 이름 (선택)
+            error: 에러 메시지 (선택, 실패 시)
+            stderr: 명령 stderr 출력 (선택, 실패 시)
+            suggestion: 복구 제안 (선택, 실패 시)
 
         """
-        deployment_info = {
+        deployment_info: dict[str, str] = {
             "name": name,
             "namespace": namespace,
             "status": status,
-            "version": version or "",
         }
+        if version:
+            deployment_info["version"] = version
+        if chart:
+            deployment_info["chart"] = chart
+        if release:
+            deployment_info["release"] = release
         if notes:
             deployment_info["notes"] = notes
+        if error:
+            deployment_info["error"] = error
+        if stderr:
+            deployment_info["stderr"] = stderr
+        if suggestion:
+            deployment_info["suggestion"] = suggestion
         self.deployments.append(deployment_info)
 
     def finalize(
@@ -398,7 +419,16 @@ class OutputManager:
             status if status is not None else ("failed" if final_errors else "success")
         )
 
-        inferred_summary = (
+        # Collect deduplicated warnings from events
+        warnings = list(
+            dict.fromkeys(
+                e["message"]
+                for e in self.events
+                if e.get("type") == "warning" or e.get("level") == "warning"
+            )
+        )
+
+        inferred_summary: dict[str, Any] = (
             summary
             if summary is not None
             else {
@@ -407,6 +437,9 @@ class OutputManager:
                 "errors": len(final_errors),
             }
         )
+        # Inject warnings into summary for LLM format
+        if warnings and "warnings" not in inferred_summary:
+            inferred_summary["warnings"] = warnings
 
         result = self.formatter.format_deployment_result(
             status=inferred_status,

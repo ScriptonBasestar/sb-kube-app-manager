@@ -119,14 +119,14 @@ class TestFormatDeploymentResult:
         )
 
         assert isinstance(result, str)
-        assert "STATUS: SUCCESS" in result
-        assert "DEPLOYED: 3 charts in 12.5s" in result
-        assert "APPLICATIONS:" in result
-        assert "nginx-app (default): running v1.25.0" in result
-        assert "postgres-db (database): running v15.0" in result
+        assert "SBKUBE APPLY: success" in result
+        assert "APPS: 3/3 deployed" in result
+        assert "APP nginx-app: running" in result
+        assert "namespace: default" in result
+        assert "APP postgres-db: running" in result
+        assert "namespace: database" in result
         assert "NEXT STEPS:" in result
         assert "kubectl get pods -n default" in result
-        assert "ERRORS: none" in result
 
     def test_format_llm_with_errors(self, sample_data) -> None:
         """Test LLM format output with errors."""
@@ -145,7 +145,7 @@ class TestFormatDeploymentResult:
             errors=sample_data["errors"],
         )
 
-        assert "STATUS: FAILED" in result
+        assert "SBKUBE APPLY: failed" in result
         assert "ERRORS:" in result
         assert "- Database connection failed" in result
         assert "- Timeout waiting for pod" in result

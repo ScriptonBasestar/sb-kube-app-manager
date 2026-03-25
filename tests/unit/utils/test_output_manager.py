@@ -280,7 +280,7 @@ class TestOutputManager:
         assert manager.deployments[0]["name"] == "app1"
         assert manager.deployments[0]["namespace"] == "default"
         assert manager.deployments[0]["status"] == "deployed"
-        assert manager.deployments[0]["version"] == ""
+        assert "version" not in manager.deployments[0]
         assert "notes" not in manager.deployments[0]
 
         # Add deployment with version

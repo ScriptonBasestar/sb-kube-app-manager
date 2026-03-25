@@ -3,7 +3,7 @@ title: "feat: LLM 출력 포맷 리디자인"
 type: feature
 priority: P2
 effort: large
-status: todo
+status: done
 depends_on:
   - fix-llm-format-output-bugs
 related_files:

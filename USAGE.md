@@ -325,6 +325,22 @@ export SBKUBE_OUTPUT_FORMAT=llm
 sbkube apply  # Uses LLM format
 ```
 
+LLM format output example:
+```
+SBKUBE APPLY: success (12.3s)
+APPS: 2/2 deployed
+
+APP coredns: deployed
+  namespace: kube-system
+  chart: coredns/coredns
+  version: latest
+
+APP haproxy: deployed
+  namespace: default
+  chart: haproxytech/haproxy
+  version: latest
+```
+
 ### 8. Multi-Phase Orchestration (v0.11.0+)
 
 Multi-phase deployment for complex environments:

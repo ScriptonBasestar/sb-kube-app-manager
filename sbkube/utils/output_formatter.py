@@ -166,44 +166,86 @@ class OutputFormatter:
         next_steps: list[str] | None,
         errors: list[str] | None,
     ) -> str:
-        """Format deployment result for LLM (compact, readable text)."""
+        """Format deployment result for LLM (compact, token-efficient text).
+
+        Design: first line = overall status for quick branch decisions.
+        Per-app blocks with minimal info on success, diagnostic info on failure.
+        Deduplicated warnings at the end.
+        """
         lines = []
 
-        # Status line
-        lines.append(f"STATUS: {status.upper()}")
-
-        # Summary
-        charts_count = summary.get("charts_deployed", 0)
+        # First line: overall status (LLM can branch on this alone)
+        total_apps = len(deployments) if deployments else 0
+        deployed_count = sum(
+            1 for d in deployments if d.get("status") in ("deployed", "success", "running")
+        ) if deployments else 0
         duration = summary.get("duration_seconds", 0)
-        lines.append(f"DEPLOYED: {charts_count} charts in {duration:.1f}s")
-        lines.append("")
+        duration_str = f" ({duration:.1f}s)" if duration else ""
 
-        # Deployments
+        lines.append(f"SBKUBE APPLY: {status}{duration_str}")
+        if total_apps:
+            lines.append(f"APPS: {deployed_count}/{total_apps} deployed")
+
+        # Per-app blocks
         if deployments:
-            lines.append("APPLICATIONS:")
             for dep in deployments:
                 name = dep.get("name", "unknown")
-                namespace = dep.get("namespace", "default")
                 dep_status = dep.get("status", "unknown")
+                namespace = dep.get("namespace", "default")
+                lines.append("")
+                lines.append(f"APP {name}: {dep_status}")
+                lines.append(f"  namespace: {namespace}")
+                # Success: minimal info
+                chart = dep.get("chart")
+                if chart:
+                    lines.append(f"  chart: {chart}")
                 version = dep.get("version", "")
-                version_str = f" v{version}" if version else ""
-                lines.append(f"- {name} ({namespace}): {dep_status}{version_str}")
-            lines.append("")
+                if version:
+                    lines.append(f"  version: {version}")
+                release = dep.get("release")
+                if release:
+                    lines.append(f"  release: {release}")
+                # Failure: diagnostic info
+                error = dep.get("error")
+                if error:
+                    lines.append(f"  error: {error}")
+                stderr = dep.get("stderr")
+                if stderr:
+                    lines.append(f"  stderr: {stderr}")
+                suggestion = dep.get("suggestion")
+                if suggestion:
+                    lines.append(f"  suggestion: {suggestion}")
+                notes = dep.get("notes")
+                if notes:
+                    lines.append(f"  notes: {notes}")
 
-        # Next steps
-        if next_steps:
-            lines.append("NEXT STEPS:")
-            for step in next_steps:
-                lines.append(step)
+        # Deduplicated warnings
+        warnings = summary.get("warnings") or []
+        if warnings:
+            seen: set[str] = set()
+            unique_warnings: list[str] = []
+            for w in warnings:
+                if w not in seen:
+                    seen.add(w)
+                    unique_warnings.append(w)
             lines.append("")
+            lines.append("WARNINGS:")
+            for w in unique_warnings:
+                lines.append(f"- {w}")
 
         # Errors
         if errors:
+            lines.append("")
             lines.append("ERRORS:")
             for error in errors:
                 lines.append(f"- {error}")
-        else:
-            lines.append("ERRORS: none")
+
+        # Next steps (only if present)
+        if next_steps:
+            lines.append("")
+            lines.append("NEXT STEPS:")
+            for step in next_steps:
+                lines.append(f"- {step}")
 
         return "\n".join(lines)
 

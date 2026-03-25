@@ -1,5 +1,5 @@
 ---
-title: "fix: --format llm 출력 버그 수정 (5건)"
+title: "fix: --format llm 출력 버그 수정 (6건)"
 type: bug
 priority: P1
 effort: medium
@@ -57,6 +57,7 @@ related_files:
   lines.append("ERRORS: none")  # 무조건 추가 ← 버그
   ```
 - **수정 방향**: if/else 구조로 변경. 에러가 있으면 `ERRORS:` + 목록, 없으면 `ERRORS: none`. `errors` 파라미터가 None일 수 있으므로 `errors or []` 방어 필요
+- **참고**: `_format_llm_history`(line 394-401)는 동일 패턴이 if/else로 올바르게 구현되어 있음. `_format_llm_deployment`만 수정 필요
 
 ### Bug 4: LLM 포맷에 이모지 포함
 
@@ -64,13 +65,24 @@ related_files:
 - **증상**: LLM 포맷 출력에 `✅`, `❌`, `⚠️`, `🔄`, `⏳`, `↩️` 이모지가 포함
 - **문제**: LLM은 이모지를 토큰으로 소비하며, 구조화된 파싱에 방해. `OutputManager.print()`에서 emoji 파라미터를 "human 모드에서만 사용"이라고 명시(line 107)했으나, formatter 레벨에서는 여전히 이모지 삽입
 - **수정 방향**: LLM 포맷에서는 이모지 대신 텍스트 상태 표기 사용 (`SUCCESS`, `FAILED`, `WARNING` 등)
+- **범위 주의**: `_format_llm_deployment`(line 173-176)의 직접 이모지 + `_format_llm_history`의 `icon_for_state()`(line 222-231) 및 이를 사용하는 line 274, 283, 300, 305 모두 수정 대상
 
-### Bug 5: 프로그레스바 텍스트 출력 혼입 (경미)
+### Bug 5: 프로그레스바 텍스트 출력 혼입 (경미, Bug 1 수정 후 자동 해결 예상)
 
 - **증상**: 터미널 프로그레스바 렌더링 문자가 텍스트에 섞임 (`⠙ 📦 Prepare coredns ━━━...`)
 - **원인**: Bug 1(format_type 미전파)이 해결되면 대부분 해결됨. `apply.py:400`에서 이미 `output.format_type != "human"` 체크 존재
 - **확인 필요**: deploy 명령의 프로그레스 트래커도 동일하게 format_type 체크하는지 확인 (deploy.py:1351에서 확인됨 — 이미 체크 존재)
 - **수정 방향**: Bug 1 수정 후 자동 해결 예상. 수정 후 실제 테스트로 확인
+
+### Bug 6: apply.py의 Rich markup + 이모지 직접 하드코딩 (18건+)
+
+- **위치**: `sbkube/commands/apply.py` 전역 (line 152, 279, 410, 437, 441, 893, 896, 1003, 1077, 1123, 1129, 1189, 1360, 1398, 1402, 1582, 1595 등)
+- **증상**: `output.print("[bold blue]✨ SBKube apply 시작 ✨[/bold blue]")` 식으로 Rich markup과 이모지가 직접 포함되어 있어, Bug 1 수정 후에도 LLM 출력에 `[bold blue]`, `[yellow]` 등의 markup 태그와 이모지가 노출
+- **원인**: 표현(presentation)과 로직(logic)이 분리되지 않고, 각 command에서 Rich markup을 직접 사용
+- **수정 방향**: 두 가지 접근 가능
+  - (A) `OutputManager.print()`에서 `format_type != "human"`일 때 Rich markup을 자동 strip + 이모지 제거 (영향 범위 최소)
+  - (B) `output.print()`에 `plain_text` 파라미터를 추가하여 LLM 모드용 대체 텍스트 전달 (더 깨끗하지만 수정 범위 큼)
+- **권장**: (A) 방식으로 `OutputManager` 레벨에서 일괄 처리. 향후 (B)로 점진 리팩토링
 
 ## 수정 순서
 
@@ -79,6 +91,7 @@ related_files:
 3. **Bug 3** (에러 출력 로직) → 간단한 로직 수정
 4. **Bug 4** (이모지 제거) → LLM 토큰 효율화
 5. **Bug 5** (프로그레스바) → Bug 1 수정 후 검증
+6. **Bug 6** (Rich markup strip) → OutputManager 레벨 일괄 처리
 
 ## 테스트 방법
 
@@ -99,7 +112,8 @@ make test-quick
 
 - [ ] `--format llm` 지정 시 human 포맷이 아닌 구조화된 텍스트 출력
 - [ ] "Extra inputs are not permitted" 경고 미출력
-- [ ] 에러 유/무에 따른 정확한 ERRORS 섹션 출력
-- [ ] LLM 포맷에 이모지 미포함
+- [ ] 에러 유/무에 따른 정확한 ERRORS 섹션 출력 (`errors=None` 시 TypeError 미발생)
+- [ ] LLM 포맷에 이모지 미포함 (formatter + history icon_for_state 포함)
 - [ ] 프로그레스바 문자 미포함
+- [ ] LLM 포맷에 Rich markup 태그(`[bold ...]`, `[yellow]` 등) 미포함
 - [ ] 기존 human/json/yaml 포맷 동작 미영향

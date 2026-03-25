@@ -1390,6 +1390,7 @@ class WorkspaceDeployCommand:
                             force=self.force,
                             parallel=self.parallel_apps,
                             inherited_settings=inherited_settings,
+                            format_type=self.output.format_type,
                         )
                         success = apply_cmd.execute()
                         self._complete_phase_tracking(
@@ -1524,6 +1525,7 @@ class WorkspaceDeployCommand:
                         skip_prepare=False,
                         skip_build=False,
                         inherited_settings=inherited_settings,
+                        format_type=self.output.format_type,
                     )
 
                     # Apply 실행
@@ -1593,6 +1595,7 @@ class WorkspaceDeployCommand:
             skip_prepare=False,
             skip_build=False,
             inherited_settings=inherited_settings,
+            format_type=self.output.format_type,
         )
 
         return apply_cmd.execute()

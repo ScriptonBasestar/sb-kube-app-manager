@@ -7,13 +7,15 @@ Resolves cluster configuration with explicit priorities:
 4. ❌ ~/.kube/config default - NOT USED
 """
 
-from pathlib import Path
+from __future__ import annotations
 
-from rich.console import Console
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from sbkube.models.sources_model import SourceScheme
 
-console = Console()
+if TYPE_CHECKING:
+    from sbkube.utils.output_manager import OutputManager
 
 
 class ClusterConfigError(Exception):
@@ -60,6 +62,7 @@ def resolve_cluster_config(
     cli_kubeconfig: str | None,
     cli_context: str | None,
     sources: SourceScheme | None,
+    output: OutputManager | None = None,
 ) -> tuple[str, str]:
     """클러스터 설정 해석 및 검증.
 
@@ -87,11 +90,10 @@ def resolve_cluster_config(
         kubeconfig = str(Path(cli_kubeconfig).expanduser())
         context = cli_context
 
-        console.print(
-            "[yellow]⚠️  Using CLI override for cluster configuration[/yellow]"
-        )
-        console.print(f"  Kubeconfig: {kubeconfig}")
-        console.print(f"  Context: {context}")
+        if output:
+            output.print_warning("Using CLI override for cluster configuration")
+            output.print(f"  Kubeconfig: {kubeconfig}", level="info")
+            output.print(f"  Context: {context}", level="info")
 
         # kubeconfig 파일 존재 확인
         if not Path(kubeconfig).exists():
@@ -173,11 +175,12 @@ def resolve_cluster_config(
         )
 
     # 성공 - 설정 정보 표시
-    console.print("[cyan]🔍 Cluster Configuration (from sources.yaml):[/cyan]")
-    if sources.cluster:
-        console.print(f"  Target Cluster: {sources.cluster}")
-    console.print(f"  Kubeconfig: {kubeconfig}")
-    console.print(f"  Context: {context}")
+    if output:
+        output.print("[cyan]🔍 Cluster Configuration (from sources.yaml):[/cyan]", level="info")
+        if sources.cluster:
+            output.print(f"  Target Cluster: {sources.cluster}", level="info")
+        output.print(f"  Kubeconfig: {kubeconfig}", level="info")
+        output.print(f"  Context: {context}", level="info")
 
     # Context 존재 여부 검증
     from sbkube.utils.cli_check import validate_context_exists

@@ -347,9 +347,11 @@ def cmd(
     - Overrides 적용 (overrides/<app-name>/* → build/<app-name>/*)
     - Removes 적용 (불필요한 파일/디렉토리 삭제)
     """
-    # Initialize OutputManager
+    # Use shared OutputManager from parent command, or create own if standalone
+    shared_output = ctx.obj.get("output")
     output_format = ctx.obj.get("format", "human")
-    output = OutputManager(format_type=output_format)
+    output = shared_output or OutputManager(format_type=output_format)
+    _is_standalone = shared_output is None
 
     output.print("[bold blue]✨ SBKube `build` 시작 ✨[/bold blue]", level="info")
 
@@ -374,7 +376,8 @@ def cmd(
     # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
     try:
         app_config_dirs = resolve_app_dirs(
-            BASE_DIR, app_config_dir_name, config_file_name, sources_file_name
+            BASE_DIR, app_config_dir_name, config_file_name, sources_file_name,
+            output=output,
         )
     except ValueError:
         raise click.Abort
@@ -580,19 +583,21 @@ def cmd(
         output.print(
             "\n[bold red]❌ Some app groups failed to build[/bold red]", level="error"
         )
-        output.finalize(
-            status="failed",
-            summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
-            next_steps=["Check error messages above and fix configuration"],
-            errors=["Some apps failed to build"],
-        )
+        if _is_standalone:
+            output.finalize(
+                status="failed",
+                summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
+                next_steps=["Check error messages above and fix configuration"],
+                errors=["Some apps failed to build"],
+            )
         raise click.Abort
     output.print(
         "\n[bold green]🎉 All app groups built successfully![/bold green]",
         level="success",
     )
-    output.finalize(
-        status="success",
-        summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
-        next_steps=["Run 'sbkube deploy' to deploy to cluster"],
-    )
+    if _is_standalone:
+        output.finalize(
+            status="success",
+            summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
+            next_steps=["Run 'sbkube deploy' to deploy to cluster"],
+        )

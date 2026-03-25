@@ -15,7 +15,10 @@ from rich.console import Console
 KUBECTL_TIMEOUT_SECONDS = 30
 HELM_TIMEOUT_SECONDS = 30
 
-console = Console()
+from sbkube.utils.logger import logger
+
+# Use logger's console so it respects --format (quiet in non-human modes)
+console = logger.console
 
 
 class ClusterStatusCollector:

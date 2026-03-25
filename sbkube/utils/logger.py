@@ -26,6 +26,7 @@ class SbkubeLogger:
     def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
         self._level = LogLevel.WARNING
+        self._format_type = "human"
 
     def set_level(self, level: LogLevel) -> None:
         """로그 레벨 설정."""
@@ -34,6 +35,11 @@ class SbkubeLogger:
     def get_level(self) -> LogLevel:
         """현재 로그 레벨 반환."""
         return self._level
+
+    def set_format(self, format_type: str) -> None:
+        """출력 포맷 설정. non-human 모드에서는 Console 출력을 억제."""
+        self._format_type = format_type
+        self.console.quiet = format_type != "human"
 
     def debug(self, message: str, **kwargs) -> None:
         """디버그 메시지 출력."""
@@ -76,8 +82,9 @@ class SbkubeLogger:
             self.console.print(f"[cyan]$ {command}[/cyan]", **kwargs)
 
     def heading(self, message: str, **kwargs) -> None:
-        """헤딩 메시지 출력 (항상 표시)."""
-        self.console.print(f"[bold blue]✨ {message} ✨[/bold blue]", **kwargs)
+        """헤딩 메시지 출력 (human 모드에서 항상 표시)."""
+        if self._format_type == "human":
+            self.console.print(f"[bold blue]✨ {message} ✨[/bold blue]", **kwargs)
 
 
 # 전역 로거 인스턴스

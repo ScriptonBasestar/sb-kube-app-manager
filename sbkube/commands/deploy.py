@@ -1185,9 +1185,11 @@ def cmd(
     - exec 타입: 커스텀 명령어
     - kustomize 타입: kubectl apply -k
     """
-    # Initialize OutputManager
+    # Use shared OutputManager from parent command, or create own if standalone
+    shared_output = ctx.obj.get("output")
     output_format = ctx.obj.get("format", "human")
-    output = OutputManager(format_type=output_format)
+    output = shared_output or OutputManager(format_type=output_format)
+    _is_standalone = shared_output is None
 
     output.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]", level="warning")
 
@@ -1215,7 +1217,8 @@ def cmd(
     # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
     try:
         app_config_dirs = resolve_app_dirs(
-            BASE_DIR, app_config_dir_name, config_file_name, sources_file_name
+            BASE_DIR, app_config_dir_name, config_file_name, sources_file_name,
+            output=output,
         )
     except ValueError:
         raise click.Abort
@@ -1319,6 +1322,7 @@ def cmd(
                 cli_kubeconfig=ctx.obj.get("kubeconfig"),
                 cli_context=ctx.obj.get("context"),
                 sources=sources,
+                output=output,
             )
         except ClusterConfigError as e:
             output.print_error(str(e))
@@ -1650,16 +1654,18 @@ def cmd(
 
     # 전체 결과
     if not overall_success:
-        output.finalize(
-            status="failed",
-            summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
-            next_steps=["Check error messages above and fix configuration"],
-            errors=None,  # OutputManager will use accumulated errors
-        )
+        if _is_standalone:
+            output.finalize(
+                status="failed",
+                summary={"app_groups_processed": len(app_config_dirs), "status": "failed"},
+                next_steps=["Check error messages above and fix configuration"],
+                errors=None,  # OutputManager will use accumulated errors
+            )
         raise click.Abort
-    output.finalize(
-        status="success",
-        summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
-        next_steps=["Verify deployment with: kubectl get pods"],
-        errors=[],
-    )
+    if _is_standalone:
+        output.finalize(
+            status="success",
+            summary={"app_groups_processed": len(app_config_dirs), "status": "success"},
+            next_steps=["Verify deployment with: kubectl get pods"],
+            errors=[],
+        )

@@ -35,6 +35,9 @@ def _resolve_options(ctx: click.Context) -> None:
     elif ctx.obj.get("format") is None:
         ctx.obj["format"] = ctx.params.get("output_format") or "human"
 
+    # Suppress logger console output in non-human modes
+    logger.set_format(ctx.obj["format"])
+
     # --- Log-level / verbose resolution ---
     log_level_source = ctx.get_parameter_source("log_level")
     verbose_source = ctx.get_parameter_source("verbose")

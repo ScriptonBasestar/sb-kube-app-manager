@@ -17,7 +17,8 @@ from sbkube.utils.diagnostic_system import DiagnosticEngine
 from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import logger
 
-console = Console()
+# Use logger's console so it respects --format (quiet in non-human modes)
+console = logger.console
 
 
 @click.command(name="doctor")

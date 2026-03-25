@@ -9,14 +9,14 @@ import subprocess
 from pathlib import Path
 from typing import Literal
 
-from rich.console import Console
-
 from sbkube.exceptions import SbkubeError
 from sbkube.utils.cluster_config import apply_cluster_config_to_command
 from sbkube.utils.common import run_command
+from sbkube.utils.logger import logger
 from sbkube.utils.security import is_exec_allowed
 
-console = Console()
+# Use logger's console so it respects --format (quiet in non-human modes)
+console = logger.console
 
 HookType = Literal[
     "pre_prepare",

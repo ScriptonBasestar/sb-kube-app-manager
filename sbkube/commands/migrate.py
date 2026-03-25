@@ -17,7 +17,8 @@ from sbkube.utils.common import run_command
 from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import logger
 
-console = Console()
+# Use logger's console so it respects --format (quiet in non-human modes)
+console = logger.console
 
 
 def _list_helm_releases(

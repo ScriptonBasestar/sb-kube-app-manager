@@ -50,6 +50,7 @@ class ApplyCommand:
         skip_prepare: bool = False,
         skip_build: bool = False,
         inherited_settings: dict | None = None,
+        format_type: str = "human",
     ) -> None:
         """Initialize ApplyCommand.
 
@@ -65,6 +66,7 @@ class ApplyCommand:
             skip_build: Skip build step
             inherited_settings: Settings inherited from parent workspace/phase
                 (helm_repos, oci_registries, git_repos)
+            format_type: Output format (human, llm, json, yaml)
 
         """
         self.config_file = config_file
@@ -77,6 +79,7 @@ class ApplyCommand:
         self.skip_prepare = skip_prepare
         self.skip_build = skip_build
         self.inherited_settings = inherited_settings or {}
+        self.format_type = format_type
 
     def execute(self) -> bool:
         """Execute apply command.
@@ -85,12 +88,10 @@ class ApplyCommand:
             bool: True if successful
 
         """
-        from rich.console import Console
-
         from sbkube.models.unified_config_model import UnifiedConfig
 
-        console = Console()
-        output = OutputManager(format_type="human")
+        output = OutputManager(format_type=self.format_type)
+        console = output.get_console()
 
         # Determine which config file to use
         if self.config_file:
@@ -393,10 +394,10 @@ def _execute_apps_deployment(
                 dry_run=dry_run,
             )
 
-    # Progress tracking setup
+    # Progress tracking setup (disable in non-human modes to suppress spinner/bar)
     console = output.get_console()
     progress_tracker = ProgressTracker(
-        console=console, disable=(dry_run or no_progress)
+        console=console, disable=(dry_run or no_progress or output.format_type != "human")
     )
 
     failed = False
@@ -884,9 +885,10 @@ def cmd(
     Usage with legacy config directory:
         sbkube apply ./config
     """
-    # Initialize OutputManager
+    # Initialize OutputManager and share via context
     output_format = ctx.obj.get("format", "human")
     output = OutputManager(format_type=output_format)
+    ctx.obj["output"] = output
 
     output.print("[bold blue]✨ SBKube `apply` 시작 ✨[/bold blue]", level="info")
 
@@ -1145,7 +1147,8 @@ def cmd(
     # 앱 그룹 디렉토리 결정 (공통 유틸리티 사용)
     try:
         app_config_dirs = resolve_app_dirs(
-            BASE_DIR, app_config_dir_name, config_file_name, sources_file_name
+            BASE_DIR, app_config_dir_name, config_file_name, sources_file_name,
+            output=output,
         )
     except ValueError:
         raise click.Abort
@@ -1342,10 +1345,10 @@ def cmd(
         # Process each app in dependency order
         failed = False
 
-        # Progress tracking setup (get console from OutputManager)
+        # Progress tracking setup (disable in non-human modes to suppress spinner/bar)
         console = output.get_console()
         progress_tracker = ProgressTracker(
-            console=console, disable=(dry_run or no_progress)
+            console=console, disable=(dry_run or no_progress or output.format_type != "human")
         )
 
         try:

@@ -16,7 +16,10 @@ from sbkube.utils.global_options import global_options
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.helm_util import get_installed_charts
 
-console = Console()
+from sbkube.utils.logger import logger
+
+# Use logger's console so it respects --format (quiet in non-human modes)
+console = logger.console
 
 
 @click.command(name="delete")

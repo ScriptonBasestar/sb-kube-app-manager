@@ -11,7 +11,10 @@ from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.global_options import global_options
 from sbkube.utils.file_loader import load_config_file
 
-console = Console()
+from sbkube.utils.logger import logger
+
+# Use logger's console so it respects --format (quiet in non-human modes)
+console = logger.console
 
 
 @click.command(name="upgrade")

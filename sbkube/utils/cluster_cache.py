@@ -14,7 +14,10 @@ from rich.console import Console
 # Constants
 DEFAULT_CACHE_TTL_SECONDS = 300  # 5 minutes
 
-console = Console()
+from sbkube.utils.logger import logger
+
+# Use logger's console so it respects --format (quiet in non-human modes)
+console = logger.console
 
 
 class ClusterCache:

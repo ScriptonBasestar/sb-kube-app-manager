@@ -119,7 +119,7 @@ class TestFormatDeploymentResult:
         )
 
         assert isinstance(result, str)
-        assert "STATUS: success ✅" in result
+        assert "STATUS: SUCCESS" in result
         assert "DEPLOYED: 3 charts in 12.5s" in result
         assert "APPLICATIONS:" in result
         assert "nginx-app (default): running v1.25.0" in result
@@ -145,7 +145,7 @@ class TestFormatDeploymentResult:
             errors=sample_data["errors"],
         )
 
-        assert "STATUS: failed ❌" in result
+        assert "STATUS: FAILED" in result
         assert "ERRORS:" in result
         assert "- Database connection failed" in result
         assert "- Timeout waiting for pod" in result
@@ -226,10 +226,10 @@ class TestPrintOutput:
     def test_print_string_output(self, capsys) -> None:
         """Test printing string output."""
         formatter = OutputFormatter(OutputFormat.LLM)
-        formatter.print_output("STATUS: success ✅")
+        formatter.print_output("STATUS: SUCCESS")
 
         captured = capsys.readouterr()
-        assert "STATUS: success ✅" in captured.out
+        assert "STATUS: SUCCESS" in captured.out
 
     def test_print_dict_output_json(self, capsys) -> None:
         """Test printing dict as JSON."""

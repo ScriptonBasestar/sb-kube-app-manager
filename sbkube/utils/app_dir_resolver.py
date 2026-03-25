@@ -75,7 +75,11 @@ def resolve_app_dirs(
     if sources_file_path.exists():
         try:
             sources_data = load_config_file(sources_file_path)
-            sources_config = SourceScheme(**sources_data)
+            # Skip SourceScheme parsing for unified config format (apiVersion present)
+            if isinstance(sources_data, dict) and "apiVersion" in sources_data:
+                pass  # Unified format - not a SourceScheme file
+            else:
+                sources_config = SourceScheme(**sources_data)
         except Exception as e:
             _print_warning(f"Could not load {sources_file_name}: {e}")
 

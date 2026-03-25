@@ -186,7 +186,7 @@ class ApplyCommand:
 
         ctx = click.Context(click.Command("apply"))
         ctx.obj = {
-            "format": "human",
+            "format": self.format_type,
             "kubeconfig": merged_kubeconfig,
             "context": merged_kubeconfig_context,
             "inherited_settings": {

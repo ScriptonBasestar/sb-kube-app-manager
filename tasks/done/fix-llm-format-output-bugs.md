@@ -3,7 +3,7 @@ title: "fix: --format llm 출력 버그 수정 (6건)"
 type: bug
 priority: P1
 effort: medium
-status: todo
+status: done
 related_files:
   - sbkube/commands/apply.py
   - sbkube/utils/output_formatter.py

@@ -89,7 +89,17 @@ class OutputManager:
         # Remove Rich markup including complex styles like [bold cyan], [dim red], RGB colors, etc.
         # Supports: colors, styles, closing tags, combinations with spaces, RGB, hex colors
         # Pattern matches [tag], [/tag], [tag with spaces], [RGB(...)], [#hex], etc.
-        return re.sub(r"\[/?[^\]]+\]", "", text)
+        text = re.sub(r"\[/?[^\]]+\]", "", text)
+        # Remove emoji characters (Emoji_Presentation and common symbols)
+        text = re.sub(
+            r"[\U0001F300-\U0001F9FF\U00002702-\U000027B0\U0000FE00-\U0000FE0F"
+            r"\U0000200D\U00002600-\U000026FF\U00002B50-\U00002B55]+",
+            "",
+            text,
+        )
+        # Clean up excess whitespace from emoji removal
+        text = re.sub(r"  +", " ", text).strip()
+        return text
 
     def print(
         self,

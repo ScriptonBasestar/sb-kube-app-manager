@@ -170,10 +170,7 @@ class OutputFormatter:
         lines = []
 
         # Status line
-        status_icon = (
-            "✅" if status == "success" else "❌" if status == "failed" else "⚠️"
-        )
-        lines.append(f"STATUS: {status} {status_icon}")
+        lines.append(f"STATUS: {status.upper()}")
 
         # Summary
         charts_count = summary.get("charts_deployed", 0)
@@ -203,9 +200,10 @@ class OutputFormatter:
         # Errors
         if errors:
             lines.append("ERRORS:")
-        for error in errors:
-            lines.append(f"- {error}")
-        lines.append("ERRORS: none")
+            for error in errors:
+                lines.append(f"- {error}")
+        else:
+            lines.append("ERRORS: none")
 
         return "\n".join(lines)
 
@@ -219,21 +217,20 @@ class OutputFormatter:
     ) -> str:
         """Format history result for LLM consumption."""
 
-        def icon_for_state(state: str) -> str:
+        def label_for_state(state: str) -> str:
             mapping = {
-                "success": "✅",
-                "failed": "❌",
-                "in_progress": "🔄",
-                "pending": "⏳",
-                "rolled_back": "↩️",
-                "partially_failed": "⚠️",
+                "success": "OK",
+                "failed": "FAILED",
+                "in_progress": "IN_PROGRESS",
+                "pending": "PENDING",
+                "rolled_back": "ROLLED_BACK",
+                "partially_failed": "PARTIAL_FAIL",
             }
-            return mapping.get(state, "•")
+            return mapping.get(state, state.upper() if state else "UNKNOWN")
 
         lines: list[str] = []
-        status_icon = icon_for_state(status)
         view = summary.get("view", "list")
-        lines.append(f"HISTORY STATUS: {status} {status_icon}")
+        lines.append(f"HISTORY STATUS: {label_for_state(status)}")
 
         if view == "list":
             total = summary.get("total", len(history))
@@ -261,9 +258,7 @@ class OutputFormatter:
                 lines.append("RECENT DEPLOYMENTS:")
                 for entry in history:
                     entry_status = entry.get("status", "unknown")
-                    entry_icon = entry.get("status_icon") or icon_for_state(
-                        entry_status
-                    )
+                    entry_label = label_for_state(entry_status)
                     apps_info = entry.get("apps", {})
                     success_count = apps_info.get("success", 0)
                     total_count = apps_info.get("total", 0)
@@ -271,16 +266,16 @@ class OutputFormatter:
                     lines.append(
                         f"- {entry.get('deployment_id', 'unknown')} | {timestamp} | "
                         f"{entry.get('cluster', '-')}/{entry.get('namespace', '-')} | "
-                        f"{entry_status} {entry_icon} ({success_count}/{total_count} apps)"
+                        f"{entry_label} ({success_count}/{total_count} apps)"
                     )
                     if entry.get("error_message"):
                         lines.append(f"  error: {entry['error_message']}")
         elif view == "detail":
             entry = history[0] if history else {}
             entry_status = entry.get("status", status)
-            entry_icon = icon_for_state(entry_status)
+            entry_label = label_for_state(entry_status)
             lines.append(
-                f"DEPLOYMENT ID: {entry.get('deployment_id', 'unknown')} {entry_icon}"
+                f"DEPLOYMENT ID: {entry.get('deployment_id', 'unknown')} [{entry_label}]"
             )
             lines.append(f"TIMESTAMP: {entry.get('timestamp')}")
             lines.append(
@@ -297,12 +292,12 @@ class OutputFormatter:
                 lines.append(f"APPS ({len(apps)}):")
                 for app in apps:
                     app_status = app.get("status", "unknown")
-                    app_icon = app.get("status_icon") or icon_for_state(app_status)
+                    app_label = label_for_state(app_status)
                     namespace = app.get("namespace")
                     ns_str = f" ({namespace})" if namespace else ""
                     lines.append(
                         f"- {app.get('name', 'unknown')} [{app.get('type', '?')}] "
-                        f"{app_status} {app_icon}{ns_str}"
+                        f"{app_label}{ns_str}"
                     )
                     if app.get("error_message"):
                         lines.append(f"  error: {app['error_message']}")

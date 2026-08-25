@@ -9,13 +9,12 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
+from sbkube.utils.logger import logger
 
 # Constants
 KUBECTL_TIMEOUT_SECONDS = 30
 HELM_TIMEOUT_SECONDS = 30
 
-from sbkube.utils.logger import logger
 
 # Use logger's console so it respects --format (quiet in non-human modes)
 console = logger.console

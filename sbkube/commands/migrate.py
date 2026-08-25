@@ -10,7 +10,6 @@ import json
 import re
 
 import click
-from rich.console import Console
 from rich.table import Table
 
 from sbkube.utils.common import run_command
@@ -461,7 +460,7 @@ def cmd(
 
     # 6. 결과 요약
     console.print(f"\n{'─' * 40}")
-    console.print(f"[bold]마이그레이션 완료[/bold]")
+    console.print("[bold]마이그레이션 완료[/bold]")
     console.print(f"  ✅ 성공: {success}")
     if failed:
         console.print(f"  ❌ 실패: {failed}")

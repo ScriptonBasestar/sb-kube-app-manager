@@ -2,7 +2,6 @@ import asyncio
 import sys
 
 import click
-from rich.console import Console
 
 from sbkube.diagnostics.kubernetes_checks import (
     ConfigValidityCheck,

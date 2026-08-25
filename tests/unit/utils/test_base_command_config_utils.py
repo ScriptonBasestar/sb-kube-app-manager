@@ -3,8 +3,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from sbkube.utils.base_command import EnhancedBaseCommand
 
 
@@ -131,7 +129,7 @@ invalid_key: value
 
         # May or may not fail depending on validation strictness
         # Just ensure it doesn't crash
-        result = cmd.load_and_validate_sources_file(sources_path, output)
+        cmd.load_and_validate_sources_file(sources_path, output)
         # Result depends on model validation
 
 

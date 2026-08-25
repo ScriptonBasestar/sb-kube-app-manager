@@ -330,7 +330,7 @@ helm_repos:
         mock_run_command.return_value = (1, "", "Error: repository already exists")
 
         # Act
-        result = prepare_helm_app(
+        prepare_helm_app(
             app_name="nginx",
             app=app,
             base_dir=tmp_path,

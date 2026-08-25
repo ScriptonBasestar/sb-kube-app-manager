@@ -12,7 +12,12 @@ from pathlib import Path
 import click
 
 from sbkube.models.config_model import GitApp, HelmApp, HookApp, HttpApp, SBKubeConfig
-from sbkube.models.sources_model import GitRepoScheme, HelmRepoScheme, OciRepoScheme, SourceScheme
+from sbkube.models.sources_model import (
+    GitRepoScheme,
+    HelmRepoScheme,
+    OciRepoScheme,
+    SourceScheme,
+)
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.cli_check import check_helm_installed_or_exit
 from sbkube.utils.cluster_config import (

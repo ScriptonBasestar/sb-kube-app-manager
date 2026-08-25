@@ -1,13 +1,14 @@
 """Tests for RecursiveExecutor (v0.11.0+)."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
 
 from sbkube.models.config_model import HelmApp
-from sbkube.models.unified_config_model import PhaseReference, UnifiedConfig, UnifiedSettings
+from sbkube.models.unified_config_model import (
+    PhaseReference,
+    UnifiedConfig,
+    UnifiedSettings,
+)
 from sbkube.utils.recursive_executor import (
     AppExecutionResult,
     ExecutionResult,
@@ -338,7 +339,7 @@ class TestRecursiveExecutorFailureHandling:
             },
         )
 
-        result = executor.execute(config)
+        executor.execute(config)
 
         # With continue, execution should proceed
         assert call_count == 2

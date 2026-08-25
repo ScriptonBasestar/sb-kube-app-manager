@@ -23,7 +23,6 @@ from sbkube.state.rollback import RollbackManager
 from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import logger
 
-
 # Type alias for rollback scope
 RollbackScope = Literal["app", "phase", "all"]
 

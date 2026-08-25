@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Mapping
+from collections.abc import Mapping
 
 
 def is_exec_allowed(env: Mapping[str, str] | None = None) -> bool:

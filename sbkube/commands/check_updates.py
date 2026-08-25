@@ -16,16 +16,15 @@ from packaging.version import InvalidVersion
 from rich.table import Table
 
 from sbkube.models.config_manager import ConfigManager
+from sbkube.utils.global_options import global_options
 from sbkube.utils.helm_util import (
     get_all_helm_releases,
     get_latest_chart_version,
     search_helm_chart,
 )
-from sbkube.utils.global_options import global_options
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.version_compare import (
     VersionComparison,
-    compare_versions,
     get_version_diff,
 )
 
@@ -393,7 +392,6 @@ def _handle_config_update(
         return
 
     # Load config
-    config_manager = ConfigManager(base_path=base_path)
     config_path = base_path / "config.yaml"
 
     if not config_path.exists():

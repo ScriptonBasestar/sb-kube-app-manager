@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from rich.console import Console
+
+from sbkube.utils.logger import logger
 
 # Constants
 DEFAULT_CACHE_TTL_SECONDS = 300  # 5 minutes
 
-from sbkube.utils.logger import logger
 
 # Use logger's console so it respects --format (quiet in non-human modes)
 console = logger.console

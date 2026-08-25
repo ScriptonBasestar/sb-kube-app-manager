@@ -1,9 +1,7 @@
 """Tests for chart_path_resolver module."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from sbkube.utils.chart_path_resolver import (
     ChartPathResult,

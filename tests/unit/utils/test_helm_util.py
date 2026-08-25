@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sbkube.exceptions import (
-    CliToolExecutionError,
     CliToolNotFoundError,
     KubernetesConnectionError,
 )

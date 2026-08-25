@@ -1,7 +1,7 @@
 """Tests for hook_helpers module (Phase 3 refactoring)."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

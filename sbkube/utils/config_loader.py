@@ -101,7 +101,6 @@ class ConfigLoader:
         detected = self.detect()
 
         if detected.config_type == ConfigType.UNKNOWN:
-            msg = f"No sbkube.yaml found in {self.base_dir}"
             raise ConfigFileNotFoundError(
                 str(self.base_dir),
                 ["sbkube.yaml", "sbkube.yml"],

@@ -72,7 +72,7 @@ def format_deployment_error(
 
     # verbose 힌트
     if not verbose:
-        console.print(f"   [dim](상세: --verbose 또는 -v)[/dim]")
+        console.print("   [dim](상세: --verbose 또는 -v)[/dim]")
         console.print()
         return
 

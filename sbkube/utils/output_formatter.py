@@ -9,7 +9,7 @@ This module provides utilities to format command outputs in different modes:
 
 import json
 import os
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from rich.console import Console
@@ -20,7 +20,7 @@ except ImportError:
     yaml = None  # YAML support is optional
 
 
-class OutputFormat(str, Enum):
+class OutputFormat(StrEnum):
     """Supported output formats."""
 
     HUMAN = "human"

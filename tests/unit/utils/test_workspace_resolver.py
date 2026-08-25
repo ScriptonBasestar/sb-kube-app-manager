@@ -1,6 +1,5 @@
 """Tests for workspace_resolver module."""
 
-import pytest
 from pathlib import Path
 
 from sbkube.utils.workspace_resolver import (

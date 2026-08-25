@@ -2,7 +2,6 @@ from pathlib import Path
 
 import click
 from pydantic import ValidationError as PydanticValidationError
-from rich.console import Console
 
 from sbkube.models.config_model import ActionApp, SBKubeConfig, YamlApp
 from sbkube.utils.cli_check import (
@@ -12,10 +11,9 @@ from sbkube.utils.cli_check import (
 from sbkube.utils.cluster_config import resolve_cluster_config
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
-from sbkube.utils.global_options import global_options
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.global_options import global_options
 from sbkube.utils.helm_util import get_installed_charts
-
 from sbkube.utils.logger import logger
 
 # Use logger's console so it respects --format (quiet in non-human modes)

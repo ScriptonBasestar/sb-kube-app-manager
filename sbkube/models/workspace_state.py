@@ -5,7 +5,7 @@ workspace multi-phase deployment states.
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
@@ -26,7 +26,7 @@ from sbkube.models.deployment_state import Base
 from sbkube.utils.datetime_utils import utc_now
 
 
-class WorkspaceDeploymentStatus(str, Enum):
+class WorkspaceDeploymentStatus(StrEnum):
     """Workspace deployment status enumeration."""
 
     PENDING = "pending"
@@ -37,7 +37,7 @@ class WorkspaceDeploymentStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class PhaseDeploymentStatus(str, Enum):
+class PhaseDeploymentStatus(StrEnum):
     """Phase deployment status enumeration."""
 
     PENDING = "pending"

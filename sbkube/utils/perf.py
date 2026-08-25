@@ -11,11 +11,11 @@ import atexit
 import json
 import os
 import time
+from collections.abc import Iterable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
-
+from typing import Any
 
 _TRUTHY = {"1", "true", "yes", "on"}
 
@@ -147,7 +147,7 @@ class PerfRecorder:
                     "error": type(exc).__name__,
                 }
                 if hasattr(exc, "returncode"):
-                    tags["returncode"] = getattr(exc, "returncode")
+                    tags["returncode"] = exc.returncode
                 self.record(
                     name="subprocess",
                     duration_seconds=duration,

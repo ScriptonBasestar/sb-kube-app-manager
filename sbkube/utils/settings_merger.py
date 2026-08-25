@@ -18,16 +18,14 @@ Usage:
     # Result: kubeconfig="~/.kube/config", timeout=300
 """
 
-from typing import Any, TypeVar
+from typing import Any
 
 from pydantic import BaseModel
 
 from sbkube.utils.logger import logger
 
-T = TypeVar("T", bound=BaseModel)
 
-
-def merge_settings(parent: T, child: T | None) -> T:
+def merge_settings[T: BaseModel](parent: T, child: T | None) -> T:
     """Merge two settings objects with inheritance rules.
 
     The child settings override parent settings according to merge rules:
@@ -165,7 +163,7 @@ def _make_hashable(item: Any) -> Any:
     return item
 
 
-def merge_settings_chain(*settings: T | None) -> T:
+def merge_settings_chain[T: BaseModel](*settings: T | None) -> T:
     """Merge a chain of settings objects.
 
     Settings are merged left-to-right, with later settings

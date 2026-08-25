@@ -5,7 +5,7 @@ deployment states and enabling rollback operations.
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
@@ -28,7 +28,7 @@ from sbkube.utils.datetime_utils import utc_now
 Base = declarative_base()
 
 
-class DeploymentStatus(str, Enum):
+class DeploymentStatus(StrEnum):
     """Deployment status enumeration."""
 
     PENDING = "pending"
@@ -39,7 +39,7 @@ class DeploymentStatus(str, Enum):
     PARTIALLY_FAILED = "partially_failed"
 
 
-class ResourceAction(str, Enum):
+class ResourceAction(StrEnum):
     """Resource action types."""
 
     CREATE = "create"

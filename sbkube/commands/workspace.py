@@ -1258,7 +1258,7 @@ class WorkspaceDeployCommand:
                 return (True, list(phase_config.apps.keys()))
 
             # TODO: Implement inline apps deployment
-            self.output.print_warning(f"Inline apps deployment not yet implemented")
+            self.output.print_warning("Inline apps deployment not yet implemented")
             self._complete_phase_tracking(phase_name, False, "Inline apps not supported yet")
             return (False, list(phase_config.apps.keys()))
 

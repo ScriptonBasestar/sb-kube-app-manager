@@ -219,7 +219,7 @@ chart: grafana/grafana    # ✅ correct
 | Python version | 3.14+ strict |
 | Temp files | `tmp/` or `tmp/scripts/` only |
 | Build artifacts | `build/`, `tmp/bin/`, `dist/` only |
-| Auto-push | ❌ PROHIBITED |
+| Push workflow | Follow global worktree, push, integration, and cleanup policy |
 | Auto-commit | ✅ allowed |
 | Docs language | AI context: English / User-facing: Korean |
 

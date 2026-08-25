@@ -11,6 +11,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator, model_validator
 
+from sbkube.utils.config_inheritance import resolve_inheritance
+
 from .base_model import ConfigBaseModel
 
 # ============================================================================
@@ -1336,6 +1338,19 @@ class SBKubeConfig(ConfigBaseModel):
     apps: dict[str, AppConfig] = Field(default_factory=dict)
     global_labels: dict[str, str] = Field(default_factory=dict)
     global_annotations: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_parent_inheritance(cls, values: Any) -> Any:
+        """Merge a ``_parent`` document in before validation.
+
+        ``_parent`` is normally consumed by the loader (``load_config_file`` /
+        ``from_yaml``), which knows the document's own directory. This is the
+        net for a raw dict validated in memory: anchors (``@lib/...``) still
+        resolve, and a relative ``_parent`` fails closed because the base
+        directory is unknown. Without it the key would hit ``extra="forbid"``.
+        """
+        return resolve_inheritance(values)
 
     @field_validator("namespace")
     @classmethod

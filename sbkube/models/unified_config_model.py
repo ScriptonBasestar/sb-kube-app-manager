@@ -22,6 +22,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator, model_validator
 
+from sbkube.utils.config_inheritance import resolve_inheritance
+
 from .base_model import ConfigBaseModel
 from .config_model import AppConfig
 from .sources_model import GitRepoScheme, HelmRepoScheme, OciRepoScheme
@@ -549,6 +551,19 @@ class UnifiedConfig(ConfigBaseModel):
             description="Global command hooks (e.g., hooks.apply.pre, hooks.deploy.post)",
         ),
     ] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_parent_inheritance(cls, values: Any) -> Any:
+        """Merge a ``_parent`` document in before validation.
+
+        ``_parent`` is normally consumed by the loader (``load_config_file`` /
+        ``from_yaml``), which knows the document's own directory. This is the
+        net for a raw dict validated in memory: anchors (``@lib/...``) still
+        resolve, and a relative ``_parent`` fails closed because the base
+        directory is unknown. Without it the key would hit ``extra="forbid"``.
+        """
+        return resolve_inheritance(values)
 
     @field_validator("metadata", mode="before")
     @classmethod

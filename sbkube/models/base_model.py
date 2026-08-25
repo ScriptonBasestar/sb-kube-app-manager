@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from pydantic_core import ValidationError
 
 from sbkube.exceptions import ConfigValidationError
+from sbkube.utils.config_inheritance import resolve_inheritance
 from sbkube.utils.logger import get_logger
 
 from .validators import ValidatorMixin
@@ -218,11 +219,14 @@ class ConfigBaseModel(BaseModel, ValidatorMixin):
             if data is None:
                 data = {}
 
-            return cls(**data)
-
         except yaml.YAMLError as e:
             msg = f"Invalid YAML in {path}: {e!s}"
             raise ConfigValidationError(msg)
+
+        # Outside the YAMLError handler: `_parent` resolution has its own
+        # fail-closed errors and must not be relabelled as a YAML syntax error.
+        data = resolve_inheritance(data, path)
+        return cls(**data)
 
 
 class InheritableConfigModel(ConfigBaseModel):

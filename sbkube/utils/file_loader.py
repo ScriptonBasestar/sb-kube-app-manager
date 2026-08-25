@@ -8,6 +8,11 @@ import toml
 import yaml
 
 from sbkube.exceptions import ConfigFileNotFoundError, FileOperationError
+from sbkube.utils.config_inheritance import (
+    has_parent,
+    is_sbkube_document,
+    resolve_inheritance,
+)
 from sbkube.utils.logger import logger
 
 # ============================================================================
@@ -181,10 +186,16 @@ def load_config_file(basename: str | Path) -> dict[str, Any]:
     for candidate in unique_candidates:
         if os.path.exists(candidate):
             try:
-                return _load_file_by_extension(candidate)
+                data = _load_file_by_extension(candidate)
             except Exception as e:
                 logger.error(f"Failed to parse config file '{candidate}': {e}")
                 raise FileOperationError(candidate, "parse", str(e))
+            # Resolve `_parent` outside the except block above: a broken parent
+            # reference must surface its own message, not be reported as a parse
+            # failure of this file.
+            if has_parent(data) and is_sbkube_document(data):
+                return resolve_inheritance(data, candidate)
+            return data
 
     logger.error(f"설정 파일을 찾을 수 없습니다: {basename_str}.yaml|.yml|.toml")
     raise ConfigFileNotFoundError(basename_str, unique_candidates)

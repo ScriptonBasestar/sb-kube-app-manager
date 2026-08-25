@@ -42,6 +42,9 @@ last_updated: 2026-02-25
 앱 그룹은 임의의 상위 디렉터리를 더 이상 탐색하지 않습니다. 의도한 루트에
 marker를 추가하고 공용 `settings`를 옮기거나, 앱 파일에 `kubeconfig`와
 `kubeconfig_context`를 지정하세요(또는 두 CLI 옵션을 함께 전달하세요).
+이 marker 조건은 **암묵적 상위 탐색**에 적용됩니다. `apply TARGET -f <root>/sbkube.yaml`
+처럼 루트 파일을 명시하면 그 파일의 디렉터리가 상속 경계가 되며, 중간
+문서는 그 경계 안에 있고 유효한 SBKube API 문서일 때만 읽힙니다.
 `~/.kube/config`와 `default`는 더 이상 암묵 기본값이 아니므로, 클러스터가
 필요한 명령은 두 값을 명시적으로 제공하지 않으면 실패합니다.
 

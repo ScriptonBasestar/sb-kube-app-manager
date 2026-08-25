@@ -95,13 +95,10 @@ def test_resolve_cluster_config_no_sources() -> None:
 
 
 def test_resolve_cluster_config_incomplete_sources() -> None:
-    """Should raise error when sources.yaml is incomplete."""
-    # Missing kubeconfig_context
-    with pytest.raises(Exception):  # Pydantic validation error
-        SourceScheme(
-            kubeconfig="~/.kube/config",
-            # kubeconfig_context is missing
-        )
+    """The model permits incomplete settings; a cluster command rejects them."""
+    sources = SourceScheme(kubeconfig="~/.kube/config")
+    with pytest.raises(ClusterConfigError, match="kubeconfig_context"):
+        resolve_cluster_config(None, None, sources)
 
 
 def test_resolve_cluster_config_cli_partial() -> None:
@@ -187,17 +184,9 @@ def test_sources_model_validation() -> None:
     assert sources.kubeconfig == "~/.kube/config"
     assert sources.kubeconfig_context == "default"
 
-    # Missing kubeconfig
-    with pytest.raises(Exception):  # Pydantic validation error
-        SourceScheme(
-            kubeconfig_context="default",
-        )
-
-    # Missing kubeconfig_context
-    with pytest.raises(Exception):  # Pydantic validation error
-        SourceScheme(
-            kubeconfig="~/.kube/config",
-        )
+    # Omitted values stay absent; cluster-required commands fail closed later.
+    assert SourceScheme(kubeconfig_context="default").kubeconfig is None
+    assert SourceScheme(kubeconfig="~/.kube/config").kubeconfig_context is None
 
     # Empty kubeconfig
     with pytest.raises(Exception):  # Pydantic validation error

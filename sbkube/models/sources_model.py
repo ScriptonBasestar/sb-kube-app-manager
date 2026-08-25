@@ -143,10 +143,11 @@ class SourceScheme(InheritableConfigModel):
     - Optional app directory specification (v0.5.0+)
     """
 
-    # Cluster targeting (required for deployment, optional with defaults for migration)
+    # Cluster targeting is optional at model construction time. Commands that
+    # need a cluster use resolve_cluster_config(), which fails closed.
     cluster: str | None = None  # Cluster identifier (documentation purpose, optional)
-    kubeconfig: str = "~/.kube/config"  # Kubeconfig file path (default for legacy compat)
-    kubeconfig_context: str = "default"  # Kubectl context name (default for legacy compat)
+    kubeconfig: str | None = None
+    kubeconfig_context: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -289,9 +290,11 @@ class SourceScheme(InheritableConfigModel):
 
     @field_validator("kubeconfig")
     @classmethod
-    def validate_kubeconfig_not_empty(cls, v: str) -> str:
+    def validate_kubeconfig_not_empty(cls, v: str | None) -> str | None:
         """Validate kubeconfig is not empty."""
-        if not v or not v.strip():
+        if v is None:
+            return None
+        if not v.strip():
             msg = (
                 "kubeconfig is required. "
                 "Specify the path to your kubeconfig file in sources.yaml"
@@ -303,9 +306,11 @@ class SourceScheme(InheritableConfigModel):
 
     @field_validator("kubeconfig_context")
     @classmethod
-    def validate_context_not_empty(cls, v: str) -> str:
+    def validate_context_not_empty(cls, v: str | None) -> str | None:
         """Validate context is not empty."""
-        if not v or not v.strip():
+        if v is None:
+            return None
+        if not v.strip():
             msg = (
                 "kubeconfig_context is required. "
                 "Specify the kubectl context name in sources.yaml"

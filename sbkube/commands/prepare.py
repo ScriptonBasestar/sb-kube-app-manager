@@ -31,6 +31,11 @@ from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.global_options import global_options
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
+from sbkube.utils.settings_inheritance import (
+    collect_parent_inherited_settings,
+    extract_inherited_settings,
+    merge_inherited_settings,
+)
 from sbkube.utils.workspace_resolver import SbkubeDirectories
 
 
@@ -864,37 +869,31 @@ def cmd(
                 "http_proxy", "https_proxy", "no_proxy",
             }
 
-            # Get inherited settings from context (passed from parent workspace/phase)
-            # No parent scanning - settings must be explicitly passed or defined locally
-            inherited_settings = ctx.obj.get("inherited_settings", {})
-
-            # Start with inherited settings
-            merged_settings: dict = {}
-
-            # Apply inherited kubeconfig settings
-            if inherited_settings.get("kubeconfig"):
-                merged_settings["kubeconfig"] = inherited_settings["kubeconfig"]
-            if inherited_settings.get("kubeconfig_context"):
-                merged_settings["kubeconfig_context"] = inherited_settings["kubeconfig_context"]
-
-            # Apply inherited helm_repos, oci_registries, git_repos
-            if inherited_settings.get("helm_repos"):
-                merged_settings["helm_repos"] = dict(inherited_settings["helm_repos"])
-            if inherited_settings.get("oci_registries"):
-                merged_settings["oci_registries"] = dict(inherited_settings["oci_registries"])
-            if inherited_settings.get("git_repos"):
-                merged_settings["git_repos"] = dict(inherited_settings["git_repos"])
-
-            # Override with local settings (local takes precedence)
-            for k, v in full_settings.items():
-                if k in source_scheme_fields:
-                    if k in ("helm_repos", "oci_registries", "git_repos") and k in merged_settings:
-                        # Merge dict fields: inherited + local (local wins on conflict)
-                        merged_settings[k].update(v)
-                    else:
-                        merged_settings[k] = v
-
-            settings_data = merged_settings
+            # Direct -f app/sbkube.yaml invocations need the same root -> phase
+            # -> app inheritance as workspace-driven execution.  The marker is
+            # the hard boundary, so settings above it cannot leak in.
+            inherited_settings = merge_inherited_settings(
+                collect_parent_inherited_settings(sources_file_path.parent),
+                ctx.obj.get("inherited_settings", {}),
+            )
+            local_settings = {
+                key: value for key, value in full_settings.items()
+                if key in source_scheme_fields
+            }
+            settings_data = merge_inherited_settings(
+                inherited_settings, extract_inherited_settings({"settings": local_settings})
+            )
+            # Preserve SourceScheme fields that are not inherited.
+            settings_data.update(
+                {key: value for key, value in local_settings.items()
+                 if key not in settings_data}
+            )
+            # Scalars are not union-merged: an explicitly empty local value must
+            # still reach SourceScheme and be rejected instead of falling back to
+            # a parent target.
+            for key in ("kubeconfig", "kubeconfig_context"):
+                if key in local_settings:
+                    settings_data[key] = local_settings[key]
         else:
             # 레거시 포맷: 전체 데이터가 SourceScheme
             settings_data = sources_data

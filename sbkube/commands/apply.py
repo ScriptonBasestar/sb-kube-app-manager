@@ -26,7 +26,22 @@ from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.perf import perf_timer
 from sbkube.utils.progress_tracker import ProgressTracker
+from sbkube.utils.settings_inheritance import (
+    build_inherited_settings_chain as _build_inherited_settings_chain,
+)
+from sbkube.utils.settings_inheritance import (
+    collect_parent_inherited_settings as _collect_parent_inherited_settings,
+)
+from sbkube.utils.settings_inheritance import (
+    extract_inherited_settings as _extract_inherited_settings_from_config,
+)
+from sbkube.utils.settings_inheritance import (
+    merge_inherited_settings,
+)
 from sbkube.utils.target_resolver import resolve_target
+
+# Compatibility re-export for callers that used the former apply-local helper.
+_merge_inherited_settings = merge_inherited_settings
 
 if TYPE_CHECKING:
     pass
@@ -559,162 +574,6 @@ def _execute_apps_deployment(
     return overall_success
 
 
-def _extract_inherited_settings_from_config(config_data: dict) -> dict:
-    """Extract inheritable settings from a loaded config dict.
-
-    Extracts kubeconfig, kubeconfig_context, helm_repos, oci_registries,
-    and git_repos from the settings section of a sbkube.yaml config.
-
-    Args:
-        config_data: Loaded sbkube.yaml dict
-
-    Returns:
-        dict with inheritable settings (empty values omitted)
-
-    """
-    settings = config_data.get("settings", {})
-    if not isinstance(settings, dict):
-        return {}
-
-    result: dict = {}
-
-    for key in ("helm_repos", "oci_registries", "git_repos"):
-        val = settings.get(key)
-        if val:
-            result[key] = dict(val)
-
-    for key in ("kubeconfig", "kubeconfig_context"):
-        val = settings.get(key)
-        if val:
-            result[key] = val
-
-    return result
-
-
-def _merge_inherited_settings(base: dict, override: dict) -> dict:
-    """Merge two inherited_settings dicts. Override takes precedence.
-
-    Dict values (helm_repos etc.) are union-merged; scalars are replaced.
-    """
-    merged = dict(base)
-    for key in ("helm_repos", "oci_registries", "git_repos"):
-        if key in override:
-            combined = dict(merged.get(key, {}))
-            combined.update(override[key])
-            merged[key] = combined
-
-    for key in ("kubeconfig", "kubeconfig_context"):
-        if key in override:
-            merged[key] = override[key]
-
-    return merged
-
-
-def _build_inherited_settings_chain(
-    root_config_data: dict,
-    intermediate_config_paths: list[Path] | Path | None = None,
-) -> dict:
-    """Build inherited settings by merging root and intermediate configs.
-
-    Supports N-level paths. For a path like a/b/c, merges:
-    1. root sbkube.yaml settings
-    2. a/sbkube.yaml settings
-    3. a/b/sbkube.yaml settings
-    Each level overrides its parent.
-
-    Args:
-        root_config_data: Already-loaded root config dict
-        intermediate_config_paths: Path(s) to intermediate sbkube.yaml files,
-            ordered from shallowest to deepest. Single Path is also accepted.
-
-    Returns:
-        Merged inherited_settings dict
-
-    """
-    merged = _extract_inherited_settings_from_config(root_config_data)
-
-    if intermediate_config_paths is None:
-        return merged
-
-    # Normalize single Path to list
-    if isinstance(intermediate_config_paths, Path):
-        intermediate_config_paths = [intermediate_config_paths]
-
-    for config_path in intermediate_config_paths:
-        if not config_path.exists():
-            continue
-        try:
-            data = load_config_file(str(config_path))
-            layer_settings = _extract_inherited_settings_from_config(data)
-        except Exception as exc:
-            import warnings
-
-            warnings.warn(
-                f"Failed to load intermediate config {config_path}: {exc}",
-                stacklevel=2,
-            )
-            continue
-
-        merged = _merge_inherited_settings(merged, layer_settings)
-
-    return merged
-
-
-def _collect_parent_inherited_settings(
-    config_dir: Path,
-    stop_at: Path | None = None,
-) -> dict:
-    """Walk upward from config_dir to collect inherited settings from parent configs.
-
-    Used for bottom-up inheritance when a TARGET directory has its own sbkube.yaml
-    and is treated as standalone by target_resolver. This function finds parent
-    sbkube.yaml files and merges their settings (root-most first).
-
-    Args:
-        config_dir: Directory containing the target's sbkube.yaml
-        stop_at: Stop searching at this directory (e.g. filesystem root).
-            If None, walks up to filesystem root.
-
-    Returns:
-        Merged inherited_settings dict from all parent configs.
-        Empty dict if no parent configs found.
-
-    """
-    parent_configs: list[tuple[Path, dict]] = []
-    current = config_dir.resolve().parent  # Start from parent of config_dir
-
-    root = Path(current.anchor)
-    stop = stop_at.resolve() if stop_at else root
-
-    while current != root:
-        for name in ("sbkube.yaml", "sbkube.yml"):
-            candidate = current / name
-            if candidate.exists():
-                try:
-                    data = load_config_file(str(candidate))
-                    parent_configs.append((candidate, data))
-                except Exception:
-                    pass
-                break  # Found config at this level, stop checking alternates
-        if current == stop:
-            break
-        current = current.parent
-
-    if not parent_configs:
-        return {}
-
-    # Reverse: root-most config first, then deeper levels
-    parent_configs.reverse()
-
-    # Build merged settings from root down
-    merged: dict = {}
-    for _path, data in parent_configs:
-        layer = _extract_inherited_settings_from_config(data)
-        merged = _merge_inherited_settings(merged, layer) if merged else layer
-
-    return merged
-
-
 def _match_phase_by_scope(config_data: dict, scope_path: str) -> str | None:
     """Find best matching phase name for filesystem scope path."""
     phases = config_data.get("phases")
@@ -922,7 +781,7 @@ def cmd(
     # Bottom-up inheritance: when TARGET has its own sbkube.yaml (scope_path=None),
     # collect settings from parent sbkube.yaml files for kubeconfig/helm_repos etc.
     parent_inherited: dict = {}
-    if target and not resolved_target.scope_path:
+    if not resolved_target.scope_path:
         parent_inherited = _collect_parent_inherited_settings(BASE_DIR)
         if parent_inherited:
             if not ctx.obj.get("kubeconfig") and parent_inherited.get("kubeconfig"):

@@ -928,6 +928,7 @@ class TestCollectParentInheritedSettings:
     @staticmethod
     def _create_hierarchy(root_dir):
         """Create root + phase + app hierarchy."""
+        (root_dir / ".sbkube-workspace").write_text("anchors: {}\n")
         (root_dir / "sbkube.yaml").write_text(
             yaml.dump(
                 {

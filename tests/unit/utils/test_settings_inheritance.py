@@ -5,7 +5,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-from sbkube.utils.settings_inheritance import collect_parent_inherited_settings
+from sbkube.utils.settings_inheritance import (
+    collect_parent_inherited_settings,
+    extract_inherited_settings,
+)
 
 
 def _write_config(path: Path, settings: dict) -> None:
@@ -65,4 +68,35 @@ def test_invalid_existing_parent_fails_closed(tmp_path: Path) -> None:
     app.mkdir()
 
     with pytest.raises(Exception):
+        collect_parent_inherited_settings(app)
+
+
+def test_explicit_empty_cluster_scalar_is_preserved() -> None:
+    assert extract_inherited_settings({"settings": {"kubeconfig": ""}}) == {
+        "kubeconfig": ""
+    }
+
+
+@pytest.mark.parametrize(
+    "settings",
+    [{"helm_repos": "not-a-mapping"}, []],
+)
+def test_invalid_settings_shapes_include_config_path(settings: object, tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match=str(tmp_path)):
+        extract_inherited_settings({"settings": settings}, tmp_path)
+
+
+def test_non_sbkube_parent_and_escaping_symlink_fail_closed(tmp_path: Path) -> None:
+    (tmp_path / ".sbkube-workspace").write_text("anchors: {}\n")
+    app = tmp_path / "app"
+    app.mkdir()
+    (tmp_path / "sbkube.yaml").write_text("kubeconfig: /legacy\n")
+    with pytest.raises(ValueError, match="parent must be an sbkube API document"):
+        collect_parent_inherited_settings(app)
+
+    outside = tmp_path.parent / "outside-sbkube.yaml"
+    outside.write_text("apiVersion: sbkube/v1\nsettings: {}\n")
+    (tmp_path / "sbkube.yaml").unlink()
+    (tmp_path / "sbkube.yaml").symlink_to(outside)
+    with pytest.raises(ValueError, match="escapes workspace boundary"):
         collect_parent_inherited_settings(app)

@@ -58,6 +58,12 @@ from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.logger import LogLevel, logger
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.security import is_exec_allowed
+from sbkube.utils.settings_inheritance import (
+    collect_parent_documents,
+    collect_parent_inherited_settings,
+    merge_inherited_settings,
+    merge_local_source_settings,
+)
 from sbkube.utils.workspace_resolver import resolve_sbkube_directories
 
 _SSA_CONFLICT_KEYWORDS: tuple[str, ...] = (
@@ -1258,6 +1264,8 @@ def cmd(
                 if api_version.startswith("sbkube/"):
                     # 통합 포맷: settings 섹션에서 SourceScheme 필드만 추출
                     full_settings = sources_data.get("settings", {})
+                    if not isinstance(full_settings, dict):
+                        raise ValueError(f"{sources_file_path}: 'settings' must be a mapping")
 
                     # SourceScheme에서 허용하는 필드만 추출
                     source_scheme_fields = {
@@ -1268,36 +1276,18 @@ def cmd(
                         "http_proxy", "https_proxy", "no_proxy",
                     }
 
-                    # 상위 디렉토리의 sbkube.yaml에서 설정 상속 (cluster settings)
-                    merged_settings: dict = {}
-                    current_dir = sources_file_path.parent
-                    parent_configs = []
-
-                    for _ in range(5):
-                        parent_dir = current_dir.parent
-                        if parent_dir == current_dir:
-                            break
-                        parent_config = parent_dir / "sbkube.yaml"
-                        if parent_config.exists():
-                            parent_configs.append(parent_config)
-                        current_dir = parent_dir
-
-                    for parent_config in reversed(parent_configs):
-                        try:
-                            parent_data = load_config_file(parent_config)
-                            if parent_data and parent_data.get("apiVersion", "").startswith("sbkube/"):
-                                parent_settings = parent_data.get("settings", {})
-                                for k, v in parent_settings.items():
-                                    if k in source_scheme_fields:
-                                        merged_settings[k] = v
-                        except Exception:
-                            pass
-
-                    for k, v in full_settings.items():
-                        if k in source_scheme_fields:
-                            merged_settings[k] = v
-
-                    settings_data = merged_settings
+                    local_settings = {
+                        key: value for key, value in full_settings.items()
+                        if key in source_scheme_fields
+                    }
+                    settings_data = merge_local_source_settings(
+                        merge_inherited_settings(
+                            collect_parent_inherited_settings(sources_file_path.parent),
+                            ctx.obj.get("inherited_settings", {}),
+                        ),
+                        local_settings,
+                        sources_file_path,
+                    )
                 else:
                     settings_data = sources_data
 
@@ -1353,28 +1343,17 @@ def cmd(
                 output.print_warning(f"No apps found in: {config_file_path}")
                 continue
 
-            # namespace 상속 처리 (parent → current)
+            # Namespace inherits through the same marker-bounded parent chain.
             merged_namespace = "default"
-            current_dir = config_file_path.parent
-            parent_configs = []
-            for _ in range(5):
-                parent_dir = current_dir.parent
-                if parent_dir == current_dir:
-                    break
-                parent_config = parent_dir / "sbkube.yaml"
-                if parent_config.exists():
-                    parent_configs.append(parent_config)
-                current_dir = parent_dir
-
-            for parent_config in reversed(parent_configs):
-                try:
-                    parent_data = load_config_file(parent_config)
-                    if parent_data and parent_data.get("apiVersion", "").startswith("sbkube/"):
-                        parent_ns = parent_data.get("settings", {}).get("namespace")
-                        if parent_ns:
-                            merged_namespace = parent_ns
-                except Exception:
-                    pass
+            for parent_data, parent_path in collect_parent_documents(
+                config_file_path.parent
+            ):
+                parent_settings = parent_data.get("settings", {})
+                if not isinstance(parent_settings, dict):
+                    raise ValueError(f"{parent_path}: 'settings' must be a mapping")
+                parent_ns = parent_settings.get("namespace")
+                if parent_ns:
+                    merged_namespace = parent_ns
 
             # 현재 config의 namespace로 오버라이드
             current_namespace = raw_data.get("settings", {}).get("namespace")

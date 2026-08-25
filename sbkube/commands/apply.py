@@ -778,16 +778,12 @@ def cmd(
     if target and resolved_target.scope_path:
         app_config_dir_name = resolved_target.scope_path
 
-    # Bottom-up inheritance: when TARGET has its own sbkube.yaml (scope_path=None),
-    # collect settings from parent sbkube.yaml files for kubeconfig/helm_repos etc.
+    # Parent settings remain inherited data, never CLI overrides.  This keeps
+    # the effective order CLI > app local > phase > root.
     parent_inherited: dict = {}
     if not resolved_target.scope_path:
         parent_inherited = _collect_parent_inherited_settings(BASE_DIR)
         if parent_inherited:
-            if not ctx.obj.get("kubeconfig") and parent_inherited.get("kubeconfig"):
-                ctx.obj["kubeconfig"] = parent_inherited["kubeconfig"]
-            if not ctx.obj.get("context") and parent_inherited.get("kubeconfig_context"):
-                ctx.obj["context"] = parent_inherited["kubeconfig_context"]
             ctx.obj["inherited_settings"] = parent_inherited
 
     # Detect config format
@@ -890,12 +886,8 @@ def cmd(
                     output.finalize(status="success")
                     return
                 # No phases: single app group mode
-                # Inject inherited settings into ctx.obj for downstream use
+                # Keep parent data separate from actual CLI options.
                 if target_inherited:
-                    if not ctx.obj.get("kubeconfig") and target_inherited.get("kubeconfig"):
-                        ctx.obj["kubeconfig"] = target_inherited["kubeconfig"]
-                    if not ctx.obj.get("context") and target_inherited.get("kubeconfig_context"):
-                        ctx.obj["context"] = target_inherited["kubeconfig_context"]
                     ctx.obj["inherited_settings"] = target_inherited
                 detected = DetectedConfig(
                     config_type=ConfigType.UNIFIED,

@@ -33,8 +33,8 @@ from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.settings_inheritance import (
     collect_parent_inherited_settings,
-    extract_inherited_settings,
     merge_inherited_settings,
+    merge_local_source_settings,
 )
 from sbkube.utils.workspace_resolver import SbkubeDirectories
 
@@ -859,6 +859,8 @@ def cmd(
             # 통합 포맷: settings 섹션에서 SourceScheme 필드만 추출
             full_settings = sources_data.get("settings", {})
             output.print(f"[cyan]📄 Unified format detected (apiVersion: {api_version})[/cyan]", level="info")
+            if not isinstance(full_settings, dict):
+                raise ValueError(f"{sources_file_path}: 'settings' must be a mapping")
 
             # SourceScheme에서 허용하는 필드만 추출
             source_scheme_fields = {
@@ -880,20 +882,9 @@ def cmd(
                 key: value for key, value in full_settings.items()
                 if key in source_scheme_fields
             }
-            settings_data = merge_inherited_settings(
-                inherited_settings, extract_inherited_settings({"settings": local_settings})
+            settings_data = merge_local_source_settings(
+                inherited_settings, local_settings, sources_file_path
             )
-            # Preserve SourceScheme fields that are not inherited.
-            settings_data.update(
-                {key: value for key, value in local_settings.items()
-                 if key not in settings_data}
-            )
-            # Scalars are not union-merged: an explicitly empty local value must
-            # still reach SourceScheme and be rejected instead of falling back to
-            # a parent target.
-            for key in ("kubeconfig", "kubeconfig_context"):
-                if key in local_settings:
-                    settings_data[key] = local_settings[key]
         else:
             # 레거시 포맷: 전체 데이터가 SourceScheme
             settings_data = sources_data

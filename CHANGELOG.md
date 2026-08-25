@@ -10,6 +10,14 @@ ______________________________________________________________________
 
 ### 🚀 New Features
 
+**marker 경계 기반 클러스터 설정 상속**
+
+- `apply`, `prepare`, `deploy`는 `.sbkube-workspace` 내부에서만 공용
+  클러스터·저장소 설정을 상속한다. 우선순위는 CLI > 앱 > phase > 루트다.
+- marker 없는 중첩 앱은 임의의 상위 `sbkube.yaml`을 더 이상 흡수하지 않는다.
+  의도한 루트에 `.sbkube-workspace`를 추가하고 공용 설정을 옮기거나,
+  앱에 클러스터 설정을 직접 선언해 마이그레이션한다.
+
 **설정 상속 `_parent`** (`sbkube/utils/config_inheritance.py`)
 
 - ✅ **NEW**: 설정 문서가 `_parent:` 로 다른 설정을 상속한다. 부모를 먼저 적재해
@@ -784,4 +792,3 @@ Apps list→dict, `pull-helm`+`install-helm`→단일 `helm`, `specs` 제거, HT
 </details>
 
 ---
-

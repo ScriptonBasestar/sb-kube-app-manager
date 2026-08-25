@@ -1034,3 +1034,59 @@ class TestCollectParentInheritedSettings:
         assert inherited["kubeconfig_context"] == "root-ctx"
         assert inherited["helm_repos"]["grafana"] == "https://grafana.example.com"
         assert result.exit_code == 0
+
+
+@patch("sbkube.commands.apply._execute_apps_deployment", return_value=True)
+def test_apply_file_keeps_cli_values_separate_from_parent_inheritance(
+    _execute, tmp_path
+):
+    """apply -f carries parents as inherited data, never as a fake CLI override."""
+    (tmp_path / ".sbkube-workspace").write_text("anchors: {}\n")
+    (tmp_path / "sbkube.yaml").write_text(
+        yaml.safe_dump({"apiVersion": "sbkube/v1", "settings": {
+            "kubeconfig": "/root", "kubeconfig_context": "root"}, "phases": {}})
+    )
+    app = tmp_path / "app"
+    app.mkdir()
+    (app / "sbkube.yaml").write_text(
+        yaml.safe_dump({"apiVersion": "sbkube/v1", "settings": {
+            "kubeconfig": "/app", "kubeconfig_context": "app"}, "apps": {}})
+    )
+
+    result = CliRunner().invoke(
+        cmd, ["-f", str(app / "sbkube.yaml")],
+        obj={"format": "human", "kubeconfig": "/cli", "context": "cli"},
+    )
+
+    assert result.exit_code == 0
+    call_ctx = _execute.call_args.kwargs["ctx"].obj
+    assert call_ctx["kubeconfig"] == "/cli"
+    assert call_ctx["context"] == "cli"
+    assert call_ctx["inherited_settings"]["kubeconfig"] == "/root"
+
+
+@patch("sbkube.commands.apply._execute_apps_deployment", return_value=True)
+def test_apply_scoped_target_keeps_parent_settings_out_of_cli_slots(_execute, tmp_path):
+    """apply TARGET -f root passes root/phase through inherited_settings only."""
+    (tmp_path / ".sbkube-workspace").write_text("anchors: {}\n")
+    (tmp_path / "sbkube.yaml").write_text(yaml.safe_dump({
+        "apiVersion": "sbkube/v1", "settings": {"kubeconfig": "/root", "kubeconfig_context": "root"},
+        "phases": {"phase": {"source": "phase/sbkube.yaml"}},
+    }))
+    phase = tmp_path / "phase"
+    phase.mkdir()
+    (phase / "sbkube.yaml").write_text(yaml.safe_dump({
+        "apiVersion": "sbkube/v1", "settings": {"kubeconfig_context": "phase"}, "apps": {}}))
+    app = phase / "app"
+    app.mkdir()
+    (app / "sbkube.yaml").write_text(yaml.safe_dump({
+        "apiVersion": "sbkube/v1", "settings": {"kubeconfig": "/app", "kubeconfig_context": "app"}, "apps": {}}))
+
+    result = CliRunner().invoke(cmd, [str(app), "-f", str(tmp_path / "sbkube.yaml")], obj={"format": "human"})
+
+    assert result.exit_code == 0
+    call_ctx = _execute.call_args.kwargs["ctx"].obj
+    assert call_ctx.get("kubeconfig") is None
+    assert call_ctx.get("context") is None
+    assert call_ctx["inherited_settings"]["kubeconfig"] == "/root"
+    assert call_ctx["inherited_settings"]["kubeconfig_context"] == "phase"

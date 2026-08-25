@@ -34,6 +34,15 @@ last_updated: 2026-02-25
 | `--context` | kubectl 컨텍스트 | 설정 파일 값 |
 | `--help` / `-h` | 도움말 | - |
 
+### 워크스페이스 설정 상속
+
+중첩된 `sbkube.yaml`에서 `prepare`, `deploy`, `apply`는 상위 경로에
+`.sbkube-workspace` marker가 있을 때만 클러스터·저장소 설정을 상속합니다.
+우선순위는 **CLI > 앱 로컬 > phase > 워크스페이스 루트**입니다. marker 없는
+앱 그룹은 임의의 상위 디렉터리를 더 이상 탐색하지 않습니다. 의도한 루트에
+marker를 추가하고 공용 `settings`를 옮기거나, 앱 파일에 `kubeconfig`와
+`kubeconfig_context`를 지정하세요(또는 두 CLI 옵션을 함께 전달하세요).
+
 ---
 
 ## Core Workflow Commands

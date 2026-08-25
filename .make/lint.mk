@@ -23,15 +23,18 @@ check:
 	@uv run mypy $(LINT_DIRS_CORE) --ignore-missing-imports --no-error-summary $(EXCLUDE_DIRS) || echo "⚠️  Type check completed with warnings"
 	@echo "✅ Quick check completed!"
 
-# lint-check: 변경 사항 미리보기 (diff 모드)
-# - ruff check --diff: 수정될 내용을 미리보기로 표시 (실제 수정 없음)
+# lint-check: 검사만 (자동 수정 없음)
+# - ruff check --output-format=concise: 진단을 `file:line:col: CODE msg` 로 낸다 (실제 수정 없음)
+#   ⚠ --diff 로 되돌리지 말 것 — 그건 자동수정 가능한 것만 통일 diff 로 찍어서
+#   수정 불가 진단(F821·F841 등)을 출력에서 통째로 숨기고, file:line 을 파싱하는
+#   외부 게이트에는 "진단 0건"으로 보인다. 실측 47건이 0건으로 보였다.
 # - mypy: 타입 검사
 # - bandit: 보안 취약점 검사 (medium 레벨)
 # - mdformat: 마크다운 포맷팅 체크 (diff 모드)
 lint-check:
 	@echo "Running lint checks only (no auto-fix)..."
 	@echo "Running ruff check..."
-	uv run ruff check $(LINT_DIRS) --diff $(EXCLUDE_DIRS)
+	uv run ruff check $(LINT_DIRS) --output-format=concise $(EXCLUDE_DIRS)
 	@echo "Running mypy..."
 	uv run mypy $(LINT_DIRS_CORE) --ignore-missing-imports $(EXCLUDE_DIRS)
 	@echo "Running bandit security check..."

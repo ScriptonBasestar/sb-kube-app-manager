@@ -159,6 +159,7 @@ class TestParentInheritanceMerge:
 
         assert load_config_file(str(child))["apps"]["traefik"]["type"] == "helm"
 
+
     def test_parent_inheritance_resolves_grandparent_chain(
         self, workspace: Path
     ) -> None:
@@ -201,6 +202,54 @@ class TestParentInheritanceMerge:
             UnifiedConfig.model_validate(
                 {"apiVersion": "sbkube/v1", "apps": {"traefik": {"values": ["v.yaml"]}}}
             )
+
+
+class TestParentInheritanceBoundaries:
+    """Anchors are workspace-scoped capabilities, not arbitrary path aliases."""
+
+    def test_anchor_target_cannot_escape_workspace(self, tmp_path: Path) -> None:
+        outside = tmp_path.parent / f"{tmp_path.name}-outside" / "parent"
+        _write(outside / "config.yaml", PARENT_CONFIG)
+        (tmp_path / ".sbkube-workspace").write_text(
+            yaml.safe_dump({"anchors": {"lib": f"../{outside.parent.name}"}}),
+            encoding="utf-8",
+        )
+        child = _write(
+            tmp_path / "env" / "app" / "sbkube.yaml",
+            {"apiVersion": "sbkube/v1", "_parent": "@lib/parent"},
+        )
+
+        with pytest.raises(ParentResolutionError, match="escapes workspace boundary"):
+            load_config_file(str(child))
+
+    def test_anchor_reference_cannot_escape_anchor_root(self, workspace: Path) -> None:
+        outside = workspace / "outside"
+        _write(outside / "config.yaml", PARENT_CONFIG)
+        child = _write(
+            workspace / "env" / "app" / "sbkube.yaml",
+            {"apiVersion": "sbkube/v1", "_parent": "@lib/../outside"},
+        )
+
+        with pytest.raises(ParentResolutionError, match="escapes anchor boundary"):
+            load_config_file(str(child))
+
+    def test_anchor_parent_file_symlink_cannot_escape_anchor_root(
+        self, workspace: Path
+    ) -> None:
+        outside = workspace / "outside" / "config.yaml"
+        _write(outside, PARENT_CONFIG)
+        parent_dir = workspace / "library" / "symlinked"
+        parent_dir.mkdir()
+        (parent_dir / "config.yaml").symlink_to(outside)
+        child = _write(
+            workspace / "env" / "app" / "sbkube.yaml",
+            {"apiVersion": "sbkube/v1", "_parent": "@lib/symlinked"},
+        )
+
+        with pytest.raises(
+            ParentResolutionError, match="parent file outside anchor boundary"
+        ):
+            load_config_file(str(child))
 
 
 class TestParentInheritanceFailsClosed:

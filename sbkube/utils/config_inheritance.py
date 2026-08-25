@@ -141,6 +141,7 @@ def _resolve_ref(ref: Any, child_dir: Path | None) -> Path:
             f"'{PARENT_KEY}' must be a non-empty string, got {ref!r}"
         )
     ref = ref.strip()
+    anchor_root: Path | None = None
 
     if ref.startswith("@"):
         anchor, _, rest = ref[1:].partition("/")
@@ -158,9 +159,27 @@ def _resolve_ref(ref: Any, child_dir: Path | None) -> Path:
                 f"'{PARENT_KEY}: {ref}' — unknown anchor '@{anchor}'. "
                 f"{root / WORKSPACE_MARKER} declares: {declared}"
             )
-        target = root / anchors[anchor]
+        workspace_root = root.resolve()
+        anchor_root = (root / anchors[anchor]).resolve()
+        try:
+            anchor_root.relative_to(workspace_root)
+        except ValueError as exc:
+            raise ParentResolutionError(
+                f"'{PARENT_KEY}: {ref}' — anchor '@{anchor}' escapes workspace boundary "
+                f"{workspace_root}: {anchor_root}"
+            ) from exc
+        target = anchor_root
         if rest:
             target = target / rest
+        resolved_target = target.resolve()
+        try:
+            resolved_target.relative_to(anchor_root)
+        except ValueError as exc:
+            raise ParentResolutionError(
+                f"'{PARENT_KEY}: {ref}' escapes anchor boundary {anchor_root}: "
+                f"{resolved_target}"
+            ) from exc
+        target = resolved_target
     elif Path(ref).is_absolute():
         target = Path(ref)
     else:
@@ -172,7 +191,16 @@ def _resolve_ref(ref: Any, child_dir: Path | None) -> Path:
             )
         target = child_dir / ref
 
-    return _pick_parent_file(target, ref)
+    parent_file = _pick_parent_file(target, ref)
+    if anchor_root is not None:
+        try:
+            parent_file.relative_to(anchor_root)
+        except ValueError as exc:
+            raise ParentResolutionError(
+                f"'{PARENT_KEY}: {ref}' resolves to a parent file outside anchor boundary "
+                f"{anchor_root}: {parent_file}"
+            ) from exc
+    return parent_file
 
 
 def _absolutize_parent_values(

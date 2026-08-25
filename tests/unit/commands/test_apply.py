@@ -1090,3 +1090,25 @@ def test_apply_scoped_target_keeps_parent_settings_out_of_cli_slots(_execute, tm
     assert call_ctx.get("context") is None
     assert call_ctx["inherited_settings"]["kubeconfig"] == "/root"
     assert call_ctx["inherited_settings"]["kubeconfig_context"] == "phase"
+
+
+def test_apply_scoped_target_rejects_broken_intermediate_symlink(tmp_path):
+    """A broken phase config cannot silently fall back to workspace settings."""
+    (tmp_path / ".sbkube-workspace").write_text("anchors: {}\n")
+    (tmp_path / "sbkube.yaml").write_text(yaml.safe_dump({
+        "apiVersion": "sbkube/v1", "settings": {"kubeconfig": "/root"},
+        "phases": {"phase": {"source": "phase/sbkube.yaml"}},
+    }))
+    phase = tmp_path / "phase"
+    phase.mkdir()
+    (phase / "sbkube.yaml").symlink_to(tmp_path / "missing-phase.yaml")
+    app = phase / "app"
+    app.mkdir()
+    (app / "sbkube.yaml").write_text(yaml.safe_dump({
+        "apiVersion": "sbkube/v1", "settings": {}, "apps": {}}))
+
+    result = CliRunner().invoke(cmd, [str(app), "-f", str(tmp_path / "sbkube.yaml")])
+
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ValueError)
+    assert "cannot resolve intermediate config" in str(result.exception)

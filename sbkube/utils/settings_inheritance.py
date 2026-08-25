@@ -90,6 +90,7 @@ def merge_local_source_settings(
 def build_inherited_settings_chain(
     root_config_data: dict[str, Any],
     intermediate_config_paths: list[Path] | Path | None = None,
+    boundary: Path | None = None,
 ) -> dict[str, Any]:
     """Merge a root document and existing descendants in shallow-to-deep order.
 
@@ -100,11 +101,27 @@ def build_inherited_settings_chain(
     if intermediate_config_paths is None:
         return merged
     paths = [intermediate_config_paths] if isinstance(intermediate_config_paths, Path) else intermediate_config_paths
+    resolved_boundary = boundary.resolve() if boundary else None
     for config_path in paths:
-        if not config_path.exists():
+        if not config_path.exists() and not config_path.is_symlink():
             continue
+        try:
+            resolved_path = config_path.resolve(strict=True)
+        except OSError as exc:
+            raise ValueError(f"{config_path}: cannot resolve intermediate config: {exc}") from exc
+        if resolved_boundary:
+            try:
+                resolved_path.relative_to(resolved_boundary)
+            except ValueError as exc:
+                raise ValueError(
+                    f"{config_path}: intermediate config escapes workspace boundary {boundary}"
+                ) from exc
+        document = load_config_file(resolved_path)
+        api_version = document.get("apiVersion") if isinstance(document, dict) else None
+        if not isinstance(api_version, str) or not api_version.startswith("sbkube/"):
+            raise ValueError(f"{config_path}: intermediate config must be an sbkube API document")
         merged = merge_inherited_settings(
-            merged, extract_inherited_settings(load_config_file(config_path), config_path)
+            merged, extract_inherited_settings(document, config_path)
         )
     return merged
 
@@ -137,8 +154,11 @@ def collect_parent_documents(config_dir: Path) -> list[tuple[dict[str, Any], Pat
     while True:
         for name in _CONFIG_NAMES:
             candidate = current / name
-            if candidate.exists():
-                resolved = candidate.resolve()
+            if candidate.exists() or candidate.is_symlink():
+                try:
+                    resolved = candidate.resolve(strict=True)
+                except OSError as exc:
+                    raise ValueError(f"{candidate}: cannot resolve parent config: {exc}") from exc
                 try:
                     resolved.relative_to(workspace_root.resolve())
                 except ValueError as exc:

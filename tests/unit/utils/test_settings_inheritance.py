@@ -6,6 +6,7 @@ import pytest
 import yaml
 
 from sbkube.utils.settings_inheritance import (
+    build_inherited_settings_chain,
     collect_parent_inherited_settings,
     extract_inherited_settings,
 )
@@ -100,3 +101,42 @@ def test_non_sbkube_parent_and_escaping_symlink_fail_closed(tmp_path: Path) -> N
     (tmp_path / "sbkube.yaml").symlink_to(outside)
     with pytest.raises(ValueError, match="escapes workspace boundary"):
         collect_parent_inherited_settings(app)
+
+
+def test_broken_parent_symlink_fails_closed_instead_of_root_fallback(tmp_path: Path) -> None:
+    (tmp_path / ".sbkube-workspace").write_text("anchors: {}\n")
+    _write_config(tmp_path / "sbkube.yaml", {"kubeconfig": "/root"})
+    phase = tmp_path / "phase"
+    phase.mkdir()
+    (phase / "sbkube.yaml").symlink_to(tmp_path / "missing.yaml")
+    app = phase / "app"
+    app.mkdir()
+
+    with pytest.raises(ValueError, match="phase/sbkube.yaml.*cannot resolve parent"):
+        collect_parent_inherited_settings(app)
+
+
+@pytest.mark.parametrize("kind", ["escaping", "broken", "non_sbkube"])
+def test_intermediate_chain_fails_closed_at_workspace_boundary(
+    kind: str, tmp_path: Path
+) -> None:
+    root = tmp_path / "workspace"
+    root.mkdir()
+    intermediate = root / "phase" / "sbkube.yaml"
+    intermediate.parent.mkdir()
+    if kind == "escaping":
+        outside = tmp_path / "outside.yaml"
+        _write_config(outside, {})
+        intermediate.symlink_to(outside)
+        match = "escapes workspace boundary"
+    elif kind == "broken":
+        intermediate.symlink_to(root / "missing.yaml")
+        match = "cannot resolve intermediate"
+    else:
+        intermediate.write_text("settings: {}\n")
+        match = "must be an sbkube API document"
+
+    with pytest.raises(ValueError, match=match):
+        build_inherited_settings_chain(
+            {"settings": {}}, [intermediate], boundary=root
+        )

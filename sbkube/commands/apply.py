@@ -849,7 +849,7 @@ def cmd(
                         for depth in range(len(scope_parts) - 1)
                     ]
                     target_inherited = _build_inherited_settings_chain(
-                        config_data, intermediate_configs
+                        config_data, intermediate_configs, boundary=BASE_DIR
                     )
                 else:
                     target_inherited = root_inherited

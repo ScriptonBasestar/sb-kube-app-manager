@@ -59,7 +59,6 @@ from sbkube.utils.logger import LogLevel, logger
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.security import is_exec_allowed
 from sbkube.utils.settings_inheritance import (
-    collect_parent_documents,
     collect_parent_inherited_settings,
     merge_inherited_settings,
     merge_local_source_settings,
@@ -1343,17 +1342,28 @@ def cmd(
                 output.print_warning(f"No apps found in: {config_file_path}")
                 continue
 
-            # Namespace inherits through the same marker-bounded parent chain.
+            # namespace 상속 처리 (parent → current)
             merged_namespace = "default"
-            for parent_data, parent_path in collect_parent_documents(
-                config_file_path.parent
-            ):
-                parent_settings = parent_data.get("settings", {})
-                if not isinstance(parent_settings, dict):
-                    raise ValueError(f"{parent_path}: 'settings' must be a mapping")
-                parent_ns = parent_settings.get("namespace")
-                if parent_ns:
-                    merged_namespace = parent_ns
+            current_dir = config_file_path.parent
+            parent_configs = []
+            for _ in range(5):
+                parent_dir = current_dir.parent
+                if parent_dir == current_dir:
+                    break
+                parent_config = parent_dir / "sbkube.yaml"
+                if parent_config.exists():
+                    parent_configs.append(parent_config)
+                current_dir = parent_dir
+
+            for parent_config in reversed(parent_configs):
+                try:
+                    parent_data = load_config_file(parent_config)
+                    if parent_data and parent_data.get("apiVersion", "").startswith("sbkube/"):
+                        parent_ns = parent_data.get("settings", {}).get("namespace")
+                        if parent_ns:
+                            merged_namespace = parent_ns
+                except Exception:
+                    pass
 
             # 현재 config의 namespace로 오버라이드
             current_namespace = raw_data.get("settings", {}).get("namespace")

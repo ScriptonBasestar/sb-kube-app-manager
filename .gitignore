@@ -39,7 +39,7 @@ rendered/
 # Poetry, Hatch, uv lockfiles
 poetry.lock
 hatch.lock
-uv.lock
+# uv.lock is committed: sbkube is an application and CI runs `uv sync --frozen`
 pip-wheel-metadata/
 
 # Virtualenvs

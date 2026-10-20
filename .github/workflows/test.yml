@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.14"]
         test-category: ["unit", "e2e"]
 
     steps:
@@ -31,7 +31,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv venv
+        uv venv --python ${{ matrix.python-version }}
         uv sync --frozen --group test
 
     - name: Install Helm
@@ -87,7 +87,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.12"
+        python-version: "3.14"
 
     - name: Install uv
       run: |
@@ -96,7 +96,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv venv
+        uv venv --python 3.14
         uv sync --frozen --group dev
 
     - name: Run ruff
@@ -118,7 +118,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.12"
+        python-version: "3.14"
 
     - name: Install uv
       run: |
@@ -127,7 +127,7 @@ jobs:
 
     - name: Install sbkube
       run: |
-        uv venv
+        uv venv --python 3.14
         uv pip install -e .
 
     - name: Validate example configs

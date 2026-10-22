@@ -426,6 +426,88 @@ apps:
 
 ---
 
+## Deploy Gate (`sbkube-gate.yaml`)
+
+클러스터를 바꾸는 명령(`deploy`, `apply`, `upgrade`, `delete`, `rollback`, `migrate`)은 실행 전에
+설정된 외부 명령을 돌리고, 그 종료코드로 진행 여부를 정한다. 설정은 `sbkube.yaml`이 아니라 별도
+`sbkube-gate.yaml` 파일의 `deploy_gate` 블록에 둔다 — 게이트 설정만 편집 보호 경로로 묶을 수 있게
+하기 위해서다. **`sbkube-gate.yaml`이 하나도 없으면 게이트도 없고 동작은 그대로다.**
+
+```yaml
+# <workspace root>/sbkube-gate.yaml  (.sbkube-workspace 옆) — 전역
+deploy_gate:
+  command: "uv run scripts/full_ci_gate.py gate"
+  mode: enforce            # enforce | warn | off — 필수, 기본값 없음
+  precedence: asymmetric   # asymmetric(기본) | individual | global — 전역 파일만
+  allow_override: false    # 전역 파일만
+```
+
+```yaml
+# <phase 또는 앱 그룹 디렉토리>/sbkube-gate.yaml — 개별
+deploy_gate:
+  mode: off
+```
+
+| 필드 | 위치 | 설명 |
+|------|------|------|
+| `command` | 전역만 | 게이트 명령. 셸 없이 `shlex`로 나눠 실행한다. 최종 `mode`가 `off`가 아니면 필수 |
+| `mode` | 전역 필수, 개별 선택 | `enforce`: 실패 시 거부 / `warn`: 경고 후 진행 / `off`: 게이트 없음. 개별 파일은 이 값만 둘 수 있다 |
+| `precedence` | 전역만 | 전역과 개별 `mode`가 다를 때의 규칙 |
+| `allow_override` | 전역만 | `asymmetric`에서 개별 파일의 완화를 허용 |
+
+파일 찾기:
+
+- 범위: `.sbkube-workspace`가 있으면 그 워크스페이스 루트, 없으면 대상을 감싼 저장소 루트(`.git`)
+  안에서만 위로 찾는다. 범위 밖 상위 디렉토리의 파일은 보지 않는다. 둘 다 없으면 파일시스템 루트까지
+  올라간다.
+- 전역: 워크스페이스가 있으면 루트의 `sbkube-gate.yaml`, 없으면 범위 안에서 대상 위로 올라가며 찾은
+  가장 위의 파일.
+- 개별: 대상 디렉토리에서 위로 올라가며 처음 만나는 파일(전역 제외), 그리고 대상 아래의 모든 파일.
+  루트에서 `apply`하면 phase마다 둔 개별 파일이 모두 반영된다. 아래로는 전역 파일이 있을 때만
+  찾는다. `.`으로 시작하는 디렉토리는 건너뛰고, 심볼릭 링크는 실제 경로가 범위 안일 때만 따라간다.
+  바깥 `apply`가 안쪽까지 배포하므로 자체 `.sbkube-workspace`나 `.git`이 있는 하위 디렉토리도
+  찾으며, 그 안의 파일도 개별 파일로 취급한다(`command` 등 전역 전용 키가 있으면 거부).
+- 대상 위치나 그 위에 전역 파일 없이 개별 파일만 있으면 오류로 거부한다. 전역 파일이 없으면 아래를
+  찾지 않으므로, 루트에서 `apply`할 때 phase에만 둔 파일은 감지되지 않고 게이트 없이 실행된다.
+  개별 파일은 전역 파일이 있어야 효력이 있다.
+- phase `source`가 워크스페이스 밖(`../shared/...`)을 가리키면 그 디렉토리의 게이트 파일은 루트
+  `apply`에서 반영되지 않는다.
+- 개별 파일마다 아래 우선순위로 모드를 정하고, 그중 **가장 엄격한 모드**로 전역 `command`를 한 번
+  돌린다.
+- 대상 디렉토리: `-f`가 있으면 그 파일의 디렉토리, 아니면 `TARGET`, 아니면 현재 디렉토리.
+  `rollback`은 상태 DB에 기록된 배포의 앱 디렉토리(없으면 `--base-dir`/`--app-dir`),
+  `migrate`는 `TARGET`(없으면 현재 디렉토리)이다.
+- 게이트는 저장소 단위 opt-in이다. 게이트 파일이 있는 저장소 밖에서 대상 없이 실행한 `migrate`나
+  기록이 없는 `rollback`은 게이트 파일을 찾지 못해 게이트 없이 실행된다.
+- 읽을 수 없거나 형식이 틀린 파일은 명령을 거부한다(fail closed). 모르는 키도 오류다.
+
+우선순위(강화 = `off` → `warn` → `enforce`). 어느 규칙이든 전역과 개별이 어긋나면 두 파일 경로와
+값, 적용 결과를 경고로 찍고 실행한다.
+
+| `precedence` | 개별이 강화 | 개별이 완화 |
+|--------------|-------------|-------------|
+| `asymmetric` (기본) | 개별 | `allow_override: true`일 때만 개별, 아니면 전역 |
+| `individual` | 개별 | 개별 |
+| `global` | 개별 | 전역 |
+
+게이트 명령 호출:
+
+- 인자 하나로 작업 이름을 받는다: `deploy`, `apply`, `upgrade`, `delete`, `rollback`, `migrate`,
+  `apply --prune-disabled`이면 `prune`.
+- 환경변수 `SBKUBE_GATE_OPERATION`(작업 이름), `SBKUBE_GATE_TARGET`(대상 디렉토리)이 추가된다.
+- 작업 디렉토리는 전역 파일의 디렉토리다.
+- `--dry-run`과 `rollback --list`는 클러스터를 바꾸지 않으므로 게이트를 돌리지 않는다.
+- `apply`가 내부에서 `deploy`를 부르거나 workspace phase를 스레드로 돌려도 게이트는 바깥 명령에서
+  한 번만 돈다. 단, `WorkspaceDeployCommand`를 import하지 못해 `sbkube apply` 하위 프로세스로
+  넘어가는 대체 경로에서는 하위 프로세스가 게이트를 다시 돈다.
+
+사람의 건너뛰기는 `--skip-deploy-gate=<사유>` 한 가지다
+([commands.md](../02-features/commands.md#deploy-gate-건너뛰기)). 환경변수로 끄는 방법은 없다.
+
+YAML 1.1 파서는 따옴표 없는 `off`를 불리언으로 읽지만 `mode`에서는 `off`로 받아들인다.
+
+---
+
 ## Recursive Execution
 
 ```

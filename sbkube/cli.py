@@ -33,6 +33,7 @@ from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
 )
+from sbkube.utils.deploy_gate import CLUSTER_MUTATING_COMMANDS, install_gate
 from sbkube.utils.logger import LogLevel, logger
 
 
@@ -101,6 +102,12 @@ class SbkubeGroup(click.Group):
         if uncategorized:
             with formatter.section("기타"):
                 formatter.write_dl(uncategorized)
+
+    def add_command(self, cmd: click.Command, name: str | None = None) -> None:
+        """Register a command; cluster-mutating commands get the deploy gate."""
+        super().add_command(cmd, name)
+        if (name or cmd.name) in CLUSTER_MUTATING_COMMANDS:
+            install_gate(cmd)
 
     def invoke(self, ctx: click.Context) -> None:
         # 이 메소드는 invoke_without_command=True 와 main 콜백 로직에 의해

@@ -160,6 +160,22 @@ sbkube destroy -f sbkube.yaml --app grafana
 sbkube destroy -f sbkube.yaml --yes  # 확인 없이 삭제
 ```
 
+### deploy gate 건너뛰기
+
+`sbkube-gate.yaml`로 배포 게이트를 켠 저장소에서는 클러스터를 바꾸는 명령(`deploy`, `apply`,
+`upgrade`, `delete`, `rollback`, `migrate`)이 게이트 명령을 먼저 돌린다
+([config-schema.md](../03-configuration/config-schema.md#deploy-gate-sbkube-gateyaml)).
+사람이 긴급하게 건너뛸 때만 사유와 함께 옵션을 준다.
+
+```bash
+sbkube apply --skip-deploy-gate="incident 42 hotfix"
+```
+
+- 사유가 비어 있거나 `-`로 시작하면 거부한다(`=` 형식으로 준다).
+- stdin과 stderr가 모두 터미널일 때만 받는다(스크립트·CI·에이전트 셸에서는 거부).
+- 작업·대상·게이트 파일·사유·사용자를 상태 DB(`~/.sbkube/deployments.db`의 `deploy_gate_skips`)에 남긴다.
+- 환경변수로 게이트를 끄는 방법은 없다.
+
 ---
 
 ## Utility Commands

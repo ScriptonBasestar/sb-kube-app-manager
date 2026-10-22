@@ -14,6 +14,7 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
+from sbkube.models.deploy_gate_state import DeployGateSkip
 from sbkube.models.deployment_state import (
     AppDeployment,
     AppDeploymentCreate,
@@ -113,6 +114,27 @@ class DeploymentDatabase:
             raise
         finally:
             session.close()
+
+    def record_deploy_gate_skip(
+        self,
+        *,
+        operation: str,
+        target_dir: str,
+        gate_file: str | None,
+        reason: str,
+        operator: str | None,
+    ) -> None:
+        """Record a human --skip-deploy-gate use."""
+        with self.get_session() as session:
+            session.add(
+                DeployGateSkip(
+                    operation=operation,
+                    target_dir=target_dir,
+                    gate_file=gate_file,
+                    reason=reason,
+                    operator=operator,
+                )
+            )
 
     def create_deployment(self, deployment_data: DeploymentCreate) -> Deployment:
         """Create a new deployment record.

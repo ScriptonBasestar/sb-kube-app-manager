@@ -10,6 +10,22 @@ ______________________________________________________________________
 
 ### 🚀 New Features
 
+**배포 게이트 `sbkube-gate.yaml`** (`sbkube/utils/deploy_gate.py`, `deploy_gate_config.py`)
+
+- ✅ **NEW**: 클러스터를 바꾸는 명령(`deploy`, `apply`, `upgrade`, `delete`, `rollback`,
+  `migrate`)이 실행 전에 설정된 게이트 명령을 돌린다. `mode: enforce`면 실패 시 거부,
+  `warn`이면 경고 후 진행, `off`면 건너뛴다. 작업 이름(`apply --prune-disabled`는 `prune`)을
+  인자와 `SBKUBE_GATE_OPERATION`으로 넘긴다.
+- ✅ 설정은 `sbkube.yaml`과 분리된 `sbkube-gate.yaml`이다. 워크스페이스 루트가 전역, phase·앱
+  그룹 디렉토리가 개별이며, 전역 `precedence`(`asymmetric` 기본 · `individual` · `global`)와
+  `allow_override`로 충돌을 정하고 어긋나면 경고 후 실행한다. 게이트 명령은 전역 파일에만 두고
+  가장 엄격한 모드로 한 번 돌린다. 개별 파일만 있고 전역 파일이 없으면 거부한다.
+- ✅ 게이트는 CLI 그룹(`SbkubeGroup.add_command`) 한 곳에서 걸리고, `apply` 내부 호출·
+  workspace 스레드에서는 한 번만 돈다. 새 명령이 분류되지 않으면 테스트가 실패한다.
+- ✅ `--skip-deploy-gate=<사유>`: 사유와 대화형 터미널이 필요하며 상태 DB
+  `deploy_gate_skips`에 기록된다. 환경변수 우회는 없다.
+- `sbkube-gate.yaml`이 없으면 동작은 이전과 같다. 형식이 틀린 게이트 파일은 명령을 거부한다.
+
 **marker 경계 기반 클러스터 설정 상속**
 
 - `apply`, `prepare`, `deploy`는 `.sbkube-workspace` 내부에서만 공용

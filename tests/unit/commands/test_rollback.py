@@ -373,6 +373,21 @@ class TestRollbackErrors:
         assert "Use --list" in result.output
 
     @patch("sbkube.commands.rollback.RollbackManager")
+    def test_rollback_phase_without_apps_aborts(self, mock_manager_class) -> None:
+        """An unknown phase must not fall through to rolling back every app."""
+        mock_manager = MagicMock()
+        mock_manager_class.return_value = mock_manager
+        mock_manager.get_phase_apps.return_value = []
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cmd, ["dep_20250131_143022", "--scope", "phase", "--phase", "typo"]
+        )
+
+        assert result.exit_code != 0
+        mock_manager.rollback_deployment.assert_not_called()
+
+    @patch("sbkube.commands.rollback.RollbackManager")
     def test_rollback_manager_error(self, mock_manager_class) -> None:
         """Test handling of RollbackManager errors."""
         # Arrange

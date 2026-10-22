@@ -301,6 +301,9 @@ def _resolve_apps_for_scope(
     Returns:
         List of app names to rollback, or None for all apps
 
+    Raises:
+        click.Abort: If scope=phase and the phase contains no apps
+
     """
     if scope == "app":
         return apps if apps else None
@@ -313,10 +316,11 @@ def _resolve_apps_for_scope(
         # This requires looking up phase metadata from deployment history
         phase_apps = rollback_manager.get_phase_apps(deployment_id, phase_name)
         if not phase_apps:
-            logger.warning(
+            # An empty app list would be treated as "all apps" downstream
+            logger.error(
                 f"No apps found for phase '{phase_name}' in deployment {deployment_id}"
             )
-            return []
+            raise click.Abort
         logger.info(f"Phase '{phase_name}' contains {len(phase_apps)} apps: {phase_apps}")
         return phase_apps
 

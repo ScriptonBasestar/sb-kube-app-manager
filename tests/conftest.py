@@ -55,15 +55,37 @@ def isolated_deploy_state_db(monkeypatch, tmp_path_factory) -> None:
     )
 
 
+@pytest.fixture(scope="session", autouse=True)
+def basetemp_outside_gate_scope(tmp_path_factory) -> None:
+    """Refuse a temp root that an enclosing workspace or gate file governs.
+
+    A gate lookup starting under the temp root walks up past it, so tests
+    whose ``tmp_path`` has no workspace marker would see the enclosing gate.
+    """
+    from sbkube.utils.deploy_gate_config import GATE_FILE_NAME
+
+    root = tmp_path_factory.getbasetemp().resolve()
+    for directory in root.parents:
+        if (directory / ".sbkube-workspace").is_file() or (
+            directory / GATE_FILE_NAME
+        ).is_file():
+            pytest.exit(
+                f"pytest basetemp {root} is below {directory}, which a deploy "
+                "gate governs; use a --basetemp or TMPDIR outside it",
+                returncode=4,
+            )
+
+
 @pytest.fixture(autouse=True)
 def hermetic_deploy_gate(monkeypatch, tmp_path_factory) -> None:
-    """Ignore deploy gate files outside pytest's temp root.
+    """Return no gate for lookups starting outside pytest's temp root.
 
     A checkout nested in a gated workspace (an enclosing ``.sbkube-workspace``
     with ``sbkube-gate.yaml``) would otherwise run that workspace's real gate
     command from any test that invokes a cluster-mutating command on the cwd.
     Gate tests build their workspaces under ``tmp_path`` and are unaffected.
     """
+    from sbkube.commands import gate as gate_command
     from sbkube.utils import deploy_gate
 
     real_find = deploy_gate.find_gate_files
@@ -75,6 +97,8 @@ def hermetic_deploy_gate(monkeypatch, tmp_path_factory) -> None:
         return real_find(start)
 
     monkeypatch.setattr(deploy_gate, "find_gate_files", find_under_temp_root)
+    # `sbkube gate grant` imports the lookup by name.
+    monkeypatch.setattr(gate_command, "find_gate_files", find_under_temp_root)
 
 
 @pytest.fixture(scope="session")

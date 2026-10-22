@@ -652,6 +652,36 @@ def test_gate_grant_command_records_real_process(
     assert rows == [(session.pid, str(root.resolve()), "r", 1)]
 
 
+def test_gate_grant_unreadable_process_list_runs_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _grant_workspace(tmp_path, monkeypatch, "unlimited")
+    _grant(root, None)
+
+    def broken() -> dict[int, tuple[int, str]]:
+        raise DeployGateError("cannot list processes: ps exited 1")
+
+    monkeypatch.setattr(deploy_gate, "process_table", broken)
+    with pytest.raises(DeployGateError, match="exit code 3"):
+        run_gate("deploy", {"target": str(root)}, None)
+    assert "agent grant not checked" in capsys.readouterr().err
+
+
+def test_gate_grant_command_refuses_unknown_pid(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _grant_workspace(tmp_path, monkeypatch, "1h")
+    monkeypatch.setattr(gate_command, "_is_interactive", lambda: True)
+    monkeypatch.setattr(gate_command, "process_table", lambda: {1: (0, "x")})
+    for pid in ("1", "999999"):
+        result = CliRunner().invoke(
+            main,
+            ["gate", "grant", "--pid", pid, "--reason", "r", "--target", str(root)],
+        )
+        assert result.exit_code != 0
+        assert "no running process" in str(result.exception)
+
+
 def test_gate_grant_process_lineage_reads_real_ps() -> None:
     lineage = deploy_gate.process_lineage(deploy_gate.process_table(), os.getpid())
     pids = [pid for pid, _ in lineage]

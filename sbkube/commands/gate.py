@@ -39,7 +39,7 @@ def cmd() -> None:
     help="게이트 파일을 찾을 디렉토리.",
 )
 def grant(pid: int, reason: str, target: Path) -> None:
-    """에이전트 세션이 게이트 명령 없이 배포하도록 허용합니다 (사람 전용).
+    """에이전트 세션이 게이트 명령 없이 배포하도록 허용합니다 (사람이 터미널에서 실행).
 
     허용은 그 PID에서 파생된 프로세스에만 적용되며, 전역 sbkube-gate.yaml의
     deploy_gate.agent_grant.ttl이 지나거나 (unlimited면) 그 프로세스가

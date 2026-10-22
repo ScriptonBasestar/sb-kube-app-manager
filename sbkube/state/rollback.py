@@ -4,6 +4,7 @@ This module provides the rollback mechanism to restore previous
 deployment states using tracked deployment information.
 """
 
+import json
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ from sbkube.state.rollback_compare import (
     RollbackConfirmationRequired,
     compare_snapshots,
 )
+from sbkube.utils.common import run_command
 from sbkube.utils.logger import get_logger
 
 logger = get_logger()
@@ -92,7 +94,7 @@ class RollbackManager:
 
         if comparison.requires_confirmation and confirmed_digest != comparison.digest:
             msg = (
-                "Rollback changes code (chart version, values or source commit) "
+                "Rollback changes code (chart, chart version, values or source commit) "
                 "and was not confirmed with the difference digest"
             )
             raise RollbackConfirmationRequired(msg)
@@ -106,8 +108,14 @@ class RollbackManager:
         return result
 
     def compare_rollback(self, rollback_request: RollbackRequest) -> RollbackComparison:
-        """Compare the rollback target with the current deployment without acting."""
+        """Compare the rollback target with the current deployment without acting.
+
+        Raises:
+            RollbackError: If the rollback itself is invalid (see _validate_rollback)
+
+        """
         current_deployment, target_deployment = self._load_deployments(rollback_request)
+        self._validate_rollback(current_deployment, target_deployment, rollback_request)
         return self._compare(current_deployment, target_deployment, rollback_request)
 
     def _load_deployments(
@@ -140,12 +148,7 @@ class RollbackManager:
         target_deployment: DeploymentDetail | None,
         request: RollbackRequest,
     ) -> RollbackComparison:
-        """Compare every app the rollback would touch.
-
-        The target state is the --target deployment record when given, else
-        the latest earlier record of the same app. Either way it must be the
-        Helm revision the rollback restores (current revision - 1).
-        """
+        """Compare every app the rollback would touch."""
         apps: list[AppComparison] = []
         for app in current_deployment.apps:
             # Same selection as _simulate_rollback/_execute_rollback
@@ -166,41 +169,128 @@ class RollbackManager:
                 )
                 continue
 
-            current = AppSnapshot.from_record(
-                current_deployment.deployment_id,
-                rollback_info,
-                current_deployment.source_commit,
-            )
-            restore_revision = (
-                max(1, current.revision - 1) if current.revision is not None else None
-            )
-
-            target_record = target_deployment or self.db.get_previous_app_deployment(
-                current_deployment.cluster,
-                app["name"],
-                current_deployment.deployment_id,
-            )
-            target = None
-            if target_record is not None:
-                target_app = next(
-                    (a for a in target_record.apps if a["name"] == app["name"]), None
-                )
-                target_info = (target_app or {}).get("rollback_info") or {}
-                if target_info.get("type") == "helm":
-                    target = AppSnapshot.from_record(
-                        target_record.deployment_id,
-                        target_info,
-                        target_record.source_commit,
-                    )
-
             apps.append(
-                compare_snapshots(app["name"], current, target, restore_revision)
+                self._compare_helm_app(
+                    app["name"], rollback_info, current_deployment, target_deployment
+                )
             )
 
         return RollbackComparison(
             current_deployment_id=current_deployment.deployment_id,
             apps=apps,
         )
+
+    def _compare_helm_app(
+        self,
+        app_name: str,
+        rollback_info: dict[str, Any],
+        current_deployment: DeploymentDetail,
+        target_deployment: DeploymentDetail | None,
+    ) -> AppComparison:
+        """Compare one Helm app with the state its rollback restores.
+
+        The target state is the record of the same release and namespace at
+        the Helm revision the rollback restores (current revision - 1): the
+        --target deployment's record when given, else the newest earlier one.
+        The current record must also be the live state: the newest record of
+        the release, at the revision `helm status` reports.
+        """
+        release_name = rollback_info.get("release_name")
+        namespace = rollback_info.get("namespace")
+        current = AppSnapshot.from_record(
+            current_deployment.deployment_id,
+            rollback_info,
+            current_deployment.source_commit,
+        )
+        restore_revision = (
+            max(1, current.revision - 1) if current.revision is not None else None
+        )
+
+        target_record = target_deployment
+        if target_record is None and restore_revision is not None:
+            target_record = self.db.get_previous_app_deployment(
+                current_deployment.cluster,
+                release_name,
+                namespace,
+                restore_revision,
+                current_deployment.deployment_id,
+            )
+        target_info = (
+            _find_release_info(target_record, release_name, namespace)
+            if target_record is not None
+            else None
+        )
+        target = (
+            AppSnapshot.from_record(
+                target_record.deployment_id, target_info, target_record.source_commit
+            )
+            if target_record is not None and target_info is not None
+            else None
+        )
+
+        comparison = compare_snapshots(app_name, current, target, restore_revision)
+        live_reason = self._current_state_reason(
+            current_deployment, release_name, namespace, current.revision
+        )
+        if live_reason is not None:
+            comparison.uncomparable_reason = live_reason
+        elif target_deployment is not None and target_info is None:
+            comparison.uncomparable_reason = (
+                f"--target {target_deployment.deployment_id} has no record of "
+                f"release {release_name} in namespace {namespace}"
+            )
+        return comparison
+
+    def _current_state_reason(
+        self,
+        current_deployment: DeploymentDetail,
+        release_name: str | None,
+        namespace: str | None,
+        recorded_revision: int | None,
+    ) -> str | None:
+        """Why the current record may not be the live release state, else None."""
+        if not release_name or not namespace:
+            return "release name or namespace was not recorded"
+        latest = self.db.get_latest_helm_release_deployment_id(
+            current_deployment.cluster, release_name, namespace
+        )
+        if latest != current_deployment.deployment_id:
+            return (
+                f"{current_deployment.deployment_id} is not the newest record of "
+                f"release {release_name} in {namespace} (newest: {latest})"
+            )
+        live_revision = self._live_helm_revision(release_name, namespace)
+        if live_revision is None:
+            return (
+                f"live Helm revision of {release_name} in {namespace} could not be read"
+            )
+        if live_revision != recorded_revision:
+            return (
+                f"live Helm revision {live_revision} of {release_name} differs from "
+                f"recorded revision {recorded_revision}"
+            )
+        return None
+
+    def _live_helm_revision(self, release_name: str, namespace: str) -> int | None:
+        """Revision `helm status` reports, None when helm fails or is unparsable.
+
+        The reason text stays free of helm output so that the difference
+        digest is stable between the comparison and the confirmed rollback.
+        """
+        cmd = ["helm", "status", release_name, "-n", namespace, "-o", "json"]
+        return_code, stdout, stderr = run_command(cmd)
+        if return_code != 0:
+            logger.warning(f"helm status {release_name} failed: {stderr.strip()}")
+            return None
+        try:
+            revision = json.loads(stdout).get("version")
+        except (ValueError, AttributeError):
+            logger.warning(f"helm status {release_name} returned unparsable output")
+            return None
+        if isinstance(revision, bool) or not isinstance(revision, int):
+            logger.warning(f"helm status {release_name} has no revision number")
+            return None
+        return revision
 
     def _validate_rollback(
         self,
@@ -249,6 +339,29 @@ class RollbackManager:
                 raise RollbackError(
                     msg,
                 )
+
+            # helm rollback always restores current revision - 1; --target only
+            # names the record that state is compared with.
+            for app in current_deployment.apps:
+                if request.app_names and app["name"] not in request.app_names:
+                    continue
+                info = app.get("rollback_info") or {}
+                if info.get("type") != "helm" or info.get("revision") is None:
+                    continue
+                target_info = _find_release_info(
+                    target_deployment, info.get("release_name"), info.get("namespace")
+                )
+                if target_info is None:
+                    continue
+                restore_revision = max(1, info["revision"] - 1)
+                if target_info.get("revision") != restore_revision:
+                    msg = (
+                        f"--target {target_deployment.deployment_id} recorded "
+                        f"{info.get('release_name')} at revision "
+                        f"{target_info.get('revision')}, but rollback restores "
+                        f"revision {restore_revision} (current revision - 1)"
+                    )
+                    raise RollbackError(msg)
 
     def _simulate_rollback(
         self,
@@ -667,3 +780,20 @@ class RollbackManager:
                 )
 
         return rollback_points
+
+
+def _find_release_info(
+    deployment: DeploymentDetail,
+    release_name: str | None,
+    namespace: str | None,
+) -> dict[str, Any] | None:
+    """Helm rollback_info of release_name/namespace in deployment, if recorded."""
+    for app in deployment.apps:
+        info = app.get("rollback_info") or {}
+        if (
+            info.get("type") == "helm"
+            and info.get("release_name") == release_name
+            and info.get("namespace") == namespace
+        ):
+            return info
+    return None

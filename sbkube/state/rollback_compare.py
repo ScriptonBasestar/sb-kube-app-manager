@@ -2,10 +2,12 @@
 
 `sbkube rollback` must not silently restore different code. For every app the
 rollback would touch, the recorded current state is compared with the
-recorded state Helm would restore on three fields: chart version, values
-digest and source commit. Any difference, and any state that cannot be
-compared (no record, no source commit, dirty tree, revision mismatch), makes
-the rollback require a human to type the difference digest.
+recorded state Helm would restore on four fields: chart, chart version,
+values digest and source commit. Any difference, and any state that cannot be
+compared (no record, no source commit, dirty tree, revision mismatch, current
+record not the live release state), makes the rollback require the
+difference digest. Typing it proves the summary was read; it is not an
+approval, which is the deploy gate's job.
 """
 
 import hashlib
@@ -16,7 +18,7 @@ from typing import Any
 from sbkube.exceptions import RollbackError
 from sbkube.state.deploy_recorder import DIRTY_SUFFIX
 
-COMPARED_FIELDS = ("chart_version", "values_digest", "source_commit")
+COMPARED_FIELDS = ("chart", "chart_version", "values_digest", "source_commit")
 DIGEST_LENGTH = 12
 
 

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import create_engine, event, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -112,11 +113,18 @@ class DeploymentDatabase:
                 existing = {
                     row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))
                 }
-                if column not in existing:
+                if column in existing:
+                    continue
+                try:
                     conn.execute(
                         text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}")
                     )
-                    logger.verbose(f"Database migrated: added {table}.{column}")
+                except OperationalError as e:
+                    # Another process added it between PRAGMA and ALTER
+                    if "duplicate column" not in str(e).lower():
+                        raise
+                    continue
+                logger.verbose(f"Database migrated: added {table}.{column}")
 
     @contextmanager
     def get_session(self) -> Session:
@@ -638,47 +646,80 @@ class DeploymentDatabase:
 
             return None
 
-    def get_previous_app_deployment(
+    def _helm_release_records(
         self,
         cluster: str,
-        app_name: str,
-        before_deployment_id: str,
-    ) -> DeploymentDetail | None:
-        """Get the latest deployment older than before_deployment_id that recorded app_name.
-
-        Args:
-            cluster: Cluster name
-            app_name: App name recorded in app_deployments
-            before_deployment_id: Only deployments older than this one qualify
+        release_name: str,
+        namespace: str,
+    ) -> list[tuple[str, dict[str, Any]]]:
+        """Recorded Helm deploys of one release, newest first.
 
         Returns:
-            Deployment details or None if there is no earlier record
+            (deployment_id, rollback_info) pairs whose rollback_info names the
+            release and namespace
 
         """
         with self.get_session() as session:
-            before = (
-                session.query(Deployment)
-                .filter_by(deployment_id=before_deployment_id)
-                .first()
-            )
-            if before is None:
-                return None
-            deployment = (
-                session.query(Deployment)
+            rows = (
+                session.query(Deployment.deployment_id, AppDeployment.rollback_info)
                 .join(AppDeployment)
                 .filter(
                     Deployment.cluster == cluster,
-                    Deployment.timestamp < before.timestamp,
-                    AppDeployment.app_name == app_name,
+                    AppDeployment.app_type == "helm",
+                    AppDeployment.rollback_info.isnot(None),
                 )
-                .order_by(Deployment.timestamp.desc())
-                .first()
+                .order_by(Deployment.timestamp.desc(), Deployment.id.desc())
+                .all()
             )
-            deployment_id = deployment.deployment_id if deployment else None
+        return [
+            (deployment_id, info)
+            for deployment_id, info in rows
+            if isinstance(info, dict)
+            and info.get("type") == "helm"
+            and info.get("release_name") == release_name
+            and info.get("namespace") == namespace
+        ]
 
-        if deployment_id is None:
+    def get_latest_helm_release_deployment_id(
+        self,
+        cluster: str,
+        release_name: str,
+        namespace: str,
+    ) -> str | None:
+        """Deployment id of the newest recorded deploy of a Helm release."""
+        records = self._helm_release_records(cluster, release_name, namespace)
+        return records[0][0] if records else None
+
+    def get_previous_app_deployment(
+        self,
+        cluster: str,
+        release_name: str,
+        namespace: str,
+        revision: int,
+        before_deployment_id: str,
+    ) -> DeploymentDetail | None:
+        """Get the newest earlier deployment that recorded release at revision.
+
+        Args:
+            cluster: Cluster name
+            release_name: Helm release name in rollback_info
+            namespace: Release namespace in rollback_info
+            revision: Helm revision the record must hold
+            before_deployment_id: Only records older than this one qualify
+
+        Returns:
+            Deployment details or None if there is no such record
+
+        """
+        records = self._helm_release_records(cluster, release_name, namespace)
+        ids = [deployment_id for deployment_id, _ in records]
+        if before_deployment_id not in ids:
             return None
-        return self.get_deployment(deployment_id)
+        older = records[ids.index(before_deployment_id) + 1 :]
+        for deployment_id, info in older:
+            if info.get("revision") == revision:
+                return self.get_deployment(deployment_id)
+        return None
 
     def cleanup_old_deployments(
         self,

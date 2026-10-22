@@ -1,11 +1,13 @@
 """Tests for rollback code-change confirmation and deploy rollback-point recording.
 
-Rollback compares chart version, values digest and source commit of the
-current deployment with the state it restores; any difference needs the
+Rollback compares chart, chart version, values digest and source commit of
+the current deployment with the state it restores; any difference needs the
 difference digest. helm/kubectl are never executed: helm rollback is mocked
-at subprocess.run in sbkube.state.rollback and helm upgrade at run_command.
+at subprocess.run and helm status at run_command in sbkube.state.rollback,
+helm upgrade at run_command in sbkube.commands.deploy.
 """
 
+import json
 import sqlite3
 import subprocess
 from datetime import datetime, timedelta
@@ -44,9 +46,12 @@ def _seed(
     *,
     when: datetime,
     revision: int,
+    chart: str = "repo/web",
     chart_version: str | None = "1.0.0",
     values_digest: str | None = "v" * 64,
     source_commit: str | None = COMMIT_A,
+    release_name: str = "web",
+    namespace: str = "default",
 ) -> None:
     db.create_deployment(
         DeploymentCreate(
@@ -74,10 +79,10 @@ def _seed(
         DeploymentStatus.SUCCESS,
         rollback_info={
             "type": "helm",
-            "release_name": "web",
-            "namespace": "default",
+            "release_name": release_name,
+            "namespace": namespace,
             "revision": revision,
-            "chart": "repo/web",
+            "chart": chart,
             "chart_version": chart_version,
             "values_digest": values_digest,
         },
@@ -87,6 +92,19 @@ def _seed(
 @pytest.fixture
 def db(tmp_path: Path) -> DeploymentDatabase:
     return DeploymentDatabase(tmp_path / "state.db")
+
+
+def _helm_status(revision: int) -> tuple[int, str, str]:
+    return 0, json.dumps({"name": "web", "version": revision}), ""
+
+
+@pytest.fixture(autouse=True)
+def live_status():
+    """`helm status` result; the live release is at revision 2 unless changed."""
+    with patch(
+        "sbkube.state.rollback.run_command", return_value=_helm_status(2)
+    ) as status:
+        yield status
 
 
 def _seed_pair(db: DeploymentDatabase, **previous_overrides) -> None:
@@ -196,15 +214,162 @@ def test_rollback_without_previous_record_requires_confirmation(db) -> None:
     helm.assert_not_called()
 
 
-def test_rollback_target_revision_mismatch_requires_confirmation(db) -> None:
+def test_rollback_target_at_other_revision_is_rejected(db, live_status) -> None:
     now = datetime(2026, 10, 22, 12, 0, 0)
     _seed(db, PREVIOUS, when=now - timedelta(hours=1), revision=3)
     _seed(db, CURRENT, when=now, revision=5)
+    live_status.return_value = _helm_status(5)
+
+    result, helm = _invoke(db, [CURRENT, "--scope", "all", "--target", PREVIOUS])
+
+    assert result.exit_code != 0
+    assert "rollback restores revision 4" in result.output
+    helm.assert_not_called()
+
+
+def test_rollback_without_target_ignores_records_at_other_revisions(
+    db, live_status
+) -> None:
+    now = datetime(2026, 10, 22, 12, 0, 0)
+    _seed(db, PREVIOUS, when=now - timedelta(hours=1), revision=3)
+    _seed(db, CURRENT, when=now, revision=5)
+    live_status.return_value = _helm_status(5)
 
     result, helm = _invoke(db, [CURRENT, "--scope", "all"])
 
     assert result.exit_code != 0
-    assert "not the Helm revision 4" in result.output
+    assert "no recorded state for the rollback target" in result.output
+    helm.assert_not_called()
+
+
+def test_rollback_chart_change_requires_confirmation(db) -> None:
+    _seed_pair(db, chart="other/web")
+
+    result, helm = _invoke(db, [CURRENT, "--scope", "all"])
+
+    assert result.exit_code != 0
+    assert "chart: repo/web -> other/web" in result.output
+    helm.assert_not_called()
+
+
+# ------------------------------------------------- live state (review P1-1)
+
+
+def test_rollback_of_stale_deployment_with_recorded_source_requires_confirmation(
+    db,
+) -> None:
+    """d2 is not live when d3 is newer, even though d1 matches d2 exactly."""
+    now = datetime(2026, 10, 22, 12, 0, 0)
+    _seed(db, "d1", when=now - timedelta(hours=2), revision=1)
+    _seed(db, "d2", when=now - timedelta(hours=1), revision=2)
+    _seed(db, "d3", when=now, revision=3)
+
+    result, helm = _invoke(db, ["d2", "--scope", "all"])
+
+    assert result.exit_code != 0
+    assert "d2 is not the newest record of release web in default (newest: d3)" in (
+        result.output
+    )
+    helm.assert_not_called()
+
+
+def test_rollback_live_revision_mismatch_requires_confirmation(db, live_status) -> None:
+    _seed_pair(db)
+    live_status.return_value = _helm_status(4)
+
+    result, helm = _invoke(db, [CURRENT, "--scope", "all"])
+
+    assert result.exit_code != 0
+    assert "live Helm revision 4 of web differs from recorded revision 2" in (
+        result.output
+    )
+    helm.assert_not_called()
+    assert live_status.call_args[0][0] == [
+        "helm",
+        "status",
+        "web",
+        "-n",
+        "default",
+        "-o",
+        "json",
+    ]
+
+
+@pytest.mark.parametrize(
+    "status",
+    [(1, "", "Error: release: not found"), (0, "not json", ""), (0, "{}", "")],
+    ids=["helm-fails", "unparsable", "no-version"],
+)
+def test_rollback_unreadable_live_revision_requires_confirmation(
+    db, live_status, status
+) -> None:
+    _seed_pair(db)
+    live_status.return_value = status
+
+    result, helm = _invoke(db, [CURRENT, "--scope", "all"])
+
+    assert result.exit_code != 0
+    assert "live Helm revision of web in default could not be read" in result.output
+    helm.assert_not_called()
+
+
+# -------------------------------------------- release identity (review P1-2)
+
+
+def test_rollback_with_recorded_source_ignores_same_app_name_in_other_release(
+    db,
+) -> None:
+    """A newer record of app 'web' for another release must not be the target."""
+    now = datetime(2026, 10, 22, 12, 0, 0)
+    _seed(db, "d-same-release", when=now - timedelta(hours=3), revision=1)
+    _seed(
+        db,
+        "d-other-release",
+        when=now - timedelta(hours=2),
+        revision=1,
+        release_name="web-canary",
+        chart_version="0.1.0",
+    )
+    _seed(
+        db,
+        "d-other-namespace",
+        when=now - timedelta(hours=1),
+        revision=1,
+        namespace="staging",
+        chart_version="0.2.0",
+    )
+    _seed(db, CURRENT, when=now, revision=2)
+
+    result, helm = _invoke(db, [CURRENT, "--scope", "all"])
+
+    assert result.exit_code == 0, result.output
+    assert "No code change" in result.output
+    helm.assert_called_once()
+
+
+def test_rollback_with_only_other_release_recorded_requires_confirmation(db) -> None:
+    now = datetime(2026, 10, 22, 12, 0, 0)
+    _seed(db, PREVIOUS, when=now - timedelta(hours=1), revision=1, release_name="web-b")
+    _seed(db, CURRENT, when=now, revision=2)
+
+    result, helm = _invoke(db, [CURRENT, "--scope", "all"])
+
+    assert result.exit_code != 0
+    assert "no recorded state for the rollback target" in result.output
+    helm.assert_not_called()
+
+
+def test_rollback_target_of_other_release_requires_confirmation(db) -> None:
+    now = datetime(2026, 10, 22, 12, 0, 0)
+    _seed(db, PREVIOUS, when=now - timedelta(hours=1), revision=1, namespace="staging")
+    _seed(db, CURRENT, when=now, revision=2)
+
+    result, helm = _invoke(db, [CURRENT, "--scope", "all", "--target", PREVIOUS])
+
+    assert result.exit_code != 0
+    assert f"--target {PREVIOUS} has no record of release web in namespace default" in (
+        result.output
+    )
     helm.assert_not_called()
 
 
@@ -370,6 +535,31 @@ def test_deploy_records_source_commit_and_helm_state(git_repo, tmp_path) -> None
     assert len(info["values_digest"]) == 64
 
 
+def test_source_commit_marks_untracked_files_dirty(git_repo) -> None:
+    (git_repo / ".gitignore").write_text(".sbkube/\n")
+    _git(git_repo, "add", ".gitignore")
+    _git(
+        git_repo,
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@example.com",
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-q",
+        "-m",
+        "ignore",
+    )
+    head = _git(git_repo, "rev-parse", "HEAD")
+    (git_repo / "web" / ".sbkube").mkdir()
+    (git_repo / "web" / ".sbkube" / "work.yaml").write_text("x: 1\n")
+    assert resolve_source_commit(git_repo / "web") == head
+
+    (git_repo / "web" / "extra-values.yaml").write_text("x: 1\n")
+    assert resolve_source_commit(git_repo / "web") == f"{head}-dirty"
+
+
 def test_source_commit_marks_dirty_tree_and_non_git(git_repo, tmp_path) -> None:
     head = _git(git_repo, "rev-parse", "HEAD")
     (git_repo / "web" / "values.yaml").write_text("replicaCount: 2\n")
@@ -521,3 +711,50 @@ def test_existing_database_gains_source_commit_column(tmp_path) -> None:
     }
     assert "source_commit" in columns
     assert db.get_deployment("dep-old").source_commit is None
+
+
+def test_migration_ignores_concurrently_added_column(tmp_path) -> None:
+    """A duplicate-column error from a concurrent ALTER is not fatal."""
+    DeploymentDatabase(tmp_path / "state.db")
+
+    class RacingDatabase(DeploymentDatabase):
+        # SQLite column names are case-insensitive: PRAGMA misses it, ALTER fails
+        _ADDED_COLUMNS = (("deployments", "SOURCE_COMMIT", "VARCHAR(80)"),)
+
+    RacingDatabase(tmp_path / "state.db")
+
+
+# ------------------------------------------------------- recorder lifecycle
+
+
+@patch("sbkube.commands.deploy.deploy_helm_app", side_effect=RuntimeError("boom"))
+@patch("sbkube.commands.deploy.DeploymentRecorder")
+@patch("sbkube.commands.deploy.check_kubectl_installed_or_exit")
+@patch("sbkube.commands.deploy.check_helm_installed_or_exit")
+@patch("sbkube.commands.deploy.resolve_cluster_config")
+@patch("sbkube.commands.deploy.check_cluster_connectivity_or_exit")
+def test_deploy_exception_still_finishes_recorder(
+    _connectivity,
+    mock_resolve_cluster,
+    _helm,
+    _kubectl,
+    mock_recorder_cls,
+    _deploy_helm_app,
+    tmp_path,
+) -> None:
+    mock_resolve_cluster.return_value = (None, "test-context")
+    app_dir = tmp_path / "web"
+    app_dir.mkdir()
+    (app_dir / "config.yaml").write_text(
+        yaml.dump(
+            {
+                "namespace": "default",
+                "apps": {"web": {"type": "helm", "chart": "./chart"}},
+            }
+        )
+    )
+
+    result = CliRunner().invoke(main, ["deploy", str(app_dir)])
+
+    assert result.exit_code != 0
+    mock_recorder_cls.return_value.finish.assert_called_once_with(failed=True)

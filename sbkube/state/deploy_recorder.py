@@ -37,9 +37,8 @@ _REVISION_PATTERN = re.compile(r"^REVISION:\s*(\d+)\s*$", re.MULTILINE)
 def resolve_source_commit(path: Path) -> str | None:
     """Return HEAD of the git repository containing path.
 
-    Tracked uncommitted changes append ``-dirty``. Untracked files are
-    ignored because sbkube writes its own work directories next to configs;
-    values content is compared separately through the values digest.
+    Uncommitted changes, including untracked files git does not ignore,
+    append ``-dirty``: such a commit does not identify what was deployed.
 
     Returns None when path is not inside a git work tree or git is missing.
     """
@@ -53,7 +52,14 @@ def resolve_source_commit(path: Path) -> str | None:
         if head.returncode != 0:
             return None
         status = subprocess.run(
-            ["git", "-C", str(path), "status", "--porcelain", "--untracked-files=no"],
+            [
+                "git",
+                "-C",
+                str(path),
+                "status",
+                "--porcelain",
+                "--untracked-files=normal",
+            ],
             capture_output=True,
             text=True,
             check=False,

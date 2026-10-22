@@ -154,13 +154,22 @@ sbkube rollback <deployment-id> --scope all --dry-run  # 비교만 출력
 sbkube rollback <deployment-id> --scope all --confirm-digest 3f9a0c1d2e4b
 ```
 
-**코드 변경 확인**: 실행 전에 현재 배포와 되돌릴 상태의 chart version, values digest,
-source commit을 앱마다 비교한다.
+**되돌리는 대상**: 롤백은 항상 기록된 Helm revision - 1로 되돌린다. `--target`은 되돌릴
+상태와 비교할 기록을 고르는 기준일 뿐이며, 그 기록의 revision이 revision - 1이 아니면
+명령을 거부한다.
+
+**코드 변경 확인**: 실행 전에 현재 배포와 되돌릴 상태의 chart, chart version, values
+digest, source commit을 앱마다 비교한다. 되돌릴 상태는 같은 release·namespace의
+revision - 1 기록이다.
 
 - 모두 같으면 확인 없이 진행한다.
-- 하나라도 다르거나 비교할 수 없으면(기록 없음, source commit 없음, 커밋되지 않은 변경으로
-  배포됨, 기록된 revision이 되돌릴 revision과 다름) 차이 요약과 12자리 difference digest를
-  출력하고, 대화형 터미널에서 그 digest를 입력해야 진행한다.
+- 하나라도 다르거나 비교할 수 없으면 차이 요약과 12자리 difference digest를 출력하고,
+  대화형 터미널에서 그 digest를 입력해야 진행한다. 비교할 수 없는 경우: 기록 없음, source
+  commit 없음, 커밋되지 않은 변경(무시되지 않은 untracked 파일 포함)으로 배포됨, 지정한
+  배포가 그 release의 최신 기록이 아님, `helm status`의 live revision이 기록과 다르거나
+  읽을 수 없음, `--target`에 같은 release·namespace 기록이 없음.
+- digest 입력은 요약을 읽었다는 증거일 뿐 사람의 승인이 아니다. 승인은 두 번째 방어선인
+  deploy gate가 맡는다.
 - 터미널이 아니면 `--confirm-digest <digest>`로만 진행한다. 틀린 digest·빈 입력·비대화형
   실행은 0이 아닌 종료 코드로 거부한다. `--force`는 이 확인을 건너뛰지 않는다.
 - `--dry-run`은 비교와 digest만 보여 주고 확인을 묻지 않는다.

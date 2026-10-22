@@ -1448,224 +1448,228 @@ def cmd(
                 overall_success = False
                 continue
 
-        # 앱 배포
-        success_count = 0
-        total_count = len(apps_to_deploy)
         deployment_failed = False
+        try:
+            # 앱 배포
+            success_count = 0
+            total_count = len(apps_to_deploy)
 
-        for app_name_iter in apps_to_deploy:
-            app = config.apps[app_name_iter]
+            for app_name_iter in apps_to_deploy:
+                app = config.apps[app_name_iter]
 
-            if not app.enabled:
-                output.print_warning(f"Skipping disabled app: {app_name_iter}")
-                continue
+                if not app.enabled:
+                    output.print_warning(f"Skipping disabled app: {app_name_iter}")
+                    continue
 
-            # ========== 앱별 pre-deploy 훅 실행 ==========
-            if hasattr(app, "hooks") and app.hooks:
-                app_hooks = app.hooks.model_dump()
-                hook_context = {
-                    "namespace": (
-                        app.namespace if hasattr(app, "namespace") else config.namespace
-                    ),
-                    "release_name": getattr(app, "release_name", None) or app_name_iter,
-                }
+                # ========== 앱별 pre-deploy 훅 실행 ==========
+                if hasattr(app, "hooks") and app.hooks:
+                    app_hooks = app.hooks.model_dump()
+                    hook_context = {
+                        "namespace": (
+                            app.namespace if hasattr(app, "namespace") else config.namespace
+                        ),
+                        "release_name": getattr(app, "release_name", None) or app_name_iter,
+                    }
 
-                # Phase 2: pre_deploy_tasks 우선 실행
-                if app_hooks.get("pre_deploy_tasks"):
-                    if not hook_executor.execute_hook_tasks(
+                    # Phase 2: pre_deploy_tasks 우선 실행
+                    if app_hooks.get("pre_deploy_tasks"):
+                        if not hook_executor.execute_hook_tasks(
+                            app_name=app_name_iter,
+                            tasks=app_hooks["pre_deploy_tasks"],
+                            hook_type="pre_deploy",
+                            context=hook_context,
+                        ):
+                            output.print_error(
+                                f"Pre-deploy tasks failed for app: {app_name_iter}"
+                            )
+                            deployment_failed = True
+                            continue
+
+                    # Phase 1: shell 명령어 + manifests
+                    if not hook_executor.execute_app_hook_with_manifests(
                         app_name=app_name_iter,
-                        tasks=app_hooks["pre_deploy_tasks"],
+                        app_hooks=app_hooks,
                         hook_type="pre_deploy",
                         context=hook_context,
                     ):
                         output.print_error(
-                            f"Pre-deploy tasks failed for app: {app_name_iter}"
+                            f"Pre-deploy hook failed for app: {app_name_iter}"
                         )
                         deployment_failed = True
                         continue
 
-                # Phase 1: shell 명령어 + manifests
-                if not hook_executor.execute_app_hook_with_manifests(
-                    app_name=app_name_iter,
-                    app_hooks=app_hooks,
-                    hook_type="pre_deploy",
-                    context=hook_context,
-                ):
+                success = False
+
+                try:
+                    if isinstance(app, HelmApp):
+                        check_helm_installed_or_exit()
+                        success = deploy_helm_app(
+                            app_name_iter,
+                            app,
+                            BASE_DIR,
+                            CHARTS_DIR,
+                            BUILD_DIR,
+                            APP_CONFIG_DIR,
+                            output,
+                            kubeconfig,
+                            context,
+                            dry_run,
+                            cluster_global_values=cluster_global_values,
+                            incompatible_charts=sources.incompatible_charts if sources else None,
+                            force_label_injection=sources.force_label_injection if sources else None,
+                            recorder=recorder,
+                        )
+                    elif isinstance(app, YamlApp):
+                        # apps_config를 딕셔너리로 변환 (Pydantic 모델 → dict)
+                        apps_config_dict = {
+                            name: app_obj.model_dump()
+                            for name, app_obj in config.apps.items()
+                        }
+                        success = deploy_yaml_app(
+                            app_name_iter,
+                            app,
+                            BASE_DIR,
+                            APP_CONFIG_DIR,
+                            output,
+                            kubeconfig,
+                            context,
+                            dry_run,
+                            apps_config=apps_config_dict,
+                            sbkube_work_dir=SBKUBE_WORK_DIR,
+                            config_namespace=config.namespace,
+                        )
+                    elif isinstance(app, ActionApp):
+                        success = deploy_action_app(
+                            app_name_iter,
+                            app,
+                            BASE_DIR,
+                            APP_CONFIG_DIR,
+                            output,
+                            kubeconfig,
+                            context,
+                            dry_run,
+                            config_namespace=config.namespace,
+                        )
+                    elif isinstance(app, ExecApp):
+                        success = deploy_exec_app(
+                            app_name_iter, app, BASE_DIR, output, dry_run
+                        )
+                    elif isinstance(app, KustomizeApp):
+                        success = deploy_kustomize_app(
+                            app_name_iter,
+                            app,
+                            BASE_DIR,
+                            APP_CONFIG_DIR,
+                            output,
+                            kubeconfig,
+                            context,
+                            dry_run,
+                            config_namespace=config.namespace,
+                        )
+                    elif isinstance(app, NoopApp):
+                        success = deploy_noop_app(
+                            app_name_iter, app, BASE_DIR, APP_CONFIG_DIR, output, dry_run
+                        )
+                    elif isinstance(app, HookApp):
+                        success = deploy_hook_app(
+                            app_name_iter,
+                            app,
+                            BASE_DIR,
+                            APP_CONFIG_DIR,
+                            output,
+                            kubeconfig,
+                            context,
+                            config.namespace,  # config에서 namespace 가져옴
+                            dry_run,
+                        )
+                    elif isinstance(app, GitApp):
+                        # Git apps are handled in prepare phase, skip silently in deploy
+                        output.print(
+                            f"⏭️  Git app skipped (handled in prepare): {app_name_iter}", level="info"
+                        )
+                        success = True
+                    else:
+                        output.print_warning(
+                            f"Unsupported app type '{app.type}': {app_name_iter}"
+                        )
+                        continue
+                except KubernetesConnectionError as exc:
                     output.print_error(
-                        f"Pre-deploy hook failed for app: {app_name_iter}"
+                        f"Kubernetes cluster connection error detected while processing app: {app_name_iter}",
+                        error=exc.reason if exc.reason else None,
                     )
+                    output.print_warning("Check your cluster connectivity and try again.")
                     deployment_failed = True
-                    continue
+                    overall_success = False
+                    break
 
-            success = False
-
-            try:
-                if isinstance(app, HelmApp):
-                    check_helm_installed_or_exit()
-                    success = deploy_helm_app(
-                        app_name_iter,
-                        app,
-                        BASE_DIR,
-                        CHARTS_DIR,
-                        BUILD_DIR,
-                        APP_CONFIG_DIR,
-                        output,
-                        kubeconfig,
-                        context,
-                        dry_run,
-                        cluster_global_values=cluster_global_values,
-                        incompatible_charts=sources.incompatible_charts if sources else None,
-                        force_label_injection=sources.force_label_injection if sources else None,
-                        recorder=recorder,
-                    )
-                elif isinstance(app, YamlApp):
-                    # apps_config를 딕셔너리로 변환 (Pydantic 모델 → dict)
-                    apps_config_dict = {
-                        name: app_obj.model_dump()
-                        for name, app_obj in config.apps.items()
+                # ========== 앱별 post-deploy 또는 on_deploy_failure 훅 실행 ==========
+                if hasattr(app, "hooks") and app.hooks:
+                    app_hooks = app.hooks.model_dump()
+                    hook_context = {
+                        "namespace": (
+                            app.namespace if hasattr(app, "namespace") else config.namespace
+                        ),
+                        "release_name": getattr(app, "release_name", None) or app_name_iter,
                     }
-                    success = deploy_yaml_app(
-                        app_name_iter,
-                        app,
-                        BASE_DIR,
-                        APP_CONFIG_DIR,
-                        output,
-                        kubeconfig,
-                        context,
-                        dry_run,
-                        apps_config=apps_config_dict,
-                        sbkube_work_dir=SBKUBE_WORK_DIR,
-                        config_namespace=config.namespace,
-                    )
-                elif isinstance(app, ActionApp):
-                    success = deploy_action_app(
-                        app_name_iter,
-                        app,
-                        BASE_DIR,
-                        APP_CONFIG_DIR,
-                        output,
-                        kubeconfig,
-                        context,
-                        dry_run,
-                        config_namespace=config.namespace,
-                    )
-                elif isinstance(app, ExecApp):
-                    success = deploy_exec_app(
-                        app_name_iter, app, BASE_DIR, output, dry_run
-                    )
-                elif isinstance(app, KustomizeApp):
-                    success = deploy_kustomize_app(
-                        app_name_iter,
-                        app,
-                        BASE_DIR,
-                        APP_CONFIG_DIR,
-                        output,
-                        kubeconfig,
-                        context,
-                        dry_run,
-                        config_namespace=config.namespace,
-                    )
-                elif isinstance(app, NoopApp):
-                    success = deploy_noop_app(
-                        app_name_iter, app, BASE_DIR, APP_CONFIG_DIR, output, dry_run
-                    )
-                elif isinstance(app, HookApp):
-                    success = deploy_hook_app(
-                        app_name_iter,
-                        app,
-                        BASE_DIR,
-                        APP_CONFIG_DIR,
-                        output,
-                        kubeconfig,
-                        context,
-                        config.namespace,  # config에서 namespace 가져옴
-                        dry_run,
-                    )
-                elif isinstance(app, GitApp):
-                    # Git apps are handled in prepare phase, skip silently in deploy
-                    output.print(
-                        f"⏭️  Git app skipped (handled in prepare): {app_name_iter}", level="info"
-                    )
-                    success = True
-                else:
-                    output.print_warning(
-                        f"Unsupported app type '{app.type}': {app_name_iter}"
-                    )
-                    continue
-            except KubernetesConnectionError as exc:
-                output.print_error(
-                    f"Kubernetes cluster connection error detected while processing app: {app_name_iter}",
-                    error=exc.reason if exc.reason else None,
-                )
-                output.print_warning("Check your cluster connectivity and try again.")
-                deployment_failed = True
-                overall_success = False
-                break
 
-            # ========== 앱별 post-deploy 또는 on_deploy_failure 훅 실행 ==========
-            if hasattr(app, "hooks") and app.hooks:
-                app_hooks = app.hooks.model_dump()
-                hook_context = {
-                    "namespace": (
-                        app.namespace if hasattr(app, "namespace") else config.namespace
-                    ),
-                    "release_name": getattr(app, "release_name", None) or app_name_iter,
-                }
-
-                if success:
-                    # 배포 성공 시 post_deploy 훅 실행
-                    # Phase 1: shell 명령어 + manifests
-                    hook_executor.execute_app_hook_with_manifests(
-                        app_name=app_name_iter,
-                        app_hooks=app_hooks,
-                        hook_type="post_deploy",
-                        context=hook_context,
-                    )
-
-                    # Phase 2: tasks (우선순위: tasks > manifests > commands)
-                    if app_hooks.get("post_deploy_tasks"):
-                        hook_executor.execute_hook_tasks(
+                    if success:
+                        # 배포 성공 시 post_deploy 훅 실행
+                        # Phase 1: shell 명령어 + manifests
+                        hook_executor.execute_app_hook_with_manifests(
                             app_name=app_name_iter,
-                            tasks=app_hooks["post_deploy_tasks"],
+                            app_hooks=app_hooks,
                             hook_type="post_deploy",
                             context=hook_context,
                         )
+
+                        # Phase 2: tasks (우선순위: tasks > manifests > commands)
+                        if app_hooks.get("post_deploy_tasks"):
+                            hook_executor.execute_hook_tasks(
+                                app_name=app_name_iter,
+                                tasks=app_hooks["post_deploy_tasks"],
+                                hook_type="post_deploy",
+                                context=hook_context,
+                            )
+                    else:
+                        # 배포 실패 시 on_deploy_failure 훅 실행
+                        hook_executor.execute_app_hook(
+                            app_name=app_name_iter,
+                            app_hooks=app_hooks,
+                            hook_type="on_deploy_failure",
+                            context=hook_context,
+                        )
+                        deployment_failed = True
+
+                if success:
+                    success_count += 1
                 else:
-                    # 배포 실패 시 on_deploy_failure 훅 실행
-                    hook_executor.execute_app_hook(
-                        app_name=app_name_iter,
-                        app_hooks=app_hooks,
-                        hook_type="on_deploy_failure",
-                        context=hook_context,
-                    )
                     deployment_failed = True
 
-            if success:
-                success_count += 1
-            else:
-                deployment_failed = True
+            # ========== 전역 post-deploy 또는 on_failure 훅 실행 ==========
+            if config.hooks and "deploy" in config.hooks:
+                deploy_hooks = config.hooks["deploy"].model_dump()
 
-        # ========== 전역 post-deploy 또는 on_failure 훅 실행 ==========
-        if config.hooks and "deploy" in config.hooks:
-            deploy_hooks = config.hooks["deploy"].model_dump()
-
-            if deployment_failed:
-                # 배포 실패 시 on_failure 훅 실행
-                hook_executor.execute_command_hooks(
-                    hook_config=deploy_hooks,
-                    hook_phase="on_failure",
-                    command_name="deploy",
-                )
-            else:
-                # 모든 배포 성공 시 post 훅 실행
-                hook_executor.execute_command_hooks(
-                    hook_config=deploy_hooks,
-                    hook_phase="post",
-                    command_name="deploy",
-                )
-
-        if recorder is not None:
-            recorder.finish(failed=deployment_failed)
+                if deployment_failed:
+                    # 배포 실패 시 on_failure 훅 실행
+                    hook_executor.execute_command_hooks(
+                        hook_config=deploy_hooks,
+                        hook_phase="on_failure",
+                        command_name="deploy",
+                    )
+                else:
+                    # 모든 배포 성공 시 post 훅 실행
+                    hook_executor.execute_command_hooks(
+                        hook_config=deploy_hooks,
+                        hook_phase="post",
+                        command_name="deploy",
+                    )
+        except BaseException:
+            deployment_failed = True
+            raise
+        finally:
+            if recorder is not None:
+                recorder.finish(failed=deployment_failed)
 
         # 이 앱 그룹 결과 출력
         output.print_success(

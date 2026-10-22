@@ -30,14 +30,20 @@ ______________________________________________________________________
   적용되지 않고, `unlimited`는 세션 프로세스가 끝나면 사라진다. 기록은 `deploy_gate_grants`.
 - `sbkube-gate.yaml`이 없으면 동작은 이전과 같다. 형식이 틀린 게이트 파일은 명령을 거부한다.
 
-**롤백 코드 변경 확인** (`sbkube/state/rollback_compare.py`, `deploy_recorder.py`)
+**롤백 코드 변경 확인** (v0.11.7, `sbkube/state/rollback_compare.py`, `deploy_recorder.py`)
 
 - ✅ **NEW**: `deploy`·`apply`가 Helm 앱 배포 성공 시 롤백 지점(chart, chart version,
-  values digest, Helm revision, source commit = `git rev-parse HEAD`, 변경이 있으면 `-dirty`)을
-  상태 DB에 기록한다. 기록 실패는 경고만 내고 배포를 실패시키지 않는다.
-- ✅ `sbkube rollback`이 현재 배포와 되돌릴 상태를 비교해 차이가 없으면 바로 진행하고, 차이가
-  있거나 비교할 수 없으면 요약과 12자리 difference digest를 보여 주며 대화형 터미널에서 그
-  digest를 입력해야 진행한다. `--confirm-digest`로 넘길 수 있고 `--force`는 우회하지 않는다.
+  values digest, Helm revision, source commit = `git rev-parse HEAD`, 무시되지 않은 untracked
+  파일을 포함해 변경이 있으면 `-dirty`)을 상태 DB에 기록한다. 기록 실패는 경고만 내고 배포를
+  실패시키지 않는다.
+- ✅ `sbkube rollback`이 현재 배포와 되돌릴 상태(같은 release·namespace의 revision - 1 기록)를
+  chart, chart version, values digest, source commit으로 비교해 차이가 없으면 바로 진행하고,
+  차이가 있거나 비교할 수 없으면 요약과 12자리 difference digest를 보여 주며 대화형 터미널에서
+  그 digest를 입력해야 진행한다. `--confirm-digest`로 넘길 수 있고 `--force`는 우회하지 않는다.
+- ✅ 지정한 배포가 그 release의 최신 기록이 아니거나 `helm status`의 live revision이 기록과
+  다르거나 읽을 수 없으면 비교할 수 없는 것으로 보고 확인을 요구한다.
+- `--target`은 비교 기준일 뿐이며 되돌리는 대상은 항상 revision - 1이다. `--target` 기록의
+  revision이 다르면 거부한다.
 - 기존 상태 DB에는 `deployments.source_commit` 열을 자동으로 추가한다. 이 기능 이전 배포는
   source commit이 없어 롤백 시 확인을 요구한다.
 

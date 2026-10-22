@@ -31,7 +31,14 @@ RollbackScope = Literal["app", "phase", "all"]
 
 @click.command(name="rollback")
 @click.argument("deployment_id", required=False)
-@click.option("--target", help="Specific deployment ID to rollback to")
+@click.option(
+    "--target",
+    help=(
+        "Deployment ID to compare the restored state with; the restore is "
+        "always the recorded Helm revision - 1 (a --target at another "
+        "revision is rejected)"
+    ),
+)
 @click.option(
     "--app",
     "-a",
@@ -131,8 +138,10 @@ def cmd(
 
     \b
     Code-change confirmation:
-        Before acting, the chart version, values digest and source commit of
-        the current deployment are compared with the state being restored.
+        Before acting, the chart, chart version, values digest and source
+        commit of the current deployment are compared with the state being
+        restored (Helm revision - 1). The current record must be the newest
+        record of the release and match the revision `helm status` reports.
         If anything differs or cannot be compared, the differences and a
         12-character digest are printed and the rollback runs only after the
         digest is typed at an interactive terminal (or passed with
@@ -225,7 +234,9 @@ def _stdin_is_tty() -> bool:
 
 def _print_comparison(comparison: RollbackComparison) -> None:
     """Print the code comparison between current and restored state."""
-    click.echo("\nCode comparison (chart version, values digest, source commit):")
+    click.echo(
+        "\nCode comparison (chart, chart version, values digest, source commit):"
+    )
     for line in comparison.summary_lines():
         click.echo(line)
     if comparison.requires_confirmation:

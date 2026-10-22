@@ -42,6 +42,19 @@ def skip_if_k8s_unavailable(request) -> None:
             )
 
 
+@pytest.fixture(autouse=True)
+def isolated_deploy_state_db(monkeypatch, tmp_path_factory) -> None:
+    """Keep rollback points recorded by deploy out of the real ~/.sbkube DB."""
+    from sbkube.state import deploy_recorder
+    from sbkube.state.database import DeploymentDatabase
+
+    monkeypatch.setattr(
+        deploy_recorder,
+        "DeploymentDatabase",
+        lambda: DeploymentDatabase(tmp_path_factory.mktemp("state") / "deployments.db"),
+    )
+
+
 @pytest.fixture(scope="session")
 def runner():
     """Click CliRunner fixture."""

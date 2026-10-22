@@ -18,6 +18,12 @@ from sbkube.commands.rollback import (
     cmd,
 )
 from sbkube.exceptions import RollbackError
+from sbkube.state.rollback_compare import RollbackComparison
+
+
+def _no_code_change() -> RollbackComparison:
+    """Comparison in which nothing differs, so no confirmation is needed."""
+    return RollbackComparison(current_deployment_id="dep_20250131_143022", apps=[])
 
 
 class TestRollbackListPoints:
@@ -222,6 +228,7 @@ class TestRollbackExecution:
         # Arrange
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
+        mock_manager.compare_rollback.return_value = _no_code_change()
 
         mock_manager.rollback_deployment.return_value = {
             "success": True,
@@ -260,6 +267,7 @@ class TestRollbackExecution:
         # Arrange
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
+        mock_manager.compare_rollback.return_value = _no_code_change()
 
         mock_manager.rollback_deployment.return_value = {
             "success": True,
@@ -292,6 +300,7 @@ class TestRollbackExecution:
         # Arrange
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
+        mock_manager.compare_rollback.return_value = _no_code_change()
 
         mock_manager.rollback_deployment.return_value = {
             "success": False,
@@ -324,6 +333,7 @@ class TestRollbackExecution:
         # Arrange
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
+        mock_manager.compare_rollback.return_value = _no_code_change()
 
         mock_manager.rollback_deployment.return_value = {
             "success": True,
@@ -368,6 +378,7 @@ class TestRollbackErrors:
         # Arrange
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
+        mock_manager.compare_rollback.return_value = _no_code_change()
 
         mock_manager.rollback_deployment.side_effect = RollbackError(
             "Deployment not found"
@@ -392,6 +403,7 @@ class TestRollbackErrors:
         # Arrange
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
+        mock_manager.compare_rollback.return_value = _no_code_change()
 
         mock_manager.rollback_deployment.side_effect = Exception(
             "Unexpected database error"

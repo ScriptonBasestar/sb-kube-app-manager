@@ -30,6 +30,17 @@ ______________________________________________________________________
   적용되지 않고, `unlimited`는 세션 프로세스가 끝나면 사라진다. 기록은 `deploy_gate_grants`.
 - `sbkube-gate.yaml`이 없으면 동작은 이전과 같다. 형식이 틀린 게이트 파일은 명령을 거부한다.
 
+**롤백 코드 변경 확인** (`sbkube/state/rollback_compare.py`, `deploy_recorder.py`)
+
+- ✅ **NEW**: `deploy`·`apply`가 Helm 앱 배포 성공 시 롤백 지점(chart, chart version,
+  values digest, Helm revision, source commit = `git rev-parse HEAD`, 변경이 있으면 `-dirty`)을
+  상태 DB에 기록한다. 기록 실패는 경고만 내고 배포를 실패시키지 않는다.
+- ✅ `sbkube rollback`이 현재 배포와 되돌릴 상태를 비교해 차이가 없으면 바로 진행하고, 차이가
+  있거나 비교할 수 없으면 요약과 12자리 difference digest를 보여 주며 대화형 터미널에서 그
+  digest를 입력해야 진행한다. `--confirm-digest`로 넘길 수 있고 `--force`는 우회하지 않는다.
+- 기존 상태 DB에는 `deployments.source_commit` 열을 자동으로 추가한다. 이 기능 이전 배포는
+  source commit이 없어 롤백 시 확인을 요구한다.
+
 **marker 경계 기반 클러스터 설정 상속**
 
 - `apply`, `prepare`, `deploy`는 `.sbkube-workspace` 내부에서만 공용

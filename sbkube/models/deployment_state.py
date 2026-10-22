@@ -80,6 +80,10 @@ class Deployment(Base):
     config_snapshot = Column(JSON, nullable=False)  # Complete config.yaml content
     sources_snapshot = Column(JSON, nullable=True)  # sources.yaml if available
 
+    # git HEAD of the app config repository ("<sha>-dirty" with tracked
+    # uncommitted changes, NULL outside git). Compared by rollback.
+    source_commit = Column(String(80), nullable=True)
+
     # Metadata
     sbkube_version = Column(String(20), nullable=True)
     operator = Column(String(255), nullable=True)  # User who ran the command
@@ -235,6 +239,7 @@ class DeploymentCreate(BaseModel):
     dry_run: bool = False
     config_snapshot: dict[str, Any]
     sources_snapshot: dict[str, Any] | None = None
+    source_commit: str | None = None
     sbkube_version: str | None = None
     operator: str | None = None
 
@@ -306,6 +311,7 @@ class DeploymentDetail(BaseModel):
     status: DeploymentStatus
     error_message: str | None = None
     config_snapshot: dict[str, Any]
+    source_commit: str | None = None
     apps: list[dict[str, Any]] = []
     resources: list[ResourceInfo] = []
     helm_releases: list[HelmReleaseInfo] = []

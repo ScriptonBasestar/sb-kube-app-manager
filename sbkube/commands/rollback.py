@@ -11,6 +11,7 @@ Scope options (v0.11.0+):
 - all: Rollback entire deployment (all apps)
 """
 
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -20,6 +21,7 @@ import click
 from sbkube.exceptions import RollbackError
 from sbkube.models.deployment_state import RollbackRequest
 from sbkube.state.rollback import RollbackManager
+from sbkube.state.rollback_compare import RollbackComparison
 from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import logger
 
@@ -54,6 +56,13 @@ RollbackScope = Literal["app", "phase", "all"]
 )
 @click.option("--force", is_flag=True, help="Force rollback even with warnings")
 @click.option(
+    "--confirm-digest",
+    help=(
+        "Difference digest shown for a rollback that changes code; required "
+        "without an interactive terminal (--force does not skip it)"
+    ),
+)
+@click.option(
     "--list",
     "list_points",
     is_flag=True,
@@ -75,6 +84,7 @@ def cmd(
     phase: str | None,
     dry_run: bool,
     force: bool,
+    confirm_digest: str | None,
     list_points: bool,
     base_dir: str,
     app_dir: str,
@@ -116,8 +126,17 @@ def cmd(
         # List available rollback points
         sbkube rollback --list --cluster production --namespace kube-system
 
-        # Force rollback (ignore warnings)
+        # Force rollback (ignore warnings; does not skip code-change confirmation)
         sbkube rollback dep_20250131_143022 --force
+
+    \b
+    Code-change confirmation:
+        Before acting, the chart version, values digest and source commit of
+        the current deployment are compared with the state being restored.
+        If anything differs or cannot be compared, the differences and a
+        12-character digest are printed and the rollback runs only after the
+        digest is typed at an interactive terminal (or passed with
+        --confirm-digest). --dry-run shows the comparison only.
     """
     try:
         rollback_manager = RollbackManager()
@@ -174,8 +193,15 @@ def cmd(
             f"Rolling back {scope_desc[scope]} from deployment: {deployment_id}"
         )
 
+        confirmed_digest = None
+        if not dry_run:
+            comparison = rollback_manager.compare_rollback(request)
+            confirmed_digest = _confirm_code_change(comparison, confirm_digest)
+
         # Perform rollback
-        result = rollback_manager.rollback_deployment(request)
+        result = rollback_manager.rollback_deployment(
+            request, confirmed_digest=confirmed_digest
+        )
 
         # Display results
         if dry_run:
@@ -183,12 +209,66 @@ def cmd(
         else:
             _print_rollback_result(result, scope)
 
+    except click.Abort:
+        raise
     except RollbackError as e:
         logger.error(f"Rollback failed: {e}")
         raise click.Abort
     except Exception as e:
         logger.error(f"Unexpected error during rollback: {e}")
         raise click.Abort
+
+
+def _stdin_is_tty() -> bool:
+    return sys.stdin.isatty()
+
+
+def _print_comparison(comparison: RollbackComparison) -> None:
+    """Print the code comparison between current and restored state."""
+    click.echo("\nCode comparison (chart version, values digest, source commit):")
+    for line in comparison.summary_lines():
+        click.echo(line)
+    if comparison.requires_confirmation:
+        click.echo(f"Difference digest: {comparison.digest}")
+
+
+def _confirm_code_change(
+    comparison: RollbackComparison,
+    confirm_digest: str | None,
+) -> str | None:
+    """Return the confirmed digest, or abort when a code change is unconfirmed.
+
+    No difference needs no confirmation. Otherwise the operator must supply
+    the exact digest, typed at an interactive terminal or via --confirm-digest.
+    """
+    _print_comparison(comparison)
+    if not comparison.requires_confirmation:
+        click.echo("No code change: proceeding without confirmation.")
+        return None
+
+    if confirm_digest is not None:
+        supplied = confirm_digest.strip()
+    elif _stdin_is_tty():
+        supplied = click.prompt(
+            "This rollback changes code. Type the difference digest to proceed",
+            default="",
+            show_default=False,
+        ).strip()
+    else:
+        logger.error(
+            "Rollback changes code and stdin is not an interactive terminal. "
+            "Review the differences above, then re-run interactively or pass "
+            "--confirm-digest <digest>."
+        )
+        raise click.Abort
+
+    if supplied != comparison.digest:
+        logger.error(
+            "Difference digest does not match"
+            f"{'' if supplied else ' (no input)'}; rollback refused."
+        )
+        raise click.Abort
+    return supplied
 
 
 def _resolve_apps_for_scope(
@@ -290,6 +370,15 @@ def _print_rollback_simulation(result, scope: RollbackScope = "app") -> None:
     click.echo(f"Current: {result['current_deployment']}")
     click.echo(f"Target: {result['target_deployment']}")
     click.echo(f"Scope: {scope}")
+    comparison = result.get("comparison")
+    if isinstance(comparison, RollbackComparison):
+        _print_comparison(comparison)
+        if comparison.requires_confirmation:
+            click.echo(
+                "A real rollback would require typing this digest "
+                "(or --confirm-digest)."
+            )
+
     click.echo(f"\nPlanned Actions ({len(result['actions'])} total):")
 
     for action in result["actions"]:

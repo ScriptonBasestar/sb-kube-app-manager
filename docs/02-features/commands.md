@@ -143,12 +143,29 @@ sbkube history -f sbkube.yaml --limit 10
 
 ### rollback — 롤백
 
-이전 배포 상태로 롤백합니다.
+상태 DB(`~/.sbkube/deployments.db`)에 기록된 배포를 이전 Helm revision으로 되돌린다.
+`deploy`·`apply`가 Helm 앱을 성공적으로 배포할 때마다 롤백 지점(chart, chart version,
+values digest, Helm revision, 앱 설정 저장소의 source commit)을 기록한다.
 
 ```bash
-sbkube rollback -f sbkube.yaml --app grafana
-sbkube rollback -f sbkube.yaml --app grafana --revision 3
+sbkube rollback --list --cluster production          # 롤백 지점 목록
+sbkube rollback <deployment-id> --app grafana        # 앱 하나 롤백
+sbkube rollback <deployment-id> --scope all --dry-run  # 비교만 출력
+sbkube rollback <deployment-id> --scope all --confirm-digest 3f9a0c1d2e4b
 ```
+
+**코드 변경 확인**: 실행 전에 현재 배포와 되돌릴 상태의 chart version, values digest,
+source commit을 앱마다 비교한다.
+
+- 모두 같으면 확인 없이 진행한다.
+- 하나라도 다르거나 비교할 수 없으면(기록 없음, source commit 없음, 커밋되지 않은 변경으로
+  배포됨, 기록된 revision이 되돌릴 revision과 다름) 차이 요약과 12자리 difference digest를
+  출력하고, 대화형 터미널에서 그 digest를 입력해야 진행한다.
+- 터미널이 아니면 `--confirm-digest <digest>`로만 진행한다. 틀린 digest·빈 입력·비대화형
+  실행은 0이 아닌 종료 코드로 거부한다. `--force`는 이 확인을 건너뛰지 않는다.
+- `--dry-run`은 비교와 digest만 보여 주고 확인을 묻지 않는다.
+- 롤백 지점 기록이 실패하면(상태 DB 쓰기 오류) 배포는 성공으로 두고 경고만 출력한다.
+  그 배포로는 비교할 수 없으므로 이후 롤백은 확인을 요구한다.
 
 ### destroy — 리소스 삭제
 

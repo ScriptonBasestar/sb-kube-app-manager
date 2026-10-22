@@ -25,6 +25,7 @@ from sbkube.models.config_model import (
     SBKubeConfig,
     YamlApp,
 )
+from sbkube.state.deploy_recorder import DeploymentRecorder
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.app_labels import (
     build_helm_set_annotations,
@@ -157,6 +158,7 @@ def deploy_helm_app(
     cluster_global_values: dict | None = None,
     incompatible_charts: list[str] | None = None,
     force_label_injection: list[str] | None = None,
+    recorder: DeploymentRecorder | None = None,
 ) -> bool:
     """Helm 앱 배포 (install/upgrade).
 
@@ -177,6 +179,7 @@ def deploy_helm_app(
         cluster_global_values: 클러스터 전역 values (선택, v0.7.0+)
         incompatible_charts: 추가 비호환 chart 목록 (sources.yaml에서)
         force_label_injection: 강제 호환 chart 목록 (sources.yaml에서)
+        recorder: 성공한 배포를 롤백 지점으로 기록 (dry-run이면 무시)
 
     Returns:
         성공 여부
@@ -536,6 +539,18 @@ def deploy_helm_app(
 
             output.print_error("Failed to deploy", error=stderr)
             return False
+
+        if recorder is not None and not dry_run:
+            recorder.record_helm_app(
+                app_name=app_name,
+                app=app,
+                release_name=release_name,
+                namespace=namespace,
+                chart_path=chart_path,
+                app_config_dir=app_config_dir,
+                cluster_global_values=cluster_global_values,
+                helm_stdout=stdout,
+            )
 
         if progress_tracker:
             progress_tracker.console_print(
@@ -1396,6 +1411,21 @@ def cmd(
             # 모든 앱 배포 (의존성 순서대로)
             apps_to_deploy = deployment_order
 
+        # 성공한 Helm 배포를 롤백 지점으로 기록 (실패해도 경고만, 배포는 유지)
+        recorder = None
+        if not dry_run:
+            recorder = DeploymentRecorder(
+                cluster=(sources.cluster if sources and sources.cluster else context)
+                or "unknown",
+                namespace=config.namespace or "default",
+                app_config_dir=APP_CONFIG_DIR.resolve(),
+                config_file_path=config_file_path.resolve(),
+                config_data=config.model_dump(mode="json"),
+                sources_data=sources.model_dump(mode="json") if sources else None,
+                warn=output.print_warning,
+                command_args={"app": app_name} if app_name else None,
+            )
+
         # Hook executor 초기화 (Phase 1: kubeconfig, context, namespace 추가)
         hook_executor = HookExecutor(
             base_dir=BASE_DIR,
@@ -1486,6 +1516,7 @@ def cmd(
                         cluster_global_values=cluster_global_values,
                         incompatible_charts=sources.incompatible_charts if sources else None,
                         force_label_injection=sources.force_label_injection if sources else None,
+                        recorder=recorder,
                     )
                 elif isinstance(app, YamlApp):
                     # apps_config를 딕셔너리로 변환 (Pydantic 모델 → dict)
@@ -1632,6 +1663,9 @@ def cmd(
                     hook_phase="post",
                     command_name="deploy",
                 )
+
+        if recorder is not None:
+            recorder.finish(failed=deployment_failed)
 
         # 이 앱 그룹 결과 출력
         output.print_success(

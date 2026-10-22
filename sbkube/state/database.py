@@ -93,10 +93,30 @@ class DeploymentDatabase:
         """Initialize database schema."""
         try:
             Base.metadata.create_all(bind=self.engine)
+            self._add_missing_columns()
             logger.verbose(f"Database initialized at: {self.db_path}")
         except Exception as e:
             logger.exception(f"Failed to initialize database: {e}")
             raise
+
+    # Columns added after the first release of a table. create_all() never
+    # alters an existing table, so older databases get them here.
+    _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
+        ("deployments", "source_commit", "VARCHAR(80)"),
+    )
+
+    def _add_missing_columns(self) -> None:
+        """Add columns that create_all() cannot add to existing tables."""
+        with self.engine.begin() as conn:
+            for table, column, ddl_type in self._ADDED_COLUMNS:
+                existing = {
+                    row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))
+                }
+                if column not in existing:
+                    conn.execute(
+                        text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}")
+                    )
+                    logger.verbose(f"Database migrated: added {table}.{column}")
 
     @contextmanager
     def get_session(self) -> Session:
@@ -198,6 +218,7 @@ class DeploymentDatabase:
                 dry_run=deployment_data.dry_run,
                 config_snapshot=deployment_data.config_snapshot,
                 sources_snapshot=deployment_data.sources_snapshot,
+                source_commit=deployment_data.source_commit,
                 sbkube_version=deployment_data.sbkube_version,
                 operator=deployment_data.operator,
             )
@@ -416,6 +437,7 @@ class DeploymentDatabase:
                 status=DeploymentStatus(deployment.status),
                 error_message=deployment.error_message,
                 config_snapshot=deployment.config_snapshot,
+                source_commit=deployment.source_commit,
                 apps=[],
                 resources=[],
                 helm_releases=[],
@@ -615,6 +637,48 @@ class DeploymentDatabase:
                 return self.get_deployment(deployment.deployment_id)
 
             return None
+
+    def get_previous_app_deployment(
+        self,
+        cluster: str,
+        app_name: str,
+        before_deployment_id: str,
+    ) -> DeploymentDetail | None:
+        """Get the latest deployment older than before_deployment_id that recorded app_name.
+
+        Args:
+            cluster: Cluster name
+            app_name: App name recorded in app_deployments
+            before_deployment_id: Only deployments older than this one qualify
+
+        Returns:
+            Deployment details or None if there is no earlier record
+
+        """
+        with self.get_session() as session:
+            before = (
+                session.query(Deployment)
+                .filter_by(deployment_id=before_deployment_id)
+                .first()
+            )
+            if before is None:
+                return None
+            deployment = (
+                session.query(Deployment)
+                .join(AppDeployment)
+                .filter(
+                    Deployment.cluster == cluster,
+                    Deployment.timestamp < before.timestamp,
+                    AppDeployment.app_name == app_name,
+                )
+                .order_by(Deployment.timestamp.desc())
+                .first()
+            )
+            deployment_id = deployment.deployment_id if deployment else None
+
+        if deployment_id is None:
+            return None
+        return self.get_deployment(deployment_id)
 
     def cleanup_old_deployments(
         self,

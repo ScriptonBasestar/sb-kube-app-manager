@@ -18,6 +18,13 @@ from sbkube.models.deployment_state import (
     RollbackRequest,
 )
 from sbkube.state.database import DeploymentDatabase
+from sbkube.state.rollback_compare import (
+    AppComparison,
+    AppSnapshot,
+    RollbackComparison,
+    RollbackConfirmationRequired,
+    compare_snapshots,
+)
 from sbkube.utils.logger import get_logger
 
 logger = get_logger()
@@ -39,20 +46,75 @@ class RollbackManager:
         """
         self.db = DeploymentDatabase(db_path)
 
-    def rollback_deployment(self, rollback_request: RollbackRequest) -> dict[str, Any]:
+    def rollback_deployment(
+        self,
+        rollback_request: RollbackRequest,
+        confirmed_digest: str | None = None,
+    ) -> dict[str, Any]:
         """Rollback a deployment to a previous state.
+
+        A rollback whose target differs from the current deployment in chart
+        version, values digest or source commit (or cannot be compared) runs
+        only when confirmed_digest equals the comparison digest. force does
+        not skip this check; dry runs only report the comparison.
 
         Args:
             rollback_request: Rollback request details
+            confirmed_digest: Difference digest typed or passed by the operator
 
         Returns:
-            Rollback result summary
+            Rollback result summary, with the comparison under "comparison"
 
         Raises:
             RollbackError: If rollback fails
+            RollbackConfirmationRequired: If code changes and the digest does not match
 
         """
-        # Get current deployment details
+        current_deployment, target_deployment = self._load_deployments(rollback_request)
+
+        # Validate rollback is possible
+        self._validate_rollback(current_deployment, target_deployment, rollback_request)
+
+        comparison = self._compare(
+            current_deployment, target_deployment, rollback_request
+        )
+
+        # Perform rollback
+        if rollback_request.dry_run:
+            logger.info("DRY RUN: Rollback would be performed")
+            result = self._simulate_rollback(
+                current_deployment,
+                target_deployment,
+                rollback_request,
+            )
+            result["comparison"] = comparison
+            return result
+
+        if comparison.requires_confirmation and confirmed_digest != comparison.digest:
+            msg = (
+                "Rollback changes code (chart version, values or source commit) "
+                "and was not confirmed with the difference digest"
+            )
+            raise RollbackConfirmationRequired(msg)
+
+        result = self._execute_rollback(
+            current_deployment,
+            target_deployment,
+            rollback_request,
+        )
+        result["comparison"] = comparison
+        return result
+
+    def compare_rollback(self, rollback_request: RollbackRequest) -> RollbackComparison:
+        """Compare the rollback target with the current deployment without acting."""
+        current_deployment, target_deployment = self._load_deployments(rollback_request)
+        return self._compare(current_deployment, target_deployment, rollback_request)
+
+    def _load_deployments(
+        self,
+        rollback_request: RollbackRequest,
+    ) -> tuple[DeploymentDetail, DeploymentDetail | None]:
+        """Load the current and optional target deployment records."""
         current_deployment = self.db.get_deployment(rollback_request.deployment_id)
         if not current_deployment:
             msg = f"Deployment not found: {rollback_request.deployment_id}"
@@ -60,7 +122,6 @@ class RollbackManager:
                 msg,
             )
 
-        # Get target deployment if specified
         target_deployment = None
         if rollback_request.target_deployment_id:
             target_deployment = self.db.get_deployment(
@@ -71,22 +132,74 @@ class RollbackManager:
                 raise RollbackError(
                     msg,
                 )
+        return current_deployment, target_deployment
 
-        # Validate rollback is possible
-        self._validate_rollback(current_deployment, target_deployment, rollback_request)
+    def _compare(
+        self,
+        current_deployment: DeploymentDetail,
+        target_deployment: DeploymentDetail | None,
+        request: RollbackRequest,
+    ) -> RollbackComparison:
+        """Compare every app the rollback would touch.
 
-        # Perform rollback
-        if rollback_request.dry_run:
-            logger.info("DRY RUN: Rollback would be performed")
-            return self._simulate_rollback(
-                current_deployment,
-                target_deployment,
-                rollback_request,
+        The target state is the --target deployment record when given, else
+        the latest earlier record of the same app. Either way it must be the
+        Helm revision the rollback restores (current revision - 1).
+        """
+        apps: list[AppComparison] = []
+        for app in current_deployment.apps:
+            # Same selection as _simulate_rollback/_execute_rollback
+            if request.app_names and app["name"] not in request.app_names:
+                continue
+
+            rollback_info = app.get("rollback_info") or {}
+            if app["type"] != "helm" or rollback_info.get("type") != "helm":
+                apps.append(
+                    AppComparison(
+                        app_name=app["name"],
+                        current=None,
+                        target=None,
+                        uncomparable_reason=(
+                            f"no recorded chart/values snapshot for app type '{app['type']}'"
+                        ),
+                    )
+                )
+                continue
+
+            current = AppSnapshot.from_record(
+                current_deployment.deployment_id,
+                rollback_info,
+                current_deployment.source_commit,
             )
-        return self._execute_rollback(
-            current_deployment,
-            target_deployment,
-            rollback_request,
+            restore_revision = (
+                max(1, current.revision - 1) if current.revision is not None else None
+            )
+
+            target_record = target_deployment or self.db.get_previous_app_deployment(
+                current_deployment.cluster,
+                app["name"],
+                current_deployment.deployment_id,
+            )
+            target = None
+            if target_record is not None:
+                target_app = next(
+                    (a for a in target_record.apps if a["name"] == app["name"]), None
+                )
+                target_info = (target_app or {}).get("rollback_info") or {}
+                if target_info.get("type") == "helm":
+                    target = AppSnapshot.from_record(
+                        target_record.deployment_id,
+                        target_info,
+                        target_record.source_commit,
+                    )
+
+            apps.append(
+                compare_snapshots(app["name"], current, target, restore_revision)
+            )
+
+        return RollbackComparison(
+            current_deployment_id=current_deployment.deployment_id,
+            apps=apps,
         )
 
     def _validate_rollback(

@@ -55,6 +55,28 @@ def isolated_deploy_state_db(monkeypatch, tmp_path_factory) -> None:
     )
 
 
+@pytest.fixture(autouse=True)
+def hermetic_deploy_gate(monkeypatch, tmp_path_factory) -> None:
+    """Ignore deploy gate files outside pytest's temp root.
+
+    A checkout nested in a gated workspace (an enclosing ``.sbkube-workspace``
+    with ``sbkube-gate.yaml``) would otherwise run that workspace's real gate
+    command from any test that invokes a cluster-mutating command on the cwd.
+    Gate tests build their workspaces under ``tmp_path`` and are unaffected.
+    """
+    from sbkube.utils import deploy_gate
+
+    real_find = deploy_gate.find_gate_files
+    temp_root = tmp_path_factory.getbasetemp().resolve()
+
+    def find_under_temp_root(start: Path) -> deploy_gate.GateFiles:
+        if not Path(start).resolve().is_relative_to(temp_root):
+            return deploy_gate.GateFiles(None, (), True)
+        return real_find(start)
+
+    monkeypatch.setattr(deploy_gate, "find_gate_files", find_under_temp_root)
+
+
 @pytest.fixture(scope="session")
 def runner():
     """Click CliRunner fixture."""

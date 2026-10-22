@@ -1,10 +1,13 @@
 """Tests for the deploy gate (sbkube/utils/deploy_gate.py)."""
 
 import json
+import os
 import re
 import shlex
 import sqlite3
+import subprocess
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 import click
@@ -12,8 +15,10 @@ import pytest
 from click.testing import CliRunner
 
 from sbkube.cli import SbkubeGroup, main
+from sbkube.commands import gate as gate_command
 from sbkube.exceptions import ConfigurationError
 from sbkube.utils import deploy_gate, deploy_gate_config
+from sbkube.utils.datetime_utils import utc_now
 from sbkube.utils.deploy_gate import (
     CLUSTER_MUTATING_COMMANDS,
     GATE_FILE_NAME,
@@ -490,3 +495,165 @@ def test_skip_deploy_gate_rejects_option_like_reason(tmp_path: Path) -> None:
     _global_gate(root, "enforce")
     with pytest.raises(click.UsageError, match="must not start with"):
         run_gate("deploy", {"target": str(root)}, "--dry-run", interactive=lambda: True)
+
+
+# --- agent grant -------------------------------------------------------------
+
+AGENT = 4242  # the granted agent session process in the fake process tables
+
+
+def _grant_workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ttl: str) -> Path:
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    (tmp_path / "home").mkdir()
+    root = _workspace(tmp_path)
+    _global_gate(
+        root, "enforce", command=FAIL, extra=f"  agent_grant:\n    ttl: {ttl}\n"
+    )
+    return root
+
+
+def _grant(root: Path, expires_at: object, pid: int = AGENT) -> None:
+    deploy_gate.record_gate_grant(
+        gate_dir=root.resolve(),
+        pid=pid,
+        pid_started="Wed Oct 22 10:00:00 2026",
+        expires_at=expires_at,
+        reason="test",
+    )
+
+
+def _descends_from(
+    monkeypatch: pytest.MonkeyPatch,
+    session: int,
+    started: str = "Wed Oct 22 10:00:00 2026",
+) -> None:
+    table = {os.getpid(): (session, "Wed Oct 22 10:05:00 2026"), session: (1, started)}
+    monkeypatch.setattr(deploy_gate, "process_table", lambda: table)
+
+
+def test_gate_grant_ttl_expires(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _grant_workspace(tmp_path, monkeypatch, "1h")
+    now = utc_now()
+    _grant(root, now + timedelta(hours=1))
+    _descends_from(monkeypatch, AGENT)
+    params = {"target": str(root)}
+
+    monkeypatch.setattr(deploy_gate, "utc_now", lambda: now + timedelta(minutes=30))
+    run_gate("deploy", params, None)
+    assert (
+        f"agent grant for session PID {AGENT}, 30 min left" in capsys.readouterr().err
+    )
+
+    monkeypatch.setattr(deploy_gate, "utc_now", lambda: now + timedelta(hours=2))
+    with pytest.raises(DeployGateError, match="exit code 3"):
+        run_gate("deploy", params, None)
+
+
+def test_gate_grant_unlimited_ends_with_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = _grant_workspace(tmp_path, monkeypatch, "unlimited")
+    _grant(root, None)
+    params = {"target": str(root)}
+
+    _descends_from(monkeypatch, AGENT)
+    run_gate("deploy", params, None)
+    assert f"until session PID {AGENT} ends" in capsys.readouterr().err
+
+    # The session ended: its PID is gone from the process table.
+    monkeypatch.setattr(deploy_gate, "process_table", lambda: {})
+    with pytest.raises(DeployGateError, match="exit code 3"):
+        run_gate("deploy", params, None)
+
+    # The PID was reused by a later process: the start time no longer matches.
+    _descends_from(monkeypatch, AGENT, started="Thu Oct 23 09:00:00 2026")
+    with pytest.raises(DeployGateError, match="exit code 3"):
+        run_gate("deploy", params, None)
+
+
+def test_gate_grant_not_shared_across_sessions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _grant_workspace(tmp_path, monkeypatch, "unlimited")
+    _grant(root, None)
+    params = {"target": str(root)}
+
+    _descends_from(monkeypatch, 5555)  # another agent session
+    with pytest.raises(DeployGateError, match="exit code 3"):
+        run_gate("deploy", params, None)
+
+    # A grant for another gate (another workspace) does not apply here either.
+    other = tmp_path / "other"
+    other.mkdir()
+    _grant(other, None, pid=5555)
+    with pytest.raises(DeployGateError, match="exit code 3"):
+        run_gate("deploy", params, None)
+
+
+def test_gate_grant_needs_config_and_terminal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    (tmp_path / "home").mkdir()
+    root = _workspace(tmp_path)
+    _global_gate(root, "enforce")
+    args = ["gate", "grant", "--pid", str(os.getpid()), "--reason", "r"]
+
+    # CliRunner is not a terminal.
+    result = CliRunner().invoke(main, [*args, "--target", str(root)])
+    assert result.exit_code != 0
+    assert "interactive terminal" in result.output
+
+    monkeypatch.setattr(gate_command, "_is_interactive", lambda: True)
+    result = CliRunner().invoke(main, [*args, "--target", str(root)])
+    assert result.exit_code != 0
+    assert "does not enable agent grants" in result.output
+
+    # agent_grant is a global-only key.
+    _write_gate(root / "phase", "deploy_gate:\n  agent_grant:\n    ttl: 1h\n")
+    with pytest.raises(ConfigurationError, match="agent_grant may only be set"):
+        resolve_gate(*find_gate_files(root))
+
+    with pytest.raises(ValueError, match="invalid agent_grant.ttl"):
+        deploy_gate_config.parse_grant_ttl("90")
+
+
+def test_gate_grant_command_records_real_process(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _grant_workspace(tmp_path, monkeypatch, "1h")
+    monkeypatch.setattr(gate_command, "_is_interactive", lambda: True)
+    args = ["gate", "grant", "--reason", "r", "--target", str(root)]
+
+    # The operator's own terminal (an ancestor) cannot be granted.
+    result = CliRunner().invoke(main, [*args, "--pid", str(os.getppid())])
+    assert result.exit_code != 0
+    assert "ancestor of this terminal" in str(result.exception)
+
+    session = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    try:
+        result = CliRunner().invoke(main, [*args, "--pid", str(session.pid)])
+        assert result.exit_code == 0, result.output
+        assert f"agent grant for PID {session.pid}" in result.output
+        # This test process does not descend from the granted session.
+        with pytest.raises(DeployGateError, match="exit code 3"):
+            run_gate("deploy", {"target": str(root)}, None)
+    finally:
+        session.kill()
+        session.wait()
+
+    db_path = tmp_path / "home" / ".sbkube" / "deployments.db"
+    with sqlite3.connect(db_path) as connection:
+        rows = connection.execute(
+            "SELECT pid, gate_dir, reason, expires_at IS NOT NULL FROM deploy_gate_grants"
+        ).fetchall()
+    assert rows == [(session.pid, str(root.resolve()), "r", 1)]
+
+
+def test_gate_grant_process_lineage_reads_real_ps() -> None:
+    lineage = deploy_gate.process_lineage(deploy_gate.process_table(), os.getpid())
+    pids = [pid for pid, _ in lineage]
+    assert pids[:2] == [os.getpid(), os.getppid()]
+    assert all(started for _, started in lineage)

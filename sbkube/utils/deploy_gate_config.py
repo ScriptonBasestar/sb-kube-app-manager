@@ -7,8 +7,10 @@ human skip) lives in :mod:`sbkube.utils.deploy_gate`.
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
@@ -26,6 +28,36 @@ Precedence = Literal["asymmetric", "individual", "global"]
 _MODE_STRENGTH: dict[str, int] = {"off": 0, "warn": 1, "enforce": 2}
 
 
+_TTL_PATTERN = re.compile(r"^([1-9][0-9]*)([mhd])$")
+_TTL_UNITS = {"m": "minutes", "h": "hours", "d": "days"}
+
+
+def parse_grant_ttl(ttl: str) -> timedelta | None:
+    """``30m``/``1h``/``2d`` as a duration; ``unlimited`` as ``None``."""
+    if ttl == "unlimited":
+        return None
+    match = _TTL_PATTERN.match(ttl)
+    if match is None:
+        raise ValueError(
+            f"invalid agent_grant.ttl {ttl!r}: use <n>m, <n>h, <n>d or unlimited"
+        )
+    return timedelta(**{_TTL_UNITS[match.group(2)]: int(match.group(1))})
+
+
+class AgentGrantSettings(BaseModel):
+    """``deploy_gate.agent_grant`` block: enables ``sbkube gate grant``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ttl: str = "1h"
+
+    @field_validator("ttl")
+    @classmethod
+    def _valid_ttl(cls, value: str) -> str:
+        parse_grant_ttl(value)
+        return value
+
+
 class DeployGateSettings(BaseModel):
     """``deploy_gate`` block of a gate file."""
 
@@ -35,6 +67,7 @@ class DeployGateSettings(BaseModel):
     mode: GateMode | None = None
     precedence: Precedence | None = None
     allow_override: bool | None = None
+    agent_grant: AgentGrantSettings | None = None
 
     @field_validator("mode", mode="before")
     @classmethod
@@ -67,6 +100,8 @@ class ResolvedGate:
     command: str | None
     command_dir: Path | None
     warnings: tuple[str, ...]
+    # From the global file only; ``None`` means agent grants are disabled.
+    agent_grant: AgentGrantSettings | None = None
 
 
 def load_gate_file(path: Path) -> GateSource:
@@ -211,7 +246,7 @@ def resolve_gate(
     for individual in individuals:
         global_only = [
             name
-            for name in ("command", "precedence", "allow_override")
+            for name in ("command", "precedence", "allow_override", "agent_grant")
             if getattr(individual.settings, name) is not None
         ]
         if global_only:
@@ -259,6 +294,7 @@ def resolve_gate(
         command=command,
         command_dir=global_source.path.parent,
         warnings=tuple(warnings),
+        agent_grant=global_source.settings.agent_grant,
     )
 
 

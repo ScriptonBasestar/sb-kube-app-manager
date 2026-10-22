@@ -7,6 +7,7 @@ for the deployment state tracking system.
 import hashlib
 import json
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,7 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from sbkube.models.deploy_gate_state import DeployGateSkip
+from sbkube.models.deploy_gate_state import DeployGateGrant, DeployGateSkip
 from sbkube.models.deployment_state import (
     AppDeployment,
     AppDeploymentCreate,
@@ -135,6 +136,45 @@ class DeploymentDatabase:
                     operator=operator,
                 )
             )
+
+    def record_deploy_gate_grant(
+        self,
+        *,
+        gate_dir: str,
+        pid: int,
+        pid_started: str,
+        expires_at: datetime | None,
+        reason: str,
+        operator: str | None,
+    ) -> None:
+        """Record a human ``sbkube gate grant`` for one agent session."""
+        with self.get_session() as session:
+            session.add(
+                DeployGateGrant(
+                    gate_dir=gate_dir,
+                    pid=pid,
+                    pid_started=pid_started,
+                    expires_at=expires_at,
+                    reason=reason,
+                    operator=operator,
+                )
+            )
+
+    def active_deploy_gate_grants(
+        self, gate_dir: str, now: datetime
+    ) -> list[tuple[int, str, datetime | None]]:
+        """``(pid, pid_started, expires_at)`` of unexpired grants for a gate."""
+        with self.get_session() as session:
+            rows = (
+                session.query(DeployGateGrant)
+                .filter(DeployGateGrant.gate_dir == gate_dir)
+                .filter(
+                    (DeployGateGrant.expires_at.is_(None))
+                    | (DeployGateGrant.expires_at > now)
+                )
+                .all()
+            )
+            return [(row.pid, row.pid_started, row.expires_at) for row in rows]
 
     def create_deployment(self, deployment_data: DeploymentCreate) -> Deployment:
         """Create a new deployment record.

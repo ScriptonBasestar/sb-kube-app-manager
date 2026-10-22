@@ -176,6 +176,21 @@ sbkube apply --skip-deploy-gate="incident 42 hotfix"
 - 작업·대상·게이트 파일·사유·사용자를 상태 DB(`~/.sbkube/deployments.db`의 `deploy_gate_skips`)에 남긴다.
 - 환경변수로 게이트를 끄는 방법은 없다.
 
+### gate grant — 에이전트 세션 허용
+
+전역 `sbkube-gate.yaml`에 `agent_grant`를 둔 저장소에서는 사람이 에이전트 세션 하나에 게이트
+통과를 허용할 수 있다. 허용은 그 세션 프로세스에서 파생된 명령에만 적용된다.
+
+```bash
+sbkube gate grant --pid 93755 --reason "TASK-123 배포"
+```
+
+- `--pid`는 에이전트 세션 프로세스다(Claude Code는 `CLAUDE_PID`). 환경변수나 세션 ID가 아니라
+  프로세스 조상 관계(PID와 시작 시각)로 판정하므로 다른 세션이나 재사용된 PID에는 적용되지 않는다.
+- 기간은 `agent_grant.ttl`(기본 `1h`)이다. `unlimited`면 그 프로세스가 끝날 때까지다.
+- stdin과 stderr가 모두 터미널일 때만 받고, 이 터미널의 조상 프로세스(자기 셸)는 거부한다.
+- 허용 기록은 상태 DB `deploy_gate_grants`에 남고, 허용으로 통과할 때마다 남은 기간을 경고로 찍는다.
+
 ---
 
 ## Utility Commands

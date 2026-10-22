@@ -32,6 +32,13 @@ Design notes
 * **No environment bypass.** Skipping requires ``--skip-deploy-gate=<reason>``
   from an interactive terminal and is recorded in the state DB. An environment
   variable would leak into agent shells through ``.envrc``.
+* **Agent grants bind to a process, not an identifier.** When the global file
+  sets ``agent_grant``, a human may run ``sbkube gate grant --pid <PID>`` from
+  a terminal; the gate then passes for commands that descend from that process
+  (matched by PID and start time) until ``ttl`` expires or, for
+  ``ttl: unlimited``, until the process ends. Session identifiers such as
+  ``CLAUDE_CODE_SESSION_ID`` or ``getsid`` are not used: an environment value
+  can be copied, and agent tool calls do not share a session id.
 """
 
 from __future__ import annotations
@@ -43,12 +50,14 @@ import subprocess
 import sys
 import threading
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import click
 
 from sbkube.exceptions import SbkubeError
+from sbkube.utils.datetime_utils import utc_now
 from sbkube.utils.deploy_gate_config import (
     GATE_FILE_NAME,
     DeployGateFile,
@@ -98,6 +107,7 @@ READ_ONLY_COMMANDS: frozenset[str] = frozenset(
         "validate",
         "version",
         "doctor",
+        "gate",
     }
 )
 
@@ -189,6 +199,96 @@ def record_gate_skip(
     )
 
 
+def process_table() -> dict[int, tuple[int, str]]:
+    """``pid -> (ppid, start time)`` for every process, from one ``ps`` call.
+
+    The start time (``lstart``, C locale) tells a reused PID apart from the
+    process a grant was given to.
+    """
+    try:
+        result = subprocess.run(
+            ["ps", "-A", "-o", "pid=,ppid=,lstart="],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+    except OSError as e:
+        raise DeployGateError(f"cannot list processes: {e}") from e
+    if result.returncode != 0:
+        raise DeployGateError(
+            f"cannot list processes: ps exited {result.returncode}: "
+            f"{result.stderr.strip()}"
+        )
+    table: dict[int, tuple[int, str]] = {}
+    for line in result.stdout.splitlines():
+        fields = line.split(None, 2)
+        if len(fields) == 3 and fields[0].isdigit() and fields[1].isdigit():
+            table[int(fields[0])] = (int(fields[1]), " ".join(fields[2].split()))
+    return table
+
+
+def process_lineage(
+    table: dict[int, tuple[int, str]], pid: int
+) -> list[tuple[int, str]]:
+    """``(pid, start time)`` of ``pid`` and each of its ancestors."""
+    lineage: list[tuple[int, str]] = []
+    while pid in table and all(pid != seen for seen, _ in lineage):
+        parent, started = table[pid]
+        lineage.append((pid, started))
+        pid = parent
+    return lineage
+
+
+def record_gate_grant(
+    *,
+    gate_dir: Path,
+    pid: int,
+    pid_started: str,
+    expires_at: datetime | None,
+    reason: str,
+) -> None:
+    """Persist a human agent grant in the state DB."""
+    from sbkube.state.database import DeploymentDatabase
+
+    DeploymentDatabase().record_deploy_gate_grant(
+        gate_dir=str(gate_dir),
+        pid=pid,
+        pid_started=pid_started,
+        expires_at=expires_at,
+        reason=reason,
+        operator=_operator(),
+    )
+
+
+def _granted(gate: ResolvedGate) -> str | None:
+    """Describe the agent grant covering this process, or ``None``."""
+    if gate.agent_grant is None or gate.command_dir is None:
+        return None
+    from sbkube.state.database import DeploymentDatabase
+
+    now = utc_now()
+    grants = DeploymentDatabase().active_deploy_gate_grants(
+        str(gate.command_dir.resolve()), now
+    )
+    if not grants:
+        return None
+    try:
+        lineage = set(process_lineage(process_table(), os.getpid()))
+    except DeployGateError as e:
+        # Without the process tree no grant can be proven: run the gate.
+        _warn(f"agent grant not checked: {e}")
+        return None
+    for pid, pid_started, expires_at in grants:
+        if (pid, pid_started) not in lineage:
+            continue
+        if expires_at is None:
+            return f"until session PID {pid} ends"
+        minutes = max(1, int((expires_at - now).total_seconds() // 60))
+        return f"for session PID {pid}, {minutes} min left"
+    return None
+
+
 def run_gate(
     command_name: str,
     params: dict[str, Any],
@@ -240,6 +340,11 @@ def run_gate(
         _warn(
             f"deploy gate skipped for '{operation}' by operator: {skip_reason.strip()}"
         )
+        return
+
+    grant = _granted(gate)
+    if grant is not None:
+        _warn(f"deploy gate passed for '{operation}' by agent grant {grant}")
         return
 
     assert gate.command is not None and gate.command_dir is not None

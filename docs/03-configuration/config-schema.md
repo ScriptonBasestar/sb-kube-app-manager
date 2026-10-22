@@ -440,6 +440,8 @@ deploy_gate:
   mode: enforce            # enforce | warn | off — 필수, 기본값 없음
   precedence: asymmetric   # asymmetric(기본) | individual | global — 전역 파일만
   allow_override: false    # 전역 파일만
+  agent_grant:             # 전역 파일만, 선택 — 있으면 `sbkube gate grant` 허용
+    ttl: 1h                # <n>m | <n>h | <n>d | unlimited (기본 1h)
 ```
 
 ```yaml
@@ -454,6 +456,7 @@ deploy_gate:
 | `mode` | 전역 필수, 개별 선택 | `enforce`: 실패 시 거부 / `warn`: 경고 후 진행 / `off`: 게이트 없음. 개별 파일은 이 값만 둘 수 있다 |
 | `precedence` | 전역만 | 전역과 개별 `mode`가 다를 때의 규칙 |
 | `allow_override` | 전역만 | `asymmetric`에서 개별 파일의 완화를 허용 |
+| `agent_grant.ttl` | 전역만 | 있으면 사람이 `sbkube gate grant --pid`로 에이전트 세션에 게이트 통과를 허용할 수 있다. 기간 `<n>m`/`<n>h`/`<n>d` 또는 `unlimited`(세션 프로세스가 끝날 때까지) |
 
 파일 찾기:
 
@@ -503,6 +506,11 @@ deploy_gate:
 
 사람의 건너뛰기는 `--skip-deploy-gate=<사유>` 한 가지다
 ([commands.md](../02-features/commands.md#deploy-gate-건너뛰기)). 환경변수로 끄는 방법은 없다.
+
+에이전트 세션 허용은 `agent_grant`가 있을 때 사람이 터미널에서 `sbkube gate grant --pid <PID>`로
+준다([commands.md](../02-features/commands.md#gate-grant--에이전트-세션-허용)). 게이트는 허용된 프로세스(PID와
+시작 시각)가 현재 명령의 조상이고 기간이 남았을 때 게이트 명령 없이 통과하며, 남은 기간을 경고로 찍는다.
+프로세스 목록(`ps`)을 읽지 못하면 허용 없이 게이트 명령을 돌린다.
 
 YAML 1.1 파서는 따옴표 없는 `off`를 불리언으로 읽지만 `mode`에서는 `off`로 받아들인다.
 

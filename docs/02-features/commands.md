@@ -173,12 +173,14 @@ revision - 1 기록이다.
 - 터미널이 아니면 `--confirm-digest <digest>`로만 진행한다. 틀린 digest·빈 입력·비대화형
   실행은 0이 아닌 종료 코드로 거부한다. `--force`는 이 확인을 건너뛰지 않는다.
 - `--dry-run`은 비교와 digest만 보여 주고 확인을 묻지 않는다. 비교를 위해 `helm status`로
-  클러스터를 읽기 전용으로 조회하므로, 클러스터에 접근할 수 없으면 live revision을 "could not
-  be read"로 표시하고 확인을 요구한다(`helm status`는 60초 제한).
+  클러스터를 읽기 전용으로 조회한다(`helm status`는 60초 제한). 클러스터에 접근할 수 없으면
+  dry-run은 live revision을 "could not be read"로 표시할 뿐 확인을 묻지 않고, 실제 롤백을
+  실행할 때 확인을 요구한다.
 - helm이 계속 실패하는 동안 digest는 시간이 지나도 바뀌지 않는다. 이때 digest를 입력하면
   알 수 없는 live 상태를 받아들이는 것이다.
-- 무시되지 않은 untracked 파일이 있으면 배포가 `-dirty`로 기록된다. sbkube 작업 디렉토리
-  (예: `.sbkube/`)를 `.gitignore`에 넣지 않으면 모든 롤백이 확인을 요구한다.
+- `git status`는 앱 디렉토리가 아니라 저장소 전체를 검사한다. 저장소 어디에든 무시되지 않은
+  untracked 파일이 있으면 배포가 `-dirty`로 기록된다. sbkube 작업 디렉토리(예: `.sbkube/`)를
+  `.gitignore`에 넣지 않으면 모든 롤백이 확인을 요구한다.
 - 롤백 지점 기록이 실패하면(상태 DB 쓰기 오류) 배포는 성공으로 두고 경고만 출력한다.
   그 배포로는 비교할 수 없으므로 이후 롤백은 확인을 요구한다.
 

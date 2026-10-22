@@ -55,23 +55,27 @@ def isolated_deploy_state_db(monkeypatch, tmp_path_factory) -> None:
     )
 
 
-@pytest.fixture(scope="session", autouse=True)
-def basetemp_outside_gate_scope(tmp_path_factory) -> None:
-    """Refuse a temp root that an enclosing workspace or gate file governs.
+def pytest_sessionstart(session) -> None:
+    """Refuse a temp root below an sbkube workspace or gate file.
 
     A gate lookup starting under the temp root walks up past it, so tests
     whose ``tmp_path`` has no workspace marker would see the enclosing gate.
+    Checked in the controller only: an exit raised in an xdist worker loses
+    its message.
     """
+    if hasattr(session.config, "workerinput"):
+        return
     from sbkube.utils.deploy_gate_config import GATE_FILE_NAME
 
-    root = tmp_path_factory.getbasetemp().resolve()
+    root = session.config._tmp_path_factory.getbasetemp().resolve()
     for directory in root.parents:
         if (directory / ".sbkube-workspace").is_file() or (
             directory / GATE_FILE_NAME
         ).is_file():
             pytest.exit(
-                f"pytest basetemp {root} is below {directory}, which a deploy "
-                "gate governs; use a --basetemp or TMPDIR outside it",
+                f"pytest basetemp {root} is below {directory}, which holds an "
+                "sbkube workspace or gate file; use a --basetemp or TMPDIR "
+                "outside it",
                 returncode=4,
             )
 

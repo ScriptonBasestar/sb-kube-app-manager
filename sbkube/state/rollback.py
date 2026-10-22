@@ -31,6 +31,9 @@ from sbkube.utils.logger import get_logger
 
 logger = get_logger()
 
+# A hung `helm status` counts as an unreadable live revision
+HELM_STATUS_TIMEOUT_SECONDS = 60
+
 
 class RollbackManager:
     """Manages rollback operations for deployments.
@@ -272,13 +275,16 @@ class RollbackManager:
         return None
 
     def _live_helm_revision(self, release_name: str, namespace: str) -> int | None:
-        """Revision `helm status` reports, None when helm fails or is unparsable.
+        """Revision `helm status` reports, None when helm fails, times out or
+        returns unparsable output.
 
         The reason text stays free of helm output so that the difference
         digest is stable between the comparison and the confirmed rollback.
         """
         cmd = ["helm", "status", release_name, "-n", namespace, "-o", "json"]
-        return_code, stdout, stderr = run_command(cmd)
+        return_code, stdout, stderr = run_command(
+            cmd, timeout=HELM_STATUS_TIMEOUT_SECONDS
+        )
         if return_code != 0:
             logger.warning(f"helm status {release_name} failed: {stderr.strip()}")
             return None

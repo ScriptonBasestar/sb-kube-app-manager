@@ -31,8 +31,9 @@ from sbkube.models.deployment_state import (
 )
 from sbkube.state.database import DeploymentDatabase
 from sbkube.state.deploy_recorder import DeploymentRecorder, resolve_source_commit
-from sbkube.state.rollback import RollbackManager
+from sbkube.state.rollback import HELM_STATUS_TIMEOUT_SECONDS, RollbackManager
 from sbkube.state.rollback_compare import RollbackConfirmationRequired
+from sbkube.utils.common import run_command
 
 COMMIT_A = "a" * 40
 COMMIT_B = "b" * 40
@@ -311,6 +312,24 @@ def test_rollback_unreadable_live_revision_requires_confirmation(
     assert result.exit_code != 0
     assert "live Helm revision of web in default could not be read" in result.output
     helm.assert_not_called()
+
+
+def test_rollback_helm_status_timeout_requires_confirmation(db, live_status) -> None:
+    """A hung `helm status` is cut at 60s and counts as unreadable."""
+    _seed_pair(db)
+    live_status.side_effect = run_command
+    timeout = subprocess.TimeoutExpired(["helm", "status"], 60)
+
+    with patch("sbkube.utils.common.subprocess.run", side_effect=timeout) as run:
+        comparison = RollbackManager(db_path=db.db_path).compare_rollback(
+            RollbackRequest(deployment_id=CURRENT)
+        )
+
+    assert run.call_args.kwargs["timeout"] == HELM_STATUS_TIMEOUT_SECONDS == 60
+    assert comparison.requires_confirmation
+    assert comparison.apps[0].uncomparable_reason == (
+        "live Helm revision of web in default could not be read"
+    )
 
 
 # -------------------------------------------- release identity (review P1-2)

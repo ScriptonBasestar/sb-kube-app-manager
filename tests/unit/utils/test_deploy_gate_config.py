@@ -94,6 +94,41 @@ def test_symlink_out_of_scope_is_not_followed(tmp_path: Path) -> None:
     assert gate is not None and gate.mode == "warn"
 
 
+def test_phase_sourced_outside_the_workspace_tightens(tmp_path: Path) -> None:
+    root = _workspace(tmp_path / "ws")
+    _global(root, mode="warn")
+    shared = tmp_path / "shared" / "p1"
+    _write_gate(shared, "deploy_gate:\n  mode: enforce\n")
+    (root / "sbkube.yaml").write_text(
+        "apiVersion: sbkube/v1\nphases:\n  p1:\n    source: ../shared/p1/sbkube.yaml\n",
+        encoding="utf-8",
+    )
+
+    gate = resolve_gate(*find_gate_files(root))
+
+    assert gate is not None and gate.mode == "enforce"
+
+
+def test_external_phase_symlink_out_of_its_directory_is_not_followed(
+    tmp_path: Path,
+) -> None:
+    root = _workspace(tmp_path / "ws")
+    _global(root, mode="warn")
+    shared = tmp_path / "shared" / "p1"
+    shared.mkdir(parents=True)
+    elsewhere = tmp_path / "elsewhere"
+    _write_gate(elsewhere, "deploy_gate:\n  mode: enforce\n")
+    (shared / "link").symlink_to(elsewhere, target_is_directory=True)
+    (root / "sbkube.yaml").write_text(
+        "apiVersion: sbkube/v1\nphases:\n  p1:\n    source: ../shared/p1/sbkube.yaml\n",
+        encoding="utf-8",
+    )
+
+    gate = resolve_gate(*find_gate_files(root))
+
+    assert gate is not None and gate.mode == "warn"
+
+
 def test_gate_file_outside_the_repository_is_ignored(tmp_path: Path) -> None:
     _write_gate(tmp_path, "not: [valid")
     repo = tmp_path / "repo"

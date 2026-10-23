@@ -170,7 +170,15 @@ def find_gate_files(start: Path) -> GateFiles:
         # gate, and a gated repository vendored below must not refuse ours.
         # A followed link can reach a file already counted (e.g. the global one).
         seen = {path.resolve() for path in (global_path, *individual_paths)}
-        for path in _gate_files_below(base, bound=scope_root or global_path.parent):
+        bound = scope_root or global_path.parent
+        candidates = _gate_files_below(base, bound=bound)
+        for external in _external_phase_dirs(base, bound=bound):
+            # A phase sourced outside the scope is its own scope: its gate file
+            # and everything below it count, with links bounded by that directory.
+            if (external / GATE_FILE_NAME).is_file():
+                candidates.append(external / GATE_FILE_NAME)
+            candidates.extend(_gate_files_below(external, bound=external))
+        for path in candidates:
             if path.resolve() not in seen:
                 seen.add(path.resolve())
                 individual_paths.append(path)
@@ -185,6 +193,58 @@ def _vcs_root(base: Path) -> Path | None:
         if (directory / ".git").exists():
             return directory
     return None
+
+
+_CONFIG_NAMES = ("sbkube.yaml", "sbkube.yml")
+
+
+def _external_phase_dirs(base: Path, *, bound: Path) -> list[Path]:
+    """Directories of phase ``source`` files that lie outside ``bound``.
+
+    Follows ``phases`` from the config in ``base`` through every phase source,
+    in or out of scope, so a nested workspace definition is covered too.
+    """
+    external: list[Path] = []
+    pending = [base]
+    visited: set[Path] = set()
+    while pending:
+        directory = pending.pop()
+        if directory in visited:
+            continue
+        visited.add(directory)
+        for name in _CONFIG_NAMES:
+            config = directory / name
+            if config.is_file():
+                break
+        else:
+            continue
+        for source in _phase_sources(config):
+            target = (directory / source).resolve()
+            phase_dir = target if target.is_dir() else target.parent
+            if not phase_dir.is_dir():
+                continue
+            pending.append(phase_dir)
+            if not phase_dir.is_relative_to(bound) and phase_dir not in external:
+                external.append(phase_dir)
+    return external
+
+
+def _phase_sources(config: Path) -> list[str]:
+    try:
+        document = yaml.safe_load(config.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as e:
+        # A phase we cannot read may point at a stricter file: fail closed.
+        raise ConfigurationError(
+            f"{config}: cannot search for deploy gate files: {e}"
+        ) from e
+    phases = document.get("phases") if isinstance(document, dict) else None
+    if not isinstance(phases, dict):
+        return []
+    return [
+        phase["source"]
+        for phase in phases.values()
+        if isinstance(phase, dict) and isinstance(phase.get("source"), str)
+    ]
 
 
 def _gate_files_below(base: Path, *, bound: Path) -> list[Path]:

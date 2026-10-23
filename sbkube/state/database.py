@@ -512,6 +512,7 @@ class DeploymentDatabase:
         cluster: str | None = None,
         namespace: str | None = None,
         app_group: str | None = None,
+        app_config_dir: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[DeploymentSummary]:
@@ -521,6 +522,7 @@ class DeploymentDatabase:
             cluster: Filter by cluster
             namespace: Filter by namespace
             app_group: Filter by app-group (Phase 5)
+            app_config_dir: Filter by app configuration directory
             limit: Maximum number of results
             offset: Result offset for pagination
 
@@ -535,6 +537,8 @@ class DeploymentDatabase:
                 query = query.filter_by(cluster=cluster)
             if namespace:
                 query = query.filter_by(namespace=namespace)
+            if app_config_dir:
+                query = query.filter_by(app_config_dir=app_config_dir)
 
             # Phase 5: Filter by app-group
             if app_group:

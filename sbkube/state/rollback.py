@@ -920,29 +920,24 @@ class RollbackManager:
         deployments = self.db.list_deployments(
             cluster=cluster,
             namespace=namespace,
+            app_config_dir=app_config_dir,
             limit=limit,
         )
 
-        # Filter by app_config_dir
-        rollback_points = []
-        for deployment in deployments:
-            detail = self.db.get_deployment(deployment.deployment_id)
-            if detail and detail.app_config_dir == app_config_dir:
-                rollback_points.append(
-                    {
-                        "deployment_id": deployment.deployment_id,
-                        "timestamp": deployment.timestamp.isoformat(),
-                        "status": deployment.status.value,
-                        "apps": deployment.app_count,
-                        "can_rollback": deployment.status
-                        in [
-                            DeploymentStatus.SUCCESS,
-                            DeploymentStatus.PARTIALLY_FAILED,
-                        ],
-                    },
-                )
-
-        return rollback_points
+        return [
+            {
+                "deployment_id": deployment.deployment_id,
+                "timestamp": deployment.timestamp.isoformat(),
+                "status": deployment.status.value,
+                "apps": deployment.app_count,
+                "can_rollback": deployment.status
+                in [
+                    DeploymentStatus.SUCCESS,
+                    DeploymentStatus.PARTIALLY_FAILED,
+                ],
+            }
+            for deployment in deployments
+        ]
 
 
 def _find_release_info(

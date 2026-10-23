@@ -868,3 +868,29 @@ def test_list_rollback_points_reports_app_count(db) -> None:
         f"{PREVIOUS} - 2026-10-22 11:00:00 - 1 apps - Status: success" in result.output
     )
     helm.assert_not_called()
+
+
+def test_list_rollback_points_limit_counts_only_the_requested_app_dir(db) -> None:
+    _seed_pair(db)
+    for i in range(3):
+        db.create_deployment(
+            DeploymentCreate(
+                deployment_id=f"dep-other-{i}",
+                cluster="test-cluster",
+                namespace="default",
+                app_config_dir="/apps/other",
+                config_file_path="/apps/other/config.yaml",
+                command="deploy",
+                config_snapshot={},
+            )
+        )
+        with db.get_session() as session:
+            row = session.query(Deployment).filter_by(deployment_id=f"dep-other-{i}")
+            row.one().timestamp = datetime(2026, 10, 22, 13, i)
+    args = ["--list", "--cluster", "test-cluster", "--namespace", "default"]
+    args += ["--base-dir", "/", "--app-dir", "apps/web", "--limit", "2"]
+    result, _ = _invoke(db, args)
+    assert result.exit_code == 0, result.output
+    assert CURRENT in result.output
+    assert PREVIOUS in result.output
+    assert "dep-other" not in result.output

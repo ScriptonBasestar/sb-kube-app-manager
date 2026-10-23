@@ -8,6 +8,5 @@ This package provides deployment state management capabilities including:
 
 from .database import DeploymentDatabase
 from .rollback import RollbackManager
-from .tracker import DeploymentTracker
 
-__all__ = ["DeploymentDatabase", "DeploymentTracker", "RollbackManager"]
+__all__ = ["DeploymentDatabase", "RollbackManager"]

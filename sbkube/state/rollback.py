@@ -542,7 +542,9 @@ class RollbackManager:
         failure only warns: the rollback already reached the cluster.
         """
         rolled_back = {r["app"] for r in results["rollbacks"] if r.get("success")}
-        entries: list[tuple[dict[str, Any], dict[str, Any], DeploymentDetail | None]] = []
+        entries: list[
+            tuple[dict[str, Any], dict[str, Any], DeploymentDetail | None]
+        ] = []
         for app in current_deployment.apps:
             info = app.get("rollback_info") or {}
             if (

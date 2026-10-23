@@ -309,7 +309,13 @@ def resolve_gate(
     for individual in individuals:
         global_only = [
             name
-            for name in ("command", "precedence", "allow_override", "agent_grant", "timeout")
+            for name in (
+                "command",
+                "precedence",
+                "allow_override",
+                "agent_grant",
+                "timeout",
+            )
             if getattr(individual.settings, name) is not None
         ]
         if global_only:

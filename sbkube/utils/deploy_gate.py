@@ -44,12 +44,12 @@ Design notes
 
 from __future__ import annotations
 
+import contextvars
 import getpass
 import os
 import shlex
 import subprocess
 import sys
-import threading
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -113,12 +113,15 @@ READ_ONLY_COMMANDS: frozenset[str] = frozenset(
 )
 
 
-# Gated callbacks currently running in this process. ``apply`` runs ``deploy``
-# in-process (``ctx.invoke``, workspace worker threads); only the outermost
-# gated command runs the gate. Process-wide on purpose: worker threads do not
-# inherit context variables.
-_gate_depth = 0
-_gate_depth_lock = threading.Lock()
+# Gated callbacks running in the current invocation context. ``apply`` runs
+# ``deploy`` in-process (``ctx.invoke``, workspace worker threads); only the
+# outermost gated command runs the gate. Per context so that independent
+# invocations (e.g. library callers using threads) each run their own gate.
+# Worker threads do not inherit context variables: submit work to them through
+# ``contextvars.copy_context().run`` so nested commands see the outer depth.
+_gate_depth: contextvars.ContextVar[int] = contextvars.ContextVar(
+    "sbkube_gate_depth", default=0
+)
 
 
 class DeployGateError(SbkubeError):
@@ -386,18 +389,15 @@ def gate_callback(
     """Wrap a command callback so the gate runs before it."""
 
     def gated(*args: Any, **kwargs: Any) -> Any:
-        global _gate_depth
         skip_reason = kwargs.pop(SKIP_OPTION_NAME, None)
-        with _gate_depth_lock:
-            outermost = _gate_depth == 0
-            _gate_depth += 1
+        depth = _gate_depth.get()
+        token = _gate_depth.set(depth + 1)
         try:
-            if outermost:
+            if depth == 0:
                 run_gate(command_name, kwargs, skip_reason)
             return callback(*args, **kwargs)
         finally:
-            with _gate_depth_lock:
-                _gate_depth -= 1
+            _gate_depth.reset(token)
 
     gated.__sbkube_deploy_gate__ = True  # type: ignore[attr-defined]
     gated.__wrapped__ = callback  # type: ignore[attr-defined]

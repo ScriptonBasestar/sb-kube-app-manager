@@ -1,5 +1,6 @@
 """Workspace 명령어 구현."""
 
+import contextvars
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -1165,6 +1166,7 @@ class WorkspaceDeployCommand:
             # Submit all phases
             futures = {
                 executor.submit(
+                    contextvars.copy_context().run,
                     self._deploy_phase_thread_safe,
                     phase_name,
                     workspace.phases[phase_name],
@@ -1625,6 +1627,7 @@ class WorkspaceDeployCommand:
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_group = {
                 executor.submit(
+                    contextvars.copy_context().run,
                     self._deploy_single_app_group,
                     app_group,
                     base_dir,

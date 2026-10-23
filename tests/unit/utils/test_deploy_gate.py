@@ -1,5 +1,6 @@
 """Tests for the deploy gate (sbkube/utils/deploy_gate.py)."""
 
+import contextvars
 import json
 import os
 import re
@@ -7,6 +8,7 @@ import shlex
 import sqlite3
 import subprocess
 import sys
+import threading
 from datetime import timedelta
 from pathlib import Path
 
@@ -164,6 +166,47 @@ def test_deploy_gate_runs_once_for_nested_invocation(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert record == ["inner"]
     assert (root / "gate-called").read_text() == "apply apply"
+
+
+def test_gate_depth_is_per_context_not_per_process(monkeypatch) -> None:
+    gated_calls: list[str] = []
+    monkeypatch.setattr(
+        deploy_gate, "run_gate", lambda name, kw, skip: gated_calls.append(name)
+    )
+    inside = threading.Event()
+    release = threading.Event()
+
+    def slow() -> None:
+        inside.set()
+        assert release.wait(5)
+
+    first = deploy_gate.gate_callback("first", lambda: slow())
+    second = deploy_gate.gate_callback("second", lambda: None)
+
+    worker = threading.Thread(target=first)
+    worker.start()
+    assert inside.wait(5)
+    # An independent invocation overlapping the first still runs its own gate
+    second()
+    release.set()
+    worker.join(5)
+    assert gated_calls == ["first", "second"]
+
+
+def test_gate_depth_propagates_through_copied_context(monkeypatch) -> None:
+    gated_calls: list[str] = []
+    monkeypatch.setattr(
+        deploy_gate, "run_gate", lambda name, kw, skip: gated_calls.append(name)
+    )
+    inner = deploy_gate.gate_callback("inner", lambda: None)
+
+    def outer_body() -> None:
+        thread = threading.Thread(target=contextvars.copy_context().run, args=(inner,))
+        thread.start()
+        thread.join(5)
+
+    deploy_gate.gate_callback("outer", outer_body)()
+    assert gated_calls == ["outer"]
 
 
 # --- precedence ------------------------------------------------------------

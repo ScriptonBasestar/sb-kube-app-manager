@@ -22,6 +22,7 @@ Usage:
     result = executor.execute(config)
 """
 
+import contextvars
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -364,6 +365,7 @@ class RecursiveExecutor:
         with ThreadPoolExecutor(max_workers=settings.max_workers) as executor:
             future_to_app = {
                 executor.submit(
+                    contextvars.copy_context().run,
                     self._execute_single_app,
                     app_name,
                     app_config,
@@ -561,6 +563,7 @@ class RecursiveExecutor:
         with ThreadPoolExecutor(max_workers=settings.max_workers) as executor:
             future_to_phase = {
                 executor.submit(
+                    contextvars.copy_context().run,
                     self._execute_single_phase,
                     phase_name,
                     phase_ref,

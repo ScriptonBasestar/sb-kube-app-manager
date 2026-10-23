@@ -440,6 +440,7 @@ deploy_gate:
   mode: enforce            # enforce | warn | off — 필수, 기본값 없음
   precedence: asymmetric   # asymmetric(기본) | individual | global — 전역 파일만
   allow_override: false    # 전역 파일만
+  timeout: 60              # 전역 파일만, 선택 — 게이트 명령 제한 시간(초)
   agent_grant:             # 전역 파일만, 선택 — 있으면 `sbkube gate grant` 허용
     ttl: 1h                # <n>m | <n>h | <n>d | unlimited (기본 1h)
 ```
@@ -456,6 +457,7 @@ deploy_gate:
 | `mode` | 전역 필수, 개별 선택 | `enforce`: 실패 시 거부 / `warn`: 경고 후 진행 / `off`: 게이트 없음. 개별 파일은 이 값만 둘 수 있다 |
 | `precedence` | 전역만 | 전역과 개별 `mode`가 다를 때의 규칙 |
 | `allow_override` | 전역만 | `asymmetric`에서 개별 파일의 완화를 허용 |
+| `timeout` | 전역만 | 게이트 명령의 제한 시간(초, 0보다 큰 수). 생략하면 제한 없음. 만료 시 `enforce`는 거부(fail closed), `warn`은 경고 후 계속 |
 | `agent_grant.ttl` | 전역만 | 있으면 사람이 `sbkube gate grant --pid`로 에이전트 세션에 게이트 통과를 허용할 수 있다. 기간 `<n>m`/`<n>h`/`<n>d` 또는 `unlimited`(세션 프로세스가 끝날 때까지) |
 
 파일 찾기:

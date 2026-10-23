@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
 import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from sbkube.exceptions import ConfigurationError
 from sbkube.utils.config_inheritance import find_workspace_root
@@ -68,6 +68,8 @@ class DeployGateSettings(BaseModel):
     precedence: Precedence | None = None
     allow_override: bool | None = None
     agent_grant: AgentGrantSettings | None = None
+    # Seconds the gate command may run; ``None`` means no limit.
+    timeout: float | None = Field(default=None, gt=0)
 
     @field_validator("mode", mode="before")
     @classmethod
@@ -102,6 +104,7 @@ class ResolvedGate:
     warnings: tuple[str, ...]
     # From the global file only; ``None`` means agent grants are disabled.
     agent_grant: AgentGrantSettings | None = None
+    timeout: float | None = None
 
 
 def load_gate_file(path: Path) -> GateSource:
@@ -246,7 +249,7 @@ def resolve_gate(
     for individual in individuals:
         global_only = [
             name
-            for name in ("command", "precedence", "allow_override", "agent_grant")
+            for name in ("command", "precedence", "allow_override", "agent_grant", "timeout")
             if getattr(individual.settings, name) is not None
         ]
         if global_only:
@@ -295,6 +298,7 @@ def resolve_gate(
         command_dir=global_source.path.parent,
         warnings=tuple(warnings),
         agent_grant=global_source.settings.agent_grant,
+        timeout=global_source.settings.timeout,
     )
 
 

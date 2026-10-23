@@ -6,6 +6,7 @@ A repository opts in by placing ``sbkube-gate.yaml`` files::
     deploy_gate:
       command: "uv run scripts/full_ci_gate.py gate"
       mode: enforce            # enforce | warn | off
+      timeout: 60              # optional, seconds; expiry refuses (enforce) or warns
       precedence: asymmetric   # asymmetric | individual | global (global file only)
       allow_override: false    # global file only
 
@@ -355,9 +356,14 @@ def run_gate(
         "SBKUBE_GATE_TARGET": str(start.resolve()),
     }
     try:
-        result = subprocess.run(argv, cwd=gate.command_dir, env=env, check=False)
+        result = subprocess.run(
+            argv, cwd=gate.command_dir, env=env, check=False, timeout=gate.timeout
+        )
         returncode = result.returncode
         failure = f"exit code {returncode}"
+    except subprocess.TimeoutExpired:
+        returncode = None
+        failure = f"timed out after {gate.timeout:g}s"
     except OSError as e:
         returncode = None
         failure = str(e)

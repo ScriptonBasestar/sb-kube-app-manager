@@ -235,6 +235,7 @@ def test_deploy_gate_agreeing_settings_do_not_warn(tmp_path: Path) -> None:
         "deploy_gate:\n  mode: off\n  precedence: individual\n",
         "deploy_gate:\n  mode: off\n  allow_override: true\n",
         "deploy_gate:\n  mode: warn\n  command: 'true'\n",
+        "deploy_gate:\n  mode: off\n  timeout: 5\n",
     ],
 )
 def test_deploy_gate_individual_cannot_set_global_only_keys(
@@ -255,6 +256,8 @@ def test_deploy_gate_individual_cannot_set_global_only_keys(
         "deploy_gate:\n  mode: sometimes\n  command: 'true'\n",
         "deploy_gate:\n  mode: enforce\n  command: 'true'\n  typo: 1\n",
         "deploy_gate: [\n",
+        "deploy_gate:\n  mode: enforce\n  command: 'true'\n  timeout: 0\n",
+        "deploy_gate:\n  mode: enforce\n  command: 'true'\n  timeout: soon\n",
     ],
 )
 def test_deploy_gate_invalid_config_fails_closed(
@@ -291,6 +294,33 @@ def test_deploy_gate_warn_mode_continues_on_failure(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert record == [f"ran {root}"]
     assert "continuing because mode=warn" in result.output
+
+
+HANG = _python_command("import time; time.sleep(30)")
+
+
+def test_deploy_gate_timeout_refuses_under_enforce(tmp_path: Path) -> None:
+    root = _workspace(tmp_path)
+    _global_gate(root, "enforce", command=HANG, extra="  timeout: 0.5\n")
+    record: list[str] = []
+
+    result = CliRunner().invoke(_gated_group(record), ["deploy", str(root)])
+
+    assert isinstance(result.exception, DeployGateError)
+    assert "timed out after 0.5s" in str(result.exception)
+    assert record == []
+
+
+def test_deploy_gate_timeout_warns_under_warn(tmp_path: Path) -> None:
+    root = _workspace(tmp_path)
+    _global_gate(root, "warn", command=HANG, extra="  timeout: 0.5\n")
+    record: list[str] = []
+
+    result = CliRunner().invoke(_gated_group(record), ["deploy", str(root)])
+
+    assert result.exit_code == 0, result.output
+    assert record == [f"ran {root}"]
+    assert "timed out after 0.5s" in result.output
 
 
 def test_deploy_gate_dry_run_is_not_gated(tmp_path: Path) -> None:

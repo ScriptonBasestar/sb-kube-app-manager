@@ -167,6 +167,11 @@ def test_rollback_with_code_change_requires_digest_confirmation(db) -> None:
     assert typed.exit_code == 0, typed.output
     helm.assert_called_once()
 
+
+def test_rollback_with_confirm_digest_option(db) -> None:
+    _seed_pair(db, chart_version="0.9.0")
+    digest = _digest(db)
+
     passed, helm = _invoke(db, [CURRENT, "--scope", "all", "--confirm-digest", digest])
     assert passed.exit_code == 0, passed.output
     helm.assert_called_once()
@@ -777,3 +782,71 @@ def test_deploy_exception_still_finishes_recorder(
 
     assert result.exit_code != 0
     mock_recorder_cls.return_value.finish.assert_called_once_with(failed=True)
+
+
+# ------------------------------------------------------- rollback recording
+
+
+def test_successful_rollback_records_entry_and_next_compare_uses_it(
+    db: DeploymentDatabase, live_status
+) -> None:
+    _seed_pair(db)
+    live_status.return_value = _helm_status(3)  # revision after helm rollback
+
+    result, _ = _invoke(db, [CURRENT, "--confirm-digest", _digest(db) or ""])
+
+    assert result.exit_code == 0, result.output
+    manager = RollbackManager(db_path=db.db_path)
+    newest = db.get_latest_helm_release_deployment_id("test-cluster", "web", "default")
+    assert newest not in (CURRENT, PREVIOUS)
+    detail = db.get_deployment(newest)
+    assert detail.status == DeploymentStatus.SUCCESS
+    assert detail.source_commit == COMMIT_A
+    info = detail.apps[0]["rollback_info"]
+    assert info["revision"] == 3
+    assert info["restored_from"] == PREVIOUS
+    assert info["rolled_back_from"] == CURRENT
+    assert info["chart_version"] == "1.0.0"
+
+    # Next rollback restores revision 2 (the pre-rollback record), comparable.
+    comparison = manager.compare_rollback(RollbackRequest(deployment_id=newest))
+    assert comparison.apps[0].target.deployment_id == CURRENT
+    assert comparison.apps[0].uncomparable_reason is None
+
+
+def test_failed_helm_rollback_records_nothing(db: DeploymentDatabase) -> None:
+    _seed_pair(db)
+    helm = MagicMock(
+        side_effect=subprocess.CalledProcessError(1, "helm", stderr="boom")
+    )
+    with patch("sbkube.state.rollback.subprocess.run", helm):
+        with pytest.raises(Exception):
+            RollbackManager(db_path=db.db_path).rollback_deployment(
+                RollbackRequest(deployment_id=CURRENT),
+                confirmed_digest=_digest(db),
+            )
+    assert (
+        db.get_latest_helm_release_deployment_id("test-cluster", "web", "default")
+        == CURRENT
+    )
+
+
+def test_recording_failure_does_not_fail_rollback(
+    db: DeploymentDatabase, live_status
+) -> None:
+    _seed_pair(db)
+    live_status.return_value = _helm_status(3)
+    manager = RollbackManager(db_path=db.db_path)
+    with (
+        patch("sbkube.state.rollback.subprocess.run") as helm,
+        patch.object(manager.db, "create_deployment", side_effect=OSError("disk")),
+    ):
+        helm.return_value = subprocess.CompletedProcess([], 0, "", "")
+        result = manager.rollback_deployment(
+            RollbackRequest(deployment_id=CURRENT), confirmed_digest=_digest(db)
+        )
+    assert result["success"] is True
+    assert (
+        db.get_latest_helm_release_deployment_id("test-cluster", "web", "default")
+        == CURRENT
+    )

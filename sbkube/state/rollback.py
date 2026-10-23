@@ -5,7 +5,10 @@ deployment states using tracked deployment information.
 """
 
 import json
+import os
 import subprocess
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +16,8 @@ import yaml
 
 from sbkube.exceptions import RollbackError
 from sbkube.models.deployment_state import (
+    AppDeploymentCreate,
+    DeploymentCreate,
     DeploymentDetail,
     DeploymentStatus,
     ResourceAction,
@@ -209,15 +214,13 @@ class RollbackManager:
             max(1, current.revision - 1) if current.revision is not None else None
         )
 
-        target_record = target_deployment
-        if target_record is None and restore_revision is not None:
-            target_record = self.db.get_previous_app_deployment(
-                current_deployment.cluster,
-                release_name,
-                namespace,
-                restore_revision,
-                current_deployment.deployment_id,
-            )
+        target_record = self._restore_source_record(
+            current_deployment,
+            target_deployment,
+            release_name,
+            namespace,
+            restore_revision,
+        )
         target_info = (
             _find_release_info(target_record, release_name, namespace)
             if target_record is not None
@@ -243,6 +246,27 @@ class RollbackManager:
                 f"release {release_name} in namespace {namespace}"
             )
         return comparison
+
+    def _restore_source_record(
+        self,
+        current_deployment: DeploymentDetail,
+        target_deployment: DeploymentDetail | None,
+        release_name: str | None,
+        namespace: str | None,
+        restore_revision: int | None,
+    ) -> DeploymentDetail | None:
+        """Record describing the state a rollback restores, if one exists."""
+        if target_deployment is not None:
+            return target_deployment
+        if restore_revision is None:
+            return None
+        return self.db.get_previous_app_deployment(
+            current_deployment.cluster,
+            release_name,
+            namespace,
+            restore_revision,
+            current_deployment.deployment_id,
+        )
 
     def _current_state_reason(
         self,
@@ -501,7 +525,138 @@ class RollbackManager:
                     msg = f"Rollback failed for app {app['name']}: {e}"
                     raise RollbackError(msg)
 
+        self._record_rollback(current_deployment, target_deployment, results)
         return results
+
+    def _record_rollback(
+        self,
+        current_deployment: DeploymentDetail,
+        target_deployment: DeploymentDetail | None,
+        results: dict[str, Any],
+    ) -> None:
+        """Record the Helm apps just rolled back as a new deployment record.
+
+        The entry carries the restored record's chart, chart version, values
+        digest and source commit with the new live Helm revision, so the next
+        rollback compares against what is actually deployed. A recording
+        failure only warns: the rollback already reached the cluster.
+        """
+        rolled_back = {r["app"] for r in results["rollbacks"] if r.get("success")}
+        entries: list[tuple[dict[str, Any], dict[str, Any], DeploymentDetail | None]] = []
+        for app in current_deployment.apps:
+            info = app.get("rollback_info") or {}
+            if (
+                app["name"] not in rolled_back
+                or app["type"] != "helm"
+                or info.get("type") != "helm"
+            ):
+                continue
+            restored_revision = max(1, info["revision"] - 1)
+            source = self._restore_source_record(
+                current_deployment,
+                target_deployment,
+                info.get("release_name"),
+                info.get("namespace"),
+                restored_revision,
+            )
+            entries.append((app, info, source))
+        if not entries:
+            return
+
+        try:
+            from sbkube import __version__
+
+            db = self.db
+            timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+            deployment_id = f"dep-{timestamp}-{str(uuid.uuid4())[:8]}"
+            config_source = next(
+                (src for _, _, src in entries if src is not None), current_deployment
+            )
+            deployment = db.create_deployment(
+                DeploymentCreate(
+                    deployment_id=deployment_id,
+                    cluster=current_deployment.cluster,
+                    namespace=current_deployment.namespace,
+                    app_config_dir=current_deployment.app_config_dir,
+                    config_file_path=current_deployment.config_file_path or "",
+                    command="rollback",
+                    command_args={
+                        "rolled_back_from": current_deployment.deployment_id,
+                        "apps": [app["name"] for app, _, _ in entries],
+                    },
+                    config_snapshot=config_source.config_snapshot or {},
+                    sources_snapshot=config_source.sources_snapshot,
+                    source_commit=config_source.source_commit,
+                    sbkube_version=__version__,
+                    operator=os.environ.get("USER"),
+                )
+            )
+        except Exception as e:
+            logger.warning(
+                f"Rollback not recorded (state DB write failed: {e}); "
+                "the rollback itself succeeded"
+            )
+            return
+
+        recorded = 0
+        for app, info, source in entries:
+            try:
+                new_revision = self._live_helm_revision(
+                    info["release_name"], info["namespace"]
+                )
+                if new_revision is None:
+                    logger.warning(
+                        f"Rollback of '{app['name']}' not recorded: live Helm "
+                        "revision could not be read"
+                    )
+                    continue
+                source_info = (
+                    _find_release_info(source, info["release_name"], info["namespace"])
+                    if source is not None
+                    else None
+                )
+                restored = source_info or {}
+                rollback_info = {
+                    "type": "helm",
+                    "release_name": info["release_name"],
+                    "namespace": info["namespace"],
+                    "revision": new_revision,
+                    "chart": restored.get("chart"),
+                    "chart_version": restored.get("chart_version"),
+                    "values_digest": restored.get("values_digest"),
+                    "rolled_back_from": current_deployment.deployment_id,
+                    "restored_from": source.deployment_id if source else None,
+                    "restored_revision": max(1, info["revision"] - 1),
+                }
+                app_deployment = db.add_app_deployment(
+                    deployment.id,
+                    AppDeploymentCreate(
+                        app_name=app["name"],
+                        app_type="helm",
+                        namespace=info["namespace"],
+                        app_config=app.get("config") or {},
+                    ),
+                )
+                db.update_app_deployment_status(
+                    app_deployment.id,
+                    DeploymentStatus.SUCCESS,
+                    rollback_info=rollback_info,
+                )
+                recorded += 1
+            except Exception as e:
+                logger.warning(
+                    f"Rollback of '{app['name']}' not recorded "
+                    f"(state DB write failed: {e}); the rollback itself succeeded"
+                )
+        try:
+            db.update_deployment_status(
+                deployment_id,
+                DeploymentStatus.SUCCESS
+                if recorded == len(entries)
+                else DeploymentStatus.PARTIALLY_FAILED,
+            )
+        except Exception as e:
+            logger.warning(f"Rollback record {deployment_id} status not updated: {e}")
 
     def _rollback_app(
         self,

@@ -310,7 +310,9 @@ class DeploymentDetail(BaseModel):
     app_config_dir: str
     status: DeploymentStatus
     error_message: str | None = None
+    config_file_path: str | None = None
     config_snapshot: dict[str, Any]
+    sources_snapshot: dict[str, Any] | None = None
     source_commit: str | None = None
     apps: list[dict[str, Any]] = []
     resources: list[ResourceInfo] = []

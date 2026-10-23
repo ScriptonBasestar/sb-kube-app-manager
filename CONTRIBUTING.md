@@ -233,7 +233,7 @@ examples/               # Example configurations
 ### Adding a New Command
 
 1. Create command file in `sbkube/commands/`
-2. Inherit from `EnhancedBaseCommand`
+2. Define a Click command function (see `sbkube/commands/apply.py`); optionally inherit `EnhancedBaseCommand` for class-based helpers (see `init.py`)
 3. Register in `sbkube/cli.py`
 4. Add to command categories in `SbkubeGroup`
 5. Document in `docs/02-features/commands.md`

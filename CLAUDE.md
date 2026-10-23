@@ -126,7 +126,7 @@ apps:
 
 ### Command Pattern
 
-All commands inherit from `EnhancedBaseCommand` (`sbkube/utils/base_command.py`):
+Commands are plain Click functions; only `init` inherits `BaseCommand` (alias of `EnhancedBaseCommand`, `sbkube/utils/base_command.py`), which provides:
 - `self.formatter` → `OutputFormatter` (human/llm/json/yaml)
 - `self.hook_executor` → `HookExecutor`
 - `self.config_manager` → `ConfigManager`
@@ -177,8 +177,8 @@ SbkubeError → ConfigValidationError | CliToolNotFoundError | HelmExecutionErro
 
 ### New Feature
 
-1. Inherit `EnhancedBaseCommand`
-2. Use `self.formatter` for output
+1. Write a Click command function in `sbkube/commands/` (see `apply.py`); use `EnhancedBaseCommand` only if class-based helpers (formatter, hooks) are needed (see `init.py`)
+2. Use the global `--format` option / OutputFormatter for output
 3. Register in `cli.py` + `SbkubeGroup.COMMAND_CATEGORIES`
 4. Write tests (success + error cases)
 5. Document in `docs/02-features/commands.md`

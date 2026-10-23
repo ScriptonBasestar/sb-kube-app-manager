@@ -323,7 +323,7 @@ formatter.print_output(result)
 
 ### EnhancedBaseCommand 통합
 
-모든 명령어는 `EnhancedBaseCommand`를 상속하며 자동으로 `output_format` 지원:
+모든 명령어는 Click 명령어이며, 일부는 상속하지 않는 헬퍼 클래스에 위임합니다. `EnhancedBaseCommand`(`BaseCommand`)를 상속하는 것은 현재 `init`뿐이며, 상속 시 자동으로 `output_format`을 지원합니다:
 
 ```python
 from sbkube.utils.base_command import EnhancedBaseCommand

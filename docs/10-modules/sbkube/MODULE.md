@@ -40,7 +40,7 @@ last_updated: 2026-02-25
 ### 새 명령어 추가
 
 1. `sbkube/commands/` 디렉토리에 모듈 생성
-2. `EnhancedBaseCommand` 상속 클래스 작성
+2. Click 명령어 작성 (필요 시 `EnhancedBaseCommand` 상속 헬퍼 클래스 사용 — 현재 `init`만 상속, `apply`/`validate`/`workspace`는 상속 없는 헬퍼 클래스에 위임)
 3. `cli.py`에 Click 명령어 등록 + `SbkubeGroup.COMMAND_CATEGORIES`에 추가
 
 ### 새 앱 타입 추가

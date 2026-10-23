@@ -135,7 +135,7 @@ SBKube is built with modern Python tooling, focusing on reliability, type safety
 
 ### Design Principles
 - **Hexagonal Architecture**: Clean separation of concerns
-- **Command Pattern**: Click command functions (`init` uses `EnhancedBaseCommand`)
+- **Command Pattern**: Click commands; only `init` inherits `EnhancedBaseCommand`, others may delegate to plain helper classes
 - **Repository Pattern**: ConfigManager for configuration access
 - **Strategy Pattern**: OutputFormatter + OutputManager for output
 - **Observer Pattern**: Hook system for workflow events

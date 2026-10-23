@@ -16,7 +16,7 @@ last_updated: 2026-02-25
 - **Version**: v0.11.0
 - **Key Points**:
   - Monolithic architecture with clear layer separation (CLI→Command→Model→State→External)
-  - EnhancedBaseCommand pattern for command extensibility
+  - Click commands, some delegating to helper classes; only `init` uses the `EnhancedBaseCommand` pattern
   - Pydantic 2.7.1+ with `extra="forbid"` for strong typing and validation
   - 9 app types via discriminated union (helm, yaml, action, exec, git, kustomize, http, noop, hook)
   - Unified config format (`sbkube.yaml`, apiVersion: sbkube/v1) + legacy backward compatibility
@@ -41,7 +41,7 @@ last_updated: 2026-02-25
 
 ### 2. 확장성 (Extensibility)
 
-- EnhancedBaseCommand 패턴으로 새 명령어 독립적 구현
+- Click 명령어 + 헬퍼 클래스 위임으로 새 명령어 독립적 구현 (`EnhancedBaseCommand` 상속은 현재 `init`만)
 - Discriminated Union으로 새 앱 타입 쉽게 추가
 - Hook 시스템으로 워크플로우 커스터마이징
 
@@ -74,7 +74,7 @@ last_updated: 2026-02-25
                    │
 ┌──────────────────▼─────────────────────────────────────┐
 │                Command Layer (16 commands)              │
-│  (EnhancedBaseCommand Pattern)                         │
+│  (Click commands + helper classes)                     │
 │  - 명령어별 비즈니스 로직 (prepare, build, etc.)        │
 │  - Unified + Legacy 설정 로딩 및 검증                   │
 │  - 앱별 처리 로직 (AppConfig 타입별 분기)               │
@@ -150,9 +150,11 @@ class SbkubeGroup(click.Group):
 
 #### EnhancedBaseCommand 패턴
 
+모든 진입점은 Click 명령어이고, `apply`/`validate`/`workspace`는 상속 없는 헬퍼 클래스(`ApplyCommand`, `ValidateCommand`, `Workspace*Command`)에 위임합니다. `EnhancedBaseCommand`(`BaseCommand`)를 상속하는 것은 `init`뿐입니다.
+
 ```python
 class EnhancedBaseCommand:
-    """Enhanced base class for all commands with validation support."""
+    """Enhanced base class with validation support (currently used only by `init`)."""
 
     def __init__(
         self,
@@ -530,7 +532,7 @@ if app_info.type == 'my-new-type':
 
 ### 2. 새 명령어 추가 가이드
 
-**단계 1: 명령어 클래스 작성**
+**단계 1: 명령어 클래스 작성** (선택 — `EnhancedBaseCommand` 상속은 필수가 아님)
 
 ```python
 # commands/my_command.py

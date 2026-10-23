@@ -41,7 +41,7 @@
 
 ### 2. Command Layer (`sbkube/commands/` — 16 commands)
 
-- Commands are Click functions (`@click.command`) registered in `cli.py`; only `init` uses a class (`InitCommand(BaseCommand)`, `BaseCommand` = alias of `EnhancedBaseCommand`)
+- Every entry point is a Click command registered in `cli.py`; some delegate to helper classes (`ApplyCommand`, `ValidateCommand`, `Workspace*Command`) that do not inherit a base class; only `init` inherits `BaseCommand` (alias of `EnhancedBaseCommand`)
 - Core workflow: `prepare → build → template → deploy`
 - Unified: `apply` (4단계 자동 실행)
 - State: `status`, `history`, `rollback`
@@ -76,7 +76,7 @@
 
 | Pattern        | Implementation                                   |
 | -------------- | ------------------------------------------------ |
-| **Command**    | Click command functions (`init` uses `BaseCommand`) |
+| **Command**    | Click commands (only `init` inherits `BaseCommand`) |
 | **Strategy**   | `OutputFormatter` — multi-format output          |
 | **Observer**   | Hook system — pre/post workflow events           |
 | **Repository** | `ConfigManager` — configuration access           |

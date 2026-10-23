@@ -933,7 +933,7 @@ class RollbackManager:
                         "deployment_id": deployment.deployment_id,
                         "timestamp": deployment.timestamp.isoformat(),
                         "status": deployment.status.value,
-                        "apps": len(deployment.app_count),
+                        "apps": deployment.app_count,
                         "can_rollback": deployment.status
                         in [
                             DeploymentStatus.SUCCESS,

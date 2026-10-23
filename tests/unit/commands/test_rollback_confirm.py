@@ -1,4 +1,4 @@
-"""Tests for rollback code-change confirmation and deploy rollback-point recording.
+"""Tests for rollback code-change confirmation, rollback-point recording and listing.
 
 Rollback compares chart, chart version, values digest and source commit of
 the current deployment with the state it restores; any difference needs the
@@ -850,3 +850,21 @@ def test_recording_failure_does_not_fail_rollback(
         db.get_latest_helm_release_deployment_id("test-cluster", "web", "default")
         == CURRENT
     )
+
+
+# ---------------------------------------------------------------- --list
+
+
+def test_list_rollback_points_reports_app_count(db) -> None:
+    _seed_pair(db)
+    args = ["--list", "--cluster", "test-cluster", "--namespace", "default"]
+    args += ["--base-dir", "/", "--app-dir", "apps/web"]
+    result, helm = _invoke(db, args)
+    assert result.exit_code == 0, result.output
+    assert (
+        f"{CURRENT} - 2026-10-22 12:00:00 - 1 apps - Status: success" in result.output
+    )
+    assert (
+        f"{PREVIOUS} - 2026-10-22 11:00:00 - 1 apps - Status: success" in result.output
+    )
+    helm.assert_not_called()

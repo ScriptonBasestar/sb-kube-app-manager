@@ -51,9 +51,13 @@ ______________________________________________________________________
 
 - ⚠️ `sbkube rollback`의 `helm status`·`helm rollback`·`kubectl`이 현재 kube context가 아니라
   배포 기록의 `sources_snapshot`에 있는 `kubeconfig`·`kubeconfig_context`로 실행된다. 전역
-  `--kubeconfig`/`--context`는 context가 기록과 같을 때만 대신 쓰이고, 다르면 거부한다.
-  기록이 없는 배포는 두 옵션을 반드시 줘야 하며 kubeconfig 파일이 없으면 거부한다. 롤백 기록에는
-  실제로 실행한 kubeconfig·context를 남긴다. `--list`는 상태 DB만 읽어 클러스터가 필요 없다.
+  `--kubeconfig`/`--context`는 context 이름과 그 context의 API server가 기록과 같을 때만
+  대신 쓰이고, 다르면 거부한다(k3s처럼 모든 context가 `default`인 경우도 구분). 기록이 없는
+  배포는 두 옵션을 반드시 줘야 하며, kubeconfig 파일이 없거나 context가 그 파일에 없으면
+  거부한다. 롤백 기록에는 실제로 실행한 kubeconfig·context를 남긴다. `--list`는 상태 DB만
+  읽어 클러스터가 필요 없다.
+- `sbkube deploy`가 배포 기록의 `kubeconfig`·`kubeconfig_context`에 sources.yaml 값이 아니라
+  실제로 쓴 값(전역 `--kubeconfig`/`--context` 우선)을 저장한다.
 - ⚠️ `--scope phase`에서 phase에 해당하는 앱을 찾지 못하면 경고 후 모든 앱을 롤백하던 동작을
   거부로 바꿨다. 빈 앱 목록(`app_names=[]`)은 "모든 앱"이 아니라 오류다.
 

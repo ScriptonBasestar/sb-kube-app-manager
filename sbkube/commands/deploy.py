@@ -1421,7 +1421,13 @@ def cmd(
                 app_config_dir=APP_CONFIG_DIR.resolve(),
                 config_file_path=config_file_path.resolve(),
                 config_data=config.model_dump(mode="json"),
-                sources_data=sources.model_dump(mode="json") if sources else None,
+                # The cluster actually used, which --kubeconfig/--context may
+                # override; rollback pins helm/kubectl to it
+                sources_data={
+                    **(sources.model_dump(mode="json") if sources else {}),
+                    "kubeconfig": kubeconfig,
+                    "kubeconfig_context": context,
+                },
                 warn=output.print_warning,
                 command_args={"app": app_name} if app_name else None,
             )

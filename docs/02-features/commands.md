@@ -155,9 +155,9 @@ sbkube rollback <deployment-id> --scope all --confirm-digest 3f9a0c1d2e4b
 ```
 
 **클러스터**: `helm`·`kubectl`은 현재 kube context가 아니라 배포 기록에 저장된
-`kubeconfig`·`kubeconfig_context`로 실행한다. 전역 `sbkube --kubeconfig <path> --context <name>
-rollback ...`은 context가 기록과 같을 때만 대신 쓰이고 다르면 거부한다. 클러스터 기록이 없는
-배포는 두 옵션이 필요하다. `--scope phase`가 앱을 하나도 찾지 못하면 전체 롤백 대신 거부한다.
+`kubeconfig`·`kubeconfig_context`(배포 때 실제로 쓴 값)로 실행한다. 전역 `sbkube
+--kubeconfig <path> --context <name> rollback ...`은 context 이름과 그 context의 API server가
+기록과 같을 때만 대신 쓰이고 다르면 거부한다. 클러스터 기록이 없는 배포는 두 옵션이 필요하다. `--scope phase`가 앱을 하나도 찾지 못하면 전체 롤백 대신 거부한다.
 
 **되돌리는 대상**: 롤백은 항상 기록된 Helm revision - 1로 되돌린다. `--target`은 되돌릴
 상태와 비교할 기록을 고르는 기준일 뿐이며, 그 기록의 revision이 revision - 1이 아니면

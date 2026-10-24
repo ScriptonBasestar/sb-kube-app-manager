@@ -97,7 +97,14 @@ def _seed(
 @pytest.fixture
 def db(tmp_path: Path) -> DeploymentDatabase:
     # The kubeconfig _seed records; rollback requires it to exist
-    (tmp_path / "kubeconfig").write_text("")
+    (tmp_path / "kubeconfig").write_text(
+        "contexts:\n"
+        "- name: test-context\n"
+        "  context: {cluster: test}\n"
+        "clusters:\n"
+        "- name: test\n"
+        "  cluster: {server: 'https://test:6443'}\n"
+    )
     return DeploymentDatabase(tmp_path / "state.db")
 
 

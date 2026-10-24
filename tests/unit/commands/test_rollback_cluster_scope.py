@@ -31,6 +31,15 @@ from sbkube.state.rollback import RollbackManager
 CURRENT = "dep-current"
 PREVIOUS = "dep-previous"
 CONTEXT = "home-cluster"
+SERVER = "https://home:6443"
+
+
+def _write_kubeconfig(path: Path, context: str = CONTEXT, server: str = SERVER) -> Path:
+    path.write_text(
+        f"contexts:\n- name: {context}\n  context: {{cluster: c}}\n"
+        f"clusters:\n- name: c\n  cluster: {{server: '{server}'}}\n"
+    )
+    return path
 
 
 def _seed(
@@ -81,9 +90,7 @@ def _seed(
 
 @pytest.fixture
 def kubeconfig(tmp_path: Path) -> Path:
-    path = tmp_path / "kubeconfig"
-    path.write_text("")
-    return path
+    return _write_kubeconfig(tmp_path / "kubeconfig")
 
 
 @pytest.fixture
@@ -169,7 +176,7 @@ def test_rollback_expands_recorded_home_path(
 ) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
     (tmp_path / ".kube").mkdir()
-    (tmp_path / ".kube" / "home").write_text("")
+    _write_kubeconfig(tmp_path / ".kube" / "home")
     _seed_pair(db, {"kubeconfig": "~/.kube/home", "kubeconfig_context": CONTEXT})
 
     result, _ = _invoke(db, [CURRENT, "--app", "web", "--dry-run"])
@@ -185,8 +192,7 @@ def test_rollback_with_matching_cli_context_uses_cli_kubeconfig(
     db, kubeconfig, tmp_path
 ) -> None:
     _seed_pair(db, _recorded(kubeconfig))
-    other = tmp_path / "other-kubeconfig"
-    other.write_text("")
+    other = _write_kubeconfig(tmp_path / "other-kubeconfig")
 
     result, helm = _invoke(
         db,
@@ -208,7 +214,36 @@ def test_rollback_refuses_cli_context_other_than_recorded(db, kubeconfig) -> Non
     )
 
     assert result.exit_code != 0
-    assert "--context dev-cluster differs from context home-cluster" in _text(result)
+    assert "is not the cluster recorded" in _text(result)
+    helm.assert_not_called()
+
+
+def test_rollback_refuses_same_context_name_on_another_server(
+    db, kubeconfig, tmp_path
+) -> None:
+    """k3s names every context `default`; the server tells clusters apart."""
+    _seed_pair(db, _recorded(kubeconfig))
+    other = _write_kubeconfig(tmp_path / "other", server="https://dev:6443")
+
+    result, helm = _invoke(
+        db,
+        [CURRENT, "--app", "web"],
+        group_args=["--kubeconfig", str(other), "--context", CONTEXT],
+    )
+
+    assert result.exit_code != 0
+    assert "is not the cluster recorded" in _text(result)
+    helm.assert_not_called()
+
+
+def test_rollback_refuses_context_missing_from_kubeconfig(db, tmp_path) -> None:
+    stale = _write_kubeconfig(tmp_path / "stale", context="dev-cluster")
+    _seed_pair(db, _recorded(stale))
+
+    result, helm = _invoke(db, [CURRENT, "--app", "web"])
+
+    assert result.exit_code != 0
+    assert f"Context {CONTEXT} not found in kubeconfig" in _text(result)
     helm.assert_not_called()
 
 

@@ -52,7 +52,8 @@ ______________________________________________________________________
 - ⚠️ `sbkube rollback`의 `helm status`·`helm rollback`·`kubectl`이 현재 kube context가 아니라
   배포 기록의 `sources_snapshot`에 있는 `kubeconfig`·`kubeconfig_context`로 실행된다. 전역
   `--kubeconfig`/`--context`는 context 이름과 그 context의 API server가 기록과 같을 때만
-  대신 쓰이고, 다르면 거부한다(k3s처럼 모든 context가 `default`인 경우도 구분). 기록이 없는
+  대신 쓰이고, 다르면 거부한다(context 이름이 같아도 server가 다르면 구분하지만, server URL까지
+  같은 `127.0.0.1:6443` 터널 같은 경우는 구분하지 못한다). 기록이 없는
   배포는 두 옵션을 반드시 줘야 하며, kubeconfig 파일이 없거나 context가 그 파일에 없으면
   거부한다. 롤백 기록에는 실제로 실행한 kubeconfig·context를 남긴다. `--list`는 상태 DB만
   읽어 클러스터가 필요 없다.

@@ -221,7 +221,7 @@ def test_rollback_refuses_cli_context_other_than_recorded(db, kubeconfig) -> Non
 def test_rollback_refuses_same_context_name_on_another_server(
     db, kubeconfig, tmp_path
 ) -> None:
-    """k3s names every context `default`; the server tells clusters apart."""
+    """k3s names every context `default`; a different server tells them apart."""
     _seed_pair(db, _recorded(kubeconfig))
     other = _write_kubeconfig(tmp_path / "other", server="https://dev:6443")
 

@@ -63,6 +63,10 @@ def _seed(
             config_file_path="/apps/web/config.yaml",
             command="deploy",
             config_snapshot={},
+            sources_snapshot={
+                "kubeconfig": str(db.db_path.parent / "kubeconfig"),
+                "kubeconfig_context": "test-context",
+            },
             source_commit=source_commit,
         )
     )
@@ -92,6 +96,8 @@ def _seed(
 
 @pytest.fixture
 def db(tmp_path: Path) -> DeploymentDatabase:
+    # The kubeconfig _seed records; rollback requires it to exist
+    (tmp_path / "kubeconfig").write_text("")
     return DeploymentDatabase(tmp_path / "state.db")
 
 
@@ -120,7 +126,7 @@ def _invoke(db: DeploymentDatabase, args: list[str], *, tty: bool = False, input
     with (
         patch(
             "sbkube.commands.rollback.RollbackManager",
-            lambda: RollbackManager(db_path=db.db_path),
+            lambda **kw: RollbackManager(db_path=db.db_path, **kw),
         ),
         patch("sbkube.commands.rollback._stdin_is_tty", return_value=tty),
         patch("sbkube.state.rollback.subprocess.run", helm),
@@ -298,6 +304,10 @@ def test_rollback_live_revision_mismatch_requires_confirmation(db, live_status) 
         "default",
         "-o",
         "json",
+        "--kubeconfig",
+        str(db.db_path.parent / "kubeconfig"),
+        "--kube-context",
+        "test-context",
     ]
 
 

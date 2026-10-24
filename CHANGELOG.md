@@ -47,6 +47,16 @@ ______________________________________________________________________
 - 기존 상태 DB에는 `deployments.source_commit` 열을 자동으로 추가한다. 이 기능 이전 배포는
   source commit이 없어 롤백 시 확인을 요구한다.
 
+**롤백 클러스터 고정과 앱 선택** (#6, #5, `sbkube/state/rollback_cluster.py`)
+
+- ⚠️ `sbkube rollback`의 `helm status`·`helm rollback`·`kubectl`이 현재 kube context가 아니라
+  배포 기록의 `sources_snapshot`에 있는 `kubeconfig`·`kubeconfig_context`로 실행된다. 전역
+  `--kubeconfig`/`--context`는 context가 기록과 같을 때만 대신 쓰이고, 다르면 거부한다.
+  기록이 없는 배포는 두 옵션을 반드시 줘야 하며 kubeconfig 파일이 없으면 거부한다. 롤백 기록에는
+  실제로 실행한 kubeconfig·context를 남긴다. `--list`는 상태 DB만 읽어 클러스터가 필요 없다.
+- ⚠️ `--scope phase`에서 phase에 해당하는 앱을 찾지 못하면 경고 후 모든 앱을 롤백하던 동작을
+  거부로 바꿨다. 빈 앱 목록(`app_names=[]`)은 "모든 앱"이 아니라 오류다.
+
 **marker 경계 기반 클러스터 설정 상속**
 
 - `apply`, `prepare`, `deploy`는 `.sbkube-workspace` 내부에서만 공용

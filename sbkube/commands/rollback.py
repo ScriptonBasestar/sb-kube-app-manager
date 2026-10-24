@@ -83,7 +83,9 @@ RollbackScope = Literal["app", "phase", "all"]
     "--limit", default=10, help="Maximum rollback points to show (for --list)"
 )
 @global_options
+@click.pass_context
 def cmd(
+    ctx: click.Context,
     deployment_id: str | None,
     target: str | None,
     app: tuple,
@@ -146,9 +148,19 @@ def cmd(
         12-character digest are printed and the rollback runs only after the
         digest is typed at an interactive terminal (or passed with
         --confirm-digest). --dry-run shows the comparison only.
+
+    \b
+    Cluster:
+        helm and kubectl run against the kubeconfig and context recorded
+        with the deployment, never the current kube context. The global
+        --kubeconfig/--context options replace them only when the context
+        matches the record, and are required for records without one.
     """
     try:
-        rollback_manager = RollbackManager()
+        obj = ctx.obj or {}
+        rollback_manager = RollbackManager(
+            kubeconfig=obj.get("kubeconfig"), context=obj.get("context")
+        )
 
         # List rollback points
         if list_points:
@@ -313,11 +325,16 @@ def _resolve_apps_for_scope(
         # This requires looking up phase metadata from deployment history
         phase_apps = rollback_manager.get_phase_apps(deployment_id, phase_name)
         if not phase_apps:
-            logger.warning(
-                f"No apps found for phase '{phase_name}' in deployment {deployment_id}"
+            # [] would select nothing; refuse instead of guessing. Deploy
+            # records may lack the app group (issue #33).
+            logger.error(
+                f"No apps found for phase '{phase_name}' in deployment "
+                f"{deployment_id}; check the phase name or use --app"
             )
-            return []
-        logger.info(f"Phase '{phase_name}' contains {len(phase_apps)} apps: {phase_apps}")
+            raise click.Abort
+        logger.info(
+            f"Phase '{phase_name}' contains {len(phase_apps)} apps: {phase_apps}"
+        )
         return phase_apps
 
     return None
@@ -424,9 +441,13 @@ def _print_rollback_result(result, scope: RollbackScope = "app") -> None:
     }
 
     if result["success"]:
-        logger.success(f"Rollback completed successfully ({scope_labels.get(scope, scope)})")
+        logger.success(
+            f"Rollback completed successfully ({scope_labels.get(scope, scope)})"
+        )
     else:
-        logger.error(f"Rollback completed with errors ({scope_labels.get(scope, scope)})")
+        logger.error(
+            f"Rollback completed with errors ({scope_labels.get(scope, scope)})"
+        )
 
     click.echo(f"\nRollback Summary (scope={scope}):")
     click.echo(f"  Successful: {len(result['rollbacks'])}")

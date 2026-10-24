@@ -24,6 +24,7 @@ from sbkube.models.deployment_state import (
     RollbackRequest,
 )
 from sbkube.state.database import DeploymentDatabase
+from sbkube.state.rollback_cluster import resolve_rollback_cluster
 from sbkube.state.rollback_compare import (
     AppComparison,
     AppSnapshot,
@@ -31,6 +32,7 @@ from sbkube.state.rollback_compare import (
     RollbackConfirmationRequired,
     compare_snapshots,
 )
+from sbkube.utils.cluster_config import apply_cluster_config_to_command
 from sbkube.utils.common import run_command
 from sbkube.utils.logger import get_logger
 
@@ -47,14 +49,33 @@ class RollbackManager:
     using tracked deployment information.
     """
 
-    def __init__(self, db_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        db_path: Path | None = None,
+        kubeconfig: str | None = None,
+        context: str | None = None,
+    ) -> None:
         """Initialize rollback manager.
 
         Args:
             db_path: Optional path to database file
+            kubeconfig: --kubeconfig override (needs context)
+            context: --context override (needs kubeconfig); must equal the
+                context recorded with the deployment when one was recorded
 
         """
         self.db = DeploymentDatabase(db_path)
+        self._cli_kubeconfig = kubeconfig
+        self._cli_context = context
+        # Set by _load_deployments; see resolve_rollback_cluster
+        self._cluster: tuple[str, str] | None = None
+
+    def _cluster_command(self, cmd: list[str]) -> list[str]:
+        """Pin a helm/kubectl call to the deployment's cluster."""
+        if self._cluster is None:
+            msg = "Rollback cluster was not resolved before a cluster call"
+            raise RollbackError(msg)
+        return apply_cluster_config_to_command(cmd, *self._cluster)
 
     def rollback_deployment(
         self,
@@ -148,6 +169,9 @@ class RollbackManager:
                 raise RollbackError(
                     msg,
                 )
+        self._cluster = resolve_rollback_cluster(
+            current_deployment, self._cli_kubeconfig, self._cli_context
+        )
         return current_deployment, target_deployment
 
     def _compare(
@@ -160,7 +184,7 @@ class RollbackManager:
         apps: list[AppComparison] = []
         for app in current_deployment.apps:
             # Same selection as _simulate_rollback/_execute_rollback
-            if request.app_names and app["name"] not in request.app_names:
+            if not _selected(app, request):
                 continue
 
             rollback_info = app.get("rollback_info") or {}
@@ -307,7 +331,7 @@ class RollbackManager:
         """
         cmd = ["helm", "status", release_name, "-n", namespace, "-o", "json"]
         return_code, stdout, stderr = run_command(
-            cmd, timeout=HELM_STATUS_TIMEOUT_SECONDS
+            self._cluster_command(cmd), timeout=HELM_STATUS_TIMEOUT_SECONDS
         )
         if return_code != 0:
             logger.warning(f"helm status {release_name} failed: {stderr.strip()}")
@@ -339,6 +363,12 @@ class RollbackManager:
             RollbackError: If validation fails
 
         """
+        # An empty selection (e.g. a phase that resolved to no apps) must not
+        # fall through to every app
+        if request.app_names is not None and not request.app_names:
+            msg = "No apps selected for rollback"
+            raise RollbackError(msg)
+
         # Check deployment status
         if (
             current_deployment.status
@@ -373,7 +403,7 @@ class RollbackManager:
             # helm rollback always restores current revision - 1; --target only
             # names the record that state is compared with.
             for app in current_deployment.apps:
-                if request.app_names and app["name"] not in request.app_names:
+                if not _selected(app, request):
                     continue
                 info = app.get("rollback_info") or {}
                 if info.get("type") != "helm" or info.get("revision") is None:
@@ -421,7 +451,7 @@ class RollbackManager:
 
         # Simulate app rollbacks
         for app in current_deployment.apps:
-            if request.app_names and app["name"] not in request.app_names:
+            if not _selected(app, request):
                 continue
 
             app_type = app["type"]
@@ -510,7 +540,7 @@ class RollbackManager:
 
         # Process each app
         for app in current_deployment.apps:
-            if request.app_names and app["name"] not in request.app_names:
+            if not _selected(app, request):
                 continue
 
             try:
@@ -587,7 +617,14 @@ class RollbackManager:
                         "apps": [app["name"] for app, _, _ in entries],
                     },
                     config_snapshot=config_source.config_snapshot or {},
-                    sources_snapshot=config_source.sources_snapshot,
+                    # The cluster this rollback ran on, for the next rollback
+                    sources_snapshot={
+                        **(config_source.sources_snapshot or {}),
+                        "kubeconfig": self._cluster[0],
+                        "kubeconfig_context": self._cluster[1],
+                    }
+                    if self._cluster
+                    else config_source.sources_snapshot,
                     source_commit=config_source.source_commit,
                     sbkube_version=__version__,
                     operator=os.environ.get("USER"),
@@ -793,7 +830,9 @@ class RollbackManager:
         )
 
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(
+                self._cluster_command(cmd), check=True, capture_output=True, text=True
+            )
             logger.success(f"Helm release rolled back: {release_name}")
         except subprocess.CalledProcessError as e:
             msg = f"Helm rollback failed: {e.stderr}"
@@ -823,7 +862,9 @@ class RollbackManager:
         logger.info(f"Deleting resource: {kind}/{name}")
 
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(
+                self._cluster_command(cmd), check=True, capture_output=True, text=True
+            )
             logger.success(f"Resource deleted: {kind}/{name}")
         except subprocess.CalledProcessError as e:
             if "NotFound" in e.stderr:
@@ -856,7 +897,9 @@ class RollbackManager:
 
             logger.info(f"Restoring resource: {kind}/{name}")
 
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(
+                self._cluster_command(cmd), check=True, capture_output=True, text=True
+            )
             logger.success(f"Resource restored: {kind}/{name}")
 
         except subprocess.CalledProcessError as e:
@@ -938,6 +981,11 @@ class RollbackManager:
             }
             for deployment in deployments
         ]
+
+
+def _selected(app: dict[str, Any], request: RollbackRequest) -> bool:
+    """Whether the request covers app; None selects every app, [] none."""
+    return request.app_names is None or app["name"] in request.app_names
 
 
 def _find_release_info(

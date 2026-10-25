@@ -199,6 +199,36 @@ class AccessDeployerSettings(ConfigBaseModel):
         return v
 
 
+class AccessAdminSettings(ConfigBaseModel):
+    """Optional node-only administrator transport; unset keeps local kubectl."""
+
+    ssh_host: str | None = Field(
+        default=None, description="SSH destination (alias or user@host) of a k3s server"
+    )
+    expected_hostname: str | None = Field(
+        default=None, description="Exact hostname returned by the selected k3s server"
+    )
+
+    @field_validator("ssh_host", "expected_hostname")
+    @classmethod
+    def validate_destination(cls, value: str | None) -> str | None:
+        if value is not None and not re.fullmatch(
+            r"[a-zA-Z0-9_][a-zA-Z0-9_.@:-]*", value
+        ):
+            raise ValueError(
+                "use a hostname or SSH alias, without options or shell syntax"
+            )
+        return value
+
+    @model_validator(mode="after")
+    def require_identity(self) -> "AccessAdminSettings":
+        if bool(self.ssh_host) != bool(self.expected_hostname):
+            raise ValueError(
+                "ssh_host and expected_hostname must be configured together"
+            )
+        return self
+
+
 class AccessSettings(ConfigBaseModel):
     """Agent access boundary (``settings.access``).
 
@@ -221,6 +251,11 @@ class AccessSettings(ConfigBaseModel):
             description="Pick readonly/deployer kubeconfig per command (reserved; not used yet)",
         ),
     ] = True
+
+    admin: AccessAdminSettings = Field(
+        default_factory=AccessAdminSettings,
+        description="Node-only admin transport (SSH to sudo -n k3s kubectl)",
+    )
 
     namespace: Annotated[
         str,

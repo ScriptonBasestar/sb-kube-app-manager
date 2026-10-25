@@ -84,7 +84,12 @@ def mint_token(
     if proc.returncode != 0:
         detail = (proc.stderr.strip().splitlines() or [""])[0][:200]
         raise TokenIssueError(detail or f"kubectl exited {proc.returncode}")
-    token = proc.stdout.strip()
+    return token_from_output(proc.stdout)
+
+
+def token_from_output(output: str) -> str:
+    """Validate token output without ever including it in an error message."""
+    token = output.strip()
     if not token:
         raise TokenIssueError("kubectl returned an empty token")
     if any(ch.isspace() for ch in token):
@@ -179,7 +184,8 @@ def same_file(first: Path, second: Path) -> bool:
 
 
 def _resolve_ref(value: str, base: Path) -> Path:
-    path = Path(value).expanduser()
+    # client-go resolves kubeconfig references relative to the file; no tilde expansion.
+    path = Path(value)
     return path if path.is_absolute() else base.parent / path
 
 
@@ -194,10 +200,17 @@ def referenced_credential_files(path: Path, data: dict[str, Any]) -> list[Path]:
             value = user.get(key)
             if isinstance(value, str) and value:
                 found.append(_resolve_ref(value, path))
+    for entry in entries(data, "clusters"):
+        cluster = entry.get("cluster")
+        value = (
+            cluster.get("certificate-authority") if isinstance(cluster, dict) else None
+        )
+        if isinstance(value, str) and value:
+            found.append(_resolve_ref(value, path))
     return found
 
 
-def protected_files(admin: Path, readonly: Path | None) -> dict[Path, str]:
+def protected_files(admin: Path | None, readonly: Path | None) -> dict[Path, str]:
     """Every file ``issue`` must not write: the kubeconfigs and their credential files.
 
     Raises:
@@ -206,7 +219,12 @@ def protected_files(admin: Path, readonly: Path | None) -> dict[Path, str]:
 
     """
     protected: dict[Path, str] = {}
-    sources = [("admin", admin)]
+    sources = []
+    if admin is not None:
+        if admin.exists():
+            sources.append(("admin", admin))
+        else:
+            protected[admin] = "admin kubeconfig"
     if readonly is not None:
         if readonly.exists():
             sources.append(("readonly", readonly))
@@ -273,7 +291,7 @@ def build_deployer_kubeconfig(
     cluster = {k: admin_cluster[k] for k in _COPIED_CLUSTER_KEYS if k in admin_cluster}
     ca_file = admin_cluster.get("certificate-authority")
     if isinstance(ca_file, str):
-        resolved = Path(ca_file).expanduser()
+        resolved = Path(ca_file)
         if not resolved.is_absolute():
             resolved = admin_path.parent / resolved
         cluster["certificate-authority"] = str(resolved)

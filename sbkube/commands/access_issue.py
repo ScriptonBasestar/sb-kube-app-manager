@@ -13,6 +13,7 @@ from sbkube.commands.access import (
     console,
 )
 from sbkube.models.access_model import MIN_TOKEN_TTL_SECONDS, parse_go_duration_seconds
+from sbkube.utils.access_admin import NodeAdmin, cluster_ca
 from sbkube.utils.access_checks import run_can_i
 from sbkube.utils.access_issue import (
     TOKEN_FILE_NAME,
@@ -29,7 +30,11 @@ from sbkube.utils.access_issue import (
     same_file,
     write_private_file,
 )
-from sbkube.utils.access_kubeconfig import KubeconfigError, read_kubeconfig
+from sbkube.utils.access_kubeconfig import (
+    KubeconfigError,
+    context_cluster,
+    read_kubeconfig,
+)
 from sbkube.utils.datetime_utils import utc_now_aware
 from sbkube.utils.deploy_gate import _is_interactive, require_human_terminal
 
@@ -81,20 +86,26 @@ def issue(ctx: click.Context, ttl: str | None, config_file: Path) -> None:
             "no context: set settings.kubeconfig_context or pass --context."
         )
     admin_setting = obj.get("kubeconfig") or settings.kubeconfig
-    if not admin_setting:
+    node = NodeAdmin(access.admin) if access.admin.ssh_host else None
+    if not admin_setting and node is None:
         raise click.ClickException(
             "no admin kubeconfig: set settings.kubeconfig or pass --kubeconfig."
         )
     duration, seconds = _validated_ttl(ttl if ttl is not None else deployer.token_ttl)
 
-    admin = _expand(admin_setting)
+    admin = _expand(admin_setting) if admin_setting else None
     deployer_path = _expand(deployer.kubeconfig).absolute()
     token_path = (_expand(access.token_dir) / TOKEN_FILE_NAME).absolute()
     readonly = (
         _expand(access.readonly.kubeconfig) if access.readonly.kubeconfig else None
     )
-    if not admin.is_file():
+    if node is None and (admin is None or not admin.is_file()):
         raise click.ClickException(f"admin kubeconfig not found: {admin}")
+    source = readonly if node is not None else admin
+    if source is None or not source.is_file():
+        raise click.ClickException(
+            "node access requires an existing readonly kubeconfig"
+        )
     try:
         protected = protected_files(admin, readonly)
     except KubeconfigError as e:
@@ -120,15 +131,29 @@ def issue(ctx: click.Context, ttl: str | None, config_file: Path) -> None:
         raise click.ClickException(f"token not issued: {e}") from e
     try:
         kubeconfig = build_deployer_kubeconfig(
-            read_kubeconfig(admin), context, admin, token_path
+            read_kubeconfig(source), context, source, token_path
         )
+        expected_ca = None
+        if node is not None:
+            _, cluster = context_cluster(read_kubeconfig(source), context, source)
+            expected_ca = cluster_ca(cluster, source)
     except KubeconfigError as e:
         raise click.ClickException(str(e)) from e
+    except TokenIssueError as e:
+        raise click.ClickException(f"token not issued: {e}") from e
 
     try:
-        token = mint_token(
-            admin, context, access.namespace, deployer.service_account, duration
-        )
+        if node is not None:
+            assert expected_ca is not None
+            node.verify(expected_ca)
+            token = node.mint_token(
+                access.namespace, deployer.service_account, duration
+            )
+        else:
+            assert admin is not None
+            token = mint_token(
+                admin, context, access.namespace, deployer.service_account, duration
+            )
         ensure_private_dir(token_path.parent)
         write_private_file(token_path, token + "\n")
         del token

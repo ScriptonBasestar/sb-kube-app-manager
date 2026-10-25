@@ -132,6 +132,107 @@ def _all_text(result) -> str:
     return result.output + str(result.exception or "")
 
 
+def _node_config(env: dict) -> None:
+    config = yaml.safe_load(env["config"].read_text())
+    config["settings"].pop("kubeconfig")
+    config["settings"]["access"]["admin"] = {
+        "ssh_host": "operator@node-lan",
+        "expected_hostname": "node1",
+    }
+    env["config"].write_text(yaml.safe_dump(config))
+    _admin(env["readonly"])
+    data = yaml.safe_load(env["readonly"].read_text())
+    data["users"] = [
+        {"name": "adm", "user": {"tokenFile": str(env["tmp"] / "readonly.token")}}
+    ]
+    env["readonly"].write_text(yaml.safe_dump(data))
+    env["admin"].unlink()
+
+
+def test_node_issue_without_local_admin(
+    env: dict, caplog: pytest.LogCaptureFixture
+) -> None:
+    _node_config(env)
+    calls: list = []
+    caplog.set_level(logging.DEBUG)
+    outputs = iter([_proc(0, "node1\n"), _proc(0, "Q0E="), _proc(0, SENTINEL)])
+
+    def command_run(command, **kwargs):
+        if command[0] == "ssh":
+            return next(outputs)
+        return _kubectl(calls=calls)(command, **kwargs)
+
+    with (
+        patch(TTY, return_value=True),
+        patch(
+            "sbkube.utils.access_admin.subprocess.run",
+            side_effect=command_run,
+        ) as remote,
+    ):
+        result = _issue(env)
+    assert result.exit_code == 0, result.output
+    assert remote.call_count == 4
+    assert env["token"].read_text().strip() == SENTINEL
+    assert SENTINEL not in _all_text(result) + caplog.text + env["deploy"].read_text()
+    assert ADMIN_KEY not in env["deploy"].read_text()
+    assert str(env["readonly"]) not in remote.call_args_list[2].args[0][-1]
+    assert (
+        yaml.safe_load(env["deploy"].read_text())["clusters"][0]["cluster"]["server"]
+        == SERVER
+    )
+
+
+def test_node_issue_ca_mismatch_leaves_files_absent(env: dict) -> None:
+    _node_config(env)
+    with (
+        patch(TTY, return_value=True),
+        patch(
+            "sbkube.utils.access_admin.subprocess.run",
+            side_effect=[_proc(0, "node1"), _proc(0, "Tk9UQ0E=")],
+        ) as remote,
+    ):
+        result = _issue(env)
+    assert result.exit_code != 0
+    assert "CA does not match" in result.output
+    assert remote.call_count == 2
+    assert not env["token_dir"].exists()
+    assert not env["deploy"].exists()
+
+
+def test_node_issue_collision_stops_before_ssh(env: dict) -> None:
+    _node_config(env)
+    config = yaml.safe_load(env["config"].read_text())
+    config["settings"]["access"]["deployer"]["kubeconfig"] = str(env["readonly"])
+    env["config"].write_text(yaml.safe_dump(config))
+    with (
+        patch(TTY, return_value=True),
+        patch("sbkube.utils.access_admin.subprocess.run") as remote,
+    ):
+        result = _issue(env)
+    assert result.exit_code != 0
+    remote.assert_not_called()
+
+
+@pytest.mark.parametrize("ref", ["deploy.token", "~/deploy.token"])
+def test_ca_file_collision_is_protected(env: dict, ref: str) -> None:
+    ca_parent = env["tmp"] / "~" if ref.startswith("~") else env["tmp"]
+    ca_parent.mkdir(exist_ok=True)
+    ca_file = ca_parent / "deploy.token"
+    ca_file.write_text("public-ca")
+    data = yaml.safe_load(env["admin"].read_text())
+    data["clusters"][0]["cluster"] = {"server": SERVER, "certificate-authority": ref}
+    env["admin"].write_text(yaml.safe_dump(data))
+    config = yaml.safe_load(env["config"].read_text())
+    config["settings"]["access"]["token_dir"] = str(ca_parent)
+    env["config"].write_text(yaml.safe_dump(config))
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    assert "must not be" in result.output
+    run.assert_not_called()
+    assert ca_file.read_text() == "public-ca"
+
+
 # --- guards ----------------------------------------------------------------
 
 

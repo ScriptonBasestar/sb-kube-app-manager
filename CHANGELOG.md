@@ -30,6 +30,11 @@ ______________________________________________________________________
   참조하는 자격증명 파일과 겹치면 거부하며, 기존 토큰 디렉토리는 chmod하지 않고 느슨하면 거부한다. 마지막에
   `auth can-i create deployments.apps -A`로 확인한다. `namespace`와 ServiceAccount 이름은 DNS-1123으로 검증한다.
 - `init`·`revoke`와 `auto_profile` 동작은 이후 단계다.
+- ✅ **NEW** `access.admin.ssh_host`·`expected_hostname`: `access issue`가 노드의 `sudo -n k3s kubectl`로
+  토큰을 발급한다. 로컬 관리자 파일 없이 agent kubeconfig의 server·CA를 사용하고, SSH hostname과 공개
+  서버 CA가 일치해야 발급한다. SSH 호스트 키 검증을 유지하며 원격 실패 출력은 숨긴다.
+- ✅ **FIX** `access issue`의 충돌 보호에 관리자·readonly의 서버 CA 파일을 포함한다.
+  kubeconfig 내부 파일 참조의 `~`는 client-go처럼 홈으로 확장하지 않는다.
 
 **배포 게이트 `sbkube-gate.yaml`** (`sbkube/utils/deploy_gate.py`, `deploy_gate_config.py`)
 

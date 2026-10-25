@@ -550,6 +550,8 @@ settings:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `access.auto_profile` | bool | `true` | 명령별 kubeconfig 자동 선택. 1단계에서는 스키마만 있고 동작하지 않음 |
+| `access.admin.ssh_host` | string | null | 노드 전용 관리자 SSH alias 또는 `user@host`. 없으면 기존 로컬 관리자 kubectl 사용 |
+| `access.admin.expected_hostname` | string | null | SSH 노드에서 반환해야 하는 정확한 hostname. `ssh_host`와 함께 지정 |
 | `access.namespace` | string | `"agent-access"` | ServiceAccount를 두는 네임스페이스 |
 | `access.token_dir` | string | `"~/.kube/agent-access"` | 토큰 파일 디렉토리 |
 | `access.readonly.service_account` | string | `"agent-readonly"` | 에이전트용 ServiceAccount |
@@ -560,6 +562,12 @@ settings:
 | `access.deployer.token_ttl` | string | `"1h"` | 발급 토큰 수명. `30m`, `1h`, `1h30m` 같은 Go 형식. 단위는 `h`·`m`·`s` 순서로 한 번씩만(`1h1h` 거부), 최소 `10m`(TokenRequest `expirationSeconds` ≥ 600) |
 
 - 모든 모델은 `extra="forbid"`라 알 수 없는 필드는 거부된다.
+- 노드 실행은 `access.admin: {ssh_host: operator@node-lan, expected_hostname: node1}`로 설정한다.
+  두 필드는 함께 지정하며 옵션·공백·셸 문법은 허용하지 않는다. SSH 라우팅과 known_hosts는 운영자의
+  기존 설정이 소유하고, 실행은 BatchMode·StrictHostKeyChecking과 노드의 비대화형 `sudo -n k3s kubectl`을 쓴다.
+  로컬 관리자 파일 없이 `access.readonly.kubeconfig`의 server·CA로 deployer 파일을 만든다.
+  토큰 발급 전에 실제 hostname과 공개 서버 CA를 대조하며 불일치·HTTPS가 아닌 API URL·TLS 검증 해제·CA 누락은 거부한다.
+  관리자 SSH 권한 자체를 에이전트와 분리하는 기능은 아니다.
 - `access`는 전역(루트) `settings`에서만 읽는다. 상속 대상 설정에 포함되지 않으므로 phase·앱 수준에 적어도
   검증만 통과할 뿐 어떤 명령도 읽지 않는다.
 - `access.namespace`, `access.readonly.service_account`, `access.deployer.service_account`는 DNS-1123
@@ -567,7 +575,8 @@ settings:
   어기면 스키마 검증에서 거부된다.
 - `access.deployer.kubeconfig`는 `access issue`가 쓰는 파일이다. 관리자·읽기 전용 kubeconfig와 다른 경로여야
   하고, 이미 있으면 `access issue`가 만든 형태(사용자 `deploy` 하나, `tokenFile`만, 이번 토큰 파일 경로)일 때만
-  덮어쓴다. 관리자·읽기 전용 kubeconfig가 참조하는 자격증명 파일과도 달라야 한다.
+  덮어쓴다. 관리자·읽기 전용 kubeconfig가 참조하는 자격증명·서버 CA 파일과도 달라야 한다.
+  kubeconfig 내부 파일 참조는 해당 파일 디렉토리 기준이며 `~`를 홈으로 확장하지 않는다.
 - `access.token_dir`에는 `access issue`가 `deploy.token`(0600)을 쓴다. 디렉토리는 없으면 0700으로 만들고, 이미 있으면
   chmod하지 않고 group/other 권한이 있으면 거부한다.
   `deployer.kubeconfig`의 `tokenFile`은 이 파일의 절대 경로다.

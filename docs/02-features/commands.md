@@ -309,8 +309,10 @@ sbkube access issue --ttl 30m -f sbkube.yaml
 
 - 관리자 kubeconfig·context는 전역 `--kubeconfig`/`--context`, 없으면 `settings.kubeconfig`/
   `kubeconfig_context`다. `settings.access`와 `access.deployer.kubeconfig`가 필요하다.
+  `access.admin.ssh_host`가 있으면 아래 노드 실행 경로를 쓰고 로컬 관리자 파일은 요구하지 않는다.
   deployer kubeconfig와 토큰 파일은 관리자·읽기 전용 kubeconfig, 그리고 그 사용자들이 참조하는 `tokenFile`·
-  `client-certificate`·`client-key` 파일(상대 경로는 해당 kubeconfig 기준, 심링크·하드링크 포함)과 같으면
+  `client-certificate`·`client-key`·클러스터 `certificate-authority` 파일(상대 경로는 해당 kubeconfig 기준,
+  `~`도 문자 그대로 상대 경로로 처리, 심링크·하드링크 포함)과 같으면
   거부하고, 서로 같아도 거부한다. 존재하는 읽기 전용 kubeconfig를 읽을 수 없으면 건너뛰지 않고 거부한다.
   모든 거부는 kubectl 호출 전에 일어난다.
 - `--ttl`은 `deployer.token_ttl`을 덮어쓴다(같은 파서, 최소 `10m`). 값은 그대로 kubectl `--duration`에 간다.
@@ -335,6 +337,26 @@ sbkube access issue --ttl 30m -f sbkube.yaml
 - 출력: 쓴 경로, 만료 시각(로컬·UTC; 요청한 값이며 API server가 `--service-account-max-token-expiration`으로 줄일 수 있음), can-i 결과, 토큰이 만료된다는 안내. 토큰 값은 출력하지 않는다.
 - 토큰은 만료되며 갱신은 `issue`를 다시 실행하는 것이다. 만료 후 deployer kubeconfig는 `Unauthorized`가 된다.
 - `access`는 배포 게이트에서 읽기 전용 명령으로 분류된다(`create token`은 워크로드 변경이 아니라 자격증명 발급).
+
+#### 노드 전용 관리자 경로
+
+`access.admin.ssh_host`와 `expected_hostname`을 함께 설정하면 사람의 SSH 접근으로 노드의
+`sudo -n k3s kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml`을 실행한다. 로컬 관리자 kubeconfig를
+복사하거나 다운로드하지 않는다. `access.readonly.kubeconfig`에 해당 context와 서버 CA가 있어야 하며,
+deployer kubeconfig의 server·CA는 이 읽기 전용 파일에서 가져온다.
+
+- 호스트는 기존 SSH alias 또는 `user@host`다. 운영자가 소유한 SSH 설정에서 직접 LAN 경로와 프록시 경로를
+  선택하고, 실행 전에 실제 목적지와 호스트 키를 확인한다. sbkube는 라우팅을 재작성하지 않는다.
+- SSH는 TTY 없이 BatchMode와 StrictHostKeyChecking을 켠다. 기존 known_hosts와 비대화형 `sudo -n` 권한이
+  필요하며, 인증 대화나 자동 호스트 키 등록은 하지 않는다.
+- agent 파일의 API URL이 HTTPS인지 확인한다. 먼저 `hostname`이 `expected_hostname`과 같은지 확인하고, 노드 관리자 kubeconfig에서 공개 서버 CA만
+  읽어 agent 파일의 CA와 대조한다. hostname·CA가 다르거나 TLS 검증이 꺼져 있으면 발급 전에 중단한다.
+- 그다음 노드에서 TokenRequest를 실행해 토큰만 받아 로컬 0600 파일에 쓴다. SSH 실패 시 원격 stdout·stderr를
+  노출하지 않고 종료 코드와 점검할 항목을 알린다. 발급 후 deployer 권한 검사는 기존과 같다.
+- 이 경로는 자격증명을 자동 격리하지 않는다. 같은 uid의 에이전트도 관리자 SSH 권한을 사용할 수 있으면
+  관리자 접근은 여전히 가능하다. 관리자 SSH 인증의 잠금 해제·권한 관리는 운영자의 책임이다.
+
+K3s 관리자 파일과 내장 kubectl 동작은 [K3s CLI 문서](https://docs.k3s.io/cli)를 따른다.
 
 ---
 

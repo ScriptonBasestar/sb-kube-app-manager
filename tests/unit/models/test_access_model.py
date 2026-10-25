@@ -15,6 +15,8 @@ def test_access_defaults() -> None:
     access = UnifiedSettings(access={}).access
     assert access is not None
     assert access.auto_profile is True
+    assert access.admin.ssh_host is None
+    assert access.admin.expected_hostname is None
     assert access.namespace == "agent-access"
     assert access.token_dir == "~/.kube/agent-access"
     assert access.readonly.service_account == "agent-readonly"
@@ -23,6 +25,36 @@ def test_access_defaults() -> None:
     assert access.deployer.service_account == "sbkube-deployer"
     assert access.deployer.kubeconfig is None
     assert access.deployer.token_ttl == "1h"
+
+
+@pytest.mark.parametrize(
+    "admin",
+    [
+        {"ssh_host": "node"},
+        {"expected_hostname": "node"},
+        {"ssh_host": "-oProxyCommand=evil", "expected_hostname": "node"},
+        {"ssh_host": "node; id", "expected_hostname": "node"},
+        {"ssh_host": "node", "expected_hostname": "$(id)"},
+        {"ssh_host": "", "expected_hostname": "node"},
+    ],
+)
+def test_node_admin_rejects_missing_identity_and_shell_syntax(admin: dict) -> None:
+    with pytest.raises(ConfigValidationError):
+        UnifiedSettings(access={"admin": admin})
+
+
+def test_node_admin_schema() -> None:
+    settings = UnifiedSettings(
+        access={
+            "admin": {
+                "ssh_host": "operator@node-lan",
+                "expected_hostname": "node1",
+            }
+        }
+    )
+    assert settings.access.admin.ssh_host == "operator@node-lan"
+    schema = UnifiedSettings.model_json_schema()
+    assert "AccessAdminSettings" in schema["$defs"]
 
 
 def test_extra_rules_accept_rbac_field_names() -> None:

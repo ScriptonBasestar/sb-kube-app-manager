@@ -50,6 +50,8 @@ MUTATION_SITE_FILES: dict[str, tuple[str, ...]] = {
     # `kubectl create token` is a TokenRequest (a credential, not a workload
     # mutation) and `access` is read-only for the gate (see READ_ONLY_COMMANDS).
     "sbkube/utils/access_issue.py": (),
+    # Same TokenRequest via node-only SSH; no workload/RBAC mutations here.
+    "sbkube/utils/access_admin.py": (),
     "sbkube/commands/check_updates.py": (),
     "sbkube/diagnostics/kubernetes_checks.py": (),
     "sbkube/models/config_model.py": (),

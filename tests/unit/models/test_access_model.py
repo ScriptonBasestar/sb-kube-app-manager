@@ -161,3 +161,29 @@ def test_policy_rule_accepts_one_target_kind(rule: dict) -> None:
     settings = UnifiedSettings(access={"readonly": {"extra_rules": [rule]}})
     assert settings.access is not None
     assert len(settings.access.readonly.extra_rules) == 1
+
+
+@pytest.mark.parametrize("bad", ["", "-A", "Agent", "a_b", "-x", "x-", "a" * 64, "a b"])
+@pytest.mark.parametrize(
+    "block",
+    [
+        lambda v: {"namespace": v},
+        lambda v: {"readonly": {"service_account": v}},
+        lambda v: {"deployer": {"service_account": v}},
+    ],
+)
+def test_names_must_be_dns_labels(bad: str, block) -> None:
+    with pytest.raises(ConfigValidationError, match="DNS-1123"):
+        UnifiedSettings(access=block(bad))
+
+
+def test_names_accept_dns_labels() -> None:
+    settings = UnifiedSettings(
+        access={
+            "namespace": "a" * 63,
+            "readonly": {"service_account": "agent-ro1"},
+            "deployer": {"service_account": "x"},
+        }
+    )
+    assert settings.access is not None
+    assert settings.access.namespace == "a" * 63

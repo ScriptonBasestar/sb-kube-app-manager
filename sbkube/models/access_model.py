@@ -26,6 +26,20 @@ _GO_DURATION_SECONDS = {"h": 3600, "m": 60, "s": 1}
 MIN_TOKEN_TTL_SECONDS = 600
 
 
+_DNS_LABEL = re.compile(r"[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?")
+
+
+def validate_dns_label(value: str, field: str) -> str:
+    """Names passed to kubectl must be DNS-1123 labels (rejects "", "-A", uppercase)."""
+    if not _DNS_LABEL.fullmatch(value):
+        msg = (
+            f"{field} {value!r} is not a DNS-1123 label: lowercase letters, digits "
+            "and - only, starting and ending alphanumeric, at most 63 characters"
+        )
+        raise ValueError(msg)
+    return value
+
+
 def parse_go_duration_seconds(value: str) -> float:
     """Parse a Go-style duration (``30m``, ``1h``, ``1h30m``) into seconds.
 
@@ -123,6 +137,11 @@ class AccessReadonlySettings(ConfigBaseModel):
         ),
     ] = "agent-readonly"
 
+    @field_validator("service_account")
+    @classmethod
+    def validate_service_account(cls, v: str) -> str:
+        return validate_dns_label(v, "service_account")
+
     kubeconfig: Annotated[
         str | None,
         Field(
@@ -147,6 +166,11 @@ class AccessDeployerSettings(ConfigBaseModel):
             description="ServiceAccount that deploys",
         ),
     ] = "sbkube-deployer"
+
+    @field_validator("service_account")
+    @classmethod
+    def validate_service_account(cls, v: str) -> str:
+        return validate_dns_label(v, "service_account")
 
     kubeconfig: Annotated[
         str | None,
@@ -204,6 +228,11 @@ class AccessSettings(ConfigBaseModel):
             description="Namespace holding the access ServiceAccounts",
         ),
     ] = "agent-access"
+
+    @field_validator("namespace")
+    @classmethod
+    def validate_namespace(cls, v: str) -> str:
+        return validate_dns_label(v, "namespace")
 
     token_dir: Annotated[
         str,

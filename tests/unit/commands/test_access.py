@@ -732,3 +732,13 @@ def test_verify_malformed_readonly_kubeconfig_names_file(setup: dict) -> None:
     assert "readonly" in result.output
     assert "Traceback" not in result.output
     run.assert_not_called()
+
+
+def test_verify_zero_namespaces_is_error(setup: dict) -> None:
+    fake = _answering(namespaces=[])
+    with patch("sbkube.utils.access_checks.subprocess.run", side_effect=fake):
+        result = _run(["verify", "-f", str(setup["config"])])
+
+    assert result.exit_code == 1
+    assert "0 namespaces" in result.output
+    assert "ERROR" in result.output

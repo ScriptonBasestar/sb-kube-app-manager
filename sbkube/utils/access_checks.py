@@ -279,5 +279,11 @@ def verify_rows(readonly: Path, context: str, access: AccessSettings) -> list[Ro
     except NamespaceListError as e:
         rows.append(("get namespaces -o name", "listable", str(e) or "error", ERROR))
         return rows
+    if not discovered:
+        # A cluster always has namespaces; an empty list means the answer is
+        # unreliable (filtered or partial), so checking only access.namespace
+        # would silently cover less than it claims.
+        rows.append(("get namespaces -o name", "non-empty", "0 namespaces", ERROR))
+        return rows
     namespaces = sorted({*discovered, access.namespace})
     return [*rows, *_namespace_rows(readonly, context, namespaces)]

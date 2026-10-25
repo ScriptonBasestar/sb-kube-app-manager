@@ -23,7 +23,12 @@ ______________________________________________________________________
   `token_ttl`은 최소 10m·단위 중복 거부, `extra_rules` 항목은 `resources`/`nonResourceURLs` 중 하나만 허용.
 - ✅ **NEW** `sbkube access audit`: `KUBECONFIG`·`settings.kubeconfig`·읽기 전용 kubeconfig에서 client-cert
   (관리자 수준) 사용자를 찾아 보고한다. 클러스터 호출 없음, 값은 출력하지 않음, `--strict`면 발견 시 종료 코드 1.
-- `init`·`issue`·`revoke`와 `auto_profile` 동작은 이후 단계다.
+- ✅ **NEW** `sbkube access issue [--ttl DURATION]` (2단계): 사람만(TTY) 실행해 관리자 자격증명으로
+  deployer ServiceAccount 토큰을 발급하고 `<token_dir>/deploy.token`(0600)과, 그 토큰 파일만 쓰는
+  deployer kubeconfig(0600)를 원자적으로 쓴다. 관리자 사용자 자격증명은 복사하지 않고, 토큰은 출력·로그·
+  argv·예외에 나오지 않는다. `tokenFile`로만 인증하는 기존 파일만 덮어쓰며, 마지막에
+  `auth can-i create deployments.apps -A`로 확인한다. `namespace`와 ServiceAccount 이름은 DNS-1123으로 검증한다.
+- `init`·`revoke`와 `auto_profile` 동작은 이후 단계다.
 
 **배포 게이트 `sbkube-gate.yaml`** (`sbkube/utils/deploy_gate.py`, `deploy_gate_config.py`)
 

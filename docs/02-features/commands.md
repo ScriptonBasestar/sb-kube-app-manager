@@ -296,6 +296,40 @@ sbkube access audit --strict
 - 읽을 수 없거나 YAML이 깨진 파일은 보고만 하고 계속한다.
 - 발견 사항이 있어도 종료 코드는 0이다. `--strict`면 하나라도 있을 때 1이다.
 
+### access issue — 배포 토큰 발급과 deployer kubeconfig 생성
+
+관리자 자격증명으로 deployer ServiceAccount의 짧은 수명 토큰을 발급하고, 그 토큰만 쓰는 kubeconfig를
+만듭니다. **사람만 실행할 수 있습니다**: stdin과 stderr가 모두 TTY여야 하며(`gate grant`와 같은 검사),
+에이전트의 비대화형 실행은 거부됩니다.
+
+```bash
+sbkube access issue
+sbkube access issue --ttl 30m -f sbkube.yaml
+```
+
+- 관리자 kubeconfig·context는 전역 `--kubeconfig`/`--context`, 없으면 `settings.kubeconfig`/
+  `kubeconfig_context`다. `settings.access`와 `access.deployer.kubeconfig`가 필요하다.
+  deployer kubeconfig나 토큰 파일이 관리자·읽기 전용 kubeconfig와 같은 파일(심링크 포함)이면 거부한다.
+- `--ttl`은 `deployer.token_ttl`을 덮어쓴다(같은 파서, 최소 `10m`). 값은 그대로 kubectl `--duration`에 간다.
+- 실행: `kubectl create token <deployer.service_account> -n <access.namespace> --duration <ttl>`.
+  토큰은 메모리와 토큰 파일에만 있고, 출력·로그·예외·argv·환경 변수에는 나오지 않는다. 실패하면 kubectl
+  stderr 첫 줄만 보이고 아무 파일도 쓰지 않는다.
+- 쓰는 파일:
+  - `<access.token_dir>/deploy.token` (0600). 디렉토리는 없으면 0700으로 만들고, 내가 소유한 기존
+    디렉토리는 0700으로 조인다(다른 사용자 소유거나 디렉토리가 아니면 거부).
+  - `access.deployer.kubeconfig` (0600): 관리자 cluster의 `server`, CA, `tls-server-name`, `proxy-url`,
+    `insecure-skip-tls-verify`를 복사하고 context 하나, 사용자 `deploy`(절대 경로 `tokenFile`)만 담는다.
+    관리자 사용자 자격증명은 복사하지 않는다.
+  - 둘 다 같은 디렉토리의 임시 파일(O_EXCL, 0600)에 쓰고 fsync 후 `os.replace`하므로 실패해도 기존 파일이 남는다.
+- 덮어쓰기 규칙: deployer kubeconfig가 이미 있으면 모든 사용자가 `tokenFile`로만 인증할 때(생성물 또는
+  수동 인계 형태)에만 덮어쓴다. client-cert, token, exec, auth-provider, 사용자명/비밀번호가 있거나
+  파싱할 수 없으면 거부한다.
+- 쓴 뒤 `kubectl auth can-i create deployments.apps -A`를 deployer kubeconfig로 실행한다. `yes`만 성공이며
+  `no`나 오류(연결, 만료, TLS)면 안내와 함께 종료 코드 1이다.
+- 출력: 쓴 경로, 만료 시각(로컬·UTC), can-i 결과, 토큰이 만료된다는 안내. 토큰 값은 출력하지 않는다.
+- 토큰은 만료되며 갱신은 `issue`를 다시 실행하는 것이다. 만료 후 deployer kubeconfig는 `Unauthorized`가 된다.
+- `access`는 배포 게이트에서 읽기 전용 명령으로 분류된다(`create token`은 워크로드 변경이 아니라 자격증명 발급).
+
 ---
 
 ## Utility Commands

@@ -523,8 +523,8 @@ YAML 1.1 파서는 따옴표 없는 `off`를 불리언으로 읽지만 `mode`에
 
 에이전트는 사람과 같은 OS 사용자로 sbkube를 실행하므로, 우회할 수 없는 경계는 Kubernetes RBAC뿐이다.
 에이전트에게는 읽기 전용 ServiceAccount의 kubeconfig를 주고, 배포는 사람이 발급한 짧은 수명 토큰으로 한다.
-`settings.access`는 그 설정이다. 1단계에서는 스키마와 읽기 전용 명령
-(`sbkube access verify`·`audit`, [commands.md](../02-features/commands.md#access-verify--읽기-전용-자격증명-확인))만 있다.
+`settings.access`는 그 설정이다. 명령은 `sbkube access verify`·`audit`·`issue`
+([commands.md](../02-features/commands.md#access-verify--읽기-전용-자격증명-확인))가 있다.
 
 ```yaml
 settings:
@@ -562,6 +562,13 @@ settings:
 - 모든 모델은 `extra="forbid"`라 알 수 없는 필드는 거부된다.
 - `access`는 전역(루트) `settings`에서만 읽는다. 상속 대상 설정에 포함되지 않으므로 phase·앱 수준에 적어도
   검증만 통과할 뿐 어떤 명령도 읽지 않는다.
+- `access.namespace`, `access.readonly.service_account`, `access.deployer.service_account`는 DNS-1123
+  label이어야 한다(소문자·숫자·`-`, 영숫자로 시작·끝, 63자 이하: `[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?`).
+  어기면 스키마 검증에서 거부된다.
+- `access.deployer.kubeconfig`는 `access issue`가 쓰는 파일이다. 관리자·읽기 전용 kubeconfig와 다른 경로여야
+  하고, 이미 있으면 `tokenFile`로만 인증하는 파일일 때만 덮어쓴다.
+- `access.token_dir`에는 `access issue`가 `deploy.token`(0600)을 쓴다. 디렉토리는 0700으로 만들거나 조인다.
+  `deployer.kubeconfig`의 `tokenFile`은 이 파일의 절대 경로다.
 - `access`가 없으면 동작은 이전과 같다.
 
 ---

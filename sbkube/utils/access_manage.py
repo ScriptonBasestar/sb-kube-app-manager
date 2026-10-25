@@ -143,7 +143,16 @@ def init_outputs(access: AccessSettings, session: AdminSession) -> InitOutputs:
     if problem:
         raise TokenIssueError(problem)
 
-    protected = protected_files(session.admin, None)
+    admin_source = session.admin
+    if (
+        session.node is not None
+        and admin_source is not None
+        and same_file(admin_source, session.source)
+    ):
+        # Node mode reads this public readonly descriptor only to establish
+        # cluster identity; it is also the generated readonly output.
+        admin_source = None
+    protected = protected_files(admin_source, None)
     readonly_protected = protected_files(None, readonly)
     readonly_protected.pop(readonly, None)
     if readonly_generated:

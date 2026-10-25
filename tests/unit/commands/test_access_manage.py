@@ -136,7 +136,7 @@ def _mode(path: Path) -> int:
 
 
 def _all_text(result, caplog: pytest.LogCaptureFixture) -> str:
-    return result.output + str(result.exception or "") + caplog.text
+    return str(result.output) + str(result.exception or "") + caplog.text
 
 
 def test_init_print_is_public_and_needs_neither_tty_nor_cluster(
@@ -338,6 +338,54 @@ def test_init_node_bootstrap_descriptor_needs_no_local_admin(
         result = _access(env, "init")
     assert result.exit_code == 0, result.output
     assert remote.call_count == 5
+    assert env["token_dir"].joinpath("readonly.token").read_text().strip() == SENTINEL
+
+
+def test_init_node_allows_root_readonly_source_for_bootstrap_and_repeat(
+    env: dict[str, Path],
+) -> None:
+    config = yaml.safe_load(env["config"].read_text())
+    config["settings"]["kubeconfig"] = str(env["readonly"])
+    config["settings"]["access"]["admin"] = {
+        "ssh_host": "operator@node",
+        "expected_hostname": "node1",
+    }
+    env["config"].write_text(yaml.safe_dump(config))
+    env["readonly"].write_text(
+        yaml.safe_dump(
+            {
+                "clusters": [
+                    {
+                        "name": "cluster",
+                        "cluster": {
+                            "server": SERVER,
+                            "certificate-authority-data": base64.b64encode(CA).decode(),
+                        },
+                    }
+                ],
+                "contexts": [{"name": CTX, "context": {"cluster": "cluster"}}],
+                "users": [],
+            }
+        )
+    )
+    env["admin"].unlink()
+
+    for _ in range(2):
+        output = iter(
+            ["node1\n", base64.b64encode(CA).decode(), _secret(), "", _secret()]
+        )
+
+        def run(command, output=output, **kwargs):
+            assert command[0] == "ssh"
+            return _proc(out=next(output))
+
+        with (
+            patch(TTY, return_value=True),
+            patch("subprocess.run", side_effect=run) as remote,
+        ):
+            result = _access(env, "init")
+        assert result.exit_code == 0, result.output
+        assert remote.call_count == 5
     assert env["token_dir"].joinpath("readonly.token").read_text().strip() == SENTINEL
 
 

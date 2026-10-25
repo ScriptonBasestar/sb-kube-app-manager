@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 from sbkube.exceptions import SbkubeError
+from sbkube.utils.access_profile import current_profile, profile_environment
 from sbkube.utils.cluster_config import apply_cluster_config_to_command
 from sbkube.utils.common import run_command
 from sbkube.utils.logger import logger
@@ -203,6 +204,10 @@ class HookExecutor:
             full_env.update(self.env)
             if env:
                 full_env.update(env)
+            selected = current_profile()
+            if selected is not None:
+                selected.resolve(self.kubeconfig, self.context)
+            full_env = profile_environment(full_env, {**self.env, **(env or {})})
 
             result = subprocess.run(
                 shlex.split(command),

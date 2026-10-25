@@ -6,6 +6,7 @@ import json
 import time
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import click
 import pytest
@@ -135,6 +136,25 @@ def test_no_access_or_disabled_profile_returns_none_without_credentials(
         select_profile("status", {"config_file": str(tmp_path / "no-access.yaml")}, {})
         is None
     )
+
+
+def test_auto_profile_rejects_inherited_helm_override_but_disabled_mode_is_compatible(
+    monkeypatch, tmp_path: Path
+) -> None:
+    config, readonly, deployer = _profiles(tmp_path)
+    sentinel = "admin-token-sentinel"
+    monkeypatch.setenv("HELM_KUBETOKEN", sentinel)
+
+    with patch("sbkube.utils.access_profile.cluster_identity") as identity:
+        with pytest.raises(
+            AccessProfileError, match="inherited HELM_KUBE override"
+        ) as raised:
+            select_profile("status", {"config_file": str(config)}, {})
+    identity.assert_not_called()
+    assert sentinel not in str(raised.value)
+
+    disabled = _config(tmp_path, readonly, deployer, auto_profile=False)
+    assert select_profile("status", {"config_file": str(disabled)}, {}) is None
 
 
 def test_workspace_root_owns_access_and_parent_is_not_implicitly_inherited(

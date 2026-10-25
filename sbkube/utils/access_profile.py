@@ -9,6 +9,7 @@ import contextvars
 import functools
 import json
 import math
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -83,6 +84,53 @@ def profile_cluster(
 ) -> tuple[str | None, str | None]:
     selected = current_profile()
     return selected.resolve(kubeconfig, context) if selected else (kubeconfig, context)
+
+
+def profile_environment(
+    environment: dict[str, str], explicit_environment: dict | None = None
+) -> dict[str, str]:
+    """Return child-only command environment constrained to the active profile."""
+    child_environment = environment.copy()
+    selected = current_profile()
+    if selected is None:
+        return child_environment
+
+    if os.pathsep in str(selected.kubeconfig):
+        raise AccessProfileError(
+            "selected access kubeconfig must name exactly one file for raw command execution"
+        )
+
+    if explicit_environment and any(
+        key.startswith("HELM_KUBE") for key in explicit_environment
+    ):
+        raise AccessProfileError(
+            "explicit hook HELM_KUBE override conflicts with the selected access profile"
+        )
+    explicit_kubeconfig = (
+        explicit_environment.get("KUBECONFIG") if explicit_environment else None
+    )
+    if explicit_kubeconfig is not None and (
+        not isinstance(explicit_kubeconfig, str)
+        or not same_file(Path(explicit_kubeconfig).expanduser(), selected.kubeconfig)
+    ):
+        raise AccessProfileError(
+            "explicit hook KUBECONFIG conflicts with the selected access profile"
+        )
+    try:
+        current_context = read_kubeconfig(selected.kubeconfig).get("current-context")
+    except KubeconfigError as error:
+        raise AccessProfileError(
+            "cannot read selected access kubeconfig for raw command execution"
+        ) from error
+    if current_context != selected.context:
+        raise AccessProfileError(
+            "selected access kubeconfig current-context differs from the access profile"
+        )
+    for key in tuple(child_environment):
+        if key.startswith("HELM_KUBE"):
+            del child_environment[key]
+    child_environment["KUBECONFIG"] = str(selected.kubeconfig.absolute())
+    return child_environment
 
 
 def validate_profile_document(
@@ -244,6 +292,10 @@ def select_profile(
     access = settings.access
     if access is None or not access.auto_profile:
         return None
+    if any(key.startswith("HELM_KUBE") for key in os.environ):
+        raise AccessProfileError(
+            "inherited HELM_KUBE override conflicts with auto_profile"
+        )
     mutating = command_name in MUTATING_PROFILE_COMMANDS
     profile = access.deployer if mutating else access.readonly
     renewal = "issue" if mutating else "init"

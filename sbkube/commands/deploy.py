@@ -8,6 +8,7 @@
 - kustomize 타입: kubectl apply -k
 """
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +27,7 @@ from sbkube.models.config_model import (
     YamlApp,
 )
 from sbkube.state.deploy_recorder import DeploymentRecorder
-from sbkube.utils.access_profile import current_profile
+from sbkube.utils.access_profile import current_profile, profile_environment
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.app_labels import (
     build_helm_set_annotations,
@@ -892,7 +893,7 @@ def deploy_exec_app(
     Args:
         app_name: 앱 이름
         app: ExecApp 설정
-        base_dir: 프로젝트 루트
+        base_dir: 실행 디렉토리 (활성 프로파일은 앱 설정 디렉토리)
         output: OutputManager 인스턴스
         dry_run: dry-run 모드
 
@@ -916,7 +917,15 @@ def deploy_exec_app(
             continue
 
         _info_print(console, f"  Running: {command}")
-        return_code, stdout, stderr = run_command(command, timeout=60)
+        if current_profile() is None:
+            return_code, stdout, stderr = run_command(command, timeout=60)
+        else:
+            return_code, stdout, stderr = run_command(
+                command,
+                timeout=60,
+                env=profile_environment(dict(os.environ)),
+                cwd=base_dir,
+            )
 
         if return_code != 0:
             reason = _get_connection_error_reason(stdout, stderr)
@@ -1559,8 +1568,9 @@ def cmd(
                             config_namespace=config.namespace,
                         )
                     elif isinstance(app, ExecApp):
+                        exec_base_dir = APP_CONFIG_DIR if current_profile() else BASE_DIR
                         success = deploy_exec_app(
-                            app_name_iter, app, BASE_DIR, output, dry_run
+                            app_name_iter, app, exec_base_dir, output, dry_run
                         )
                     elif isinstance(app, KustomizeApp):
                         success = deploy_kustomize_app(

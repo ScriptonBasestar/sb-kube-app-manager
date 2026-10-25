@@ -338,12 +338,56 @@ def test_write_private_file_modes_and_replace(tmp_path: Path) -> None:
     assert _mode(target) == 0o600
 
 
-def test_existing_loose_token_dir_is_tightened(env: dict) -> None:
-    env["token_dir"].mkdir(mode=0o755)
+def test_loose_existing_token_dir_is_refused_not_chmoded(env: dict) -> None:
+    env["token_dir"].mkdir()
     env["token_dir"].chmod(0o755)
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    assert "chmod 700" in result.output
+    assert _mode(env["token_dir"]) == 0o755
+    run.assert_not_called()
+    assert not env["deploy"].exists()
+
+
+def test_private_existing_token_dir_is_accepted(env: dict) -> None:
+    env["token_dir"].mkdir()
+    env["token_dir"].chmod(0o700)
     with patch(TTY, return_value=True), patch(RUN, side_effect=_kubectl()):
         assert _issue(env).exit_code == 0
-    assert _mode(env["token_dir"]) == 0o700
+
+
+def test_unwritable_deployer_dir_is_refused_before_mint(env: dict) -> None:
+    config = yaml.safe_load(env["config"].read_text())
+    missing = env["tmp"] / "nope" / "deploy"
+    config["settings"]["access"]["deployer"]["kubeconfig"] = str(missing)
+    env["config"].write_text(yaml.safe_dump(config))
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    run.assert_not_called()
+    assert not env["token_dir"].exists()
+
+
+def test_kubeconfig_write_failure_reports_token_written(env: dict) -> None:
+    real = access_issue.write_private_file
+
+    def flaky(path: Path, content: str) -> None:
+        if path == env["deploy"]:
+            raise access_issue.TokenIssueError("disk full")
+        real(path, content)
+
+    with (
+        patch(TTY, return_value=True),
+        patch(RUN, side_effect=_kubectl()),
+        patch("sbkube.commands.access_issue.write_private_file", side_effect=flaky),
+    ):
+        result = _issue(env)
+    assert result.exit_code != 0
+    assert "token WAS written" in result.output
+    assert str(env["token"]) in result.output
+    assert env["token"].exists()
+    assert SENTINEL not in _all_text(result)
 
 
 def test_token_dir_that_is_a_file_is_refused(env: dict) -> None:
@@ -416,13 +460,152 @@ def test_refuses_unparseable_existing_file(env: dict, content: str) -> None:
     run.assert_not_called()
 
 
-def test_overwrites_token_file_only_shape(env: dict) -> None:
-    _existing(env["deploy"], {"tokenFile": "/old/path/deploy.token"})
+def test_overwrites_generated_shape(env: dict) -> None:
+    _existing(env["deploy"], {"tokenFile": str(env["token"])})
     with patch(TTY, return_value=True), patch(RUN, side_effect=_kubectl()):
         result = _issue(env)
     assert result.exit_code == 0, result.output
     data = yaml.safe_load(env["deploy"].read_text())
     assert data["users"][0]["user"]["tokenFile"] == str(env["token"])
+
+
+def test_overwrites_manual_handoff_shape_via_symlinked_token_path(env: dict) -> None:
+    real_dir = env["tmp"] / "real"
+    real_dir.mkdir(mode=0o700)
+    real_dir.chmod(0o700)
+    (real_dir / "deploy.token").write_text("old\n")
+    _existing(env["deploy"], {"tokenFile": str(real_dir / "deploy.token")})
+    env["token_dir"].symlink_to(real_dir)
+    with patch(TTY, return_value=True), patch(RUN, side_effect=_kubectl()):
+        result = _issue(env)
+    assert result.exit_code == 0, result.output
+
+
+def test_refuses_overwrite_when_token_file_points_elsewhere(env: dict) -> None:
+    _existing(env["deploy"], {"tokenFile": "/old/path/deploy.token"})
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    assert "refusing to overwrite" in result.output
+    run.assert_not_called()
+
+
+def test_refuses_overwrite_of_wrong_user_name_or_two_users(env: dict) -> None:
+    for users in (
+        [{"name": "other", "user": {"tokenFile": str(env["token"])}}],
+        [
+            {"name": "deploy", "user": {"tokenFile": str(env["token"])}},
+            {"name": "second", "user": {"tokenFile": str(env["token"])}},
+        ],
+    ):
+        env["deploy"].write_text(yaml.safe_dump({"users": users}))
+        with patch(TTY, return_value=True), patch(RUN) as run:
+            result = _issue(env)
+        assert result.exit_code != 0
+        run.assert_not_called()
+
+
+def test_relative_token_file_in_existing_kubeconfig_resolves_against_it(
+    env: dict,
+) -> None:
+    _existing(env["deploy"], {"tokenFile": "tokens/deploy.token"})
+    with patch(TTY, return_value=True), patch(RUN, side_effect=_kubectl()):
+        assert _issue(env).exit_code == 0
+
+
+# --- token / deployer path collisions with referenced credentials ------------
+
+
+def _set_user(path: Path, user: dict) -> None:
+    data = yaml.safe_load(path.read_text())
+    data["users"] = [{"name": "adm", "user": user}]
+    path.write_text(yaml.safe_dump(data))
+
+
+def test_readonly_token_file_equal_to_token_path_is_refused(env: dict) -> None:
+    env["readonly"].write_text(
+        yaml.safe_dump(
+            {"users": [{"name": "ro", "user": {"tokenFile": str(env["token"])}}]}
+        )
+    )
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    assert "credential file of the readonly kubeconfig" in result.output
+    run.assert_not_called()
+    assert not env["token_dir"].exists()
+
+
+def test_admin_credential_files_are_protected(env: dict) -> None:
+    for key in ("tokenFile", "client-key", "client-certificate"):
+        _admin(env["admin"])
+        _set_user(env["admin"], {key: str(env["token"])})
+        with patch(TTY, return_value=True), patch(RUN) as run:
+            result = _issue(env)
+        assert result.exit_code != 0, key
+        assert "credential file of the admin kubeconfig" in result.output
+        run.assert_not_called()
+
+
+def test_admin_credential_file_equal_to_deployer_path_is_refused(env: dict) -> None:
+    _set_user(env["admin"], {"client-key": str(env["deploy"])})
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    run.assert_not_called()
+
+
+def test_relative_credential_path_resolves_against_its_kubeconfig(env: dict) -> None:
+    rel = os.path.relpath(env["token"], env["readonly"].parent)
+    env["readonly"].write_text(
+        yaml.safe_dump({"users": [{"name": "ro", "user": {"tokenFile": rel}}]})
+    )
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    run.assert_not_called()
+
+
+def test_credential_reference_through_symlink_is_refused(env: dict) -> None:
+    link = env["tmp"] / "alias.token"
+    env["token_dir"].mkdir(mode=0o700)
+    env["token"].write_text("x\n")
+    link.symlink_to(env["token"])
+    env["readonly"].write_text(
+        yaml.safe_dump({"users": [{"name": "ro", "user": {"tokenFile": str(link)}}]})
+    )
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    run.assert_not_called()
+
+
+def test_unreadable_existing_readonly_kubeconfig_is_refused(env: dict) -> None:
+    env["readonly"].write_text("just text: [")
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    assert str(env["readonly"]) in result.output
+    run.assert_not_called()
+
+
+def test_missing_readonly_kubeconfig_is_skipped_but_not_writable_target(
+    env: dict,
+) -> None:
+    env["readonly"].unlink()
+    with patch(TTY, return_value=True), patch(RUN, side_effect=_kubectl()):
+        assert _issue(env).exit_code == 0
+
+
+def test_token_path_equal_to_deployer_path_is_refused(env: dict) -> None:
+    config = yaml.safe_load(env["config"].read_text())
+    config["settings"]["access"]["deployer"]["kubeconfig"] = str(env["token"])
+    env["config"].write_text(yaml.safe_dump(config))
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    assert "different files" in result.output
+    run.assert_not_called()
 
 
 # --- can-i handling --------------------------------------------------------

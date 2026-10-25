@@ -18,10 +18,14 @@ from sbkube.utils.access_issue import (
     TOKEN_FILE_NAME,
     TokenIssueError,
     build_deployer_kubeconfig,
+    check_token_dir,
+    check_writable_parent,
+    collision,
     dump_kubeconfig,
     ensure_private_dir,
     mint_token,
     overwrite_problem,
+    protected_files,
     same_file,
     write_private_file,
 )
@@ -86,19 +90,34 @@ def issue(ctx: click.Context, ttl: str | None, config_file: Path) -> None:
     admin = _expand(admin_setting)
     deployer_path = _expand(deployer.kubeconfig).absolute()
     token_path = (_expand(access.token_dir) / TOKEN_FILE_NAME).absolute()
-    others = {"admin": admin}
-    if access.readonly.kubeconfig:
-        others["readonly"] = _expand(access.readonly.kubeconfig)
-    for role, other in others.items():
-        if same_file(deployer_path, other) or same_file(token_path, other):
-            raise click.ClickException(
-                f"deployer kubeconfig/token path must not be the {role} kubeconfig ({other})."
-            )
+    readonly = (
+        _expand(access.readonly.kubeconfig) if access.readonly.kubeconfig else None
+    )
     if not admin.is_file():
         raise click.ClickException(f"admin kubeconfig not found: {admin}")
-    problem = overwrite_problem(deployer_path)
+    try:
+        protected = protected_files(admin, readonly)
+    except KubeconfigError as e:
+        raise click.ClickException(str(e)) from e
+    for label, path in (
+        ("deployer kubeconfig", deployer_path),
+        ("token file", token_path),
+    ):
+        hit = collision(path, protected)
+        if hit is not None:
+            raise click.ClickException(f"{label} {path} must not be the {hit}.")
+    if same_file(deployer_path, token_path):
+        raise click.ClickException(
+            "deployer kubeconfig and token file must be different files."
+        )
+    problem = overwrite_problem(deployer_path, token_path)
     if problem is not None:
         raise click.ClickException(problem)
+    try:
+        check_token_dir(token_path.parent)
+        check_writable_parent(deployer_path)
+    except TokenIssueError as e:
+        raise click.ClickException(f"token not issued: {e}") from e
     try:
         kubeconfig = build_deployer_kubeconfig(
             read_kubeconfig(admin), context, admin, token_path
@@ -113,15 +132,21 @@ def issue(ctx: click.Context, ttl: str | None, config_file: Path) -> None:
         ensure_private_dir(token_path.parent)
         write_private_file(token_path, token + "\n")
         del token
-        write_private_file(deployer_path, dump_kubeconfig(kubeconfig))
     except TokenIssueError as e:
         raise click.ClickException(f"token not issued: {e}") from e
+    try:
+        write_private_file(deployer_path, dump_kubeconfig(kubeconfig))
+    except TokenIssueError as e:
+        raise click.ClickException(
+            f"the token WAS written to {token_path}, but the deployer kubeconfig "
+            f"was not: {e}"
+        ) from e
 
     expires = utc_now_aware() + timedelta(seconds=seconds)
     console.print(f"[green]token file[/green]  {escape(str(token_path))} (mode 600)")
     console.print(f"[green]kubeconfig[/green]  {escape(str(deployer_path))} (mode 600)")
     console.print(
-        f"expires    {expires.astimezone():%Y-%m-%d %H:%M:%S %Z} "
+        f"expires    (requested; the API server may cap it) {expires.astimezone():%Y-%m-%d %H:%M:%S %Z} "
         f"({expires:%Y-%m-%d %H:%M:%S} UTC); renew with `sbkube access issue`."
     )
 

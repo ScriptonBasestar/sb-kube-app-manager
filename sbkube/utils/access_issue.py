@@ -25,6 +25,9 @@ KUBECTL_TIMEOUT_SECONDS = 30
 DEPLOYER_USER = "deploy"
 TOKEN_FILE_NAME = "deploy.token"
 
+# User keys that point at credential files.
+_CREDENTIAL_FILE_KEYS = ("tokenFile", "client-certificate", "client-key")
+
 # Cluster fields copied verbatim from the admin cluster entry.
 _COPIED_CLUSTER_KEYS = (
     "server",
@@ -89,24 +92,57 @@ def mint_token(
     return token
 
 
-def ensure_private_dir(path: Path) -> None:
-    """Create ``path`` with mode 0700, or tighten an existing directory to it.
+def check_token_dir(path: Path) -> None:
+    """Pre-flight for :func:`ensure_private_dir`; changes nothing.
 
     Raises:
-        TokenIssueError: If ``path`` is not a directory this user owns.
+        TokenIssueError: If ``path`` exists but is not a private directory we
+            own, or cannot be created.
+
+    """
+    if not path.exists():
+        parent = next(p for p in path.parents if p.exists())
+        if not parent.is_dir() or not os.access(parent, os.W_OK | os.X_OK):
+            raise TokenIssueError(f"cannot create {path}: {parent} is not writable")
+        return
+    info = path.stat()
+    if not stat.S_ISDIR(info.st_mode):
+        raise TokenIssueError(f"{path} is not a directory")
+    if info.st_uid != os.getuid():
+        raise TokenIssueError(f"{path} is not owned by the current user")
+    if stat.S_IMODE(info.st_mode) & 0o077:
+        raise TokenIssueError(
+            f"{path} is accessible to other users (mode "
+            f"{stat.S_IMODE(info.st_mode):o}); run `chmod 700 {path}` or set "
+            "access.token_dir to a dedicated directory"
+        )
+    if not os.access(path, os.W_OK | os.X_OK):
+        raise TokenIssueError(f"{path} is not writable")
+
+
+def ensure_private_dir(path: Path) -> None:
+    """Create ``path`` with mode 0700; an existing directory is never chmod-ed.
+
+    Raises:
+        TokenIssueError: If an existing ``path`` fails :func:`check_token_dir`.
 
     """
     try:
-        path.mkdir(mode=0o700, parents=True, exist_ok=True)
-        info = path.stat()
-        if not stat.S_ISDIR(info.st_mode):
-            raise TokenIssueError(f"{path} is not a directory")
-        if info.st_uid != os.getuid():
-            raise TokenIssueError(f"{path} is not owned by the current user")
-        if stat.S_IMODE(info.st_mode) != 0o700:
-            path.chmod(0o700)
+        if path.exists():
+            check_token_dir(path)
+            return
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.mkdir(mode=0o700)
+        path.chmod(0o700)
     except OSError as e:
         raise TokenIssueError(f"cannot prepare {path}: {e.strerror or e}") from e
+
+
+def check_writable_parent(path: Path) -> None:
+    """Pre-flight: the directory that will hold ``path`` exists and is writable."""
+    parent = path.parent
+    if not parent.is_dir() or not os.access(parent, os.W_OK | os.X_OK):
+        raise TokenIssueError(f"{parent} does not exist or is not writable")
 
 
 def write_private_file(path: Path, content: str) -> None:
@@ -142,12 +178,61 @@ def same_file(first: Path, second: Path) -> bool:
         return False
 
 
-def overwrite_problem(path: Path) -> str | None:
+def _resolve_ref(value: str, base: Path) -> Path:
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else base.parent / path
+
+
+def referenced_credential_files(path: Path, data: dict[str, Any]) -> list[Path]:
+    """Files a kubeconfig's users read credentials from (relative to ``path``)."""
+    found: list[Path] = []
+    for entry in entries(data, "users"):
+        user = entry.get("user")
+        if not isinstance(user, dict):
+            continue
+        for key in _CREDENTIAL_FILE_KEYS:
+            value = user.get(key)
+            if isinstance(value, str) and value:
+                found.append(_resolve_ref(value, path))
+    return found
+
+
+def protected_files(admin: Path, readonly: Path | None) -> dict[Path, str]:
+    """Every file ``issue`` must not write: the kubeconfigs and their credential files.
+
+    Raises:
+        KubeconfigError: If the admin kubeconfig, or an existing readonly one,
+            cannot be read (refusing is safer than skipping it).
+
+    """
+    protected: dict[Path, str] = {}
+    sources = [("admin", admin)]
+    if readonly is not None:
+        if readonly.exists():
+            sources.append(("readonly", readonly))
+        else:
+            protected[readonly] = "readonly kubeconfig"
+    for role, source in sources:
+        protected[source] = f"{role} kubeconfig"
+        for ref in referenced_credential_files(source, read_kubeconfig(source)):
+            protected[ref] = f"credential file of the {role} kubeconfig"
+    return protected
+
+
+def collision(path: Path, protected: dict[Path, str]) -> str | None:
+    """What ``path`` collides with in ``protected``, or ``None``."""
+    for other, what in protected.items():
+        if same_file(path, other):
+            return f"{what} ({other})"
+    return None
+
+
+def overwrite_problem(path: Path, token_path: Path) -> str | None:
     """Why an existing ``path`` must not be overwritten, or ``None``.
 
-    Only a file that looks generated (every user authenticates solely via
-    ``tokenFile``) may be replaced; anything else could be a hand-made or
-    admin kubeconfig.
+    Only the generated shape may be replaced: exactly one user named
+    ``deploy`` whose only key is a ``tokenFile`` naming ``token_path``.
+    Anything else could be a hand-made or admin kubeconfig.
     """
     if not path.exists():
         return None
@@ -156,20 +241,21 @@ def overwrite_problem(path: Path) -> str | None:
     except KubeconfigError as e:
         return f"{e}; refusing to overwrite it"
     users = entries(data, "users")
-    raw_users = data.get("users")
-    generated = (
-        isinstance(raw_users, list)
-        and bool(raw_users)
-        and len(users) == len(raw_users)
-        and all(
-            isinstance(u.get("user"), dict) and set(u["user"]) == {"tokenFile"}
-            for u in users
-        )
+    ok = (
+        isinstance(data.get("users"), list)
+        and len(data["users"]) == 1
+        and len(users) == 1
+        and users[0].get("name") == DEPLOYER_USER
+        and isinstance(users[0].get("user"), dict)
+        and set(users[0]["user"]) == {"tokenFile"}
+        and isinstance(users[0]["user"]["tokenFile"], str)
+        and same_file(_resolve_ref(users[0]["user"]["tokenFile"], path), token_path)
     )
-    if not generated:
+    if not ok:
         return (
-            f"{path} does not look like a generated deployer kubeconfig (every "
-            "user must authenticate only via tokenFile); refusing to overwrite it"
+            f"{path} does not look like a kubeconfig generated by `access issue` "
+            f"(one user '{DEPLOYER_USER}' authenticating only via tokenFile "
+            f"{token_path}); refusing to overwrite it"
         )
     return None
 

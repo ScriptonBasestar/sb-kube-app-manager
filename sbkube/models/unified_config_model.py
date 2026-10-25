@@ -24,6 +24,7 @@ from pydantic import Field, field_validator, model_validator
 
 from sbkube.utils.config_inheritance import resolve_inheritance
 
+from .access_model import AccessSettings
 from .base_model import ConfigBaseModel
 from .config_model import AppConfig
 from .sources_model import GitRepoScheme, HelmRepoScheme, OciRepoScheme
@@ -238,6 +239,14 @@ class UnifiedSettings(ConfigBaseModel):
         dict[str, Any] | None,
         Field(
             description="Inline global values for all apps",
+        ),
+    ] = None
+
+    # ---- Agent Access ----
+    access: Annotated[
+        AccessSettings | None,
+        Field(
+            description="Agent access boundary (sbkube access); global settings only",
         ),
     ] = None
 

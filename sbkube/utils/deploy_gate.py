@@ -109,6 +109,7 @@ READ_ONLY_COMMANDS: frozenset[str] = frozenset(
         "version",
         "doctor",
         "gate",
+        "access",
     }
 )
 

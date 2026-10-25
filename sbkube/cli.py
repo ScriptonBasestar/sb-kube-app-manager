@@ -6,6 +6,7 @@ from typing import ClassVar
 import click
 
 from sbkube.commands import (
+    access,
     apply,
     build,
     check_updates,
@@ -47,7 +48,7 @@ class SbkubeGroup(click.Group):
         "통합 명령어": ["apply"],
         "상태 관리": ["status", "history", "rollback"],
         "업그레이드/삭제": ["upgrade", "delete", "check-updates"],
-        "유틸리티": ["init", "validate", "doctor", "migrate", "gate", "version"],
+        "유틸리티": ["init", "validate", "doctor", "migrate", "gate", "access", "version"],
     }
 
     # 카테고리별 이모지
@@ -291,6 +292,7 @@ main.add_command(version.cmd)
 main.add_command(doctor.cmd)
 main.add_command(migrate.cmd)
 main.add_command(gate.cmd)
+main.add_command(access.cmd)
 
 
 def main_with_exception_handling() -> None:

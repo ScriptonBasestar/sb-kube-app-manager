@@ -46,6 +46,7 @@ MUTATION_SITE_FILES: dict[str, tuple[str, ...]] = {
     "sbkube/utils/hook_executor.py": ("deploy", "apply"),
     "sbkube/utils/prune_helper.py": ("apply",),
     "sbkube/utils/helm_command_builder.py": ("deploy", "apply"),
+    "sbkube/commands/access.py": (),
     "sbkube/commands/check_updates.py": (),
     "sbkube/diagnostics/kubernetes_checks.py": (),
     "sbkube/models/config_model.py": (),

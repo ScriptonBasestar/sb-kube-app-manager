@@ -554,10 +554,10 @@ settings:
 | `access.token_dir` | string | `"~/.kube/agent-access"` | 토큰 파일 디렉토리 |
 | `access.readonly.service_account` | string | `"agent-readonly"` | 에이전트용 ServiceAccount |
 | `access.readonly.kubeconfig` | string | null | 에이전트 kubeconfig 경로 |
-| `access.readonly.extra_rules` | list | `[]` | 추가 읽기 규칙: `apiGroups`, `resources`, `verbs`(필수, 1개 이상), `resourceNames`, `nonResourceURLs` |
+| `access.readonly.extra_rules` | list | `[]` | 추가 읽기 규칙: `apiGroups`, `resources`, `verbs`(필수, 1개 이상), `resourceNames`, `nonResourceURLs`. `resources`와 `nonResourceURLs` 중 정확히 하나만 지정하고, 빈 문자열 항목은 거부 |
 | `access.deployer.service_account` | string | `"sbkube-deployer"` | 배포용 ServiceAccount |
 | `access.deployer.kubeconfig` | string | null | 배포 kubeconfig 경로 |
-| `access.deployer.token_ttl` | string | `"1h"` | 발급 토큰 수명. `30m`, `1h`, `1h30m` 같은 Go 형식(`h`·`m`·`s`), 0보다 커야 함 |
+| `access.deployer.token_ttl` | string | `"1h"` | 발급 토큰 수명. `30m`, `1h`, `1h30m` 같은 Go 형식. 단위는 `h`·`m`·`s` 순서로 한 번씩만(`1h1h` 거부), 최소 `10m`(TokenRequest `expirationSeconds` ≥ 600) |
 
 - 모든 모델은 `extra="forbid"`라 알 수 없는 필드는 거부된다.
 - `access`는 전역(루트) `settings`에서만 읽는다. 상속 대상 설정에 포함되지 않으므로 phase·앱 수준에 적어도

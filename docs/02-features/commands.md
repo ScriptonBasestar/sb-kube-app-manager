@@ -256,11 +256,23 @@ sbkube access verify -f sbkube.yaml
   (전역 `--context`가 우선)가 들어 있으며, 그 context의 API server가 관리자 kubeconfig
   (`settings.kubeconfig`, 전역 `--kubeconfig`가 우선)의 같은 context와 같아야 한다. 어긋나면
   `kubectl`을 부르지 않고 실패한다.
-- 기대값: `get secrets -A` 거부, `list pods -A`·`list nodes`·`list customresourcedefinitions` 허용,
-  `create deployments -A`·`delete pods -A` 거부. `extra_rules`의 verb × resource는 모두 허용이어야 한다
-  (`apiGroups`가 있으면 `resource.group` 형식).
+- 클러스터 범위(`-A`) 기대값: `get`·`list`·`watch secrets` 거부, `list pods`·`list nodes`·
+  `list customresourcedefinitions` 허용, `create deployments`·`delete pods` 거부,
+  `create serviceaccounts --subresource=token -n <access.namespace>` 거부(토큰 발급 불가).
+  `extra_rules`의 verb × resource는 모두 허용이어야 한다(`apiGroups`가 있으면 `resource.group` 형식).
+  `resourceNames`가 있는 대상(`resource/name`)도 같은 이유로 `-A`로 묻는다. `extra_rules`는 클러스터
+  범위 읽기 규칙이기 때문이다.
+- 네임스페이스별 검사: `-A`는 네임스페이스를 비운 채 묻기 때문에 ClusterRoleBinding만 평가한다. 한 네임스페이스에
+  묶인 RoleBinding은 보이지 않으므로, 거부해야 하는 항목(`get`·`list`·`watch secrets`, `create deployments`,
+  `delete pods`)을 읽기 전용 자격증명이 `kubectl get namespaces -o name`으로 찾은 모든 네임스페이스(그리고
+  `access.namespace`)에 `-n <ns>`로 다시 묻는다. 동시에 최대 8개씩 실행하며 결과 순서는 고정이다. 통과하면
+  항목당 한 줄(`all N namespaces`)로 보이고, 실패하면 허용된 네임스페이스를 앞 10개와 나머지 개수로 적는다.
+  네임스페이스 목록을 얻지 못하면 건너뛰지 않고 `ERROR`다.
+- 남는 한계: 검사는 실행 시점에 있는 네임스페이스만 본다. 그 뒤에 만든 네임스페이스나 RoleBinding은 다시 실행할
+  때까지 확인되지 않는다(주기적으로 돌리거나 변경 직후에 돌린다).
 - `kubectl`의 `no`와 오류를 구분한다. 연결 실패·`Unauthorized`·토큰 만료·`kubectl` 없음·시간 초과는
-  `ERROR`로 표시하고 `no`로 세지 않는다.
+  `ERROR`로 표시하고 `no`로 세지 않는다. TLS 오류(`x509:`, `certificate signed by`, `certificate has expired`)도
+  오류이고, `resource type 'certificates'` 같은 일반 경고는 오류가 아니다.
 - 결과는 check / expected / actual / result 표로 출력한다. 모두 맞을 때만 종료 코드 0이다.
 - 토큰·인증서·키 값은 읽어 출력하지 않는다.
 

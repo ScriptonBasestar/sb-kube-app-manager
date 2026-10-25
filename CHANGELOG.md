@@ -17,6 +17,10 @@ ______________________________________________________________________
 - ✅ **NEW** `sbkube access verify`: 읽기 전용 kubeconfig를 `kubectl auth can-i`로 확인한다(secret·쓰기
   거부, 읽기·`extra_rules` 허용). API server가 관리자 kubeconfig와 다르면 클러스터 호출 없이 실패하고,
   연결 실패·토큰 만료는 `no`가 아니라 오류로 보고한다. 클러스터를 바꾸지 않는다.
+  `-A`는 ClusterRoleBinding만 평가하므로 거부 항목(`get`·`list`·`watch secrets`, `create deployments`,
+  `delete pods`)을 모든 네임스페이스에 `-n`으로도 묻고(목록 조회 실패는 오류), 토큰 발급
+  (`create serviceaccounts/token`)도 거부를 확인한다. 한계: 실행 시점에 있는 네임스페이스만 본다.
+  `token_ttl`은 최소 10m·단위 중복 거부, `extra_rules` 항목은 `resources`/`nonResourceURLs` 중 하나만 허용.
 - ✅ **NEW** `sbkube access audit`: `KUBECONFIG`·`settings.kubeconfig`·읽기 전용 kubeconfig에서 client-cert
   (관리자 수준) 사용자를 찾아 보고한다. 클러스터 호출 없음, 값은 출력하지 않음, `--strict`면 발견 시 종료 코드 1.
 - `init`·`issue`·`revoke`와 `auto_profile` 동작은 이후 단계다.

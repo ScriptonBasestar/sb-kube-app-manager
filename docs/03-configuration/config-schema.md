@@ -566,8 +566,10 @@ settings:
   label이어야 한다(소문자·숫자·`-`, 영숫자로 시작·끝, 63자 이하: `[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?`).
   어기면 스키마 검증에서 거부된다.
 - `access.deployer.kubeconfig`는 `access issue`가 쓰는 파일이다. 관리자·읽기 전용 kubeconfig와 다른 경로여야
-  하고, 이미 있으면 `tokenFile`로만 인증하는 파일일 때만 덮어쓴다.
-- `access.token_dir`에는 `access issue`가 `deploy.token`(0600)을 쓴다. 디렉토리는 0700으로 만들거나 조인다.
+  하고, 이미 있으면 `access issue`가 만든 형태(사용자 `deploy` 하나, `tokenFile`만, 이번 토큰 파일 경로)일 때만
+  덮어쓴다. 관리자·읽기 전용 kubeconfig가 참조하는 자격증명 파일과도 달라야 한다.
+- `access.token_dir`에는 `access issue`가 `deploy.token`(0600)을 쓴다. 디렉토리는 없으면 0700으로 만들고, 이미 있으면
+  chmod하지 않고 group/other 권한이 있으면 거부한다.
   `deployer.kubeconfig`의 `tokenFile`은 이 파일의 절대 경로다.
 - `access`가 없으면 동작은 이전과 같다.
 

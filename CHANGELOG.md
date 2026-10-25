@@ -26,7 +26,8 @@ ______________________________________________________________________
 - ✅ **NEW** `sbkube access issue [--ttl DURATION]` (2단계): 사람만(TTY) 실행해 관리자 자격증명으로
   deployer ServiceAccount 토큰을 발급하고 `<token_dir>/deploy.token`(0600)과, 그 토큰 파일만 쓰는
   deployer kubeconfig(0600)를 원자적으로 쓴다. 관리자 사용자 자격증명은 복사하지 않고, 토큰은 출력·로그·
-  argv·예외에 나오지 않는다. `tokenFile`로만 인증하는 기존 파일만 덮어쓰며, 마지막에
+  argv·예외에 나오지 않는다. 생성물 형태의 기존 파일만 덮어쓰고(사용자 `deploy` 하나, 이번 토큰 파일 경로), 관리자·읽기 전용 kubeconfig가
+  참조하는 자격증명 파일과 겹치면 거부하며, 기존 토큰 디렉토리는 chmod하지 않고 느슨하면 거부한다. 마지막에
   `auth can-i create deployments.apps -A`로 확인한다. `namespace`와 ServiceAccount 이름은 DNS-1123으로 검증한다.
 - `init`·`revoke`와 `auto_profile` 동작은 이후 단계다.
 

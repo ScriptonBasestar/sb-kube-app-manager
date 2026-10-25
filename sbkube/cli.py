@@ -8,6 +8,7 @@ import click
 from sbkube.commands import (
     access,
     access_issue,
+    access_manage,
     apply,
     build,
     check_updates,
@@ -49,7 +50,15 @@ class SbkubeGroup(click.Group):
         "통합 명령어": ["apply"],
         "상태 관리": ["status", "history", "rollback"],
         "업그레이드/삭제": ["upgrade", "delete", "check-updates"],
-        "유틸리티": ["init", "validate", "doctor", "migrate", "gate", "access", "version"],
+        "유틸리티": [
+            "init",
+            "validate",
+            "doctor",
+            "migrate",
+            "gate",
+            "access",
+            "version",
+        ],
     }
 
     # 카테고리별 이모지
@@ -259,7 +268,9 @@ def main(
                 level=logging.DEBUG,
                 format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
             )
-        ctx.obj["verbose"] = 2 if level <= LogLevel.VERBOSE else (1 if level <= LogLevel.INFO else 0)
+        ctx.obj["verbose"] = (
+            2 if level <= LogLevel.VERBOSE else (1 if level <= LogLevel.INFO else 0)
+        )
     elif verbose >= 2:
         logging.basicConfig(
             level=logging.DEBUG,
@@ -294,6 +305,9 @@ main.add_command(doctor.cmd)
 main.add_command(migrate.cmd)
 main.add_command(gate.cmd)
 access.cmd.add_command(access_issue.issue)
+for access_command in (access_manage.init_cmd, access_manage.revoke_cmd):
+    install_gate(access_command, operation_name=f"access-{access_command.name}")
+    access.cmd.add_command(access_command)
 main.add_command(access.cmd)
 
 

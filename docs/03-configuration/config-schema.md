@@ -573,6 +573,16 @@ settings:
 - `access.namespace`, `access.readonly.service_account`, `access.deployer.service_account`는 DNS-1123
   label이어야 한다(소문자·숫자·`-`, 영숫자로 시작·끝, 63자 이하: `[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?`).
   어기면 스키마 검증에서 거부된다.
+- readonly·deployer ServiceAccount 이름은 달라야 한다. `access init`은 extra_rules에 읽기 동사만 허용하며
+  Secret·Secret 하위 리소스와 와일드카드 리소스를 거부한다.
+- `access init`은 readonly·deployer kubeconfig 두 경로가 필요하고, `<token_dir>/readonly.token`을 새로 쓴다.
+  readonly 파일은 사용자 `readonly` 하나가 해당 절대 경로의 `tokenFile`만 쓰는 생성물일 때 갱신한다.
+  신뢰한 공개 bootstrap kubeconfig(`users: []`, context·cluster 하나)도 초기 전환할 수 있다.
+  inline token·관리자 인증서가 든 기존 수동 kubeconfig는 덮어쓰지 않는다.
+  deployer 파일은 생성하되 단기 토큰은 `access issue`가 발급한다.
+- `access revoke`는 `--profile readonly|deployer|all`을 필수로 받는다. readonly 토큰 Secret 삭제 또는
+  deployer SA 재생성으로 회수하며, 로컬 파일은 보존한다. `init`·`revoke`는 각각 `access-init`·`access-revoke`
+  배포 게이트 작업으로 분류되고, `init --print`만 출력 전용이다.
 - `access.deployer.kubeconfig`는 `access issue`가 쓰는 파일이다. 관리자·읽기 전용 kubeconfig와 다른 경로여야
   하고, 이미 있으면 `access issue`가 만든 형태(사용자 `deploy` 하나, `tokenFile`만, 이번 토큰 파일 경로)일 때만
   덮어쓴다. 관리자·읽기 전용 kubeconfig가 참조하는 자격증명·서버 CA 파일과도 달라야 한다.

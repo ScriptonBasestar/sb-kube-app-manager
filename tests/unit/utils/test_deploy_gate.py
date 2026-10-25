@@ -22,6 +22,7 @@ from sbkube.exceptions import ConfigurationError
 from sbkube.utils import deploy_gate, deploy_gate_config
 from sbkube.utils.datetime_utils import utc_now
 from sbkube.utils.deploy_gate import (
+    ACCESS_MUTATING_OPERATIONS,
     CLUSTER_MUTATING_COMMANDS,
     GATE_FILE_NAME,
     READ_ONLY_COMMANDS,
@@ -50,8 +51,9 @@ MUTATION_SITE_FILES: dict[str, tuple[str, ...]] = {
     # `kubectl create token` is a TokenRequest (a credential, not a workload
     # mutation) and `access` is read-only for the gate (see READ_ONLY_COMMANDS).
     "sbkube/utils/access_issue.py": (),
-    # Same TokenRequest via node-only SSH; no workload/RBAC mutations here.
-    "sbkube/utils/access_admin.py": (),
+    # Node transport is also used by the independently gated RBAC operations.
+    "sbkube/utils/access_admin.py": ("access-init", "access-revoke"),
+    "sbkube/utils/access_manage.py": ("access-init", "access-revoke"),
     "sbkube/commands/check_updates.py": (),
     "sbkube/diagnostics/kubernetes_checks.py": (),
     "sbkube/models/config_model.py": (),
@@ -143,7 +145,32 @@ def test_every_cluster_mutating_command_is_gated() -> None:
         "make sure every command reaching a mutation is in CLUSTER_MUTATING_COMMANDS"
     )
     for reached_by in MUTATION_SITE_FILES.values():
-        assert set(reached_by) <= CLUSTER_MUTATING_COMMANDS
+        assert set(reached_by) <= CLUSTER_MUTATING_COMMANDS | ACCESS_MUTATING_OPERATIONS
+
+
+def test_access_mutating_children_are_independently_gated() -> None:
+    access_group = main.commands["access"]
+    assert set(access_group.commands) == {"audit", "verify", "issue", "init", "revoke"}
+    for name, command in access_group.commands.items():
+        mutating = f"access-{name}" in ACCESS_MUTATING_OPERATIONS
+        assert is_gated(command) == mutating
+        assert ("skip_deploy_gate" in {p.name for p in command.params}) == mutating
+
+
+@pytest.mark.parametrize("operation", ["access-init", "access-revoke"])
+def test_access_mutations_fail_closed_at_gate(tmp_path: Path, operation: str) -> None:
+    root = _workspace(tmp_path)
+    _global_gate(root, "enforce", command=FAIL)
+    with pytest.raises(deploy_gate.DeployGateError, match="refused"):
+        run_gate(operation, {"config_file": root / "sbkube.yaml"}, None)
+
+
+def test_access_print_is_not_gated(tmp_path: Path) -> None:
+    root = _workspace(tmp_path)
+    _global_gate(root, "enforce", command=FAIL)
+    run_gate(
+        "access-init", {"config_file": root / "sbkube.yaml", "print_only": True}, None
+    )
 
 
 def test_deploy_gate_runs_once_for_nested_invocation(tmp_path: Path) -> None:

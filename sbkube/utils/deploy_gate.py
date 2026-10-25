@@ -72,6 +72,7 @@ from sbkube.utils.deploy_gate_config import (
 )
 
 __all__ = [
+    "ACCESS_MUTATING_OPERATIONS",
     "CLUSTER_MUTATING_COMMANDS",
     "GATE_FILE_NAME",
     "READ_ONLY_COMMANDS",
@@ -112,6 +113,9 @@ READ_ONLY_COMMANDS: frozenset[str] = frozenset(
         "access",
     }
 )
+
+# The access group itself performs no mutation; its children are classified here.
+ACCESS_MUTATING_OPERATIONS = frozenset({"access-init", "access-revoke"})
 
 
 # Gated callbacks running in the current invocation context. ``apply`` runs
@@ -169,6 +173,8 @@ def gate_operation(command_name: str, params: dict[str, Any]) -> str:
 def is_non_mutating_invocation(command_name: str, params: dict[str, Any]) -> bool:
     """Dry runs and listings do not change the cluster and are not gated."""
     if params.get("dry_run"):
+        return True
+    if command_name == "access-init" and params.get("print_only"):
         return True
     return command_name == "rollback" and bool(params.get("list_points"))
 
@@ -420,7 +426,7 @@ def gate_callback(
     return gated
 
 
-def install_gate(command: click.Command) -> None:
+def install_gate(command: click.Command, *, operation_name: str | None = None) -> None:
     """Add ``--skip-deploy-gate`` and the gate wrapper to a mutating command."""
     if command.callback is None or getattr(
         command.callback, "__sbkube_deploy_gate__", False
@@ -437,7 +443,9 @@ def install_gate(command: click.Command) -> None:
             ),
         )
     )
-    command.callback = gate_callback(command.name or "", command.callback)
+    command.callback = gate_callback(
+        operation_name or command.name or "", command.callback
+    )
 
 
 def is_gated(command: click.Command) -> bool:

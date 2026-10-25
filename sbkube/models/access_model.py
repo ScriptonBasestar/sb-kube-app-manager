@@ -291,3 +291,14 @@ class AccessSettings(ConfigBaseModel):
             description="Deployer credential",
         ),
     ]
+
+    @model_validator(mode="after")
+    def require_distinct_service_accounts(self) -> "AccessSettings":
+        if self.readonly.service_account == self.deployer.service_account:
+            raise ValueError("readonly and deployer service_account must be different")
+        if self.deployer.service_account in {
+            f"{self.readonly.service_account}-view",
+            f"{self.readonly.service_account}-cluster",
+        }:
+            raise ValueError("deployer service_account collides with a generated readonly ClusterRoleBinding")
+        return self

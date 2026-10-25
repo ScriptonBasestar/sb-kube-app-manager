@@ -60,7 +60,7 @@ class NodeAdmin:
 
     settings: AccessAdminSettings
 
-    def _run(self, args: list[str]) -> str:
+    def _run(self, args: list[str], input_text: str | None = None) -> str:
         if not self.settings.ssh_host or not self.settings.expected_hostname:
             raise TokenIssueError("node admin requires ssh_host and expected_hostname")
         command = [
@@ -79,7 +79,11 @@ class NodeAdmin:
         try:
             proc = subprocess.run(  # noqa: S603
                 command,
-                stdin=subprocess.DEVNULL,
+                **(
+                    {"stdin": subprocess.DEVNULL}
+                    if input_text is None
+                    else {"input": input_text}
+                ),
                 capture_output=True,
                 text=True,
                 check=False,
@@ -96,6 +100,10 @@ class NodeAdmin:
                 "check SSH routing, known_hosts and sudo -n k3s access"
             )
         return proc.stdout
+
+    def run_kubectl(self, args: list[str], input_text: str | None = None) -> str:
+        """Run fixed command arguments, with optional public manifests over stdin."""
+        return self._run([*_K3S, *args], input_text)
 
     def verify(self, expected_ca: bytes) -> None:
         """Verify the node and its cluster before any TokenRequest."""

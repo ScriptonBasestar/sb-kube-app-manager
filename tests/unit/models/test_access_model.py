@@ -11,6 +11,27 @@ def test_access_is_optional() -> None:
     assert UnifiedSettings().access is None
 
 
+def test_readonly_and_deployer_cannot_share_service_account() -> None:
+    with pytest.raises(ConfigValidationError, match="must be different"):
+        UnifiedSettings(
+            access={
+                "readonly": {"service_account": "same"},
+                "deployer": {"service_account": "same"},
+            }
+        )
+
+
+@pytest.mark.parametrize("deployer", ["reader-view", "reader-cluster"])
+def test_generated_clusterrolebinding_names_cannot_collide(deployer: str) -> None:
+    with pytest.raises(ConfigValidationError, match="ClusterRoleBinding"):
+        UnifiedSettings(
+            access={
+                "readonly": {"service_account": "reader"},
+                "deployer": {"service_account": deployer},
+            }
+        )
+
+
 def test_access_defaults() -> None:
     access = UnifiedSettings(access={}).access
     assert access is not None

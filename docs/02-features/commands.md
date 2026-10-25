@@ -336,7 +336,7 @@ sbkube access issue --ttl 30m -f sbkube.yaml
   `no`나 오류(연결, 만료, TLS)면 안내와 함께 종료 코드 1이다.
 - 출력: 쓴 경로, 만료 시각(로컬·UTC; 요청한 값이며 API server가 `--service-account-max-token-expiration`으로 줄일 수 있음), can-i 결과, 토큰이 만료된다는 안내. 토큰 값은 출력하지 않는다.
 - 토큰은 만료되며 갱신은 `issue`를 다시 실행하는 것이다. 만료 후 deployer kubeconfig는 `Unauthorized`가 된다.
-- `access`는 배포 게이트에서 읽기 전용 명령으로 분류된다(`create token`은 워크로드 변경이 아니라 자격증명 발급).
+- `audit`·`verify`·`issue`는 RBAC을 바꾸지 않는다. `init`·`revoke`는 아래와 같이 별도로 배포 게이트를 거친다.
 
 #### 노드 전용 관리자 경로
 
@@ -357,6 +357,47 @@ deployer kubeconfig의 server·CA는 이 읽기 전용 파일에서 가져온다
   관리자 접근은 여전히 가능하다. 관리자 SSH 인증의 잠금 해제·권한 관리는 운영자의 책임이다.
 
 K3s 관리자 파일과 내장 kubectl 동작은 [K3s CLI 문서](https://docs.k3s.io/cli)를 따른다.
+
+### access init — RBAC과 kubeconfig 초기화
+
+`sbkube access init --print -f sbkube.yaml`은 내장 매니페스트 8개만 YAML로 출력한다. TTY나 관리자
+파일을 요구하지 않고, 클러스터에 접속하거나 로컬 자격증명 파일을 쓰지 않는다.
+
+`--print` 없이 실행하면 사람용 TTY 검사와 `access-init` 배포 게이트를 통과해야 한다.
+노드 실행 설정이 있으면 기존 SSH hostname·서버 CA 검사를 사용하고, 없으면 로컬 관리자 kubeconfig를 쓴다.
+읽기 전용·deployer kubeconfig 경로와 context, HTTPS 서버 CA를 모두 준비해야 한다.
+
+- 템플릿은 Namespace, readonly SA·토큰 Secret·view 바인딩·클러스터 읽기 Role와 바인딩,
+  deployer SA·cluster-admin 바인딩이다. 기본 이름은 기존 polypia 리소스와 같고 `kubectl apply`로 재적용한다.
+- `readonly.extra_rules`는 읽기 동사 `get`·`list`·`watch`만 허용한다. Secret·Secret 하위 리소스와
+  와일드카드 리소스는 거부한다. readonly와 deployer의 ServiceAccount 이름은 달라야 한다.
+- 기존 readonly Secret은 타입·이름·namespace·ServiceAccount annotation이 맞아야 한다. 다른 Secret을
+  인수하거나 소유자를 바꾸지 않는다. 컨트롤러가 토큰을 채울 때까지 제한된 시간 동안 기다린다.
+- `<token_dir>/readonly.token`과 readonly kubeconfig를 0600으로 쓴다. readonly 사용자는 `tokenFile`만 참조한다.
+  deployer kubeconfig도 만들지만 **배포 토큰은 발급하지 않는다**. 단기 토큰은 사람이 `access issue`로 발급한다.
+- kubeconfig·토큰 파일 네 경로는 서로 달라야 한다. 관리자 자격증명·CA 파일과의 충돌도 발급·적용 전에 거부한다.
+  디렉토리 권한·원자적 쓰기는 `issue`와 같은 규칙이다. 기존 deployer 토큰 파일은 변경하지 않는다.
+- 기존 생성물 형태의 파일만 갱신한다. 수동 kubeconfig(특히 inline token·인증서)는 보존하고 오류로 중단한다.
+  기존 polypia 수동 파일을 유지하려면 먼저 `--print`로 RBAC을 검토하고, 파일 전환은 별도 경로로 준비한다.
+- 노드에서 처음 초기화할 때는 readonly 경로에 신뢰한 server·CA와 해당 context 하나를 가진 공개 bootstrap
+  kubeconfig(`users: []`)를 미리 둘 수 있다. 이 파일만 생성된 readonly kubeconfig로 전환한다.
+- 일부 RBAC 적용이나 파일 쓰기 뒤에 실패하면 진행 상태를 오류에 남긴다. 성공 후 `access verify`로 실제
+  읽기 권한과 Secret·쓰기 거부를 확인한다. 기본 `view`나 기존 클러스터 정책의 변경까지 자동 검증한 것은 아니다.
+
+### access revoke — 자격증명 회수
+
+`sbkube access revoke --profile readonly|deployer|all -f sbkube.yaml`에서 프로필은 필수다.
+실제 실행은 사람용 TTY 검사와 `access-revoke` 배포 게이트를 거치며, 초기화와 같은 관리자 경로를 쓴다.
+
+- `readonly`: 소유자가 일치하는 `<readonly.service_account>-token` Secret만 삭제한다.
+- `deployer`: ServiceAccount를 삭제하고 새 UID로 재생성한다. 기존 labels·annotations·imagePullSecrets는
+  보존하고, 이전 UID·resourceVersion·자동 생성된 Secret 참조는 가져오지 않는다. RoleBinding은 유지한다.
+- `all`: readonly 회수 후 deployer를 회수한다. 중간에 실패하면 완료한 단계와 재생성 실패 여부를 알린다.
+- 로컬 파일은 삭제하지 않는다. readonly 복구는 `init`, deployer 갱신은 `issue`로 한다.
+  Secret 삭제는 그 Secret의 장기 토큰을, SA 재생성은 해당 SA의 기존 토큰을 회수한다. 캐시가 있는 검증자는
+  무효화를 즉시 반영하지 않을 수 있다. 다른 이름의 readonly 토큰 Secret은 이 명령의 대상이 아니다.
+
+토큰 생성·회수 방식은 [Kubernetes ServiceAccount 관리 문서](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)를 따른다.
 
 ---
 

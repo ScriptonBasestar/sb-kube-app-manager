@@ -10,6 +10,17 @@ ______________________________________________________________________
 
 ### 🚀 New Features
 
+**에이전트 접근 경계 `sbkube access`** (1단계, `sbkube/commands/access.py`, `sbkube/models/access_model.py`)
+
+- ✅ **NEW**: `settings.access` 스키마(`auto_profile`, `namespace`, `token_dir`, `readonly`,
+  `deployer`, `token_ttl`은 Go 형식 기간). 없으면 동작은 이전과 같다. `auto_profile`은 스키마만 있다.
+- ✅ **NEW** `sbkube access verify`: 읽기 전용 kubeconfig를 `kubectl auth can-i`로 확인한다(secret·쓰기
+  거부, 읽기·`extra_rules` 허용). API server가 관리자 kubeconfig와 다르면 클러스터 호출 없이 실패하고,
+  연결 실패·토큰 만료는 `no`가 아니라 오류로 보고한다. 클러스터를 바꾸지 않는다.
+- ✅ **NEW** `sbkube access audit`: `KUBECONFIG`·`settings.kubeconfig`·읽기 전용 kubeconfig에서 client-cert
+  (관리자 수준) 사용자를 찾아 보고한다. 클러스터 호출 없음, 값은 출력하지 않음, `--strict`면 발견 시 종료 코드 1.
+- `init`·`issue`·`revoke`와 `auto_profile` 동작은 이후 단계다.
+
 **배포 게이트 `sbkube-gate.yaml`** (`sbkube/utils/deploy_gate.py`, `deploy_gate_config.py`)
 
 - ✅ **NEW**: 클러스터를 바꾸는 명령(`deploy`, `apply`, `upgrade`, `delete`, `rollback`,

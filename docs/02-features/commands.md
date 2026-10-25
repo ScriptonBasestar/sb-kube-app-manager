@@ -241,6 +241,49 @@ sbkube gate grant --pid 93755 --reason "TASK-123 배포"
 증명하지 않는다. 에이전트가 이 DB와 명령에 손대지 못하게 하는 것은 에이전트 실행 환경(권한 훅 등)의
 몫이다.
 
+### access verify — 읽기 전용 자격증명 확인
+
+에이전트에게 줄 읽기 전용 kubeconfig(`settings.access.readonly.kubeconfig`)가 기대한 권한만 갖는지
+`kubectl auth can-i`로 확인합니다. 클러스터를 바꾸지 않으므로 deploy gate 대상이 아닙니다
+([config-schema.md](../03-configuration/config-schema.md#access-에이전트-접근-경계)).
+
+```bash
+sbkube access verify
+sbkube access verify -f sbkube.yaml
+```
+
+- 먼저 클러스터 없이 검사한다: 읽기 전용 kubeconfig 파일이 있고, `settings.kubeconfig_context`
+  (전역 `--context`가 우선)가 들어 있으며, 그 context의 API server가 관리자 kubeconfig
+  (`settings.kubeconfig`, 전역 `--kubeconfig`가 우선)의 같은 context와 같아야 한다. 어긋나면
+  `kubectl`을 부르지 않고 실패한다.
+- 기대값: `get secrets -A` 거부, `list pods -A`·`list nodes`·`list customresourcedefinitions` 허용,
+  `create deployments -A`·`delete pods -A` 거부. `extra_rules`의 verb × resource는 모두 허용이어야 한다
+  (`apiGroups`가 있으면 `resource.group` 형식).
+- `kubectl`의 `no`와 오류를 구분한다. 연결 실패·`Unauthorized`·토큰 만료·`kubectl` 없음·시간 초과는
+  `ERROR`로 표시하고 `no`로 세지 않는다.
+- 결과는 check / expected / actual / result 표로 출력한다. 모두 맞을 때만 종료 코드 0이다.
+- 토큰·인증서·키 값은 읽어 출력하지 않는다.
+
+### access audit — 관리자 자격증명 경로 점검
+
+관리자 수준 자격증명이 닿는 경로를 클러스터 호출 없이 보고합니다. `sbkube.yaml`이 없어도 동작합니다
+(그 경우 설정 검사는 건너뜀).
+
+```bash
+sbkube access audit
+sbkube access audit --strict
+```
+
+- 대상: `KUBECONFIG`의 각 파일(없으면 `~/.kube/config`), `settings.kubeconfig`,
+  `settings.access.readonly.kubeconfig`.
+- 사용자를 자격증명 종류로 분류하고 참조하는 context를 보인다: 클라이언트 인증서 =
+  `client-cert (admin-like)`, `token`/`tokenFile` = `token`, `exec`/`auth-provider` = `exec`.
+  이름·경로·종류만 출력한다.
+- 발견 사항: `KUBECONFIG`가 client-cert 사용자에 닿음, `access`가 설정됐는데 `settings.kubeconfig`가
+  client-cert 사용자를 씀(에이전트가 관리자로 돎), 읽기 전용 kubeconfig에 client-cert 사용자가 있음.
+- 읽을 수 없거나 YAML이 깨진 파일은 보고만 하고 계속한다.
+- 발견 사항이 있어도 종료 코드는 0이다. `--strict`면 하나라도 있을 때 1이다.
+
 ---
 
 ## Utility Commands

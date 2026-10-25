@@ -519,6 +519,53 @@ YAML 1.1 파서는 따옴표 없는 `off`를 불리언으로 읽지만 `mode`에
 
 ---
 
+## Access (에이전트 접근 경계)
+
+에이전트는 사람과 같은 OS 사용자로 sbkube를 실행하므로, 우회할 수 없는 경계는 Kubernetes RBAC뿐이다.
+에이전트에게는 읽기 전용 ServiceAccount의 kubeconfig를 주고, 배포는 사람이 발급한 짧은 수명 토큰으로 한다.
+`settings.access`는 그 설정이다. 1단계에서는 스키마와 읽기 전용 명령
+(`sbkube access verify`·`audit`, [commands.md](../02-features/commands.md#access-verify--읽기-전용-자격증명-확인))만 있다.
+
+```yaml
+settings:
+  kubeconfig: ~/.kube/polypia-cluster          # 관리자 자격증명
+  kubeconfig_context: polypia-cluster
+  access:
+    auto_profile: true
+    namespace: agent-access
+    token_dir: ~/.kube/agent-access
+    readonly:
+      service_account: agent-readonly
+      kubeconfig: ~/.kube/polypia-cluster-agent
+      extra_rules:                             # RBAC PolicyRule 형식
+        - apiGroups: ["cert-manager.io"]
+          resources: ["certificates"]
+          verbs: ["get", "list"]
+    deployer:
+      service_account: sbkube-deployer
+      kubeconfig: ~/.kube/polypia-cluster-deploy
+      token_ttl: 1h
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `access.auto_profile` | bool | `true` | 명령별 kubeconfig 자동 선택. 1단계에서는 스키마만 있고 동작하지 않음 |
+| `access.namespace` | string | `"agent-access"` | ServiceAccount를 두는 네임스페이스 |
+| `access.token_dir` | string | `"~/.kube/agent-access"` | 토큰 파일 디렉토리 |
+| `access.readonly.service_account` | string | `"agent-readonly"` | 에이전트용 ServiceAccount |
+| `access.readonly.kubeconfig` | string | null | 에이전트 kubeconfig 경로 |
+| `access.readonly.extra_rules` | list | `[]` | 추가 읽기 규칙: `apiGroups`, `resources`, `verbs`(필수, 1개 이상), `resourceNames`, `nonResourceURLs` |
+| `access.deployer.service_account` | string | `"sbkube-deployer"` | 배포용 ServiceAccount |
+| `access.deployer.kubeconfig` | string | null | 배포 kubeconfig 경로 |
+| `access.deployer.token_ttl` | string | `"1h"` | 발급 토큰 수명. `30m`, `1h`, `1h30m` 같은 Go 형식(`h`·`m`·`s`), 0보다 커야 함 |
+
+- 모든 모델은 `extra="forbid"`라 알 수 없는 필드는 거부된다.
+- `access`는 전역(루트) `settings`에서만 읽는다. 상속 대상 설정에 포함되지 않으므로 phase·앱 수준에 적어도
+  검증만 통과할 뿐 어떤 명령도 읽지 않는다.
+- `access`가 없으면 동작은 이전과 같다.
+
+---
+
 ## Recursive Execution
 
 ```

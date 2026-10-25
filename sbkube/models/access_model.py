@@ -12,24 +12,34 @@ a phase/app-level ``access`` block validates but is never read.
 import re
 from typing import Annotated
 
-from pydantic import ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from .base_model import ConfigBaseModel
 
-_GO_DURATION = re.compile(r"(?:\d+(?:\.\d+)?[hms])+")
+# Units come in h, m, s order, each at most once (``1h1h`` is rejected).
+_GO_DURATION = re.compile(
+    r"(?=.)(?:\d+(?:\.\d+)?h)?(?:\d+(?:\.\d+)?m)?(?:\d+(?:\.\d+)?s)?"
+)
 _GO_DURATION_PART = re.compile(r"(\d+(?:\.\d+)?)([hms])")
 _GO_DURATION_SECONDS = {"h": 3600, "m": 60, "s": 1}
+# TokenRequest rejects expirationSeconds below 10 minutes.
+MIN_TOKEN_TTL_SECONDS = 600
 
 
 def parse_go_duration_seconds(value: str) -> float:
     """Parse a Go-style duration (``30m``, ``1h``, ``1h30m``) into seconds.
+
+    Each unit may appear once, in h, m, s order.
 
     Raises:
         ValueError: If the text is not a duration or is not greater than zero.
 
     """
     if not _GO_DURATION.fullmatch(value):
-        msg = f"invalid duration {value!r}: use Go-style units such as 30m, 1h, 1h30m"
+        msg = (
+            f"invalid duration {value!r}: use Go-style units in h, m, s order "
+            "such as 30m, 1h, 1h30m"
+        )
         raise ValueError(msg)
     total = sum(
         float(amount) * _GO_DURATION_SECONDS[unit]
@@ -85,6 +95,23 @@ class AccessPolicyRule(ConfigBaseModel):
         ),
     ] = []
 
+    @field_validator("verbs", "resources", "resource_names", "non_resource_urls")
+    @classmethod
+    def reject_empty_entries(cls, v: list[str]) -> list[str]:
+        """An empty string never matches anything; refuse it instead of ignoring."""
+        if any(not item.strip() for item in v):
+            msg = "entries must be non-empty strings"
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode="after")
+    def require_one_target(self) -> "AccessPolicyRule":
+        """RBAC rules target resources or nonResourceURLs, never both or neither."""
+        if bool(self.resources) == bool(self.non_resource_urls):
+            msg = "exactly one of resources / nonResourceURLs is required"
+            raise ValueError(msg)
+        return self
+
 
 class AccessReadonlySettings(ConfigBaseModel):
     """Readonly (agent) credential: ServiceAccount and generated kubeconfig."""
@@ -138,8 +165,13 @@ class AccessDeployerSettings(ConfigBaseModel):
     @field_validator("token_ttl")
     @classmethod
     def validate_token_ttl(cls, v: str) -> str:
-        """Reject anything but a positive Go-style duration."""
-        parse_go_duration_seconds(v)
+        """Reject anything but a Go-style duration of at least 10 minutes."""
+        if parse_go_duration_seconds(v) < MIN_TOKEN_TTL_SECONDS:
+            msg = (
+                f"token_ttl {v!r} is below the 10m minimum "
+                "(TokenRequest expirationSeconds >= 600)"
+            )
+            raise ValueError(msg)
         return v
 
 

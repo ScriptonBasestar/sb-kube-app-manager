@@ -35,7 +35,6 @@ def test_extra_rules_accept_rbac_field_names() -> None:
                         "resources": ["certificates"],
                         "verbs": ["get", "list"],
                         "resourceNames": ["web"],
-                        "nonResourceURLs": ["/healthz"],
                     }
                 ]
             }
@@ -45,10 +44,10 @@ def test_extra_rules_accept_rbac_field_names() -> None:
     rule = access.readonly.extra_rules[0]
     assert rule.api_groups == ["cert-manager.io"]
     assert rule.resource_names == ["web"]
-    assert rule.non_resource_urls == ["/healthz"]
+    assert rule.non_resource_urls == []
 
 
-@pytest.mark.parametrize("ttl", ["30m", "1h", "1h30m", "90s", "1.5h"])
+@pytest.mark.parametrize("ttl", ["10m", "30m", "1h", "1h30m", "600s", "1.5h"])
 def test_token_ttl_accepts_go_durations(ttl: str) -> None:
     settings = UnifiedSettings(access={"deployer": {"token_ttl": ttl}})
     assert settings.access is not None
@@ -56,7 +55,25 @@ def test_token_ttl_accepts_go_durations(ttl: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "ttl", ["", "0", "0m", "0h0m", "1d", "abc", "-1h", "1h 30m", "30"]
+    "ttl",
+    [
+        "",
+        "0",
+        "0m",
+        "0h0m",
+        "1d",
+        "abc",
+        "-1h",
+        "1h 30m",
+        "30",
+        "9m",
+        "90s",
+        "599s",
+        "1h1h",
+        "30m30m",
+        "30m1h",
+        "1s1s",
+    ],
 )
 def test_token_ttl_rejects_bad_values(ttl: str) -> None:
     with pytest.raises(ConfigValidationError, match="token_ttl"):
@@ -110,3 +127,37 @@ def test_access_in_unified_config_and_not_inherited_by_phases() -> None:
     assert config.settings.access.namespace == "root-ns"
     # Phase settings are independent models: access stays unset unless declared.
     assert config.phases["p1"].settings is None
+
+
+def test_ttl_minimum_message_names_the_limit() -> None:
+    with pytest.raises(ConfigValidationError, match="10m minimum"):
+        UnifiedSettings(access={"deployer": {"token_ttl": "9m"}})
+
+
+@pytest.mark.parametrize(
+    "rule",
+    [
+        {"verbs": ["get"]},
+        {"verbs": ["get"], "resources": ["pods"], "nonResourceURLs": ["/healthz"]},
+        {"verbs": [""], "resources": ["pods"]},
+        {"verbs": ["get"], "resources": [""]},
+        {"verbs": ["get"], "resources": ["pods"], "resourceNames": [" "]},
+        {"verbs": ["get"], "nonResourceURLs": [""]},
+    ],
+)
+def test_policy_rule_rejects_invalid_shapes(rule: dict) -> None:
+    with pytest.raises(ConfigValidationError):
+        UnifiedSettings(access={"readonly": {"extra_rules": [rule]}})
+
+
+@pytest.mark.parametrize(
+    "rule",
+    [
+        {"verbs": ["get"], "resources": ["pods"]},
+        {"verbs": ["get"], "nonResourceURLs": ["/healthz"]},
+    ],
+)
+def test_policy_rule_accepts_one_target_kind(rule: dict) -> None:
+    settings = UnifiedSettings(access={"readonly": {"extra_rules": [rule]}})
+    assert settings.access is not None
+    assert len(settings.access.readonly.extra_rules) == 1

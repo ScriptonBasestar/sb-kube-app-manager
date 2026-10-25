@@ -6,7 +6,6 @@ without touching the cluster. Neither prints a credential value.
 """
 
 import os
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,8 +15,13 @@ from rich.markup import escape
 from rich.table import Table
 
 from sbkube.exceptions import SbkubeError
-from sbkube.models.access_model import AccessPolicyRule, AccessSettings
+from sbkube.models.access_model import AccessSettings
 from sbkube.models.unified_config_model import UnifiedConfig, UnifiedSettings
+from sbkube.utils.access_checks import (
+    OUTCOME_STYLE,
+    PASS,
+    verify_rows,
+)
 from sbkube.utils.access_kubeconfig import (
     CLIENT_CERT,
     KubeconfigError,
@@ -30,33 +34,6 @@ from sbkube.utils.access_kubeconfig import (
 from sbkube.utils.file_loader import load_config_file
 
 DEFAULT_CONFIG_FILE = "sbkube.yaml"
-KUBECTL_TIMEOUT_SECONDS = 30
-
-# What the readonly credential must (not) be able to do: (can-i args, expected).
-BASE_CHECKS: tuple[tuple[tuple[str, ...], str], ...] = (
-    (("get", "secrets", "-A"), "no"),
-    (("list", "pods", "-A"), "yes"),
-    (("list", "nodes"), "yes"),
-    (("list", "customresourcedefinitions.apiextensions.k8s.io"), "yes"),
-    (("create", "deployments.apps", "-A"), "no"),
-    (("delete", "pods", "-A"), "no"),
-)
-
-# stderr fragments meaning kubectl could not get an answer from the API server.
-_ERROR_MARKERS = (
-    "unauthorized",
-    "connection refused",
-    "unable to connect",
-    "dial tcp",
-    "i/o timeout",
-    "no such host",
-    "token has expired",
-    "token is expired",
-    "expired",
-    "must be logged in",
-    "certificate",
-)
-
 console = Console()
 
 
@@ -103,84 +80,6 @@ def _expand(path: str) -> Path:
 # ---------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class CanIResult:
-    """Outcome of one ``kubectl auth can-i``: ``yes``, ``no`` or ``error``."""
-
-    answer: str
-    detail: str = ""
-
-
-def run_can_i(kubeconfig: Path, context: str, args: tuple[str, ...]) -> CanIResult:
-    """Ask the API server via ``kubectl auth can-i``; errors are never a ``no``."""
-    command = [
-        "kubectl",
-        "--kubeconfig",
-        str(kubeconfig),
-        "--context",
-        context,
-        "auth",
-        "can-i",
-        *args,
-    ]
-    try:
-        proc = subprocess.run(  # noqa: S603
-            command,
-            capture_output=True,
-            text=True,
-            timeout=KUBECTL_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except FileNotFoundError:
-        return CanIResult("error", "kubectl not found in PATH")
-    except subprocess.TimeoutExpired:
-        return CanIResult("error", f"kubectl timed out ({KUBECTL_TIMEOUT_SECONDS}s)")
-
-    stdout = proc.stdout.strip()
-    stderr = proc.stderr.strip()
-    first_word = stdout.split(maxsplit=1)[0] if stdout else ""
-    detail = (stderr.splitlines() or [""])[0][:200]
-
-    if any(marker in stderr.lower() for marker in _ERROR_MARKERS):
-        return CanIResult("error", detail)
-    if proc.returncode == 0 and first_word == "yes":
-        return CanIResult("yes")
-    if proc.returncode == 1 and first_word == "no":
-        return CanIResult("no")
-    return CanIResult("error", detail or f"kubectl exited {proc.returncode}")
-
-
-def _resource_targets(rule: AccessPolicyRule) -> list[tuple[str, ...]]:
-    """can-i argument tails (after the verb) that a rule says must be allowed."""
-    targets: list[tuple[str, ...]] = []
-    for group in rule.api_groups or [""]:
-        for resource in rule.resources:
-            base, _, subresource = resource.partition("/")
-            name = base if group in ("", "*") else f"{base}.{group}"
-            flags = [f"--subresource={subresource}"] if subresource else []
-            if rule.resource_names:
-                targets.extend((f"{name}/{n}", *flags) for n in rule.resource_names)
-            else:
-                targets.append((name, "-A", *flags))
-    targets.extend((url,) for url in rule.non_resource_urls)
-    return targets
-
-
-def build_checks(access: AccessSettings) -> list[tuple[tuple[str, ...], str]]:
-    """Expected can-i table: the base table plus every ``extra_rules`` entry."""
-    checks = list(BASE_CHECKS)
-    for rule in access.readonly.extra_rules:
-        for verb in rule.verbs:
-            checks.extend(((verb, *tail), "yes") for tail in _resource_targets(rule))
-    seen: set[tuple[str, ...]] = set()
-    unique = []
-    for args, expected in checks:
-        if args not in seen:
-            seen.add(args)
-            unique.append((args, expected))
-    return unique
-
-
 def _sanity_check(readonly: Path, admin: Path | None, context: str) -> str | None:
     """Cluster-free check; returns a failure message or ``None``."""
     if not readonly.is_file():
@@ -191,7 +90,10 @@ def _sanity_check(readonly: Path, admin: Path | None, context: str) -> str | Non
         return str(e)
     if context not in context_names(readonly_data):
         return f"context {context!r} not found in readonly kubeconfig {readonly}"
-    readonly_server = context_server(readonly_data, context)
+    try:
+        readonly_server = context_server(readonly_data, context, readonly)
+    except KubeconfigError as e:
+        return str(e)
     if readonly_server is None:
         return f"context {context!r} in {readonly} has no single cluster server"
 
@@ -204,7 +106,10 @@ def _sanity_check(readonly: Path, admin: Path | None, context: str) -> str | Non
         admin_data = read_kubeconfig(admin)
     except KubeconfigError as e:
         return str(e)
-    admin_server = context_server(admin_data, context)
+    try:
+        admin_server = context_server(admin_data, context, admin)
+    except KubeconfigError as e:
+        return str(e)
     if admin_server is None:
         return f"context {context!r} not found in admin kubeconfig {admin}"
     if readonly_server != admin_server:
@@ -256,16 +161,9 @@ def verify(ctx: click.Context, config_file: Path) -> None:
     for column in ("check", "expected", "actual", "result"):
         table.add_column(column)
     failed = False
-    for args, expected in build_checks(access):
-        result = run_can_i(readonly, context, args)
-        if result.answer == "error":
-            outcome, actual = "[red]ERROR[/red]", escape(result.detail or "error")
-        elif result.answer == expected:
-            outcome, actual = "[green]PASS[/green]", result.answer
-        else:
-            outcome, actual = "[red]FAIL[/red]", result.answer
-        failed = failed or outcome != "[green]PASS[/green]"
-        table.add_row(escape(" ".join(args)), expected, actual, outcome)
+    for check, expected, actual, passed in verify_rows(readonly, context, access):
+        failed = failed or passed != PASS
+        table.add_row(escape(check), expected, escape(actual), OUTCOME_STYLE[passed])
     console.print(table)
 
     if failed:

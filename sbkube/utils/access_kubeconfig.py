@@ -110,20 +110,34 @@ def context_names(data: dict[str, Any]) -> list[str]:
     ]
 
 
-def context_server(data: dict[str, Any], context: str) -> str | None:
-    """API server URL of ``context``'s cluster, or ``None`` if not resolvable."""
-    cluster_names = {
-        body.get("cluster")
-        for entry in _entries(data, "contexts")
-        if entry.get("name") == context
-        for body in [entry.get("context")]
-        if isinstance(body, dict)
-    }
-    servers = {
-        body.get("server")
-        for entry in _entries(data, "clusters")
-        if entry.get("name") in cluster_names
-        for body in [entry.get("cluster")]
-        if isinstance(body, dict) and isinstance(body.get("server"), str)
-    }
+def context_server(data: dict[str, Any], context: str, path: Path) -> str | None:
+    """API server URL of ``context``'s cluster, or ``None`` if not resolvable.
+
+    Raises:
+        KubeconfigError: If the context or its cluster entry is malformed
+            (non-mapping body, non-string cluster name or server).
+
+    """
+    cluster_names: set[str] = set()
+    for entry in _entries(data, "contexts"):
+        if entry.get("name") != context:
+            continue
+        body = entry.get("context")
+        if not isinstance(body, dict) or not isinstance(body.get("cluster"), str):
+            raise KubeconfigError(
+                f"{path}: context {context!r} has no string cluster name"
+            )
+        cluster_names.add(body["cluster"])
+
+    servers: set[str] = set()
+    for entry in _entries(data, "clusters"):
+        name = entry.get("name")
+        if not isinstance(name, str) or name not in cluster_names:
+            continue
+        body = entry.get("cluster")
+        if not isinstance(body, dict) or not isinstance(body.get("server"), str):
+            raise KubeconfigError(
+                f"{path}: cluster {entry.get('name')!r} has no string server"
+            )
+        servers.add(body["server"])
     return servers.pop() if len(servers) == 1 else None

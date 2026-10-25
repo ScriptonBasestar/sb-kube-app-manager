@@ -32,6 +32,7 @@ from sbkube.state.rollback_compare import (
     RollbackConfirmationRequired,
     compare_snapshots,
 )
+from sbkube.utils.access_profile import select_profile
 from sbkube.utils.cluster_config import apply_cluster_config_to_command
 from sbkube.utils.common import run_command
 from sbkube.utils.logger import get_logger
@@ -69,6 +70,7 @@ class RollbackManager:
         self._cli_context = context
         # Set by _load_deployments; see resolve_rollback_cluster
         self._cluster: tuple[str, str] | None = None
+        self._cluster_pin: dict[str, str] | None = None
 
     def _cluster_command(self, cmd: list[str]) -> list[str]:
         """Pin a helm/kubectl call to the deployment's cluster."""
@@ -169,8 +171,25 @@ class RollbackManager:
                 raise RollbackError(
                     msg,
                 )
+        selected = select_profile(
+            "rollback",
+            {"base_dir": current_deployment.app_config_dir},
+            {"kubeconfig": self._cli_kubeconfig, "context": self._cli_context},
+        )
         self._cluster = resolve_rollback_cluster(
-            current_deployment, self._cli_kubeconfig, self._cli_context
+            current_deployment,
+            str(selected.kubeconfig) if selected else self._cli_kubeconfig,
+            selected.context if selected else self._cli_context,
+        )
+        pin = (
+            selected.identity
+            if selected
+            else (current_deployment.sources_snapshot or {}).get("cluster_identity")
+        )
+        self._cluster_pin = (
+            {key: pin[key] for key in ("context", "server", "ca_sha256")}
+            if pin
+            else None
         )
         return current_deployment, target_deployment
 
@@ -619,9 +638,20 @@ class RollbackManager:
                     config_snapshot=config_source.config_snapshot or {},
                     # The cluster this rollback ran on, for the next rollback
                     sources_snapshot={
-                        **(config_source.sources_snapshot or {}),
+                        **{
+                            key: value
+                            for key, value in (
+                                config_source.sources_snapshot or {}
+                            ).items()
+                            if key != "cluster_identity"
+                        },
                         "kubeconfig": self._cluster[0],
                         "kubeconfig_context": self._cluster[1],
+                        **(
+                            {"cluster_identity": self._cluster_pin}
+                            if self._cluster_pin
+                            else {}
+                        ),
                     }
                     if self._cluster
                     else config_source.sources_snapshot,

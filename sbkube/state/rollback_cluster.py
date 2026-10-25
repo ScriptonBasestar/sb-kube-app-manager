@@ -8,10 +8,14 @@ shell's current kube context or KUBECONFIG.
 
 from pathlib import Path
 
-import yaml
-
 from sbkube.exceptions import RollbackError
 from sbkube.models.deployment_state import DeploymentDetail
+from sbkube.utils.access_kubeconfig import (
+    KubeconfigError,
+    context_cluster,
+    read_kubeconfig,
+)
+from sbkube.utils.cluster_identity import cluster_identity
 
 
 def resolve_rollback_cluster(
@@ -31,11 +35,33 @@ def resolve_rollback_cluster(
 
     """
     snapshot = deployment.sources_snapshot or {}
+    if not isinstance(snapshot, dict):
+        raise RollbackError("Deployment sources snapshot is malformed")
     recorded_kubeconfig = snapshot.get("kubeconfig")
     recorded_context = snapshot.get("kubeconfig_context")
+    saved_identity = _saved_identity(snapshot)
+
+    if saved_identity is not None:
+        chosen = _choose_pinned_cluster(
+            deployment,
+            cli_kubeconfig,
+            cli_context,
+            recorded_kubeconfig,
+            recorded_context,
+        )
+        if _identity(*chosen) != saved_identity:
+            raise RollbackError(
+                f"Selected cluster is not the immutable identity recorded for deployment "
+                f"{deployment.deployment_id}"
+            )
+        return chosen
+
     recorded = (
         (_existing(recorded_kubeconfig), recorded_context)
-        if recorded_kubeconfig and recorded_context
+        if isinstance(recorded_kubeconfig, str)
+        and recorded_kubeconfig
+        and isinstance(recorded_context, str)
+        and recorded_context
         else None
     )
 
@@ -69,6 +95,52 @@ def resolve_rollback_cluster(
     return chosen
 
 
+def _choose_pinned_cluster(
+    deployment: DeploymentDetail,
+    cli_kubeconfig: str | None,
+    cli_context: str | None,
+    recorded_kubeconfig: object,
+    recorded_context: object,
+) -> tuple[str, str]:
+    """Choose a cluster for a deployment whose immutable identity is pinned."""
+    if cli_kubeconfig or cli_context:
+        if not (cli_kubeconfig and cli_context):
+            raise RollbackError(
+                "Both --kubeconfig and --context must be specified together"
+            )
+        return _existing(cli_kubeconfig), cli_context
+    if (
+        isinstance(recorded_kubeconfig, str)
+        and recorded_kubeconfig
+        and isinstance(recorded_context, str)
+        and recorded_context
+    ):
+        return _existing(recorded_kubeconfig), recorded_context
+    raise RollbackError(
+        f"Deployment {deployment.deployment_id} has a cluster identity pin but no "
+        "usable kubeconfig and context; pass them explicitly"
+    )
+
+
+def _saved_identity(snapshot: dict[object, object]) -> dict[str, str] | None:
+    """Validate the optional deployment-time immutable identity pin."""
+    if "cluster_identity" not in snapshot:
+        return None
+    identity = snapshot["cluster_identity"]
+    required = {"context", "server", "ca_sha256"}
+    if not isinstance(identity, dict) or not required <= identity.keys():
+        raise RollbackError("Deployment cluster identity pin is malformed")
+    values = {key: identity[key] for key in required}
+    if not all(isinstance(value, str) and value for value in values.values()):
+        raise RollbackError("Deployment cluster identity pin is malformed")
+    fingerprint = values["ca_sha256"]
+    if len(fingerprint) != 64 or any(
+        char not in "0123456789abcdef" for char in fingerprint
+    ):
+        raise RollbackError("Deployment cluster identity pin is malformed")
+    return values
+
+
 def _existing(kubeconfig: str) -> str:
     path = Path(kubeconfig).expanduser()
     if not path.exists():
@@ -80,27 +152,24 @@ def _existing(kubeconfig: str) -> str:
 def _context_server(kubeconfig: str, context: str) -> str:
     """API server URL the context points at, read from the kubeconfig file."""
     try:
-        data = yaml.safe_load(Path(kubeconfig).read_text()) or {}
-    except (OSError, yaml.YAMLError) as e:
-        msg = f"Cannot read kubeconfig {kubeconfig}: {e}"
-        raise RollbackError(msg) from e
+        data = read_kubeconfig(Path(kubeconfig))
+        _, cluster = context_cluster(data, context, Path(kubeconfig))
+        return cluster["server"]
+    except KubeconfigError as error:
+        if "not found exactly once" in str(error):
+            raise RollbackError(
+                f"Context {context} not found in kubeconfig {kubeconfig}"
+            ) from error
+        raise RollbackError(
+            f"Cannot inspect kubeconfig {kubeconfig} for context {context}"
+        ) from error
 
-    clusters = {
-        entry.get("context", {}).get("cluster")
-        for entry in data.get("contexts") or []
-        if entry.get("name") == context
-    }
-    servers = {
-        entry.get("cluster", {}).get("server")
-        for entry in data.get("clusters") or []
-        if entry.get("name") in clusters
-    }
-    if not clusters:
-        msg = f"Context {context} not found in kubeconfig {kubeconfig}"
-        raise RollbackError(msg)
-    if len(servers) != 1 or None in servers:
-        msg = (
-            f"Context {context} in kubeconfig {kubeconfig} has no single cluster server"
-        )
-        raise RollbackError(msg)
-    return servers.pop()
+
+def _identity(kubeconfig: str, context: str) -> dict[str, str]:
+    """Inspect an identity without exposing kubeconfig parser details."""
+    try:
+        return cluster_identity(kubeconfig, context)
+    except Exception as error:
+        raise RollbackError(
+            f"Cannot inspect kubeconfig {kubeconfig} for immutable cluster identity"
+        ) from error

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sbkube.models.sources_model import SourceScheme
+from sbkube.utils.access_profile import current_profile, profile_cluster
 
 if TYPE_CHECKING:
     from sbkube.utils.output_manager import OutputManager
@@ -38,6 +39,7 @@ def apply_cluster_config_to_command(
         kubeconfig/context가 추가된 명령어 리스트
 
     """
+    kubeconfig, context = profile_cluster(kubeconfig, context)
     if not kubeconfig or not context:
         return cmd
 
@@ -85,6 +87,15 @@ def resolve_cluster_config(
         ClusterConfigError: 클러스터 설정이 없거나 유효하지 않은 경우
 
     """
+    selected = current_profile()
+    if selected is not None:
+        if sources is not None:
+            selected.resolve(sources.kubeconfig, sources.kubeconfig_context)
+        return selected.resolve(
+            cli_kubeconfig or (sources.kubeconfig if sources else None),
+            cli_context or (sources.kubeconfig_context if sources else None),
+        )
+
     # CLI 옵션 최우선 (오버라이드)
     if cli_kubeconfig and cli_context:
         kubeconfig = str(Path(cli_kubeconfig).expanduser())
@@ -176,7 +187,9 @@ def resolve_cluster_config(
 
     # 성공 - 설정 정보 표시
     if output:
-        output.print("[cyan]🔍 Cluster Configuration (from sources.yaml):[/cyan]", level="info")
+        output.print(
+            "[cyan]🔍 Cluster Configuration (from sources.yaml):[/cyan]", level="info"
+        )
         if sources.cluster:
             output.print(f"  Target Cluster: {sources.cluster}", level="info")
         output.print(f"  Kubeconfig: {kubeconfig}", level="info")

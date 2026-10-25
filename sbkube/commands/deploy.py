@@ -26,6 +26,7 @@ from sbkube.models.config_model import (
     YamlApp,
 )
 from sbkube.state.deploy_recorder import DeploymentRecorder
+from sbkube.utils.access_profile import current_profile
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.app_labels import (
     build_helm_set_annotations,
@@ -1427,6 +1428,7 @@ def cmd(
                     **(sources.model_dump(mode="json") if sources else {}),
                     "kubeconfig": kubeconfig,
                     "kubeconfig_context": context,
+                    **({"cluster_identity": current_profile().identity} if current_profile() else {}),
                 },
                 warn=output.print_warning,
                 command_args={"app": app_name} if app_name else None,

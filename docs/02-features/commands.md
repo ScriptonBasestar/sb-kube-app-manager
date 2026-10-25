@@ -399,6 +399,40 @@ K3s 관리자 파일과 내장 kubectl 동작은 [K3s CLI 문서](https://docs.k
 
 토큰 생성·회수 방식은 [Kubernetes ServiceAccount 관리 문서](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)를 따른다.
 
+### 명령별 자격증명 자동 선택
+
+루트 `settings.access.auto_profile`의 기본값은 `true`다. 설정이 없거나 `false`이면 기존 CLI·설정의
+kubeconfig 해석을 유지한다. 켜져 있으면 다음 자격증명을 선택하고, 누락·만료 시 관리자 파일로 돌아가지 않는다.
+
+| 명령 | 선택 |
+| --- | --- |
+| `apply`, `deploy`, `delete`, `upgrade` | deployer (`--dry-run`도 동일) |
+| `rollback` | 기록된 앱 디렉토리의 설정에서 deployer 선택 후 기록된 클러스터와 대조 |
+| `status` | readonly; unified 설정으로 조회하고 관리자 모드와 분리된 캐시 사용 |
+| `history`, `rollback --list` | 로컬 기록만 조회하므로 프로파일 토큰을 요구하지 않음 |
+
+- `.sbkube-workspace`는 설정 탐색의 경계이며 앵커만 정의할 수도 있다. 대상 파일에서 이 경계까지의
+  실제 `sbkube.yaml`/`sbkube.yml` 상위 문서 중 가장 바깥 문서가 해당 클러스터 설정의 소유자다.
+  따라서 infra-ops처럼 저장소 루트에는 앵커만 있고 환경별 `ph4_kube/sbkube.yaml`이 있는 구조도 지원한다.
+  표식이 없으면 기존 `TARGET`·`-f` 해석 결과의 문서를 루트로 삼고, 별도의 상위 설정 병합은 하지 않는다.
+- 하위 phase·앱의 `access`는 루트 선택을 덮어쓰지 않는다. 다른 `context`나 클러스터를 선언한 하위 설정은
+  훅·prune 실행 전에 거부한다. 한 자동 프로파일 범위는 한 클러스터를 대상으로 한다.
+- CLI의 `--kubeconfig`·`--context`가 선택된 프로파일과 충돌하면 오류다. 수동으로 다른 자격증명을 쓰려면
+  해당 루트의 `auto_profile`을 명시적으로 끈다. `KUBECONFIG` 환경 변수나 사용자 기본 파일은 대체 경로가 아니다.
+- 선택한 kubeconfig는 HTTPS·서버 CA를 제공해야 한다. readonly와 deployer는 context·API URL·CA 지문이 같아야
+  한다. 사용자 인증은 토큰 또는 tokenFile만 허용하고 관리자 인증서·exec 플러그인은 거부한다.
+- 토큰의 ServiceAccount 주체와 만료 시각을 로컬에서 확인한다. deployer는 만료 시각이 있는 단기 토큰이어야
+  하며 갱신 안내는 `access issue`다. readonly의 장기 토큰은 만료 항목이 없어도 되며 복구 안내는 `access init`이다.
+  이 사전 검사는 서명·audience·서버의 회수 상태까지 인증하는 것이 아니며 실제 API 서버가 최종 판정한다.
+- 병렬 앱 실행에서도 선택을 유지하고 완료·실패 후에는 호출 전 선택으로 복원한다. `apply --prune-disabled`의
+  Helm·YAML 삭제도 동일 프로파일을 사용한다. 임의의 exec 명령·셸 훅 문자열은 재작성하지 않으므로,
+  그 안에 직접 적은 관리자 경로나 외부 프로그램의 자격증명은 작성자가 별도로 전환해야 한다.
+
+자동 선택으로 배포한 새 기록에는 context·API URL·공개 서버 CA의 SHA-256을 저장한다(토큰·개인키 제외).
+rollback은 선택한 deployer의 식별 정보가 이 기록과 일치해야 하므로 이전 관리자 파일이 없어도 검증할 수 있다.
+기존 지문 없는 기록은 이전 kubeconfig의 공개 클러스터 정보로 비교하는 동작을 유지하며, 그 파일까지 없으면
+대상을 증명할 수 없어 거부한다. 기존 기록을 자동으로 수정하거나 검사를 건너뛰지 않는다.
+
 ---
 
 ## Utility Commands

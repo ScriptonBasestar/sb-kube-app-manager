@@ -4,7 +4,9 @@ import click
 from pydantic import ValidationError as PydanticValidationError
 
 from sbkube.models.config_model import HelmApp, SBKubeConfig
+from sbkube.utils.access_profile import current_profile, profile_cluster
 from sbkube.utils.cli_check import check_helm_installed_or_exit
+from sbkube.utils.cluster_config import apply_cluster_config_to_command
 from sbkube.utils.common import run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
@@ -124,6 +126,13 @@ def cmd(
     try:
         raw_config_data = load_config_file(str(config_file_path))
         if raw_config_data.get("apiVersion", "").startswith("sbkube/"):
+            selected = current_profile()
+            if selected is not None:
+                local_settings = raw_config_data.get("settings", {})
+                selected.resolve(
+                    local_settings.get("kubeconfig"),
+                    local_settings.get("kubeconfig_context"),
+                )
             config_data = {
                 "namespace": raw_config_data.get("settings", {}).get(
                     "namespace", "default"
@@ -191,6 +200,8 @@ def cmd(
             continue
 
         upgrade_total_apps += 1
+        if current_profile() is not None:
+            profile_cluster(None, getattr(app_config, "context", None))
         app_release_name = app_config.release_name or app_name
 
         console.print(
@@ -257,6 +268,13 @@ def cmd(
                         f"        [yellow]⚠️ Values 파일 없음 (건너뜀): {abs_vf_path} (원본: '{vf_rel_path_str}')[/yellow]",
                     )
 
+        if current_profile() is not None:
+            kubeconfig, context = profile_cluster(
+                ctx.obj.get("kubeconfig"), ctx.obj.get("context")
+            )
+            helm_upgrade_cmd = apply_cluster_config_to_command(
+                helm_upgrade_cmd, kubeconfig, context
+            )
         if dry_run:
             helm_upgrade_cmd.append("--dry-run")
             console.print("    [yellow]🌵 Dry-run 모드 활성화됨.[/yellow]")

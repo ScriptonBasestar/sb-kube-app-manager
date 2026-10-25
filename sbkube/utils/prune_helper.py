@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from sbkube.utils.access_profile import profile_cluster, validate_profile_document
 from sbkube.utils.common import run_command
 
 if TYPE_CHECKING:
@@ -66,6 +67,8 @@ def prune_disabled_apps(
         True if all prune operations succeeded (or were skipped)
 
     """
+    profile_cluster(kubeconfig, context)
+    validate_profile_document({"apps": dict(apps_to_prune)})
     all_success = True
 
     for app_name, app_config in apps_to_prune:
@@ -77,7 +80,13 @@ def prune_disabled_apps(
             )
         elif app_type == "yaml":
             success = _prune_yaml_app(
-                app_name, app_config, kubeconfig, context, app_config_dir, output, dry_run
+                app_name,
+                app_config,
+                kubeconfig,
+                context,
+                app_config_dir,
+                output,
+                dry_run,
             )
         elif app_type == "action":
             success = _prune_action_app(
@@ -110,6 +119,9 @@ def _prune_helm_app(
     app_context = getattr(app_config, "context", None)
     effective_context = app_context or context
     effective_kubeconfig = kubeconfig if not app_context else None
+    effective_kubeconfig, effective_context = profile_cluster(
+        effective_kubeconfig, effective_context
+    )
 
     # Check if helm release is installed
     try:
@@ -183,6 +195,9 @@ def _prune_yaml_app(
     app_context = getattr(app_config, "context", None)
     effective_context = app_context or context
     effective_kubeconfig = kubeconfig if not app_context else None
+    effective_kubeconfig, effective_context = profile_cluster(
+        effective_kubeconfig, effective_context
+    )
 
     all_ok = True
     # Delete in reverse order (same as delete.py)
@@ -205,7 +220,13 @@ def _prune_yaml_app(
             )
             continue
 
-        kubectl_cmd = ["kubectl", "delete", "-f", str(abs_path), "--ignore-not-found=true"]
+        kubectl_cmd = [
+            "kubectl",
+            "delete",
+            "-f",
+            str(abs_path),
+            "--ignore-not-found=true",
+        ]
         if namespace:
             kubectl_cmd.extend(["--namespace", namespace])
         if effective_kubeconfig:

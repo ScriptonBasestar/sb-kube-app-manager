@@ -549,7 +549,7 @@ settings:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `access.auto_profile` | bool | `true` | 명령별 kubeconfig 자동 선택. 1단계에서는 스키마만 있고 동작하지 않음 |
+| `access.auto_profile` | bool | `true` | 변경 명령은 deployer, status는 readonly 자동 선택. 누락·만료·CLI 충돌 시 중단 |
 | `access.admin.ssh_host` | string | null | 노드 전용 관리자 SSH alias 또는 `user@host`. 없으면 기존 로컬 관리자 kubectl 사용 |
 | `access.admin.expected_hostname` | string | null | SSH 노드에서 반환해야 하는 정확한 hostname. `ssh_host`와 함께 지정 |
 | `access.namespace` | string | `"agent-access"` | ServiceAccount를 두는 네임스페이스 |
@@ -591,6 +591,17 @@ settings:
   chmod하지 않고 group/other 권한이 있으면 거부한다.
   `deployer.kubeconfig`의 `tokenFile`은 이 파일의 절대 경로다.
 - `access`가 없으면 동작은 이전과 같다.
+- `auto_profile=true`인 변경 명령(`apply`·`deploy`·`delete`·`upgrade`·`rollback`, dry-run 포함)은
+  deployer의 유효한 단기 ServiceAccount 토큰이 필요하다. readonly/deployer의 context·HTTPS API URL·CA가
+  같아야 하고, 토큰의 주체도 설정한 namespace·SA와 일치해야 한다. 관리자 인증서로 자동 대체하지 않는다.
+- 설정 소유자는 대상부터 `.sbkube-workspace` 경계까지의 가장 바깥 실제 sbkube 설정 문서다. 표식 자체에
+  sbkube.yaml이 없어도 된다. 표식이 없으면 기존 TARGET·-f 해석이 고른 문서를 사용하고 별도의 상위 설정을
+  병합하지 않는다. 하위 cluster/context 충돌은 거부한다.
+- 토큰 파일의 내부 상대 참조는 kubeconfig 위치 기준이다. `access.*.kubeconfig`의 상대 경로는 기존 access
+  명령과 같이 실행 디렉토리 기준이며 `~`는 홈으로 확장한다. 충돌하는 CLI 재지정은 명시적 `auto_profile=false`가 필요하다.
+- `status`는 자동 선택 시 unified 루트 설정을 사용하며 캐시를 공개 클러스터 식별 정보·SA 주체별로 분리한다.
+  `history`와 `rollback --list`는 로컬 조회라 토큰을 요구하지 않는다. rollback의 프로파일 소유자는 현재
+  디렉토리가 아니라 배포 기록의 앱 디렉토리에서 찾는다.
 
 ---
 

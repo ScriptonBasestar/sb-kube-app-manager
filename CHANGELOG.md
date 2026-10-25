@@ -35,7 +35,11 @@ ______________________________________________________________________
 - ✅ **NEW** `access revoke --profile readonly|deployer|all`: readonly 토큰 Secret 삭제 또는 deployer SA
   UID 재생성으로 자격증명을 회수한다. 로컬 파일과 기존 SA 메타데이터를 보존하고 부분 실패를 명시한다.
   실제 `init`·`revoke`는 TTY와 독립된 `access-init`·`access-revoke` 배포 게이트를 거친다.
-- `auto_profile` 동작은 이후 단계다.
+- ✅ **NEW** `access.auto_profile`(기본 true): `apply`·`deploy`·`delete`·`upgrade`·`rollback`은 deployer,
+  `status`는 readonly를 선택한다. 루트/하위 대상 충돌·누락·잘못된 주체·만료는 관리자 fallback 없이 거부한다.
+  prune과 병렬 작업에도 선택을 유지하고, 로컬 `history`·`rollback --list`에는 토큰을 요구하지 않는다.
+- ✅ **NEW** 자동 선택 배포 기록에 context·API URL·서버 CA 지문을 보존한다. rollback은 이를 대조해
+  이전 관리자 파일이 없어도 같은 대상을 확인한다. 지문 없는 기존 기록의 검증 조건은 유지한다.
 - ✅ **NEW** `access.admin.ssh_host`·`expected_hostname`: `access issue`가 노드의 `sudo -n k3s kubectl`로
   토큰을 발급한다. 로컬 관리자 파일 없이 agent kubeconfig의 server·CA를 사용하고, SSH hostname과 공개
   서버 CA가 일치해야 발급한다. SSH 호스트 키 검증을 유지하며 원격 실패 출력은 숨긴다.

@@ -33,6 +33,7 @@ from sbkube.exceptions import (
     SbkubeError,
     format_error_with_suggestions,
 )
+from sbkube.utils.access_profile import PROFILE_COMMANDS, install_profile
 from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
@@ -120,6 +121,8 @@ class SbkubeGroup(click.Group):
         super().add_command(cmd, name)
         if (name or cmd.name) in CLUSTER_MUTATING_COMMANDS:
             install_gate(cmd)
+        if (name or cmd.name) in PROFILE_COMMANDS:
+            install_profile(cmd)
 
     def invoke(self, ctx: click.Context) -> None:
         # 이 메소드는 invoke_without_command=True 와 main 콜백 로직에 의해

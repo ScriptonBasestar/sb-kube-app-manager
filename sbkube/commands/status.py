@@ -6,6 +6,8 @@ cluster status with deployment tracking information.
 Replaces: sbkube cluster status (simplified)
 """
 
+import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -14,7 +16,9 @@ from rich.table import Table
 from rich.tree import Tree
 
 from sbkube.models.config_manager import ConfigManager
+from sbkube.models.sources_model import SourceScheme
 from sbkube.state.database import DeploymentDatabase
+from sbkube.utils.access_profile import current_profile
 from sbkube.utils.cluster_cache import ClusterCache
 from sbkube.utils.cluster_grouping import (
     filter_by_app_group,
@@ -22,6 +26,7 @@ from sbkube.utils.cluster_grouping import (
     group_releases_by_app_group,
 )
 from sbkube.utils.cluster_status import ClusterStatusCollector
+from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.global_options import global_options
 from sbkube.utils.output_manager import OutputManager
 
@@ -147,9 +152,10 @@ def cmd(
 
     base_path = Path(base_dir)
     sources_file = base_path / "sources.yaml"
+    selected = current_profile()
 
     # Load sources.yaml
-    if not sources_file.exists():
+    if not sources_file.exists() and selected is None:
         output.print_error(f"sources.yaml not found in {base_dir}")
         output.print(
             "\n[yellow]Hint: Run 'sbkube init --config-format legacy' to create sources.yaml, "
@@ -158,8 +164,20 @@ def cmd(
         sys.exit(1)
 
     try:
-        config_manager = ConfigManager(base_path)
-        sources = config_manager.load_sources()
+        if selected is not None:
+            raw_settings = load_config_file(selected.owner).get("settings", {})
+            sources = SourceScheme(
+                **{
+                    key: value
+                    for key, value in raw_settings.items()
+                    if key in SourceScheme.model_fields
+                }
+            )
+            sources.kubeconfig = str(selected.kubeconfig)
+            sources.kubeconfig_context = selected.context
+        else:
+            config_manager = ConfigManager(base_path)
+            sources = config_manager.load_sources()
     except Exception as e:
         output.print_error("Failed to load sources.yaml", error=str(e))
         sys.exit(1)
@@ -175,6 +193,13 @@ def cmd(
 
     # Initialize cache and collector
     cache_dir = base_path / ".sbkube" / "cluster_status"
+    if selected is not None:
+        cache_identity = json.dumps(
+            {**selected.identity, "principal": selected.principal}, sort_keys=True
+        )
+        cache_dir = (
+            cache_dir / "access" / hashlib.sha256(cache_identity.encode()).hexdigest()
+        )
     cache = ClusterCache(
         cache_dir=cache_dir,
         context=sources.kubeconfig_context,
@@ -384,7 +409,15 @@ def _display_status(
         )
     else:
         # Standard summary view
-        _display_summary_status(data, helm_releases, output, unhealthy, health_check, show_notes, app_notes_map)
+        _display_summary_status(
+            data,
+            helm_releases,
+            output,
+            unhealthy,
+            health_check,
+            show_notes,
+            app_notes_map,
+        )
 
     # Show cache metadata at the end
     _display_cache_info(cache, output, show_cache_info)
@@ -531,7 +564,9 @@ def _display_grouped_status(
                 output.print(f"  - {ag}")
             return
 
-        _display_single_app_group(app_group, group_data, output, show_notes, app_notes_map)
+        _display_single_app_group(
+            app_group, group_data, output, show_notes, app_notes_map
+        )
         return
 
     # Display all app-groups

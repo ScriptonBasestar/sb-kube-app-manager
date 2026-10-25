@@ -248,7 +248,7 @@ class AccessSettings(ConfigBaseModel):
     auto_profile: Annotated[
         bool,
         Field(
-            description="Pick readonly/deployer kubeconfig per command (reserved; not used yet)",
+            description="Pick readonly/deployer kubeconfig per command; fail closed on unavailable credentials",
         ),
     ] = True
 

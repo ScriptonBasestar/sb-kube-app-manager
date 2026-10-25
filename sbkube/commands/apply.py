@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import click
 
 from sbkube.models.config_model import SBKubeConfig
+from sbkube.utils.access_profile import profile_cluster, validate_profile_document
 from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.deployment_checker import DeploymentChecker
 from sbkube.utils.error_formatter import format_deployment_error
@@ -125,6 +126,7 @@ class ApplyCommand:
         # Load config
         try:
             data = load_config_file(str(config_path))
+            validate_profile_document(data or {})
             if data is None:
                 console.print(f"[red]❌ Empty config file: {config_path}[/red]")
                 return False
@@ -286,6 +288,10 @@ def _execute_apps_deployment(
     BASE_DIR = Path(base_dir).resolve()
     APP_CONFIG_DIR = app_config_dir
     config_file_path = APP_CONFIG_DIR / config_file_name
+    profile_cluster(ctx.obj.get("kubeconfig"), ctx.obj.get("context"))
+    validate_profile_document({"apps": config.apps})
+    if config_file_path.is_file():
+        validate_profile_document(load_config_file(str(config_file_path)))
     overall_success = True
 
     # deps (app-group dependencies) 배포 상태 검증

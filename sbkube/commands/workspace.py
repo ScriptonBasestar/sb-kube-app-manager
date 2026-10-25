@@ -21,6 +21,7 @@ from sbkube.models.workspace_state import (
 )
 from sbkube.state.database import DeploymentDatabase
 from sbkube.state.workspace_tracker import WorkspaceStateTracker
+from sbkube.utils.access_profile import validate_profile_document
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.global_options import global_options
 from sbkube.utils.logger import LogLevel, logger
@@ -82,6 +83,7 @@ class WorkspaceValidateCommand:
         # Pydantic 모델 검증
         try:
             logger.info("Workspace 모델 검증 중 (UnifiedConfig)...")
+            validate_profile_document(data)
             workspace = UnifiedConfig(**data)
             logger.success("Workspace 모델 검증 통과")
         except (PydanticValidationError, ConfigValidationError) as e:
@@ -768,6 +770,7 @@ class WorkspaceDeployCommand:
 
         # Pydantic 모델 검증
         try:
+            validate_profile_document(data)
             workspace = UnifiedConfig(**data)
             workspace_name = workspace.metadata.get("name", "unnamed")
             logger.success(f"Workspace '{workspace_name}' 로드 완료")
@@ -1277,6 +1280,7 @@ class WorkspaceDeployCommand:
                         f"  [magenta]🔄 Nested workspace detected: {source_path.name}[/magenta]",
                         level="info",
                     )
+                    validate_profile_document(nested_data)
                     nested_workspace = UnifiedConfig(**nested_data)
                     nested_phases = list(nested_workspace.phases.keys())
 
@@ -1331,6 +1335,7 @@ class WorkspaceDeployCommand:
                         f"  [cyan]📦 App config detected: {source_path.name}[/cyan]",
                         level="info",
                     )
+                    validate_profile_document(nested_data)
                     nested_config = UnifiedConfig(**nested_data)
                     list(nested_config.apps.keys())
                     enabled_apps = [

@@ -4,6 +4,7 @@ import click
 from pydantic import ValidationError as PydanticValidationError
 
 from sbkube.models.config_model import ActionApp, SBKubeConfig, YamlApp
+from sbkube.utils.access_profile import profile_cluster
 from sbkube.utils.cli_check import (
     check_helm_installed_or_exit,
     check_kubectl_installed_or_exit,
@@ -100,6 +101,11 @@ def cmd(
             sources_data = load_config_file(sources_file_path)
             if sources_data.get("apiVersion", "").startswith("sbkube/"):
                 settings_data = sources_data.get("settings", {})
+                settings_data = {
+                    key: value
+                    for key, value in settings_data.items()
+                    if key in SourceScheme.model_fields
+                }
             else:
                 settings_data = sources_data
             sources = SourceScheme(**settings_data)
@@ -255,6 +261,9 @@ def cmd(
             app_context = getattr(app_config, "context", None)
             effective_context = app_context or context
             effective_kubeconfig = kubeconfig if not app_context else None
+            effective_kubeconfig, effective_context = profile_cluster(
+                effective_kubeconfig, effective_context
+            )
 
             installed_charts = get_installed_charts(
                 current_namespace,
@@ -331,6 +340,9 @@ def cmd(
             app_context = getattr(app_config, "context", None)
             effective_context = app_context or context
             effective_kubeconfig = kubeconfig if not app_context else None
+            effective_kubeconfig, effective_context = profile_cluster(
+                effective_kubeconfig, effective_context
+            )
 
             if not app_config.manifests:
                 console.print(

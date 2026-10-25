@@ -7,6 +7,7 @@ import click
 
 from sbkube.commands import (
     access,
+    access_issue,
     apply,
     build,
     check_updates,
@@ -292,6 +293,7 @@ main.add_command(version.cmd)
 main.add_command(doctor.cmd)
 main.add_command(migrate.cmd)
 main.add_command(gate.cmd)
+access.cmd.add_command(access_issue.issue)
 main.add_command(access.cmd)
 
 

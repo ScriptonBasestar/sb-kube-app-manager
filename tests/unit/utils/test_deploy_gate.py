@@ -47,6 +47,9 @@ MUTATION_SITE_FILES: dict[str, tuple[str, ...]] = {
     "sbkube/utils/prune_helper.py": ("apply",),
     "sbkube/utils/helm_command_builder.py": ("deploy", "apply"),
     "sbkube/utils/access_checks.py": (),
+    # `kubectl create token` is a TokenRequest (a credential, not a workload
+    # mutation) and `access` is read-only for the gate (see READ_ONLY_COMMANDS).
+    "sbkube/utils/access_issue.py": (),
     "sbkube/commands/check_updates.py": (),
     "sbkube/diagnostics/kubernetes_checks.py": (),
     "sbkube/models/config_model.py": (),

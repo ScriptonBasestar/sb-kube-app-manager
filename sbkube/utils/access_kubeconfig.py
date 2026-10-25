@@ -58,7 +58,7 @@ def read_kubeconfig(path: Path) -> dict[str, Any]:
     return data
 
 
-def _entries(data: dict[str, Any], key: str) -> list[dict[str, Any]]:
+def entries(data: dict[str, Any], key: str) -> list[dict[str, Any]]:
     items = data.get(key)
     if not isinstance(items, list):
         return []
@@ -81,14 +81,14 @@ def classify_credential(user: object) -> str:
 def list_users(data: dict[str, Any]) -> list[KubeconfigUser]:
     """Users of a kubeconfig with the contexts that reference each."""
     referenced: dict[str, list[str]] = {}
-    for entry in _entries(data, "contexts"):
+    for entry in entries(data, "contexts"):
         body = entry.get("context")
         user = body.get("user") if isinstance(body, dict) else None
         if isinstance(user, str) and isinstance(entry.get("name"), str):
             referenced.setdefault(user, []).append(entry["name"])
 
     users = []
-    for entry in _entries(data, "users"):
+    for entry in entries(data, "users"):
         name = entry.get("name")
         if not isinstance(name, str):
             continue
@@ -105,7 +105,7 @@ def list_users(data: dict[str, Any]) -> list[KubeconfigUser]:
 def context_names(data: dict[str, Any]) -> list[str]:
     return [
         entry["name"]
-        for entry in _entries(data, "contexts")
+        for entry in entries(data, "contexts")
         if isinstance(entry.get("name"), str)
     ]
 
@@ -119,7 +119,7 @@ def context_server(data: dict[str, Any], context: str, path: Path) -> str | None
 
     """
     cluster_names: set[str] = set()
-    for entry in _entries(data, "contexts"):
+    for entry in entries(data, "contexts"):
         if entry.get("name") != context:
             continue
         body = entry.get("context")
@@ -130,7 +130,7 @@ def context_server(data: dict[str, Any], context: str, path: Path) -> str | None
         cluster_names.add(body["cluster"])
 
     servers: set[str] = set()
-    for entry in _entries(data, "clusters"):
+    for entry in entries(data, "clusters"):
         name = entry.get("name")
         if not isinstance(name, str) or name not in cluster_names:
             continue
@@ -141,3 +141,36 @@ def context_server(data: dict[str, Any], context: str, path: Path) -> str | None
             )
         servers.add(body["server"])
     return servers.pop() if len(servers) == 1 else None
+
+
+def context_cluster(
+    data: dict[str, Any], context: str, path: Path
+) -> tuple[str, dict[str, Any]]:
+    """``(cluster name, cluster body)`` that ``context`` points at.
+
+    Raises:
+        KubeconfigError: If the context or its cluster is missing or malformed.
+
+    """
+    names = [
+        entry
+        for entry in entries(data, "contexts")
+        if entry.get("name") == context
+    ]
+    if len(names) != 1:
+        raise KubeconfigError(f"{path}: context {context!r} not found exactly once")
+    body = names[0].get("context")
+    cluster_name = body.get("cluster") if isinstance(body, dict) else None
+    if not isinstance(cluster_name, str):
+        raise KubeconfigError(f"{path}: context {context!r} has no string cluster name")
+    for entry in entries(data, "clusters"):
+        if entry.get("name") == cluster_name:
+            cluster = entry.get("cluster")
+            if not isinstance(cluster, dict) or not isinstance(
+                cluster.get("server"), str
+            ):
+                raise KubeconfigError(
+                    f"{path}: cluster {cluster_name!r} has no string server"
+                )
+            return cluster_name, cluster
+    raise KubeconfigError(f"{path}: cluster {cluster_name!r} not found")

@@ -13,6 +13,7 @@ from sbkube.utils.deploy_gate import (
     process_lineage,
     process_table,
     record_gate_grant,
+    require_human_terminal,
     resolve_gate,
 )
 from sbkube.utils.deploy_gate_config import GATE_FILE_NAME, parse_grant_ttl
@@ -47,11 +48,7 @@ def grant(pid: int, reason: str, target: Path) -> None:
     """
     if not reason.strip():
         raise click.UsageError("--reason must not be empty.")
-    if not _is_interactive():
-        raise click.UsageError(
-            "sbkube gate grant is only accepted from an interactive terminal "
-            "(stdin and stderr must be a TTY)."
-        )
+    require_human_terminal("sbkube gate grant", _is_interactive)
     gate = resolve_gate(*find_gate_files(target))
     if gate is None or gate.command_dir is None:
         raise click.UsageError(f"no deploy gate is configured for {target}.")

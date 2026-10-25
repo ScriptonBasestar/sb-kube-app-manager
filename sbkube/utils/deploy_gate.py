@@ -177,6 +177,21 @@ def _is_interactive() -> bool:
     return sys.stdin.isatty() and sys.stderr.isatty()
 
 
+def require_human_terminal(
+    command: str, interactive: Callable[[], bool] = _is_interactive
+) -> None:
+    """Refuse ``command`` unless a person is at the terminal (stdin, stderr TTY).
+
+    A guard against mistakes by automation, not a security boundary: an agent
+    with the same uid can allocate a pty.
+    """
+    if not interactive():
+        raise click.UsageError(
+            f"{command} is only accepted from an interactive terminal "
+            "(stdin and stderr must be a TTY)."
+        )
+
+
 def _warn(message: str) -> None:
     # stderr keeps machine-readable stdout (--format json/yaml/llm) intact.
     click.secho(f"⚠️  {message}", fg="yellow", err=True)

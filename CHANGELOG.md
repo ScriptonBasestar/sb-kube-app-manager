@@ -45,6 +45,14 @@ ______________________________________________________________________
   서버 CA가 일치해야 발급한다. SSH 호스트 키 검증을 유지하며 원격 실패 출력은 숨긴다.
 - ✅ **FIX** `access issue`의 충돌 보호에 관리자·readonly의 서버 CA 파일을 포함한다.
   kubeconfig 내부 파일 참조의 `~`는 client-go처럼 홈으로 확장하지 않는다.
+- ✅ **FIX** `access init`·`access issue`가 만드는 kubeconfig의 사용자 이름을 클러스터별로 유일하게
+  바꾼다: readonly는 `<context>-agent-readonly`, deployer는 `<context>-agent-deploy`(예:
+  `polypia-cluster-agent-readonly`). 고정 이름 `readonly`·`deploy`는 `KUBECONFIG`로 여러 파일을
+  병합하면 클러스터 간에 충돌하고, kubectl은 먼저 읽힌 같은 이름 항목을 쓰므로 다른 클러스터의 자격증명이
+  쓰일 수 있었다. 이전 이름의 기존
+  생성물은 생성물 형태(사용자 하나, `tokenFile`만, 이번 토큰 파일 경로)이면 그대로 인식해 다음
+  `init`·`issue`가 새 이름으로 다시 쓴다. 사용자 이름이 다르거나 다른 자격증명 키가 있는 파일은 계속 거부한다.
+  이전 이름을 직접 참조하는 외부 스크립트가 있으면 새 이름으로 갱신해야 한다.
 
 **배포 게이트 `sbkube-gate.yaml`** (`sbkube/utils/deploy_gate.py`, `deploy_gate_config.py`)
 

@@ -13,13 +13,17 @@ from sbkube.models.access_model import AccessSettings
 from sbkube.models.unified_config_model import UnifiedSettings
 from sbkube.utils.access_admin import NodeAdmin, cluster_ca
 from sbkube.utils.access_issue import (
+    LEGACY_DEPLOYER_USER,
+    LEGACY_READONLY_USER,
     TokenIssueError,
     build_deployer_kubeconfig,
     check_token_dir,
     check_writable_parent,
     collision,
+    deployer_user_name,
     overwrite_problem,
     protected_files,
+    readonly_user_name,
     same_file,
     token_from_output,
 )
@@ -125,7 +129,11 @@ def init_outputs(access: AccessSettings, session: AdminSession) -> InitOutputs:
                 "readonly/deployer kubeconfigs and token files must be different files"
             )
 
-    readonly_generated = overwrite_problem(readonly, ro_token, "readonly") is None
+    readonly_user = readonly_user_name(session.context)
+    readonly_generated = (
+        overwrite_problem(readonly, ro_token, readonly_user, (LEGACY_READONLY_USER,))
+        is None
+    )
     if readonly.exists() and not readonly_generated:
         existing = read_kubeconfig(readonly)
         # A public-only bootstrap descriptor may become the generated agent config.
@@ -139,7 +147,12 @@ def init_outputs(access: AccessSettings, session: AdminSession) -> InitOutputs:
             raise TokenIssueError(
                 "readonly kubeconfig is manually managed; preserve it and choose a new output path or use init --print"
             )
-    problem = overwrite_problem(deployer, dep_token)
+    problem = overwrite_problem(
+        deployer,
+        dep_token,
+        deployer_user_name(session.context),
+        (LEGACY_DEPLOYER_USER,),
+    )
     if problem:
         raise TokenIssueError(problem)
 
@@ -186,10 +199,8 @@ def init_outputs(access: AccessSettings, session: AdminSession) -> InitOutputs:
         session.data, session.context, session.source, dep_token
     )
     readonly_config = build_deployer_kubeconfig(
-        session.data, session.context, session.source, ro_token
+        session.data, session.context, session.source, ro_token, readonly_user
     )
-    readonly_config["users"][0]["name"] = "readonly"
-    readonly_config["contexts"][0]["context"]["user"] = "readonly"
     return InitOutputs(
         readonly, deployer, ro_token, dep_token, readonly_config, deploy_config
     )

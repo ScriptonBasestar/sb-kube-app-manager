@@ -22,8 +22,23 @@ from sbkube.utils.access_kubeconfig import (
 )
 
 KUBECTL_TIMEOUT_SECONDS = 30
-DEPLOYER_USER = "deploy"
+# Pre-rename generated user names. Merged kubeconfigs share one user namespace,
+# so these collide across clusters; they are still recognised as generated files
+# so an existing ``init``/``issue`` output can be rewritten with the new name.
+LEGACY_READONLY_USER = "readonly"
+LEGACY_DEPLOYER_USER = "deploy"
 TOKEN_FILE_NAME = "deploy.token"
+
+
+def readonly_user_name(context: str) -> str:
+    """Cluster-unique name of the generated readonly (agent) user."""
+    return f"{context}-agent-readonly"
+
+
+def deployer_user_name(context: str) -> str:
+    """Cluster-unique name of the generated deployer user."""
+    return f"{context}-agent-deploy"
+
 
 # User keys that point at credential files.
 _CREDENTIAL_FILE_KEYS = ("tokenFile", "client-certificate", "client-key")
@@ -246,13 +261,17 @@ def collision(path: Path, protected: dict[Path, str]) -> str | None:
 
 
 def overwrite_problem(
-    path: Path, token_path: Path, user_name: str = DEPLOYER_USER
+    path: Path,
+    token_path: Path,
+    user_name: str,
+    legacy_user_names: tuple[str, ...] = (),
 ) -> str | None:
     """Why an existing ``path`` must not be overwritten, or ``None``.
 
     Only the generated shape may be replaced: exactly one user named
-    ``deploy`` whose only key is a ``tokenFile`` naming ``token_path``.
-    Anything else could be a hand-made or admin kubeconfig.
+    ``user_name`` (or a pre-rename ``legacy_user_names`` entry) whose only key is
+    a ``tokenFile`` naming ``token_path``. Anything else could be a hand-made or
+    admin kubeconfig.
     """
     if not path.exists():
         return None
@@ -265,7 +284,7 @@ def overwrite_problem(
         isinstance(data.get("users"), list)
         and len(data["users"]) == 1
         and len(users) == 1
-        and users[0].get("name") == user_name
+        and users[0].get("name") in (user_name, *legacy_user_names)
         and isinstance(users[0].get("user"), dict)
         and set(users[0]["user"]) == {"tokenFile"}
         and isinstance(users[0]["user"]["tokenFile"], str)
@@ -281,14 +300,22 @@ def overwrite_problem(
 
 
 def build_deployer_kubeconfig(
-    admin_data: dict[str, Any], context: str, admin_path: Path, token_path: Path
+    admin_data: dict[str, Any],
+    context: str,
+    admin_path: Path,
+    token_path: Path,
+    user_name: str | None = None,
 ) -> dict[str, Any]:
-    """Kubeconfig with the admin cluster, one ``deploy`` token-file user, no admin credential.
+    """Kubeconfig with the admin cluster, one token-file user, no admin credential.
+
+    The user is named ``user_name`` (default ``<context>-agent-deploy``) so that
+    merged kubeconfigs of different clusters never share a user entry.
 
     Raises:
         KubeconfigError: If the admin context or cluster is unusable.
 
     """
+    user = user_name or deployer_user_name(context)
     cluster_name, admin_cluster = context_cluster(admin_data, context, admin_path)
     cluster = {k: admin_cluster[k] for k in _COPIED_CLUSTER_KEYS if k in admin_cluster}
     ca_file = admin_cluster.get("certificate-authority")
@@ -304,11 +331,11 @@ def build_deployer_kubeconfig(
         "contexts": [
             {
                 "name": context,
-                "context": {"cluster": cluster_name, "user": DEPLOYER_USER},
+                "context": {"cluster": cluster_name, "user": user},
             }
         ],
         "current-context": context,
-        "users": [{"name": DEPLOYER_USER, "user": {"tokenFile": str(token_path)}}],
+        "users": [{"name": user, "user": {"tokenFile": str(token_path)}}],
     }
 
 

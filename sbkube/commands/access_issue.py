@@ -16,12 +16,14 @@ from sbkube.models.access_model import MIN_TOKEN_TTL_SECONDS, parse_go_duration_
 from sbkube.utils.access_admin import NodeAdmin, cluster_ca
 from sbkube.utils.access_checks import run_can_i
 from sbkube.utils.access_issue import (
+    LEGACY_DEPLOYER_USER,
     TOKEN_FILE_NAME,
     TokenIssueError,
     build_deployer_kubeconfig,
     check_token_dir,
     check_writable_parent,
     collision,
+    deployer_user_name,
     dump_kubeconfig,
     ensure_private_dir,
     mint_token,
@@ -121,7 +123,12 @@ def issue(ctx: click.Context, ttl: str | None, config_file: Path) -> None:
         raise click.ClickException(
             "deployer kubeconfig and token file must be different files."
         )
-    problem = overwrite_problem(deployer_path, token_path)
+    problem = overwrite_problem(
+        deployer_path,
+        token_path,
+        deployer_user_name(context),
+        (LEGACY_DEPLOYER_USER,),
+    )
     if problem is not None:
         raise click.ClickException(problem)
     try:

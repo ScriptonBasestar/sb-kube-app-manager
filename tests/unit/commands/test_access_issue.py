@@ -353,7 +353,7 @@ def test_generated_kubeconfig_content(env: dict) -> None:
 
     assert data["current-context"] == CTX
     assert data["contexts"] == [
-        {"name": CTX, "context": {"cluster": "c", "user": "deploy"}}
+        {"name": CTX, "context": {"cluster": "c", "user": f"{CTX}-agent-deploy"}}
     ]
     assert data["clusters"] == [
         {
@@ -368,7 +368,12 @@ def test_generated_kubeconfig_content(env: dict) -> None:
         }
     ]
     user = data["users"]
-    assert user == [{"name": "deploy", "user": {"tokenFile": str(env["token"])}}]
+    assert user == [
+        {
+            "name": f"{CTX}-agent-deploy",
+            "user": {"tokenFile": str(env["token"])},
+        }
+    ]
     assert Path(user[0]["user"]["tokenFile"]).is_absolute()
     text = env["deploy"].read_text()
     assert ADMIN_CERT not in text

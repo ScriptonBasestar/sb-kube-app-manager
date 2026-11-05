@@ -182,8 +182,10 @@ def test_init_local_admin_writes_private_credentials_without_token_leak(
     assert _mode(env["token_dir"]) == 0o700
     readonly = yaml.safe_load(env["readonly"].read_text())
     deployer = yaml.safe_load(env["deployer"].read_text())
-    assert readonly["users"][0]["name"] == "readonly"
-    assert deployer["users"][0]["name"] == "deploy"
+    assert readonly["users"][0]["name"] == f"{CTX}-agent-readonly"
+    assert readonly["contexts"][0]["context"]["user"] == f"{CTX}-agent-readonly"
+    assert deployer["users"][0]["name"] == f"{CTX}-agent-deploy"
+    assert deployer["contexts"][0]["context"]["user"] == f"{CTX}-agent-deploy"
     assert (
         SENTINEL
         not in _all_text(result, caplog)
@@ -203,6 +205,35 @@ def test_init_reruns_over_its_generated_outputs(env: dict[str, Path]) -> None:
             result = _access(env, "init")
         assert result.exit_code == 0, result.output
         assert len(calls) == 3
+
+
+def test_init_renames_legacy_generated_users_in_place(env: dict[str, Path]) -> None:
+    # Outputs of an sbkube that predates the cluster-unique names (users
+    # ``readonly`` / ``deploy``) are still generated files: init rewrites them.
+    env["token_dir"].mkdir(mode=0o700)
+    for path, user, token in (
+        (env["readonly"], "readonly", env["token_dir"] / "readonly.token"),
+        (env["deployer"], "deploy", env["token_dir"] / "deploy.token"),
+    ):
+        token.write_text("old\n")
+        path.write_text(
+            yaml.safe_dump(
+                {"users": [{"name": user, "user": {"tokenFile": str(token)}}]}
+            )
+        )
+    calls: list[list[str]] = []
+    with (
+        patch(TTY, return_value=True),
+        patch("subprocess.run", side_effect=_init_run(calls)),
+    ):
+        result = _access(env, "init")
+    assert result.exit_code == 0, result.output
+    assert yaml.safe_load(env["readonly"].read_text())["users"][0]["name"] == (
+        f"{CTX}-agent-readonly"
+    )
+    assert yaml.safe_load(env["deployer"].read_text())["users"][0]["name"] == (
+        f"{CTX}-agent-deploy"
+    )
 
 
 @pytest.mark.parametrize(

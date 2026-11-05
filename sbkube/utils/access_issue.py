@@ -31,12 +31,12 @@ TOKEN_FILE_NAME = "deploy.token"
 
 
 def readonly_user_name(context: str) -> str:
-    """Cluster-unique name of the generated readonly (agent) user."""
+    """Context-unique name of the generated readonly (agent) user."""
     return f"{context}-agent-readonly"
 
 
 def deployer_user_name(context: str) -> str:
-    """Cluster-unique name of the generated deployer user."""
+    """Context-unique name of the generated deployer user."""
     return f"{context}-agent-deploy"
 
 

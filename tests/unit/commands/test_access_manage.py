@@ -208,7 +208,7 @@ def test_init_reruns_over_its_generated_outputs(env: dict[str, Path]) -> None:
 
 
 def test_init_renames_legacy_generated_users_in_place(env: dict[str, Path]) -> None:
-    # Outputs of an sbkube that predates the cluster-unique names (users
+    # Outputs of an sbkube that predates the context-unique names (users
     # ``readonly`` / ``deploy``) are still generated files: init rewrites them.
     env["token_dir"].mkdir(mode=0o700)
     for path, user, token in (

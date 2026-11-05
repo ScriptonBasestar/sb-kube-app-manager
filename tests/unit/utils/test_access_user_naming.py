@@ -1,7 +1,7 @@
-"""Cluster-unique user names of the generated agent kubeconfigs.
+"""Context-unique user names of the generated agent kubeconfigs.
 
 Merged kubeconfigs share one user namespace, so the generated users must carry
-the cluster name. Files written before the rename (users ``readonly`` and
+the context name. Files written before the rename (users ``readonly`` and
 ``deploy``) must still be recognised as generated so ``init``/``issue`` can
 rewrite them, while hand-made files stay protected.
 """

@@ -26,7 +26,7 @@ ______________________________________________________________________
 - ✅ **NEW** `sbkube access issue [--ttl DURATION]` (2단계): 사람만(TTY) 실행해 관리자 자격증명으로
   deployer ServiceAccount 토큰을 발급하고 `<token_dir>/deploy.token`(0600)과, 그 토큰 파일만 쓰는
   deployer kubeconfig(0600)를 원자적으로 쓴다. 관리자 사용자 자격증명은 복사하지 않고, 토큰은 출력·로그·
-  argv·예외에 나오지 않는다. 생성물 형태의 기존 파일만 덮어쓰고(사용자 `deploy` 하나, 이번 토큰 파일 경로), 관리자·읽기 전용 kubeconfig가
+  argv·예외에 나오지 않는다. 생성물 형태의 기존 파일만 덮어쓰고(사용자 `<context>-agent-deploy` 하나, 이번 토큰 파일 경로), 관리자·읽기 전용 kubeconfig가
   참조하는 자격증명 파일과 겹치면 거부하며, 기존 토큰 디렉토리는 chmod하지 않고 느슨하면 거부한다. 마지막에
   `auth can-i create deployments.apps -A`로 확인한다. `namespace`와 ServiceAccount 이름은 DNS-1123으로 검증한다.
 - ✅ **NEW** `access init [--print]`: polypia와 같은 기본 이름의 RBAC 내장 템플릿을 적용하고 readonly
@@ -45,8 +45,8 @@ ______________________________________________________________________
   서버 CA가 일치해야 발급한다. SSH 호스트 키 검증을 유지하며 원격 실패 출력은 숨긴다.
 - ✅ **FIX** `access issue`의 충돌 보호에 관리자·readonly의 서버 CA 파일을 포함한다.
   kubeconfig 내부 파일 참조의 `~`는 client-go처럼 홈으로 확장하지 않는다.
-- ✅ **FIX** `access init`·`access issue`가 만드는 kubeconfig의 사용자 이름을 클러스터별로 유일하게
-  바꾼다: readonly는 `<context>-agent-readonly`, deployer는 `<context>-agent-deploy`(예:
+- ✅ **FIX** `access init`·`access issue`가 만드는 kubeconfig의 사용자 이름을 context 이름별로 유일하게
+  바꾼다(서로 다른 클러스터가 같은 context 이름을 쓰면 여전히 겹친다): readonly는 `<context>-agent-readonly`, deployer는 `<context>-agent-deploy`(예:
   `polypia-cluster-agent-readonly`). 고정 이름 `readonly`·`deploy`는 `KUBECONFIG`로 여러 파일을
   병합하면 클러스터 간에 충돌하고, kubectl은 먼저 읽힌 같은 이름 항목을 쓰므로 다른 클러스터의 자격증명이
   쓰일 수 있었다. 이전 이름의 기존

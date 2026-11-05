@@ -325,13 +325,14 @@ sbkube access issue --ttl 30m -f sbkube.yaml
     전용 디렉토리를 쓰라는 안내와 함께 거부한다. 토큰 발급 전에 두 파일의 위치가 쓸 수 있는지 미리 확인하며,
     토큰을 쓴 뒤 kubeconfig 쓰기가 실패하면 토큰은 썼고 kubeconfig는 못 썼다고 알린다.
   - `access.deployer.kubeconfig` (0600): 관리자 cluster의 `server`, CA, `tls-server-name`, `proxy-url`,
-    `insecure-skip-tls-verify`를 복사하고 context 하나, 사용자 `deploy`(절대 경로 `tokenFile`)만 담는다.
+    `insecure-skip-tls-verify`를 복사하고 context 하나, 사용자 `<context>-agent-deploy`(절대 경로 `tokenFile`)만 담는다.
     관리자 사용자 자격증명은 복사하지 않는다.
   - 둘 다 같은 디렉토리의 임시 파일(O_EXCL, 0600)에 쓰고 fsync 후 `os.replace`하므로 실패해도 기존 파일이 남는다.
 - 덮어쓰기 규칙: deployer kubeconfig가 이미 있으면 생성물 형태일 때만 덮어쓴다. 사용자가 정확히 하나이고
-  이름이 `deploy`이며 키가 `tokenFile` 하나뿐이고 그 경로가 이번 토큰 파일과 같은 파일이어야 한다(예전 수동
-  인계 형태 `~/.kube/agent-access/deploy.token`도 같은 경로면 허용). 그 외(client-cert, token, exec,
-  auth-provider, 다른 경로, 파싱 불가)는 거부한다.
+  이름이 `<context>-agent-deploy`(이전 이름 `deploy`도 인정)이며 키가 `tokenFile` 하나뿐이고 그 경로가
+  이번 토큰 파일과 같은 파일이어야 한다(예전 수동 인계 형태 `~/.kube/agent-access/deploy.token`도 같은 경로면
+  허용). 그 외(client-cert, token, exec, auth-provider, 다른 경로, 파싱 불가, 다른 context의 사용자 이름)는
+  거부한다.
 - 쓴 뒤 `kubectl auth can-i create deployments.apps -A`를 deployer kubeconfig로 실행한다. `yes`만 성공이며
   `no`나 오류(연결, 만료, TLS)면 안내와 함께 종료 코드 1이다.
 - 출력: 쓴 경로, 만료 시각(로컬·UTC; 요청한 값이며 API server가 `--service-account-max-token-expiration`으로 줄일 수 있음), can-i 결과, 토큰이 만료된다는 안내. 토큰 값은 출력하지 않는다.

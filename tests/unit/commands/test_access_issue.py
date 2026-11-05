@@ -510,9 +510,12 @@ def test_token_dir_that_is_a_file_is_refused(env: dict) -> None:
 
 
 def _existing(
-    path: Path, user_body: dict | None, extra_users: list | None = None
+    path: Path,
+    user_body: dict | None,
+    extra_users: list | None = None,
+    name: str = "deploy",
 ) -> None:
-    users = [] if user_body is None else [{"name": "deploy", "user": user_body}]
+    users = [] if user_body is None else [{"name": name, "user": user_body}]
     path.write_text(
         yaml.safe_dump(
             {"apiVersion": "v1", "kind": "Config", "users": users + (extra_users or [])}
@@ -573,6 +576,46 @@ def test_overwrites_generated_shape(env: dict) -> None:
     assert result.exit_code == 0, result.output
     data = yaml.safe_load(env["deploy"].read_text())
     assert data["users"][0]["user"]["tokenFile"] == str(env["token"])
+
+
+def test_rerun_overwrites_its_own_current_name_output(env: dict) -> None:
+    with patch(TTY, return_value=True), patch(RUN, side_effect=_kubectl()):
+        first = _issue(env)
+        assert first.exit_code == 0, first.output
+        assert (
+            yaml.safe_load(env["deploy"].read_text())["users"][0]["name"]
+            == f"{CTX}-agent-deploy"
+        )
+        second = _issue(env)
+    assert second.exit_code == 0, second.output
+    assert (
+        yaml.safe_load(env["deploy"].read_text())["users"][0]["name"]
+        == f"{CTX}-agent-deploy"
+    )
+
+
+def test_rewrites_legacy_name_output_to_the_current_name(env: dict) -> None:
+    _existing(env["deploy"], {"tokenFile": str(env["token"])})
+    with patch(TTY, return_value=True), patch(RUN, side_effect=_kubectl()):
+        result = _issue(env)
+    assert result.exit_code == 0, result.output
+    assert (
+        yaml.safe_load(env["deploy"].read_text())["users"][0]["name"]
+        == f"{CTX}-agent-deploy"
+    )
+
+
+def test_refuses_generated_shape_of_another_context(env: dict) -> None:
+    _existing(
+        env["deploy"], {"tokenFile": str(env["token"])}, name="other-agent-deploy"
+    )
+    before = env["deploy"].read_text()
+    with patch(TTY, return_value=True), patch(RUN) as run:
+        result = _issue(env)
+    assert result.exit_code != 0
+    assert "another context" in result.output
+    assert env["deploy"].read_text() == before
+    run.assert_not_called()
 
 
 def test_overwrites_manual_handoff_shape_via_symlinked_token_path(env: dict) -> None:

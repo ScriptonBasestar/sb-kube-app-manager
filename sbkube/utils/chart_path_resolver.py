@@ -237,6 +237,8 @@ def resolve_chart_path(
     app_config_dir: Path,
     output: "OutputManager | None" = None,
     check_build_first: bool = True,
+    git_apps: dict | None = None,
+    git_repos: dict | None = None,
 ) -> ChartPathResult:
     """Resolve chart path with build directory priority.
 
@@ -258,6 +260,15 @@ def resolve_chart_path(
         ChartPathResult with resolution status and path
 
     """
+    # Prepared Git identity must be validated before a built chart can be reused.
+    if isinstance(app.chart, str) and app.chart.startswith("${repos."):
+        from sbkube.utils.git_chart import resolve_git_chart_path
+
+        return resolve_git_chart_path(
+            app, app_name, charts_dir.parent / "repos", git_apps, git_repos,
+            build_dir=build_dir, check_build_first=check_build_first, output=output, app_config_dir=app_config_dir,
+        )
+
     # 1. Check build directory first (for deploy command)
     if check_build_first:
         build_path = build_dir / app_name

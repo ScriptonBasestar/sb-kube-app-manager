@@ -13,7 +13,6 @@ import click
 
 from sbkube.models.config_model import GitApp, HelmApp, HookApp, HttpApp, SBKubeConfig
 from sbkube.models.sources_model import (
-    GitRepoScheme,
     HelmRepoScheme,
     OciRepoScheme,
     SourceScheme,
@@ -28,6 +27,11 @@ from sbkube.utils.cluster_config import (
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.git_source import (
+    GitSourceError,
+    prepare_git_source,
+    resolve_git_source,
+)
 from sbkube.utils.global_options import global_options
 from sbkube.utils.hook_executor import HookExecutor
 from sbkube.utils.output_manager import OutputManager
@@ -89,8 +93,8 @@ def preflight_check_helm_repos(
         if not isinstance(app, HelmApp):
             continue
 
-        # OCI 차트는 건너뛰기 (oci:// 로 시작)
-        if app.chart and app.chart.startswith("oci://"):
+        # Local/Git charts and OCI do not use registered Helm repositories.
+        if not app.is_remote_chart() or app.chart.startswith("oci://"):
             continue
 
         try:
@@ -667,79 +671,24 @@ def prepare_git_app(
     if git_repos is not None:
         git_sources = git_repos
     elif not sources_file.exists():
-        output.print_error(f"sources.yaml not found: {sources_file}")
-        return False
+        git_sources = {}
     else:
         sources = load_config_file(sources_file)
         git_sources = sources.get("git_repos", {})
 
-    # app.repo가 alias인지 URL인지 판단
-    if (
-        app.repo.startswith("http://")
-        or app.repo.startswith("https://")
-        or app.repo.startswith("git@")
-    ):
-        repo_url = app.repo
-        repo_alias = app_name
-        branch = app.branch or app.ref or "main"
-    else:
-        # sources.yaml에서 찾기
-        if app.repo not in git_sources:
-            output.print_error(f"Git repo '{app.repo}' not found in sources.yaml")
-            return False
-        repo_config = git_sources[app.repo]
-        if isinstance(repo_config, GitRepoScheme):
-            repo_url = repo_config.url
-            branch = app.branch or app.ref or repo_config.branch or "main"
-        elif isinstance(repo_config, dict):
-            repo_url = repo_config.get("url")
-            if not repo_url:
-                output.print_error(f"Missing 'url' for Git repo: {app.repo}")
-                return False
-            branch = app.branch or app.ref or repo_config.get("branch", "main")
-        else:
-            # 구버전 호환: 단순 URL string
-            repo_url = str(repo_config)
-            branch = app.branch or app.ref or "main"
-        repo_alias = app.repo
-
-    dest_dir = repos_dir / repo_alias
-    git_dir = dest_dir / ".git"
-
-    # Check if repository already exists (skip if not --force)
-    if git_dir.exists() and not force:
-        output.print_warning(f"Repository already exists, skipping: {repo_alias}")
-        output.print("    Use --force to re-clone", level="warning")
-        return True
-
-    if dry_run:
-        output.print(
-            f"[yellow]🔍 [DRY-RUN] Would clone: {repo_url} (branch: {branch}) → {dest_dir}[/yellow]", level="warning"
-        )
-        if force and dest_dir.exists():
+    try:
+        resolve_git_source(app_name, app, git_sources)
+        if dry_run:
             output.print(
-                "[yellow]🔍 [DRY-RUN] Would remove existing repository (--force)[/yellow]", level="warning"
+                f"[yellow]🔍 [DRY-RUN] Would prepare verified Git source → {repos_dir / app_name}[/yellow]",
+                level="warning",
             )
-    else:
-        # If force flag is set, remove existing repository
-        if force and dest_dir.exists():
-            output.print_warning(f"Removing existing repository (--force): {dest_dir}")
-            shutil.rmtree(dest_dir)
-
-        dest_dir.mkdir(parents=True, exist_ok=True)
-
-        # Git clone
-        output.print(f"  Cloning: {repo_url} (branch: {branch}) → {dest_dir}", level="info")
-        cmd = ["git", "clone", repo_url, str(dest_dir)]
-
-        if branch:
-            cmd.extend(["--branch", branch])
-
-        return_code, _stdout, stderr = run_command(cmd)
-
-        if return_code != 0:
-            output.print_error(f"Failed to clone repository: {stderr}")
-            return False
+            return True
+        prepare_git_source(app_name, app, git_sources, repos_dir, force=force)
+    except (GitSourceError, OSError) as error:
+        message = str(error) if isinstance(error, GitSourceError) else "Git source filesystem operation failed"
+        output.print_error(message)
+        return False
 
     output.print_success(f"Git app prepared: {app_name}")
     return True

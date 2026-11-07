@@ -52,6 +52,7 @@ from sbkube.utils.cluster_config import (
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.git_chart import is_git_chart, resolve_git_chart_path
 from sbkube.utils.global_options import global_options
 from sbkube.utils.helm_command_builder import (
     HelmCommand,
@@ -161,6 +162,8 @@ def deploy_helm_app(
     incompatible_charts: list[str] | None = None,
     force_label_injection: list[str] | None = None,
     recorder: DeploymentRecorder | None = None,
+    git_apps: dict | None = None,
+    git_repos: dict | None = None,
 ) -> bool:
     """Helm 앱 배포 (install/upgrade).
 
@@ -219,7 +222,15 @@ def deploy_helm_app(
 
     # 1. .sbkube/build/ 디렉토리 확인 (overrides/removes 적용된 차트)
     build_path = build_dir / app_name
-    if build_path.exists() and build_path.is_dir():
+    if is_git_chart(app.chart):
+        result = resolve_git_chart_path(
+            app, app_name, charts_dir.parent / "repos", git_apps, git_repos,
+            build_dir=build_dir, output=output, app_config_dir=app_config_dir,
+        )
+        if not result.found:
+            return False
+        chart_path = result.chart_path
+    elif build_path.exists() and build_path.is_dir():
         chart_path = build_path
         _verbose_print(console, f"  Using built chart: {chart_path}")
     # 2. build 없으면 원본 차트 사용 (v0.8.0+ path structure)
@@ -1535,6 +1546,8 @@ def cmd(
                             incompatible_charts=sources.incompatible_charts if sources else None,
                             force_label_injection=sources.force_label_injection if sources else None,
                             recorder=recorder,
+                            git_apps=config.apps,
+                            git_repos=sources.git_repos if sources else {},
                         )
                     elif isinstance(app, YamlApp):
                         # apps_config를 딕셔너리로 변환 (Pydantic 모델 → dict)

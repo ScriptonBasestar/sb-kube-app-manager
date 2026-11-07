@@ -1,96 +1,42 @@
 # App Type: Git
 
-Git 리포지토리에서 Helm 차트나 매니페스트를 가져오는 예제입니다.
+Git 리포지토리의 Helm 차트를 가져오는 예제입니다. 제공된 `sbkube.yaml`의
+저장소 URL과 차트 하위 경로를 실제 값으로 바꿔 사용하세요.
 
-## 사용 시나리오
-
-- Private Git 리포지토리의 차트
-- 버전 관리되는 커스텀 차트
-- 팀 내부 공유 차트
-
-## 예제: Git 리포지토리에서 차트 가져오기
-
-### sbkube.yaml
 ```yaml
-namespace: git-demo
-
+apiVersion: sbkube/v1
+settings:
+  namespace: git-demo
+  git_repos:
+    my-charts:
+      url: https://github.com/your-org/helm-charts.git
+      branch: main
 apps:
-  # 1. Git 리포지토리 클론
   chart-source:
     type: git
     repo: my-charts
-    path: charts/myapp
-
-  # 2. 클론된 차트 배포
+    # 재현 가능한 배포에는 ref에 전체 커밋 SHA를 지정하세요.
   myapp:
     type: helm
-    chart: ./repos/my-charts/charts/myapp
-    values:
-      - myapp-values.yaml
-    depends_on:
-      - chart-source
+    chart: ${repos.chart-source}/charts/myapp
+    depends_on: [chart-source]
 ```
 
-### sbkube.yaml
-```yaml
-git_repos:
-  my-charts:
-    url: https://github.com/your-org/helm-charts.git
-    branch: main
-    # 인증이 필요한 경우 (SSH 키 사용)
-    # auth:
-    #   type: ssh
-    #   private_key_path: ~/.ssh/id_rsa
-```
-
-## Private 리포지토리 인증
-
-### SSH 키 사용
-```yaml
-git_repos:
-  my-private-charts:
-    url: git@github.com:your-org/private-charts.git
-    branch: main
-    auth:
-      type: ssh
-      private_key_path: ~/.ssh/id_rsa
-```
-
-### Personal Access Token 사용
-```yaml
-git_repos:
-  my-private-charts:
-    url: https://github.com/your-org/private-charts.git
-    branch: main
-    auth:
-      type: token
-      token: ghp_YourPersonalAccessToken
-```
-
-## 실행
+`prepare`는 `.sbkube/repos/chart-source`에 앱별 checkout을 준비합니다.
+버전 선택은 `ref` → 앱의 명시적 `branch` → 별칭의 `branch` → `main` 순서입니다.
+Git 앱의 `path`는 하위 디렉터리를 복사하지 않습니다. Helm 앱의 `chart`에서
+`${repos.<Git 앱 이름>}/<차트 경로>`를 명시하세요.
 
 ```bash
-# prepare 단계에서 Git 리포지토리 클론
 sbkube prepare -f sbkube.yaml
-
-# 클론된 리포지토리 확인
-ls -la repos/my-charts/
-
-# 전체 워크플로우 실행
-sbkube apply -f sbkube.yaml
+sbkube build -f sbkube.yaml
+sbkube template -f sbkube.yaml
 ```
 
-## 정리
+위 명령은 차트 준비·빌드·렌더링 단계입니다. 실제 배포는 별도의 배포 권한과
+프로젝트 게이트를 충족한 후 수행하세요. 인증은 Git 자체의 SSH 설정이나
+credential helper를 사용하며 YAML에 토큰을 넣지 마세요.
 
-```bash
-sbkube delete -f sbkube.yaml
-
-# 클론된 리포지토리도 삭제 (선택사항)
-rm -rf repos/
-```
-
-## 주의사항
-
-- Git 인증 정보는 안전하게 관리하세요 (Kubernetes Secret 활용 권장)
-- `depends_on`을 사용하여 Git 클론 후 차트 배포 순서 보장
-- 네트워크 연결 필요 (리포지토리 접근)
+기존 별칭 이름 캐시는 자동으로 지우지 않습니다. 알 수 없거나 수정된 캐시,
+출처가 다른 build는 오류로 남깁니다. 자세한 보존·입력 제한은
+[설정 스키마](../../../docs/03-configuration/config-schema.md#git--git-리포지토리)를 참고하세요.

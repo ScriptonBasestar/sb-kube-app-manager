@@ -8,6 +8,25 @@ Solutions for frequently encountered development issues in SBKube.
 
 ## Test Failures
 
+### Git 차트 공급 경계 검증 (2026-11-07)
+
+Git 앱의 `ref`가 checkout에 반영되지 않고 별칭 캐시를 공유하던 원인을
+`prepare` 소유 경계에서 수정했다. Helm 소비자는 `${repos.<Git 앱>}/<차트>`를
+해석하며 현재 checkout과 build 출처를 검증한다. 기존 build 경로를 수동 symlink로
+연결하는 방식은 사용하지 않는다. cache·ref·입력 제한 계약은 설정 스키마의
+Git 절을 따른다. 이 기록은 클러스터 배포나 registry 이미지 검증을 뜻하지 않는다.
+
+좁은 검증 대상은 Git 준비, 모델, 경로 해석, Helm build/template/deploy의 모의
+회귀와 로컬 Git→실제 Helm 렌더링이다. 전체 테스트·CI·클러스터 apply는 이번
+사용자 범위에서 제외했다. 초기 실패는 fixture의 이전 기본값·임시 출력 디렉터리·
+YAML quoting 기대를 수정했고, 독립 리뷰에서 override freshness·Helm `.Files`의
+출처 메타데이터 제외·unified settings 필터·marker 파일 종류 검사를 보강했다.
+
+비핵심 후보 P2: `.make/lint.mk:23`의 `mypy ... || echo`는 타입 오류에도 레시피를
+성공시킬 수 있다. 영향은 `make check` 판정 신뢰성이며 이번 Git 차트 작업 중
+발견했다. 수정 범위를 넓히지 않고 직접 scoped mypy의 종료 상태로 확인했다.
+외부 이슈는 만들지 않았으며, 사용자 지시로 CE 보고 경로 조회도 실행하지 않았다.
+
 ### 확인된 기존 결함: status watch 테스트의 로그 레벨 의존 (2026-10-26)
 
 `tests/unit/commands/test_status_cmd.py::TestStatusCommandCombinations::test_status_watch_mode_interrupted`는

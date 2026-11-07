@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 
 from sbkube.commands.prepare import prepare_git_app, prepare_http_app
 from sbkube.models.config_model import GitApp, HttpApp
+from sbkube.utils.git_source import GitSourceError
 from sbkube.utils.output_manager import OutputManager
 
 
@@ -199,7 +200,7 @@ class TestPrepareHttpAppErrors:
 class TestPrepareGitAppBasic:
     """Test basic Git app preparation scenarios."""
 
-    @patch("sbkube.commands.prepare.run_command")
+    @patch("sbkube.commands.prepare.prepare_git_source")
     def test_clone_git_repo_success(self, mock_run_command, tmp_path: Path) -> None:
         """Test successful Git repository clone."""
         # Arrange
@@ -239,11 +240,12 @@ git_repos:
 
         # Assert
         assert result is True
-        # Verify git clone was called
+        # Dispatch uses the app key; source resolution/cloning is tested with local Git fixtures.
         mock_run_command.assert_called()
-        call_args = mock_run_command.call_args[0][0]
-        assert "git" in call_args
-        assert "clone" in call_args
+        call_args = mock_run_command.call_args[0]
+        assert call_args[0] == "infra"
+        assert call_args[2] == {"my-infra": "https://github.com/example/infra.git"}
+        assert call_args[3] == repos_dir
 
     @patch("sbkube.commands.prepare.run_command")
     def test_skip_existing_repo(self, mock_run_command, tmp_path: Path) -> None:
@@ -253,7 +255,7 @@ git_repos:
         repos_dir.mkdir(exist_ok=True)
 
         # Create existing repo directory
-        existing_repo = repos_dir / "my-infra"
+        existing_repo = repos_dir / "infra"
         existing_repo.mkdir(exist_ok=True)
         (existing_repo / ".git").mkdir(exist_ok=True)
 
@@ -281,8 +283,8 @@ git_repos:
         )
 
         # Assert
-        assert result is True
-        # Should not call git clone
+        assert result is False
+        # Legacy alias caches are not adopted at the new app key.
         mock_run_command.assert_not_called()
 
     @patch("sbkube.commands.prepare.run_command")
@@ -294,7 +296,7 @@ git_repos:
         repos_dir = tmp_path / "repos"
         repos_dir.mkdir(exist_ok=True)
 
-        existing_repo = repos_dir / "my-infra"
+        existing_repo = repos_dir / "infra"
         existing_repo.mkdir(exist_ok=True)
         (existing_repo / ".git").mkdir(exist_ok=True)
         (existing_repo / "old-file.txt").write_text("old")
@@ -324,9 +326,9 @@ git_repos:
         )
 
         # Assert
-        assert result is True
-        # Should remove and re-clone
-        mock_run_command.assert_called()
+        assert result is False
+        # The unowned alias cache is preserved; a failed new clone cannot remove it.
+        assert (existing_repo / "old-file.txt").read_text() == "old"
 
     def test_git_app_dry_run(self, tmp_path: Path) -> None:
         """Test Git app in dry-run mode."""
@@ -403,7 +405,7 @@ git_repos:
         output.print_error.assert_called()
         assert "not found" in str(output.print_error.call_args).lower()
 
-    @patch("sbkube.commands.prepare.run_command")
+    @patch("sbkube.commands.prepare.prepare_git_source")
     def test_git_clone_failure(self, mock_run_command, tmp_path: Path) -> None:
         """Test handling of git clone failure."""
         # Arrange
@@ -422,7 +424,7 @@ git_repos:
         output = MagicMock(spec=OutputManager)
 
         # Mock git clone failure
-        mock_run_command.return_value = (128, "", "fatal: repository not found")
+        mock_run_command.side_effect = GitSourceError("Git source command failed; command output withheld")
 
         # Act
         result = prepare_git_app(

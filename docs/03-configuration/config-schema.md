@@ -279,8 +279,30 @@ apps:
   source:
     type: git
     repo: my-app               # settings.git_repos의 저장소 이름
-    path: charts/app           # 리포지토리 내 경로 (선택)
+    ref: <commit-or-tag>       # 선택: branch보다 우선
+  service:
+    type: helm
+    chart: ${repos.source}/charts/app
+    depends_on: [source]
 ```
+
+Git 버전 선택 순서는 `ref` → 앱에서 명시한 `branch` → 저장소 별칭의
+`branch` → `main`입니다. `prepare`는 선택한 커밋을 detached checkout하고,
+`.sbkube/repos/<앱 이름>`에 출처를 검증한 캐시를 만듭니다. 같은 별칭을 쓰는
+앱도 서로 다른 캐시를 사용합니다. 기존 별칭 이름 캐시는 자동으로 채택하거나
+삭제하지 않습니다. `path`는 호환 필드이며 하위 경로 복사나 staging을 수행하지
+않습니다. 소비하는 Helm 앱에서 위처럼 차트 경로를 명시하세요.
+
+Git 차트는 `prepare` → `build` → `template` 순서로 처리합니다. `build`는
+`.sbkube/build/<Helm 앱 이름>`에 차트와 출처 정보를 기록합니다. 선언한 ref,
+checkout 또는 build 내용이 바뀌면 오래된 결과를 재사용하지 않습니다. 소유권이
+없거나 수정된 캐시는 보존하고 오류를 반환합니다. `prepare --force`도 알 수
+없거나 수정된 캐시를 지우지 않으며, 교체한 기존 소유 캐시는
+`.sbkube/repos/.<앱 이름>.previous-<식별자>`에 보존합니다.
+
+Git 차트 입력은 10,000개 항목과 64MiB로 제한합니다. 디렉터리 symlink,
+차트 밖을 가리키는 파일 symlink, Git 관리 경로, ignored 파일이 포함된 소스는
+거부합니다. 비밀 파일은 checkout에 두지 말고 별도 값 입력을 사용하세요.
 
 #### http — HTTP 파일 다운로드
 

@@ -487,7 +487,7 @@ class TestGitApp:
         )
         assert app.type == "git"
         assert app.repo == "https://github.com/user/repo"
-        assert app.branch == "main"  # default
+        assert app.branch is None  # inherit the source alias, then fall back to main
 
     def test_git_app_with_path_and_branch(self) -> None:
         """Test GitApp with path and custom branch."""

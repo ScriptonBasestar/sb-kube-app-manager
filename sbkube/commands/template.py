@@ -16,6 +16,11 @@ from sbkube.utils.app_dir_resolver import resolve_app_dirs
 from sbkube.utils.common import run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.git_chart import (
+    git_chart_repositories,
+    is_git_chart,
+    resolve_git_chart_path,
+)
 from sbkube.utils.global_options import global_options
 from sbkube.utils.helm_command_builder import build_helm_template_command
 from sbkube.utils.hook_executor import HookExecutor
@@ -35,6 +40,8 @@ def template_helm_app(
     output: OutputManager,
     cluster_global_values: dict | None = None,
     cleanup_metadata: bool = True,
+    git_apps: dict | None = None,
+    git_repos: dict | None = None,
 ) -> bool:
     """Helm 앱을 YAML로 렌더링 (helm template).
 
@@ -61,7 +68,15 @@ def template_helm_app(
 
     # build/ 디렉토리 확인
     build_path = build_dir / app_name
-    if build_path.exists() and build_path.is_dir():
+    if is_git_chart(app.chart):
+        result = resolve_git_chart_path(
+            app, app_name, charts_dir.parent / "repos", git_apps, git_repos,
+            build_dir=build_dir, output=output, app_config_dir=app_config_dir,
+        )
+        if not result.found:
+            return False
+        chart_path = result.chart_path
+    elif build_path.exists() and build_path.is_dir():
         chart_path = build_path
         output.print(f"  Using built chart: {chart_path}", level="info")
     # build 없으면 원본 차트 사용 (v0.8.0+ path structure)
@@ -513,6 +528,17 @@ def cmd(
             overall_success = False
             continue
 
+        git_repositories = {}
+        if any(isinstance(item, HelmApp) and is_git_chart(item.chart) for item in config.apps.values()):
+            try:
+                git_repositories = git_chart_repositories(
+                    config_file_path, raw_data, ctx.obj.get("inherited_settings", {}), sbkube_dirs.sources_file
+                )
+            except (OSError, ValueError) as error:
+                output.print_error(f"Invalid Git chart source settings: {error}")
+                overall_success = False
+                continue
+
         # sources.yaml 로드 (cluster global values + cleanup_metadata용, v0.7.0+)
         cluster_global_values = None
         cleanup_metadata = True  # Default value
@@ -630,6 +656,8 @@ def cmd(
                         output,
                         cluster_global_values=cluster_global_values,
                         cleanup_metadata=cleanup_metadata,
+                        git_apps=config.apps,
+                        git_repos=git_repositories,
                     )
                 elif isinstance(app, YamlApp):
                     success = template_yaml_app(

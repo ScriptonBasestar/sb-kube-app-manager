@@ -20,6 +20,14 @@ from sbkube.utils.chart_path_resolver import (
 )
 from sbkube.utils.common_options import resolve_command_paths, target_options
 from sbkube.utils.file_loader import load_config_file
+from sbkube.utils.git_chart import (
+    git_chart_input,
+    git_chart_repositories,
+    is_git_chart,
+    record_git_chart_build,
+    resolve_git_chart_path,
+    verify_owned_build,
+)
 from sbkube.utils.global_options import global_options
 from sbkube.utils.hook_helpers import (
     create_hook_executor,
@@ -41,6 +49,8 @@ def build_helm_app(
     app_config_dir: Path,
     output: OutputManager,
     dry_run: bool = False,
+    git_apps: dict | None = None,
+    git_repos: dict | None = None,
 ) -> bool:
     """Helm 앱 빌드 + 커스터마이징.
 
@@ -61,7 +71,21 @@ def build_helm_app(
     output.print(f"[cyan]🔨 Building Helm app: {app_name}[/cyan]", level="info")
 
     # 1. 소스 차트 경로 결정 (Phase 2 refactoring: chart_path_resolver 사용)
-    if app.is_remote_chart():
+    git_input = None
+    if is_git_chart(app.chart):
+        chart_result = resolve_git_chart_path(
+            app, app_name, charts_dir.parent / "repos", git_apps, git_repos,
+            check_build_first=False, output=output, app_config_dir=app_config_dir,
+        )
+        if not chart_result.found:
+            return False
+        source_path = chart_result.chart_path
+        try:
+            git_input = git_chart_input(app, charts_dir.parent / "repos", git_apps, git_repos, app_name, app_config_dir)
+        except (OSError, ValueError) as error:
+            output.print_error(str(error))
+            return False
+    elif app.is_remote_chart():
         # Remote chart: resolve using centralized utility
         chart_result = resolve_remote_chart_path(app, charts_dir, output)
         if not chart_result.found:
@@ -77,6 +101,12 @@ def build_helm_app(
     # 2. 빌드 디렉토리로 복사
     dest_path = build_dir / app_name
 
+    if git_input is not None and (dest_path.exists() or dest_path.is_symlink()):
+        try:
+            verify_owned_build(dest_path, app_name)
+        except (OSError, ValueError) as error:
+            output.print_error(str(error))
+            return False
     if dry_run:
         output.print(
             f"[yellow]🔍 [DRY-RUN] Would copy chart: {source_path} → {dest_path}[/yellow]",
@@ -96,7 +126,10 @@ def build_helm_app(
             shutil.rmtree(dest_path)
 
         output.print(f"  Copying chart: {source_path} → {dest_path}", level="info")
-        shutil.copytree(source_path, dest_path)
+        if git_input is not None:
+            shutil.copytree(source_path, dest_path, ignore=shutil.ignore_patterns(".git"))
+        else:
+            shutil.copytree(source_path, dest_path)
 
     # 3. Check for override directory and warn if not configured
     overrides_base = app_config_dir / "overrides" / app_name
@@ -259,6 +292,14 @@ def build_helm_app(
             else:
                 output.print_warning(f"    Remove target not found: {remove_pattern}")
 
+    if git_input is not None and not dry_run:
+        try:
+            record_git_chart_build(
+                app, app_name, charts_dir.parent / "repos", git_apps, git_repos, dest_path, git_input, app_config_dir
+            )
+        except (OSError, ValueError) as error:
+            output.print_error(str(error))
+            return False
     output.print_success(f"Helm app built: {app_name}")
     return True
 
@@ -462,6 +503,17 @@ def cmd(
             overall_success = False
             continue
 
+        git_repositories = {}
+        if any(isinstance(item, HelmApp) and is_git_chart(item.chart) for item in config.apps.values()):
+            try:
+                git_repositories = git_chart_repositories(
+                    config_file_path, raw_data, ctx.obj.get("inherited_settings", {}), sbkube_dirs.sources_file
+                )
+            except (OSError, ValueError) as error:
+                output.print_error(f"Invalid Git chart source settings: {error}")
+                overall_success = False
+                continue
+
         # 배포 순서 얻기 (의존성 고려)
         deployment_order = config.get_deployment_order()
 
@@ -519,7 +571,7 @@ def cmd(
                 success = True
             elif isinstance(app, HelmApp):
                 # Helm 앱만 빌드 (커스터마이징 필요)
-                if app.overrides or app.removes or app.is_remote_chart():
+                if app.overrides or app.removes or app.is_remote_chart() or is_git_chart(app.chart):
                     success = build_helm_app(
                         app_name_iter,
                         app,
@@ -529,6 +581,8 @@ def cmd(
                         APP_CONFIG_DIR,
                         output,
                         dry_run,
+                        git_apps=config.apps,
+                        git_repos=git_repositories,
                     )
                 else:
                     output.print(

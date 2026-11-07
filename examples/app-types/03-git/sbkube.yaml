@@ -14,10 +14,9 @@ apps:
   chart-source:
     type: git
     repo: example-charts
-    path: charts
   example-app:
     type: helm
-    chart: ./repos/example-charts/charts/nginx
+    chart: ${repos.chart-source}/charts/nginx
     values:
     - example-values.yaml
     depends_on:

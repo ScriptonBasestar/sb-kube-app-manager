@@ -261,9 +261,10 @@ cluster: test-cluster
         mock_run_command.return_value = (0, "", "")
 
         # Run prepare
-        result = runner.invoke(
-            main, ["prepare", str(tmp_path / "config"), "--skip-preflight"]
-        )
+        with patch("sbkube.commands.prepare.prepare_git_source"):
+            result = runner.invoke(
+                main, ["prepare", str(tmp_path / "config"), "--skip-preflight"]
+            )
 
         # Assert
         assert result.exit_code == 0

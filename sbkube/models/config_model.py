@@ -795,7 +795,7 @@ class HelmApp(ConfigBaseModel):
 
         """
         # 로컬 경로 패턴
-        if self.chart.startswith("./") or self.chart.startswith("/"):
+        if self.chart.startswith(("./", "/", "${repos.")):
             return False
         # repo/chart 형식
         if "/" in self.chart and not self.chart.startswith("."):
@@ -1126,12 +1126,12 @@ class GitApp(ConfigBaseModel):
         description="Path within repository (optional)",
         json_schema_extra={"examples": ["k8s/", "manifests/production/"]},
     )
-    branch: str = Field(
-        "main",
-        description="Git branch or tag",
+    branch: str | None = Field(
+        None,
+        description="Git branch or tag; omitted inherits the repository setting, then main",
         json_schema_extra={"examples": ["main", "develop", "v1.2.3"]},
     )
-    ref: str | None = None  # 특정 commit/tag (branch보다 우선)
+    ref: str | None = Field(None, description="Commit or tag reference; takes precedence over branch")
     namespace: str | None = None
     depends_on: list[str] = Field(default_factory=list)
     enabled: bool = True
@@ -1142,6 +1142,15 @@ class GitApp(ConfigBaseModel):
         default=None,
         description="Optional notes or description for this application",
     )
+
+    @field_validator("branch", "ref")
+    @classmethod
+    def validate_git_revision(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not value or value.startswith("-") or any(character.isspace() or ord(character) < 32 for character in value):
+            raise ValueError("Git revision must be nonempty and cannot contain whitespace or start with an option")
+        return value
 
     @field_validator("repo")
     @classmethod

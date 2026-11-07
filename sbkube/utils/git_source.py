@@ -97,25 +97,30 @@ def resolve_git_source(app_name: str, app: Any, git_repos: dict) -> dict[str, st
 
 
 def _identity(pid: int) -> str | None:
-    result = subprocess.run(
-        [
-            "ps",
-            "-p",
-            str(pid),
-            "-o",
-            "ppid=",
-            "-o",
-            "pgid=",
-            "-o",
-            "lstart=",
-            "-o",
-            "command=",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=3,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            [
+                "ps",
+                "-p",
+                str(pid),
+                "-o",
+                "ppid=",
+                "-o",
+                "pgid=",
+                "-o",
+                "lstart=",
+                "-o",
+                "command=",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise GitSourceError(
+            "Cannot observe captured Git child identity", retain_staging=True
+        ) from None
     if len(result.stdout) > 16384:
         raise GitSourceError(
             "Captured Git identity output exceeds its bound", retain_staging=True
@@ -135,13 +140,18 @@ def _identity(pid: int) -> str | None:
 
 
 def _group_present(pgid: int) -> bool:
-    result = subprocess.run(
-        ["ps", "-axo", "pid=,pgid="],
-        capture_output=True,
-        text=True,
-        timeout=3,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["ps", "-axo", "pid=,pgid="],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise GitSourceError(
+            "Cannot observe captured Git process group", retain_staging=True
+        ) from None
     if result.returncode != 0 or len(result.stdout) > 1024 * 1024:
         raise GitSourceError(
             "Cannot verify captured Git process group", retain_staging=True

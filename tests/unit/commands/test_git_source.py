@@ -291,6 +291,43 @@ def test_uncertain_group_observation_never_claims_absence(monkeypatch, observati
     assert failure.value.retain_staging is True
 
 
+@pytest.mark.parametrize("observer", ["_identity", "_group_present"])
+@pytest.mark.parametrize("failure_kind", ["os_error", "timeout"])
+def test_observer_failure_preserves_staging_and_previous_cache(
+    origin, tmp_path, monkeypatch, observer, failure_kind
+):
+    _source, first, second = origin
+    repos = tmp_path / "git-cache"
+    original = GitApp(type="git", repo=URL, ref=first)
+    prepare_git_source("chart", original, {}, repos)
+    real_git = git_source._git
+
+    def unavailable_observation(*_args, **_kwargs):
+        if failure_kind == "os_error":
+            raise OSError("private observer diagnostic")
+        raise subprocess.TimeoutExpired(["ps"], timeout=3)
+
+    def clone_with_uncertain_observation(*args, **kwargs):
+        if args[0] != "clone":
+            return real_git(*args, **kwargs)
+        staging = Path(args[-1])
+        (staging / "partial-clone").write_text("preserve until process ownership is known")
+        with monkeypatch.context() as fault:
+            fault.setattr(git_source.subprocess, "run", unavailable_observation)
+            getattr(git_source, observer)(99999999)
+
+    monkeypatch.setattr(git_source, "_git", clone_with_uncertain_observation)
+    with pytest.raises(GitSourceError) as failure:
+        prepare_git_source(
+            "chart", GitApp(type="git", repo=URL, ref=second), {}, repos, force=True
+        )
+    assert failure.value.retain_staging is True
+    assert "private observer diagnostic" not in str(failure.value)
+    staging = list(repos.glob(".chart.clone-*"))
+    assert len(staging) == 1 and (staging[0] / "partial-clone").is_file()
+    assert read_prepared_git_source("chart", original, {}, repos)["head"] == first
+
+
 def test_publish_failure_rolls_back_previous_cache(origin, tmp_path, monkeypatch):
     _source, first, second = origin
     repos = tmp_path / "git-cache"

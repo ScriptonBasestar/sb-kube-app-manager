@@ -58,6 +58,8 @@ MUTATION_SITE_FILES: dict[str, tuple[str, ...]] = {
     "sbkube/diagnostics/kubernetes_checks.py": (),
     "sbkube/models/config_model.py": (),
     "sbkube/utils/cluster_config.py": (),
+    # Typed metadata mentions app types/operations; it invokes no cluster tool.
+    "sbkube/utils/deploy_plan.py": (),
     "sbkube/validators/environment_validators.py": (),
     "sbkube/validators/pre_deployment_validators.py": (),
 }

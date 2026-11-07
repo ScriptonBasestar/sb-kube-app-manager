@@ -16,11 +16,14 @@ A repository opts in by placing ``sbkube-gate.yaml`` files::
 
 Design notes
 ------------
-* **One enforcement point.** :class:`sbkube.cli.SbkubeGroup` wraps the callback
+* **One enforcement policy.** :class:`sbkube.cli.SbkubeGroup` wraps the callback
   of every command listed in :data:`CLUSTER_MUTATING_COMMANDS` when it is
   registered. Commands do not call the gate themselves, so a new command cannot
   forget it; ``tests/unit/utils/test_deploy_gate.py`` fails when a registered
   command is classified neither as mutating nor as read-only.
+  Enforced apply/deploy app groups additionally pass their resolved inputs to
+  the same policy engine before hooks or writes. This never replaces the early
+  gate or grants a scoped exception.
 * **Gate files are separate from ``sbkube.yaml``.** The gate files can then be
   edit-protected without protecting every app configuration.
 * **No file, no gate.** Without any ``sbkube-gate.yaml`` the commands behave
@@ -70,6 +73,7 @@ from sbkube.utils.deploy_gate_config import (
     load_gate_file,
     resolve_gate,
 )
+from sbkube.utils.deploy_plan import ResolvedExecutionContext
 
 __all__ = [
     "ACCESS_MUTATING_OPERATIONS",
@@ -120,12 +124,16 @@ ACCESS_MUTATING_OPERATIONS = frozenset({"access-init", "access-revoke"})
 
 # Gated callbacks running in the current invocation context. ``apply`` runs
 # ``deploy`` in-process (``ctx.invoke``, workspace worker threads); only the
-# outermost gated command runs the gate. Per context so that independent
+# outermost gated command runs the preflight gate. Resolved app-group checks
+# are separate and must not be suppressed by callback nesting. Per context so independent
 # invocations (e.g. library callers using threads) each run their own gate.
 # Worker threads do not inherit context variables: submit work to them through
 # ``contextvars.copy_context().run`` so nested commands see the outer depth.
 _gate_depth: contextvars.ContextVar[int] = contextvars.ContextVar(
     "sbkube_gate_depth", default=0
+)
+_recorded_human_skip: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "sbkube_recorded_human_skip", default=False
 )
 
 
@@ -321,7 +329,8 @@ def run_gate(
     skip_reason: str | None,
     *,
     interactive: Callable[[], bool] = _is_interactive,
-) -> None:
+    execution_context: ResolvedExecutionContext | None = None,
+) -> str | None:
     """Run the deploy gate for one invocation, raising when it refuses."""
     if skip_reason is not None:
         if not skip_reason.strip():
@@ -366,7 +375,7 @@ def run_gate(
         _warn(
             f"deploy gate skipped for '{operation}' by operator: {skip_reason.strip()}"
         )
-        return
+        return "recorded-human-skip"
 
     grant = _granted(gate)
     if grant is not None:
@@ -376,10 +385,16 @@ def run_gate(
     assert gate.command is not None and gate.command_dir is not None
     argv = [*shlex.split(gate.command), operation]
     env = {
-        **os.environ,
+        **{key: value for key, value in os.environ.items() if not key.startswith("SBKUBE_GATE_")},
         "SBKUBE_GATE_OPERATION": operation,
         "SBKUBE_GATE_TARGET": str(start.resolve()),
+        "SBKUBE_GATE_PHASE": "resolved" if execution_context is not None else "preflight",
     }
+    if execution_context is not None:
+        if execution_context.operation != operation or execution_context.config_file.parent != start.resolve():
+            raise DeployGateError("Resolved gate context does not match this invocation")
+        execution_context.verify()
+        env["SBKUBE_GATE_CONTEXT"] = execution_context.payload_json
     try:
         result = subprocess.run(
             argv, cwd=gate.command_dir, env=env, check=False, timeout=gate.timeout
@@ -405,6 +420,33 @@ def run_gate(
     )
 
 
+def resolved_gate_enabled(target: Path) -> bool:
+    """Add input guards only to enforce; preserve warn/off execution semantics."""
+    if _recorded_human_skip.get():
+        return False
+    gate = resolve_gate(*find_gate_files(target))
+    return gate is not None and gate.mode == "enforce"
+
+
+def run_resolved_gate(plan: ResolvedExecutionContext) -> None:
+    """Send resolved metadata before hooks/writes, retaining the early gate.
+
+    This deliberately does not use callback-depth suppression: each resolved
+    app group needs its own context, including nested in-process deploy calls.
+    No grant or full-check exception is created by carrying this metadata.
+    """
+    if _recorded_human_skip.get():
+        return
+    plan.verify()
+    run_gate(
+        "apply" if plan.operation == "prune" else plan.operation,
+        {"config_file": str(plan.config_file), "prune_disabled": plan.operation == "prune"},
+        None,
+        execution_context=plan,
+    )
+    plan.verify()
+
+
 def gate_callback(
     command_name: str, callback: Callable[..., Any]
 ) -> Callable[..., Any]:
@@ -414,11 +456,16 @@ def gate_callback(
         skip_reason = kwargs.pop(SKIP_OPTION_NAME, None)
         depth = _gate_depth.get()
         token = _gate_depth.set(depth + 1)
+        override_token = _recorded_human_skip.set(False) if depth == 0 else None
         try:
             if depth == 0:
-                run_gate(command_name, kwargs, skip_reason)
+                result = run_gate(command_name, kwargs, skip_reason)
+                if result == "recorded-human-skip":
+                    _recorded_human_skip.set(True)
             return callback(*args, **kwargs)
         finally:
+            if override_token is not None:
+                _recorded_human_skip.reset(override_token)
             _gate_depth.reset(token)
 
     gated.__sbkube_deploy_gate__ = True  # type: ignore[attr-defined]

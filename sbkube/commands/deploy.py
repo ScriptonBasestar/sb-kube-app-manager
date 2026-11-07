@@ -9,6 +9,8 @@
 """
 
 import os
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +53,13 @@ from sbkube.utils.cluster_config import (
 )
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
+from sbkube.utils.deploy_gate import resolved_gate_enabled, run_resolved_gate
+from sbkube.utils.deploy_gate_config import find_gate_files
+from sbkube.utils.deploy_plan import (
+    ResolvedExecutionContext,
+    capture_execution_context,
+    effective_app_context,
+)
 from sbkube.utils.file_loader import load_config_file
 from sbkube.utils.git_chart import is_git_chart, resolve_git_chart_path
 from sbkube.utils.global_options import global_options
@@ -63,7 +72,8 @@ from sbkube.utils.logger import LogLevel, logger
 from sbkube.utils.output_manager import OutputManager
 from sbkube.utils.security import is_exec_allowed
 from sbkube.utils.settings_inheritance import (
-    collect_parent_inherited_settings,
+    collect_parent_documents,
+    extract_inherited_settings,
     merge_inherited_settings,
     merge_local_source_settings,
 )
@@ -75,6 +85,151 @@ _SSA_CONFLICT_KEYWORDS: tuple[str, ...] = (
     "field is owned by",
     "field manager conflict",
 )
+
+
+@dataclass(frozen=True)
+class ResolvedDeployGroup:
+    """The same parsed objects are checked and consumed by one deploy group."""
+
+    config: SBKubeConfig
+    sources: Any
+    selected_apps: tuple[str, ...]
+    kubeconfig: str | None
+    context: str | None
+    cluster_global_values: dict[str, Any] | None
+    execution: ResolvedExecutionContext | None
+
+    def verify(self) -> None:
+        if self.execution is not None:
+            self.execution.verify()
+
+
+def _run_verified_hook(
+    execution: ResolvedExecutionContext | None, callback: Callable[..., Any], **kwargs: Any
+) -> Any:
+    if execution is not None:
+        execution.verify()
+    try:
+        return callback(**kwargs)
+    finally:
+        if execution is not None:
+            execution.verify()
+
+
+def resolve_deploy_group_inputs(
+    ctx: click.Context,
+    base_dir: Path,
+    app_config_dir: Path,
+    config_file_path: Path,
+    output: OutputManager,
+) -> tuple[Any, dict[str, Any] | None, str | None, str | None, SBKubeConfig, tuple[Path, ...]]:
+    """Resolve existing deploy precedence once, without executing cluster work."""
+    from sbkube.models.sources_model import SourceScheme
+
+    input_paths = [config_file_path]
+    sources_file_path = find_sources_file(
+        base_dir, app_config_dir, ctx.obj.get("sources_file", "sources.yaml")
+    )
+    sources = None
+    cluster_global_values = None
+    if sources_file_path and sources_file_path.exists():
+        input_paths.append(sources_file_path)
+        output.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]", level="info")
+        try:
+            sources_data = load_config_file(sources_file_path)
+            api_version = sources_data.get("apiVersion", "") if sources_data else ""
+            if api_version.startswith("sbkube/"):
+                full_settings = sources_data.get("settings", {})
+                if not isinstance(full_settings, dict):
+                    raise ValueError(f"{sources_file_path}: 'settings' must be a mapping")
+                source_scheme_fields = {
+                    "cluster", "kubeconfig", "kubeconfig_context",
+                    "app_dirs", "cluster_values_file", "global_values",
+                    "cleanup_metadata", "incompatible_charts", "force_label_injection",
+                    "helm_repos", "oci_registries", "git_repos",
+                    "http_proxy", "https_proxy", "no_proxy",
+                }
+                local_settings = {
+                    key: value for key, value in full_settings.items()
+                    if key in source_scheme_fields
+                }
+                parent_settings: dict[str, Any] = {}
+                for parent_data, parent_path in collect_parent_documents(sources_file_path.parent):
+                    input_paths.append(parent_path)
+                    parent_settings = merge_inherited_settings(
+                        parent_settings, extract_inherited_settings(parent_data, parent_path)
+                    )
+                settings_data = merge_local_source_settings(
+                    merge_inherited_settings(
+                        parent_settings, ctx.obj.get("inherited_settings", {})
+                    ),
+                    local_settings,
+                    sources_file_path,
+                )
+            else:
+                settings_data = sources_data
+            sources = SourceScheme(**settings_data)
+            cluster_global_values = sources.get_merged_global_values(sources_dir=app_config_dir)
+            if sources.cluster_values_file:
+                values_path = Path(sources.cluster_values_file).expanduser()
+                input_paths.append(
+                    values_path if values_path.is_absolute() else app_config_dir / values_path
+                )
+            if cluster_global_values:
+                output.print(
+                    "[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]", level="info"
+                )
+        except Exception as exc:
+            raise ValueError(f"Invalid sources file: {exc}") from exc
+
+    kubeconfig, context = resolve_cluster_config(
+        cli_kubeconfig=ctx.obj.get("kubeconfig"),
+        cli_context=ctx.obj.get("context"),
+        sources=sources,
+        output=output,
+    )
+    if kubeconfig:
+        input_paths.append(Path(kubeconfig).expanduser())
+    if not config_file_path.exists():
+        raise ValueError(f"Config file not found: {config_file_path}")
+    output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info")
+    raw_data = load_config_file(config_file_path)
+    api_version = raw_data.get("apiVersion", "") if raw_data else ""
+    if api_version.startswith("sbkube/"):
+        apps_data = raw_data.get("apps", {})
+        merged_namespace = "default"
+        current_dir = config_file_path.parent
+        parent_configs = []
+        for _ in range(5):
+            parent_dir = current_dir.parent
+            if parent_dir == current_dir:
+                break
+            parent_config = parent_dir / "sbkube.yaml"
+            if parent_config.exists():
+                parent_configs.append(parent_config)
+                input_paths.append(parent_config)
+            current_dir = parent_dir
+        for parent_config in reversed(parent_configs):
+            try:
+                parent_data = load_config_file(parent_config)
+                if parent_data and parent_data.get("apiVersion", "").startswith("sbkube/"):
+                    parent_ns = parent_data.get("settings", {}).get("namespace")
+                    if parent_ns:
+                        merged_namespace = parent_ns
+            except Exception:
+                # Preserve deploy's existing namespace inheritance behavior.
+                pass
+        current_namespace = raw_data.get("settings", {}).get("namespace")
+        if current_namespace:
+            merged_namespace = current_namespace
+        config_data = {"apps": apps_data, "namespace": merged_namespace}
+    else:
+        config_data = raw_data
+    try:
+        config = SBKubeConfig(**config_data)
+    except Exception as exc:
+        raise ValueError(f"Invalid config file: {exc}") from exc
+    return sources, cluster_global_values, kubeconfig, context, config, tuple(input_paths)
 
 
 def _parse_ssa_conflict_info(stderr: str) -> tuple[str | None, list[str]]:
@@ -213,8 +368,8 @@ def deploy_helm_app(
     namespace = app.namespace
 
     # App-level context overrides CLI/sources.yaml context
-    if hasattr(app, "context") and app.context:
-        context = app.context
+    context = effective_app_context(app, context)
+    if app.context:
         _verbose_print(console, f"  [yellow]Using app-specific context: {context}[/yellow]")
 
     # Chart 경로 결정 (.sbkube/build/ 우선, 없으면 .sbkube/charts/ 또는 로컬)
@@ -630,8 +785,8 @@ def deploy_yaml_app(
     namespace = app.namespace or config_namespace
 
     # App-level context overrides CLI/sources.yaml context
-    if hasattr(app, "context") and app.context:
-        context = app.context
+    context = effective_app_context(app, context)
+    if app.context:
         _verbose_print(console, f"  [yellow]Using app-specific context: {context}[/yellow]")
 
     # .sbkube 디렉토리 결정 (기본값: base_dir/.sbkube)
@@ -1279,143 +1434,17 @@ def cmd(
 
         config_file_path = APP_CONFIG_DIR / config_file_name
 
-        # Load sources and resolve cluster configuration
-        sources_file_name = ctx.obj.get("sources_file", "sources.yaml")
-        sources_file_path = find_sources_file(
-            BASE_DIR, APP_CONFIG_DIR, sources_file_name
-        )
-
-        sources = None
-        cluster_global_values = None
-        if sources_file_path and sources_file_path.exists():
-            output.print(f"[cyan]📄 Loading sources: {sources_file_path}[/cyan]", level="info")
-            try:
-                from sbkube.models.sources_model import SourceScheme
-
-                sources_data = load_config_file(sources_file_path)
-
-                # 통합 sbkube.yaml 포맷 감지 (apiVersion이 sbkube/로 시작)
-                api_version = sources_data.get("apiVersion", "") if sources_data else ""
-                if api_version.startswith("sbkube/"):
-                    # 통합 포맷: settings 섹션에서 SourceScheme 필드만 추출
-                    full_settings = sources_data.get("settings", {})
-                    if not isinstance(full_settings, dict):
-                        raise ValueError(f"{sources_file_path}: 'settings' must be a mapping")
-
-                    # SourceScheme에서 허용하는 필드만 추출
-                    source_scheme_fields = {
-                        "cluster", "kubeconfig", "kubeconfig_context",
-                        "app_dirs", "cluster_values_file", "global_values",
-                        "cleanup_metadata", "incompatible_charts", "force_label_injection",
-                        "helm_repos", "oci_registries", "git_repos",
-                        "http_proxy", "https_proxy", "no_proxy",
-                    }
-
-                    local_settings = {
-                        key: value for key, value in full_settings.items()
-                        if key in source_scheme_fields
-                    }
-                    settings_data = merge_local_source_settings(
-                        merge_inherited_settings(
-                            collect_parent_inherited_settings(sources_file_path.parent),
-                            ctx.obj.get("inherited_settings", {}),
-                        ),
-                        local_settings,
-                        sources_file_path,
-                    )
-                else:
-                    settings_data = sources_data
-
-                sources = SourceScheme(**settings_data)
-
-                # Load cluster global values (v0.7.0+)
-                cluster_global_values = sources.get_merged_global_values(
-                    sources_dir=APP_CONFIG_DIR
-                )
-                if cluster_global_values:
-                    output.print(
-                        "[cyan]🌐 Loaded cluster global values from sources.yaml[/cyan]", level="info"
-                    )
-            except Exception as e:
-                output.print_error(f"Invalid sources file: {e}")
-                overall_success = False
-                continue
-
-        # Resolve cluster configuration
         try:
-            kubeconfig, context = resolve_cluster_config(
-                cli_kubeconfig=ctx.obj.get("kubeconfig"),
-                cli_context=ctx.obj.get("context"),
-                sources=sources,
-                output=output,
+            sources, cluster_global_values, kubeconfig, context, config, input_paths = (
+                resolve_deploy_group_inputs(ctx, BASE_DIR, APP_CONFIG_DIR, config_file_path, output)
             )
-        except ClusterConfigError as e:
-            output.print_error(str(e))
+        except (ClusterConfigError, ValueError) as exc:
+            output.print_error(str(exc))
             overall_success = False
             continue
 
-        # Check cluster connectivity with resolved kubeconfig and context
-        check_cluster_connectivity_or_exit(
-            kubeconfig=kubeconfig,
-            kubecontext=context,
-        )
-
-        # 설정 파일 로드
-        if not config_file_path.exists():
-            output.print_error(f"Config file not found: {config_file_path}")
-            overall_success = False
-            continue
-
-        output.print(f"[cyan]📄 Loading config: {config_file_path}[/cyan]", level="info")
-        raw_data = load_config_file(config_file_path)
-
-        # 통합 sbkube.yaml 포맷 감지 (apiVersion이 sbkube/로 시작)
-        api_version = raw_data.get("apiVersion", "") if raw_data else ""
-        if api_version.startswith("sbkube/"):
-            # 통합 포맷: apps와 namespace 추출
-            apps_data = raw_data.get("apps", {})
-            if not apps_data:
-                output.print_warning(f"No apps found in: {config_file_path}")
-                continue
-
-            # namespace 상속 처리 (parent → current)
-            merged_namespace = "default"
-            current_dir = config_file_path.parent
-            parent_configs = []
-            for _ in range(5):
-                parent_dir = current_dir.parent
-                if parent_dir == current_dir:
-                    break
-                parent_config = parent_dir / "sbkube.yaml"
-                if parent_config.exists():
-                    parent_configs.append(parent_config)
-                current_dir = parent_dir
-
-            for parent_config in reversed(parent_configs):
-                try:
-                    parent_data = load_config_file(parent_config)
-                    if parent_data and parent_data.get("apiVersion", "").startswith("sbkube/"):
-                        parent_ns = parent_data.get("settings", {}).get("namespace")
-                        if parent_ns:
-                            merged_namespace = parent_ns
-                except Exception:
-                    pass
-
-            # 현재 config의 namespace로 오버라이드
-            current_namespace = raw_data.get("settings", {}).get("namespace")
-            if current_namespace:
-                merged_namespace = current_namespace
-
-            config_data = {"apps": apps_data, "namespace": merged_namespace}
-        else:
-            # 레거시 포맷: 전체 데이터가 SBKubeConfig
-            config_data = raw_data
-
-        try:
-            config = SBKubeConfig(**config_data)
-        except Exception as e:
-            output.print_error(f"Invalid config file: {e}")
-            overall_success = False
+        if not config.apps:
+            output.print_warning(f"No apps found in: {config_file_path}")
             continue
 
         # 배포 순서 얻기 (의존성 고려)
@@ -1432,22 +1461,51 @@ def cmd(
             # 모든 앱 배포 (의존성 순서대로)
             apps_to_deploy = deployment_order
 
+        selected_apps = tuple(apps_to_deploy)
+        parent_execution = ctx.obj.get("_sbkube_apply_execution")
+        execution = None
+        if parent_execution is not None or (
+            not dry_run and resolved_gate_enabled(config_file_path.parent)
+        ):
+            gate_files = find_gate_files(APP_CONFIG_DIR)
+            gate_paths = tuple(source.path for source in gate_files.individuals)
+            if gate_files.global_source is not None:
+                gate_paths += (gate_files.global_source.path,)
+            execution = capture_execution_context(
+                "deploy", config_file_path, config, selected_apps, kubeconfig, context,
+                sources=sources, input_paths=(*input_paths, *gate_paths),
+            )
+        group = ResolvedDeployGroup(
+            config, sources, selected_apps, kubeconfig, context, cluster_global_values, execution
+        )
+        if parent_execution is not None and execution is not None:
+            parent_execution.verify_child(execution)
+        if not dry_run and group.execution is not None:
+            run_resolved_gate(group.execution)
+        group.verify()
+        check_cluster_connectivity_or_exit(
+            kubeconfig=group.kubeconfig, kubecontext=group.context
+        )
+        group.verify()
+
         # 성공한 Helm 배포를 롤백 지점으로 기록 (실패해도 경고만, 배포는 유지)
         recorder = None
         if not dry_run:
             recorder = DeploymentRecorder(
-                cluster=(sources.cluster if sources and sources.cluster else context)
-                or "unknown",
-                namespace=config.namespace or "default",
+                cluster=(
+                    group.sources.cluster
+                    if group.sources and group.sources.cluster else group.context
+                ) or "unknown",
+                namespace=group.config.namespace or "default",
                 app_config_dir=APP_CONFIG_DIR.resolve(),
                 config_file_path=config_file_path.resolve(),
-                config_data=config.model_dump(mode="json"),
+                config_data=group.config.model_dump(mode="json"),
                 # The cluster actually used, which --kubeconfig/--context may
                 # override; rollback pins helm/kubectl to it
                 sources_data={
-                    **(sources.model_dump(mode="json") if sources else {}),
-                    "kubeconfig": kubeconfig,
-                    "kubeconfig_context": context,
+                    **(group.sources.model_dump(mode="json") if group.sources else {}),
+                    "kubeconfig": group.kubeconfig,
+                    "kubeconfig_context": group.context,
                     **({"cluster_identity": current_profile().identity} if current_profile() else {}),
                 },
                 warn=output.print_warning,
@@ -1459,15 +1517,16 @@ def cmd(
             base_dir=BASE_DIR,
             work_dir=APP_CONFIG_DIR,  # 훅은 APP_CONFIG_DIR에서 실행
             dry_run=dry_run,
-            kubeconfig=kubeconfig,
-            context=context,
-            namespace=config.namespace,  # config에서 namespace 가져옴
+            kubeconfig=group.kubeconfig,
+            context=group.context,
+            namespace=group.config.namespace,  # config에서 namespace 가져옴
         )
 
         # ========== 전역 pre-deploy 훅 실행 ==========
-        if config.hooks and "deploy" in config.hooks:
-            deploy_hooks = config.hooks["deploy"].model_dump()
-            if not hook_executor.execute_command_hooks(
+        if group.config.hooks and "deploy" in group.config.hooks:
+            deploy_hooks = group.config.hooks["deploy"].model_dump()
+            if not _run_verified_hook(
+                group.execution, hook_executor.execute_command_hooks,
                 hook_config=deploy_hooks,
                 hook_phase="pre",
                 command_name="deploy",
@@ -1480,10 +1539,10 @@ def cmd(
         try:
             # 앱 배포
             success_count = 0
-            total_count = len(apps_to_deploy)
+            total_count = len(group.selected_apps)
 
-            for app_name_iter in apps_to_deploy:
-                app = config.apps[app_name_iter]
+            for app_name_iter in group.selected_apps:
+                app = group.config.apps[app_name_iter]
 
                 if not app.enabled:
                     output.print_warning(f"Skipping disabled app: {app_name_iter}")
@@ -1494,14 +1553,15 @@ def cmd(
                     app_hooks = app.hooks.model_dump()
                     hook_context = {
                         "namespace": (
-                            app.namespace if hasattr(app, "namespace") else config.namespace
+                            app.namespace if hasattr(app, "namespace") else group.config.namespace
                         ),
                         "release_name": getattr(app, "release_name", None) or app_name_iter,
                     }
 
                     # Phase 2: pre_deploy_tasks 우선 실행
                     if app_hooks.get("pre_deploy_tasks"):
-                        if not hook_executor.execute_hook_tasks(
+                        if not _run_verified_hook(
+                            group.execution, hook_executor.execute_hook_tasks,
                             app_name=app_name_iter,
                             tasks=app_hooks["pre_deploy_tasks"],
                             hook_type="pre_deploy",
@@ -1514,7 +1574,8 @@ def cmd(
                             continue
 
                     # Phase 1: shell 명령어 + manifests
-                    if not hook_executor.execute_app_hook_with_manifests(
+                    if not _run_verified_hook(
+                        group.execution, hook_executor.execute_app_hook_with_manifests,
                         app_name=app_name_iter,
                         app_hooks=app_hooks,
                         hook_type="pre_deploy",
@@ -1526,6 +1587,7 @@ def cmd(
                         deployment_failed = True
                         continue
 
+                group.verify()
                 success = False
 
                 try:
@@ -1539,21 +1601,25 @@ def cmd(
                             BUILD_DIR,
                             APP_CONFIG_DIR,
                             output,
-                            kubeconfig,
-                            context,
+                            group.kubeconfig,
+                            group.context,
                             dry_run,
-                            cluster_global_values=cluster_global_values,
-                            incompatible_charts=sources.incompatible_charts if sources else None,
-                            force_label_injection=sources.force_label_injection if sources else None,
+                            cluster_global_values=group.cluster_global_values,
+                            incompatible_charts=(
+                                group.sources.incompatible_charts if group.sources else None
+                            ),
+                            force_label_injection=(
+                                group.sources.force_label_injection if group.sources else None
+                            ),
                             recorder=recorder,
-                            git_apps=config.apps,
-                            git_repos=sources.git_repos if sources else {},
+                            git_apps=group.config.apps,
+                            git_repos=group.sources.git_repos if group.sources else {},
                         )
                     elif isinstance(app, YamlApp):
                         # apps_config를 딕셔너리로 변환 (Pydantic 모델 → dict)
                         apps_config_dict = {
                             name: app_obj.model_dump()
-                            for name, app_obj in config.apps.items()
+                            for name, app_obj in group.config.apps.items()
                         }
                         success = deploy_yaml_app(
                             app_name_iter,
@@ -1561,12 +1627,12 @@ def cmd(
                             BASE_DIR,
                             APP_CONFIG_DIR,
                             output,
-                            kubeconfig,
-                            context,
+                            group.kubeconfig,
+                            group.context,
                             dry_run,
                             apps_config=apps_config_dict,
                             sbkube_work_dir=SBKUBE_WORK_DIR,
-                            config_namespace=config.namespace,
+                            config_namespace=group.config.namespace,
                         )
                     elif isinstance(app, ActionApp):
                         success = deploy_action_app(
@@ -1575,10 +1641,10 @@ def cmd(
                             BASE_DIR,
                             APP_CONFIG_DIR,
                             output,
-                            kubeconfig,
-                            context,
+                            group.kubeconfig,
+                            group.context,
                             dry_run,
-                            config_namespace=config.namespace,
+                            config_namespace=group.config.namespace,
                         )
                     elif isinstance(app, ExecApp):
                         exec_base_dir = APP_CONFIG_DIR if current_profile() else BASE_DIR
@@ -1592,10 +1658,10 @@ def cmd(
                             BASE_DIR,
                             APP_CONFIG_DIR,
                             output,
-                            kubeconfig,
-                            context,
+                            group.kubeconfig,
+                            group.context,
                             dry_run,
-                            config_namespace=config.namespace,
+                            config_namespace=group.config.namespace,
                         )
                     elif isinstance(app, NoopApp):
                         success = deploy_noop_app(
@@ -1608,9 +1674,9 @@ def cmd(
                             BASE_DIR,
                             APP_CONFIG_DIR,
                             output,
-                            kubeconfig,
-                            context,
-                            config.namespace,  # config에서 namespace 가져옴
+                            group.kubeconfig,
+                            group.context,
+                            group.config.namespace,  # config에서 namespace 가져옴
                             dry_run,
                         )
                     elif isinstance(app, GitApp):
@@ -1634,12 +1700,14 @@ def cmd(
                     overall_success = False
                     break
 
+                group.verify()
+
                 # ========== 앱별 post-deploy 또는 on_deploy_failure 훅 실행 ==========
                 if hasattr(app, "hooks") and app.hooks:
                     app_hooks = app.hooks.model_dump()
                     hook_context = {
                         "namespace": (
-                            app.namespace if hasattr(app, "namespace") else config.namespace
+                            app.namespace if hasattr(app, "namespace") else group.config.namespace
                         ),
                         "release_name": getattr(app, "release_name", None) or app_name_iter,
                     }
@@ -1647,7 +1715,8 @@ def cmd(
                     if success:
                         # 배포 성공 시 post_deploy 훅 실행
                         # Phase 1: shell 명령어 + manifests
-                        hook_executor.execute_app_hook_with_manifests(
+                        _run_verified_hook(
+                            group.execution, hook_executor.execute_app_hook_with_manifests,
                             app_name=app_name_iter,
                             app_hooks=app_hooks,
                             hook_type="post_deploy",
@@ -1656,7 +1725,8 @@ def cmd(
 
                         # Phase 2: tasks (우선순위: tasks > manifests > commands)
                         if app_hooks.get("post_deploy_tasks"):
-                            hook_executor.execute_hook_tasks(
+                            _run_verified_hook(
+                                group.execution, hook_executor.execute_hook_tasks,
                                 app_name=app_name_iter,
                                 tasks=app_hooks["post_deploy_tasks"],
                                 hook_type="post_deploy",
@@ -1664,7 +1734,8 @@ def cmd(
                             )
                     else:
                         # 배포 실패 시 on_deploy_failure 훅 실행
-                        hook_executor.execute_app_hook(
+                        _run_verified_hook(
+                            group.execution, hook_executor.execute_app_hook,
                             app_name=app_name_iter,
                             app_hooks=app_hooks,
                             hook_type="on_deploy_failure",
@@ -1678,19 +1749,21 @@ def cmd(
                     deployment_failed = True
 
             # ========== 전역 post-deploy 또는 on_failure 훅 실행 ==========
-            if config.hooks and "deploy" in config.hooks:
-                deploy_hooks = config.hooks["deploy"].model_dump()
+            if group.config.hooks and "deploy" in group.config.hooks:
+                deploy_hooks = group.config.hooks["deploy"].model_dump()
 
                 if deployment_failed:
                     # 배포 실패 시 on_failure 훅 실행
-                    hook_executor.execute_command_hooks(
+                    _run_verified_hook(
+                        group.execution, hook_executor.execute_command_hooks,
                         hook_config=deploy_hooks,
                         hook_phase="on_failure",
                         command_name="deploy",
                     )
                 else:
                     # 모든 배포 성공 시 post 훅 실행
-                    hook_executor.execute_command_hooks(
+                    _run_verified_hook(
+                        group.execution, hook_executor.execute_command_hooks,
                         hook_config=deploy_hooks,
                         hook_phase="post",
                         command_name="deploy",

@@ -294,6 +294,70 @@ def _execute_apps_deployment(
         validate_profile_document(load_config_file(str(config_file_path)))
     overall_success = True
 
+    from sbkube.commands.deploy import resolve_deploy_group_inputs
+    from sbkube.utils.deploy_gate import resolved_gate_enabled, run_resolved_gate
+    from sbkube.utils.deploy_gate_config import find_gate_files
+    from sbkube.utils.deploy_plan import capture_execution_context
+
+    apply_execution = None
+    input_paths: tuple[Path, ...] = ()
+    resolved_sources = None
+    effective_kubeconfig = ctx.obj.get("kubeconfig")
+    effective_context = ctx.obj.get("context")
+    context_enabled = not dry_run and resolved_gate_enabled(APP_CONFIG_DIR)
+    if context_enabled:
+        (
+            resolved_sources, _, effective_kubeconfig, effective_context,
+            resolved_config, input_paths,
+        ) = resolve_deploy_group_inputs(ctx, BASE_DIR, APP_CONFIG_DIR, config_file_path, output)
+        # Preserve apply hooks/deps while consuming deploy's actual app objects
+        # and namespace semantics rather than a second interpretation of them.
+        config = config.model_copy(update={
+            "apps": resolved_config.apps, "namespace": resolved_config.namespace,
+        })
+
+    deployment_order = config.get_deployment_order()
+    if app_name:
+        if app_name not in config.apps:
+            output.print_error(f"App not found: {app_name}", app_name=app_name)
+            return False
+        apps_to_apply: list[str] = []
+        visited: set[str] = set()
+
+        def collect_dependencies(name: str) -> None:
+            if name in visited:
+                return
+            visited.add(name)
+            for dependency in getattr(config.apps[name], "depends_on", []):
+                collect_dependencies(dependency)
+            apps_to_apply.append(name)
+
+        collect_dependencies(app_name)
+    else:
+        apps_to_apply = deployment_order
+
+    apps_to_prune = []
+    if prune_disabled:
+        from sbkube.utils.prune_helper import (
+            find_disabled_apps_to_prune,
+            prune_disabled_apps,
+        )
+
+        apps_to_prune = find_disabled_apps_to_prune(config)
+
+    if context_enabled:
+        gate_files = find_gate_files(APP_CONFIG_DIR)
+        gate_paths = tuple(item.path for item in gate_files.individuals)
+        if gate_files.global_source is not None:
+            gate_paths += (gate_files.global_source.path,)
+        apply_execution = capture_execution_context(
+            "prune" if prune_disabled else "apply", config_file_path, config, tuple(apps_to_apply),
+            effective_kubeconfig, effective_context, sources=resolved_sources,
+            input_paths=(*input_paths, *gate_paths),
+            prune_apps=tuple(item[0] for item in apps_to_prune),
+        )
+        run_resolved_gate(apply_execution)
+
     # deps (app-group dependencies) 배포 상태 검증
     if config.deps and not skip_deps_check:
         output.print(
@@ -351,12 +415,16 @@ def _execute_apps_deployment(
         output.print(
             "[cyan]🪝 Executing global pre-apply hooks...[/cyan]", level="info"
         )
-        if not hook_executor.execute_command_hooks(apply_hooks, "pre", "apply"):
+        if apply_execution is not None:
+            apply_execution.verify()
+        hook_success = hook_executor.execute_command_hooks(apply_hooks, "pre", "apply")
+        if apply_execution is not None:
+            apply_execution.verify()
+        if not hook_success:
             output.print_error("Pre-apply hook failed")
             return False
 
     # 배포 순서 출력
-    deployment_order = config.get_deployment_order()
     output.print(
         "\n[cyan]📋 Deployment order (based on dependencies):[/cyan]", level="info"
     )
@@ -366,54 +434,31 @@ def _execute_apps_deployment(
         deps_str = f" [depends on: {', '.join(deps)}]" if deps else ""
         output.print(f"  {idx}. {app} ({app_config.type}){deps_str}", level="info")
 
-    # 적용할 앱 필터링
     if app_name:
-        if app_name not in config.apps:
-            output.print_error(f"App not found: {app_name}", app_name=app_name)
-            return False
-
-        apps_to_apply = []
-        visited: set[str] = set()
-
-        def collect_dependencies(name: str) -> None:
-            if name in visited:
-                return
-            visited.add(name)
-            app_cfg = config.apps[name]
-            if hasattr(app_cfg, "depends_on"):
-                for dep in app_cfg.depends_on:
-                    collect_dependencies(dep)
-            apps_to_apply.append(name)
-
-        collect_dependencies(app_name)
         output.print(
             f"\n[yellow]ℹ️  Including dependencies: {', '.join(apps_to_apply)}[/yellow]",
             level="info",
         )
-    else:
-        apps_to_apply = deployment_order
 
     # Prune disabled apps before deployment
     if prune_disabled:
-        from sbkube.utils.prune_helper import (
-            find_disabled_apps_to_prune,
-            prune_disabled_apps,
-        )
-
-        apps_to_prune = find_disabled_apps_to_prune(config)
         if apps_to_prune:
             output.print(
                 f"\n[yellow]🗑️  Pruning {len(apps_to_prune)} disabled app(s)...[/yellow]",
                 level="info",
             )
+            if apply_execution is not None:
+                apply_execution.verify()
             prune_disabled_apps(
                 apps_to_prune=apps_to_prune,
-                kubeconfig=ctx.obj.get("kubeconfig"),
-                context=ctx.obj.get("context"),
+                kubeconfig=effective_kubeconfig,
+                context=effective_context,
                 app_config_dir=APP_CONFIG_DIR,
                 output=output,
                 dry_run=dry_run,
             )
+            if apply_execution is not None:
+                apply_execution.verify()
 
     # Progress tracking setup (disable in non-human modes to suppress spinner/bar)
     console = output.get_console()
@@ -424,6 +469,8 @@ def _execute_apps_deployment(
     failed = False
     try:
         for app_name_iter in apps_to_apply:
+            if apply_execution is not None:
+                apply_execution.verify()
             app_config = config.apps[app_name_iter]
 
             if not app_config.enabled:
@@ -474,6 +521,8 @@ def _execute_apps_deployment(
                             force=False,
                             dry_run=dry_run,
                         )
+                    if apply_execution is not None:
+                        apply_execution.verify()
                     if use_progress:
                         progress_tracker.update(task_id, advance=1)
 
@@ -500,6 +549,8 @@ def _execute_apps_deployment(
                             app_name=app_name_iter,
                             dry_run=dry_run,
                         )
+                    if apply_execution is not None:
+                        apply_execution.verify()
                     if use_progress:
                         progress_tracker.update(task_id, advance=1)
 
@@ -521,7 +572,11 @@ def _execute_apps_deployment(
                     )
 
                 deploy_ctx = click.Context(deploy_cmd, parent=ctx)
-                deploy_ctx.obj = ctx.obj
+                if apply_execution is not None:
+                    apply_execution.verify()
+                    deploy_ctx.obj = {**ctx.obj, "_sbkube_apply_execution": apply_execution}
+                else:
+                    deploy_ctx.obj = ctx.obj
                 with perf_timer("stage.deploy", app=app_name_iter):
                     deploy_ctx.invoke(
                         deploy_cmd,
@@ -530,6 +585,8 @@ def _execute_apps_deployment(
                         app_name=app_name_iter,
                         dry_run=dry_run,
                     )
+                if apply_execution is not None:
+                    apply_execution.verify()
                 if use_progress:
                     progress_tracker.update(task_id, advance=1)
                     progress_tracker.console_print(
@@ -548,9 +605,12 @@ def _execute_apps_deployment(
             output.print(
                 "[cyan]🪝 Executing global post-apply hooks...[/cyan]", level="info"
             )
-            if not hook_executor.execute_command_hooks(
-                apply_hooks, "post", "apply"
-            ):
+            if apply_execution is not None:
+                apply_execution.verify()
+            hook_success = hook_executor.execute_command_hooks(apply_hooks, "post", "apply")
+            if apply_execution is not None:
+                apply_execution.verify()
+            if not hook_success:
                 output.print_error("Post-apply hook failed")
                 failed = True
 

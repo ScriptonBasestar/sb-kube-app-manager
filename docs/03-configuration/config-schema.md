@@ -525,9 +525,39 @@ deploy_gate:
 - 환경변수 `SBKUBE_GATE_OPERATION`(작업 이름), `SBKUBE_GATE_TARGET`(대상 디렉토리)이 추가된다.
 - 작업 디렉토리는 전역 파일의 디렉토리다.
 - `--dry-run`과 `rollback --list`는 클러스터를 바꾸지 않으므로 게이트를 돌리지 않는다.
-- `apply`가 내부에서 `deploy`를 부르거나 workspace phase를 스레드로 돌려도 게이트는 바깥 명령에서
-  한 번만 돈다. 단, `WorkspaceDeployCommand`를 import하지 못해 `sbkube apply` 하위 프로세스로
-  넘어가는 대체 경로에서는 하위 프로세스가 게이트를 다시 돈다.
+- `apply`가 내부에서 `deploy`를 부르거나 workspace phase를 스레드로 돌려도 **preflight**는 바깥
+  명령에서 한 번만 돈다. 단, `WorkspaceDeployCommand`를 import하지 못해 `sbkube apply` 하위
+  프로세스로 넘어가는 대체 경로에서는 하위 프로세스가 preflight를 다시 돈다.
+- `enforce` 게이트의 apply/deploy 앱 그룹은 실제 입력을 해석한 후 **resolved** 판정을 추가한다.
+  preflight를 대체하거나 약화하지 않으며 hook·prune·recorder·앱 실행 전에 판정한다.
+
+### 실제 실행 입력 전달 (`sbkube-deploy-context/v1`)
+
+게이트 환경의 `SBKUBE_GATE_PHASE`는 `preflight` 또는 `resolved`다. preflight에는 resolved
+입력이 아직 없으므로 `SBKUBE_GATE_CONTEXT`를 전달하지 않는다. resolved에서는 이 변수에
+최대 32KiB의 JSON을 전달한다. 상속된 `SBKUBE_GATE_*` 값은 제거하고 현재 호출의 값으로
+구성하므로 이전 명령의 JSON을 재사용하지 않는다. 기존 operation 인자와 작업 디렉터리는 유지한다.
+
+| 필드 | 의미 |
+| --- | --- |
+| `schema`, `operation`, `target`, `config_file` | 스키마·작업·해석된 실행 디렉터리/설정 경로. symlink의 실제 원본 식별값은 `inputs`에 별도로 묶음 |
+| `kubeconfig`, `context` | 실제 해석된 그룹 대상. kubeconfig 내용은 전달하지 않음 |
+| `apps` | 선택된 순서, 앱 이름·타입·enabled·실제 namespace와 context. Helm/YAML의 앱별 context override와 action별 namespace도 표시 |
+| `config_model_sha256`, `sources_model_sha256`, `inputs` | 같은 메모리 모델과 설정·values·kubeconfig 등 입력 파일의 해시. 원문 설정·비밀값은 전달하지 않음 |
+| `prune_apps`, `global_hooks`, `apps[].opaque_effects` | 삭제 후보·hook 등 추가 효과의 존재. 임의 스크립트의 실제 효과를 증명하는 필드가 아님 |
+| `inputs_complete`, `incomplete_reasons` | 누락 입력·미해석 values·추적하지 못한 `_parent` 참조가 있으면 불완전함을 명시 |
+| `artifacts`, `authority` | 현재 각각 `not-attested`, `none`. 렌더 결과·게시 image의 검증이나 배포 승인을 뜻하지 않음 |
+
+실행은 판정에 사용한 같은 config/sources 객체와 앱 선택을 소비한다. hook과 실행 경계에서
+모델·파일 변경을 확인하고, 중첩 deploy는 부모 apply의 실제 대상·선택 앱과 대조한다.
+게이트가 없거나 `off`·`warn`이거나 dry-run이면 새 입력 capture/판정을 추가하지 않는다. 기존에
+사람이 대화식으로 요청해 기록까지 성공한 일회성 skip은 해당 호출 안에서만 유지하고 다시
+게이트를 실행하지 않는다. 기록 실패나 다음 독립 호출로 skip을 전달하지 않는다.
+
+이 기능은 **입력 전달 계약**이다. 같은 uid를 통제하는 주체에 대한 독립 인증·실행 증명이
+아니며, 임의 hook·manifest 내부 namespace·실제 클러스터 identity·렌더 산출물·registry digest를
+검증하지 않는다. 범위 승인을 구현하는 소비자는 불완전한 입력을 거부하고 필요한 추가 증거를
+별도로 검증해야 한다. 기존 gate의 허용/거부·mode·사람 전용 승인 정책은 변경하지 않는다.
 
 사람의 건너뛰기는 `--skip-deploy-gate=<사유>` 한 가지다
 ([commands.md](../02-features/commands.md#deploy-gate-건너뛰기)). 환경변수로 끄는 방법은 없다.

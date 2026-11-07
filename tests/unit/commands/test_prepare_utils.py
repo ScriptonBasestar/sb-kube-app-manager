@@ -10,10 +10,29 @@ Tests verify:
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from sbkube.commands.prepare import prepare_git_app, prepare_http_app
-from sbkube.models.config_model import GitApp, HttpApp
+from sbkube.commands.prepare import (
+    preflight_check_helm_repos,
+    prepare_git_app,
+    prepare_http_app,
+)
+from sbkube.models.config_model import GitApp, HelmApp, HttpApp, SBKubeConfig
 from sbkube.utils.git_source import GitSourceError
 from sbkube.utils.output_manager import OutputManager
+
+
+@patch("sbkube.commands.prepare.run_command")
+def test_preflight_mixed_remote_git_and_local_charts(mock_run_command):
+    config = SBKubeConfig(namespace="fixture", apps={
+        "remote": HelmApp(type="helm", chart="example/remote"),
+        "git": HelmApp(type="helm", chart="${repos.checkout}/charts/demo"),
+        "local": HelmApp(type="helm", chart="./local/chart"),
+    })
+    mock_run_command.return_value = (0, '[{"name": "example"}]', "")
+    success, issues = preflight_check_helm_repos(
+        config, {"example": "https://fixture.invalid/charts"}, MagicMock(spec=OutputManager),
+    )
+    assert success is True and issues == []
+    mock_run_command.assert_called_once_with(["helm", "repo", "list", "-o", "json"])
 
 
 class TestPrepareHttpAppBasic:

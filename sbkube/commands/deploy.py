@@ -53,7 +53,13 @@ from sbkube.utils.cluster_config import (
 )
 from sbkube.utils.common import find_sources_file, run_command
 from sbkube.utils.common_options import resolve_command_paths, target_options
-from sbkube.utils.deploy_gate import resolved_gate_enabled, run_resolved_gate
+from sbkube.utils.deploy_gate import (
+    DeployGateError,
+    require_strict_resolved_gate,
+    resolved_gate_enabled,
+    run_resolved_gate,
+    strict_resolved_gate_required,
+)
 from sbkube.utils.deploy_gate_config import find_gate_files
 from sbkube.utils.deploy_plan import (
     ResolvedExecutionContext,
@@ -1387,6 +1393,10 @@ def cmd(
     output = shared_output or OutputManager(format_type=output_format)
     _is_standalone = shared_output is None
 
+    strict = strict_resolved_gate_required()
+    if strict and (dry_run or ctx.obj.get("_sbkube_apply_execution") is not None):
+        raise DeployGateError("Strict deploy requires standalone execution")
+
     output.print("[bold blue]✨ SBKube `deploy` 시작 ✨[/bold blue]", level="warning")
 
     # kubectl 설치 확인 (cluster connectivity는 나중에 확인)
@@ -1419,6 +1429,9 @@ def cmd(
     except ValueError:
         raise click.Abort
 
+    if strict and len(app_config_dirs) != 1:
+        raise DeployGateError("Strict deploy requires exactly one configuration group")
+
     # Resolve .sbkube directories using centralized utility (Phase 2 refactoring)
     sbkube_dirs = resolve_sbkube_directories(
         BASE_DIR, app_config_dirs, sources_file_name
@@ -1444,6 +1457,8 @@ def cmd(
             continue
 
         if not config.apps:
+            if strict:
+                raise DeployGateError("Strict deploy requires a selected Helm app")
             output.print_warning(f"No apps found in: {config_file_path}")
             continue
 
@@ -1453,6 +1468,8 @@ def cmd(
         if app_name:
             # 특정 앱만 배포
             if app_name not in config.apps:
+                if strict:
+                    raise DeployGateError("Strict deploy selected app does not exist")
                 output.print_error(f"App not found: {app_name}")
                 overall_success = False
                 continue
@@ -1462,6 +1479,11 @@ def cmd(
             apps_to_deploy = deployment_order
 
         selected_apps = tuple(apps_to_deploy)
+        if strict and (
+            not app_name or selected_apps != (app_name,)
+            or not isinstance(config.apps[app_name], HelmApp) or not config.apps[app_name].enabled
+        ):
+            raise DeployGateError("Strict deploy requires exactly one enabled Helm app")
         parent_execution = ctx.obj.get("_sbkube_apply_execution")
         execution = None
         if parent_execution is not None or (
@@ -1483,10 +1505,12 @@ def cmd(
         if not dry_run and group.execution is not None:
             run_resolved_gate(group.execution)
         group.verify()
+        require_strict_resolved_gate(group.execution)
         check_cluster_connectivity_or_exit(
             kubeconfig=group.kubeconfig, kubecontext=group.context
         )
         group.verify()
+        require_strict_resolved_gate(group.execution)
 
         # 성공한 Helm 배포를 롤백 지점으로 기록 (실패해도 경고만, 배포는 유지)
         recorder = None

@@ -455,6 +455,14 @@ apps:
 `sbkube-gate.yaml` 파일의 `deploy_gate` 블록에 둔다 — 게이트 설정만 편집 보호 경로로 묶을 수 있게
 하기 위해서다. **`sbkube-gate.yaml`이 하나도 없으면 게이트도 없고 동작은 그대로다.**
 
+`deploy --require-resolved-gate -f FILE --app HELM_APP`은 선택적인 엄격 실행 경로다.
+독립 `deploy`의 단일 설정 그룹·활성 Helm 앱 하나만 허용한다. `-f`와 `--app`을 반드시
+명시해야 하며, 디렉터리 대상·중첩 실행·부모 `apply`·dry-run·human skip은 거부한다.
+설정된 게이트가 `enforce`여야 하고, agent grant가 있어도 외부 명령을 실제 실행한다.
+`preflight`와 동일 invocation/실행 계획의 `resolved` 단계가 모두 성공해야 connectivity 검사,
+배포 기록, hook 및 앱 실행으로 진행한다. 이 옵션은 권한이나 CI 예외를 발급하지 않으며
+payload의 `authority: none`을 유지한다. 옵션을 생략하면 기존 off/warn/grant/skip 동작은 그대로다.
+
 ```yaml
 # <workspace root>/sbkube-gate.yaml  (.sbkube-workspace 옆) — 전역
 deploy_gate:

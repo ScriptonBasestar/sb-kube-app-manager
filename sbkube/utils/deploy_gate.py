@@ -54,6 +54,7 @@ import shlex
 import subprocess
 import sys
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -135,6 +136,32 @@ _gate_depth: contextvars.ContextVar[int] = contextvars.ContextVar(
 _recorded_human_skip: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "sbkube_recorded_human_skip", default=False
 )
+
+
+@dataclass
+class _StrictInvocation:
+    config_file: Path
+    app_name: str
+    preflight_passed: bool = False
+    resolved_plan: ResolvedExecutionContext | None = None
+
+
+_strict_invocation: contextvars.ContextVar[_StrictInvocation | None] = contextvars.ContextVar(
+    "sbkube_strict_resolved_gate", default=None
+)
+
+
+def strict_resolved_gate_required() -> bool:
+    return _strict_invocation.get() is not None
+
+
+def require_strict_resolved_gate(plan: ResolvedExecutionContext | None) -> None:
+    """Require both genuine command successes for this exact invocation/plan."""
+    strict = _strict_invocation.get()
+    if strict is not None:
+        if not strict.preflight_passed or plan is None or strict.resolved_plan is not plan:
+            raise DeployGateError("Strict deploy requires its preflight and resolved gate success")
+        plan.verify()
 
 
 class DeployGateError(SbkubeError):
@@ -332,6 +359,20 @@ def run_gate(
     execution_context: ResolvedExecutionContext | None = None,
 ) -> str | None:
     """Run the deploy gate for one invocation, raising when it refuses."""
+    strict = _strict_invocation.get()
+    if strict is not None:
+        if command_name != "deploy" or skip_reason is not None or params.get("dry_run"):
+            raise DeployGateError("Strict deploy does not permit gate bypasses")
+        if execution_context is None:
+            if strict.preflight_passed or strict.resolved_plan is not None:
+                raise DeployGateError("Strict deploy preflight cannot be replayed")
+        elif (
+            not strict.preflight_passed or strict.resolved_plan is not None
+            or execution_context.operation != "deploy"
+            or execution_context.config_file != strict.config_file
+            or execution_context.selected_apps != (strict.app_name,)
+        ):
+            raise DeployGateError("Strict resolved gate differs from its invocation")
     if skip_reason is not None:
         if not skip_reason.strip():
             raise click.UsageError("--skip-deploy-gate requires a non-empty reason.")
@@ -351,7 +392,11 @@ def run_gate(
         return
 
     start = gate_start_directory(command_name, params)
+    if strict is not None and start.resolve() != strict.config_file.parent:
+        raise DeployGateError("Strict deploy target differs from its invocation")
     gate = resolve_gate(*find_gate_files(start))
+    if strict is not None and (gate is None or gate.mode != "enforce"):
+        raise DeployGateError("Strict deploy requires an enforce gate")
     if gate is None:
         if skip_reason is not None:
             _warn("--skip-deploy-gate ignored: no deploy gate is configured here.")
@@ -377,7 +422,7 @@ def run_gate(
         )
         return "recorded-human-skip"
 
-    grant = _granted(gate)
+    grant = None if strict is not None else _granted(gate)
     if grant is not None:
         _warn(f"deploy gate passed for '{operation}' by agent grant {grant}")
         return
@@ -409,6 +454,12 @@ def run_gate(
         failure = str(e)
 
     if returncode == 0:
+        if strict is not None:
+            if execution_context is None:
+                strict.preflight_passed = True
+            else:
+                execution_context.verify()
+                strict.resolved_plan = execution_context
         return
     message = f"deploy gate refused '{operation}' ({failure}): {gate.command}"
     if gate.mode == "warn":
@@ -422,6 +473,8 @@ def run_gate(
 
 def resolved_gate_enabled(target: Path) -> bool:
     """Add input guards only to enforce; preserve warn/off execution semantics."""
+    if strict_resolved_gate_required():
+        return True
     if _recorded_human_skip.get():
         return False
     gate = resolve_gate(*find_gate_files(target))
@@ -435,7 +488,7 @@ def run_resolved_gate(plan: ResolvedExecutionContext) -> None:
     app group needs its own context, including nested in-process deploy calls.
     No grant or full-check exception is created by carrying this metadata.
     """
-    if _recorded_human_skip.get():
+    if _recorded_human_skip.get() and not strict_resolved_gate_required():
         return
     plan.verify()
     run_gate(
@@ -454,7 +507,25 @@ def gate_callback(
 
     def gated(*args: Any, **kwargs: Any) -> Any:
         skip_reason = kwargs.pop(SKIP_OPTION_NAME, None)
+        required = kwargs.pop("require_resolved_gate", False)
+        if type(required) is not bool:
+            raise DeployGateError("Invalid strict deploy selector")
         depth = _gate_depth.get()
+        if _strict_invocation.get() is not None:
+            raise DeployGateError("Strict deploy cannot invoke nested gated commands")
+        strict = None
+        if required:
+            if (
+                command_name != "deploy" or depth != 0 or skip_reason is not None
+                or kwargs.get("dry_run") or not kwargs.get("config_file")
+                or not kwargs.get("app_name") or kwargs.get("target") is not None
+            ):
+                raise DeployGateError("Strict deploy requires standalone -f and --app without bypasses")
+            requested = Path(kwargs["config_file"]).expanduser().absolute()
+            if not requested.is_file():
+                raise DeployGateError("Strict deploy requires a configuration file")
+            strict = _StrictInvocation(requested.parent.resolve() / requested.name, kwargs["app_name"])
+        strict_token = _strict_invocation.set(strict)
         token = _gate_depth.set(depth + 1)
         override_token = _recorded_human_skip.set(False) if depth == 0 else None
         try:
@@ -462,11 +533,17 @@ def gate_callback(
                 result = run_gate(command_name, kwargs, skip_reason)
                 if result == "recorded-human-skip":
                     _recorded_human_skip.set(True)
-            return callback(*args, **kwargs)
+            if strict is not None and not strict.preflight_passed:
+                raise DeployGateError("Strict deploy preflight did not run")
+            result = callback(*args, **kwargs)
+            if strict is not None:
+                require_strict_resolved_gate(strict.resolved_plan)
+            return result
         finally:
             if override_token is not None:
                 _recorded_human_skip.reset(override_token)
             _gate_depth.reset(token)
+            _strict_invocation.reset(strict_token)
 
     gated.__sbkube_deploy_gate__ = True  # type: ignore[attr-defined]
     gated.__wrapped__ = callback  # type: ignore[attr-defined]
@@ -490,6 +567,11 @@ def install_gate(command: click.Command, *, operation_name: str | None = None) -
             ),
         )
     )
+    if (operation_name or command.name) == "deploy":
+        command.params.append(click.Option(
+            ["--require-resolved-gate"], is_flag=True, default=False,
+            help="Require enforce preflight and resolved gates for standalone -f FILE --app HELM.",
+        ))
     command.callback = gate_callback(
         operation_name or command.name or "", command.callback
     )

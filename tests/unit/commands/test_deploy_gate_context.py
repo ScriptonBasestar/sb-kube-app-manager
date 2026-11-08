@@ -14,6 +14,9 @@ from sbkube.utils import cli_check, deploy_gate
 from sbkube.utils.deploy_plan import ExecutionContextError
 from sbkube.utils.output_manager import OutputManager
 
+REAL_RUN_GATE = deploy_gate.run_gate
+REAL_RUN_RESOLVED_GATE = deploy_gate.run_resolved_gate
+
 
 @pytest.fixture
 def lane(monkeypatch, tmp_path):
@@ -295,3 +298,72 @@ def test_yaml_app_context_payload_matches_actual_kubectl_command(lane, monkeypat
     assert command[command.index("--context") + 1] == payload["apps"][0]["context"]
     assert command[command.index("--kubeconfig") + 1] == payload["kubeconfig"]
     lane.helper.assert_not_called()
+
+
+def _strict_invoke(lane, monkeypatch, *, fail_resolved=False, omit_resolved=False, app="web", obj=None):
+    from sbkube.cli import main
+
+    (lane.root / ".sbkube-workspace").write_text("anchors: {}\n")
+    (lane.root / "sbkube-gate.yaml").write_text(
+        "deploy_gate:\n  mode: enforce\n  command: fixture-only\n"
+    )
+    events = []
+
+    def external(_argv, **kwargs):
+        phase = kwargs["env"]["SBKUBE_GATE_PHASE"]
+        events.append(phase)
+        return SimpleNamespace(returncode=3 if fail_resolved and phase == "resolved" else 0)
+
+    monkeypatch.setattr(deploy_gate, "run_gate", REAL_RUN_GATE)
+    monkeypatch.setattr(deploy_gate, "_granted", MagicMock(side_effect=AssertionError("grant consulted")))
+    monkeypatch.setattr(deploy_gate.subprocess, "run", external)
+    monkeypatch.setattr(deploy, "resolved_gate_enabled", deploy_gate.resolved_gate_enabled)
+    monkeypatch.setattr(deploy, "run_resolved_gate", MagicMock() if omit_resolved else REAL_RUN_RESOLVED_GATE)
+    lane.helper.side_effect = lambda *_args, **_kwargs: events.append("effect") or True
+    result = CliRunner().invoke(main, [
+        "deploy", "--require-resolved-gate", "-f", str(lane.config_file), "--app", app,
+    ], obj=obj)
+    return result, events
+
+
+def test_strict_deploy_requires_both_actual_gate_phases_before_executor(lane, monkeypatch):
+    result, events = _strict_invoke(lane, monkeypatch)
+    assert result.exit_code == 0, result.output
+    assert events == ["preflight", "resolved", "effect"]
+    assert json.loads(lane.captured[0][0].payload_json)["authority"] == "none"
+    assert not deploy_gate.strict_resolved_gate_required()
+
+
+@pytest.mark.parametrize("omit", [False, True])
+def test_strict_missing_or_refused_resolved_phase_has_no_effect(lane, monkeypatch, omit):
+    result, events = _strict_invoke(lane, monkeypatch, fail_resolved=not omit, omit_resolved=omit)
+    assert result.exit_code != 0
+    assert "effect" not in events
+    lane.connectivity.assert_not_called()
+    lane.recorder.assert_not_called()
+    lane.hooks.assert_not_called()
+    lane.helper.assert_not_called()
+    assert not deploy_gate.strict_resolved_gate_required()
+
+
+@pytest.mark.parametrize("scope", ["multigroup", "nonhelm", "missing_app", "parent_apply", "phase"])
+def test_strict_scope_rejected_before_connectivity_or_effect(lane, monkeypatch, scope):
+    if scope == "multigroup":
+        monkeypatch.setattr(deploy, "resolve_app_dirs", lambda *_a, **_kw: [lane.root, lane.root / "other"])
+    elif scope in {"nonhelm", "phase"}:
+        document = yaml.safe_load(lane.config_file.read_text())
+        document["apps"] = {"web": {"type": "noop"}} if scope == "nonhelm" else {}
+        if scope == "phase":
+            document["phases"] = {"child": {"source": "child"}}
+        lane.config_file.write_text(yaml.safe_dump(document))
+    obj = {"_sbkube_apply_execution": object()} if scope == "parent_apply" else None
+    result, events = _strict_invoke(
+        lane, monkeypatch, app="missing" if scope == "missing_app" else "web", obj=obj
+    )
+    assert result.exit_code != 0
+    assert "effect" not in events
+    lane.connectivity.assert_not_called()
+    lane.recorder.assert_not_called()
+    lane.hooks.assert_not_called()
+    lane.helper.assert_not_called()
+    assert not deploy_gate.strict_resolved_gate_required()

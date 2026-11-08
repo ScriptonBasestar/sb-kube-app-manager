@@ -11,6 +11,8 @@ import sys
 import threading
 from datetime import timedelta
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import click
 import pytest
@@ -34,6 +36,107 @@ from sbkube.utils.deploy_gate import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _strict_fixture(tmp_path, monkeypatch, mode="enforce"):
+    root = _workspace(tmp_path)
+    config = root / "sbkube.yaml"
+    config.write_text("fixture-only\n")
+    if mode is not None:
+        _global_gate(root, mode, command="fixture-only")
+    events = []
+
+    def external(_argv, **kwargs):
+        events.append(kwargs["env"]["SBKUBE_GATE_PHASE"])
+        return SimpleNamespace(returncode=0)
+
+    process = Mock(side_effect=external)
+    grant = Mock(return_value="fixture-grant")
+    monkeypatch.setattr(deploy_gate.subprocess, "run", process)
+    monkeypatch.setattr(deploy_gate, "_granted", grant)
+    plan = SimpleNamespace(
+        operation="deploy", config_file=config, selected_apps=("web",),
+        payload_json='{"authority":"none"}', verify=Mock(),
+    )
+    return root, config, plan, events, process, grant
+
+
+@pytest.mark.parametrize("mode", [None, "off", "warn"])
+def test_strict_requires_enforce_even_when_legacy_would_continue(tmp_path, monkeypatch, mode):
+    _root, config, _plan, _events, process, grant = _strict_fixture(tmp_path, monkeypatch, mode)
+    body = Mock()
+    callback = deploy_gate.gate_callback("deploy", body)
+    with pytest.raises(DeployGateError):
+        callback(config_file=str(config), app_name="web", require_resolved_gate=True)
+    body.assert_not_called()
+    process.assert_not_called()
+    grant.assert_not_called()
+    assert not deploy_gate.strict_resolved_gate_required()
+
+
+def test_strict_runs_both_commands_despite_grant_and_restores_state(tmp_path, monkeypatch):
+    root, config, plan, events, process, grant = _strict_fixture(tmp_path, monkeypatch)
+
+    def body(**_kwargs):
+        assert deploy_gate.resolved_gate_enabled(root)
+        deploy_gate.run_resolved_gate(plan)
+        deploy_gate.require_strict_resolved_gate(plan)
+        events.append("effect")
+
+    deploy_gate.gate_callback("deploy", body)(
+        config_file=str(config), app_name="web", require_resolved_gate=True
+    )
+    assert events == ["preflight", "resolved", "effect"]
+    assert process.call_count == 2
+    grant.assert_not_called()
+    assert not deploy_gate.strict_resolved_gate_required()
+
+
+@pytest.mark.parametrize("changes", [
+    {"dry_run": True}, {"skip_deploy_gate": "fixture-human-reason"},
+    {"app_name": None}, {"config_file": None}, {"target": "directory"},
+])
+def test_strict_rejects_incomplete_or_bypassed_invocation(tmp_path, monkeypatch, changes):
+    _root, config, _plan, _events, process, _grant = _strict_fixture(tmp_path, monkeypatch)
+    body = Mock()
+    kwargs = {"config_file": str(config), "app_name": "web", "require_resolved_gate": True}
+    kwargs.update(changes)
+    with pytest.raises(DeployGateError):
+        deploy_gate.gate_callback("deploy", body)(**kwargs)
+    process.assert_not_called()
+    body.assert_not_called()
+    assert not deploy_gate.strict_resolved_gate_required()
+
+
+@pytest.mark.parametrize("failure", ["missing", "wrong_plan", "nested", "refused", "exception"])
+def test_strict_never_reaches_effect_without_its_resolved_success(tmp_path, monkeypatch, failure):
+    _root, config, plan, events, process, _grant = _strict_fixture(tmp_path, monkeypatch)
+
+    def body(**_kwargs):
+        if failure == "nested":
+            deploy_gate.gate_callback("deploy", lambda **_kw: None)(config_file=str(config))
+        elif failure == "wrong_plan":
+            wrong = SimpleNamespace(**{**vars(plan), "selected_apps": ("other",)})
+            deploy_gate.run_resolved_gate(wrong)
+        elif failure == "exception":
+            raise RuntimeError("fixture exception")
+        elif failure == "refused":
+            process.side_effect = lambda *_a, **_kw: SimpleNamespace(returncode=3)
+            deploy_gate.run_resolved_gate(plan)
+        deploy_gate.require_strict_resolved_gate(None)
+        events.append("effect")
+
+    with pytest.raises((DeployGateError, RuntimeError)):
+        deploy_gate.gate_callback("deploy", body)(
+            config_file=str(config), app_name="web", require_resolved_gate=True
+        )
+    assert "effect" not in events
+    assert not deploy_gate.strict_resolved_gate_required()
+
+
+def test_strict_flag_registered_only_for_deploy():
+    assert "require_resolved_gate" in {option.name for option in main.commands["deploy"].params}
+    assert "require_resolved_gate" not in {option.name for option in main.commands["apply"].params}
 
 # Every source file that issues a cluster-mutating helm/kubectl call, mapped to
 # the registered commands that reach it. Non-mutating mentions (dry runs,

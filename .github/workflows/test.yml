@@ -17,10 +17,10 @@ jobs:
         test-category: ["unit", "e2e"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -35,14 +35,14 @@ jobs:
         uv sync --frozen --group test
 
     - name: Install Helm
-      uses: azure/setup-helm@v3
+      uses: azure/setup-helm@v5
       with:
         version: 'latest'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install kubectl
-      uses: azure/setup-kubectl@v3
+      uses: azure/setup-kubectl@v5
       with:
         version: 'latest'
 
@@ -60,7 +60,7 @@ jobs:
       continue-on-error: false
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       if: hashFiles('coverage.xml') != ''
       with:
         file: ./coverage.xml
@@ -68,7 +68,7 @@ jobs:
         name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}-${{ matrix.test-category }}
 
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always() && hashFiles('coverage.xml') != ''
       with:
         name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}-${{ matrix.test-category }}
@@ -82,10 +82,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: "3.14"
 
@@ -113,10 +113,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: "3.14"
 

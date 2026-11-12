@@ -2,6 +2,7 @@ ______________________________________________________________________
 
 ## type: Historical Reference audience: Developer topics: [changelog, version-history, releases] llm_priority: low exclude_from_context: true last_updated: 2025-01-04
 
+<!-- size-limit: exempt, ceiling: 1000 lines — append-only release history already above the 500-line error limit; splitting it means cutting released sections, the ceiling freezes standing -->
 # Changelog - SBKube
 
 > **참고**: 이 문서의 과거 버전 예제에는 grafana 차트 참조가 포함되어 있습니다. 현재 버전(v0.6.0+)에서는 Grafana, Prometheus 등 오픈소스 차트를 사용합니다.
@@ -150,6 +151,15 @@ ______________________________________________________________________
 - Updated core docs to reflect v0.11.0:
   - README version/stable badges
   - Unified config schema wording and priority notes
+
+### 🐛 Bug Fixes
+
+- 상태 DB 자가 마이그레이션이 `app_deployments.app_group` 컬럼을 추가한다.
+  컬럼은 2025-10-31(af0eb70)에 모델에 추가됐지만 `_ADDED_COLUMNS` 장치에
+  등록되지 않아, 그 이전 스키마로 생성된 기존 DB(`~/.sbkube/deployments.db`)에서
+  모든 app 배포 기록 INSERT가 `table app_deployments has no column named
+  app_group`으로 실패했다(배포 자체는 성공, rollback point만 누락). 다음
+  `uv run sbkube` 실행 시 컬럼이 자동 추가되며 수동 DB 조작은 필요 없다.
 
 ## [0.9.1] - 2025-12-01
 

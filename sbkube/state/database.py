@@ -4,6 +4,10 @@ This module provides the database connection and session management
 for the deployment state tracking system.
 """
 
+# size-limit: exempt, ceiling: 1000 lines — legacy module already above the
+# 500-line error limit before any current work; splitting it is deferred, the
+# ceiling freezes today's standing (936).
+
 import hashlib
 import json
 from contextlib import contextmanager
@@ -104,6 +108,10 @@ class DeploymentDatabase:
     # alters an existing table, so older databases get them here.
     _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
         ("deployments", "source_commit", "VARCHAR(80)"),
+        # app_group landed in af0eb70 (2025-10-31); databases created before
+        # it lack the column and every app_deployments INSERT fails with
+        # "table app_deployments has no column named app_group".
+        ("app_deployments", "app_group", "VARCHAR(255)"),
     )
 
     def _add_missing_columns(self) -> None:

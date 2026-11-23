@@ -20,10 +20,10 @@ jobs:
           - "test_complete_workflow.py"
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: "3.14"
 
@@ -39,12 +39,12 @@ jobs:
         uv pip install -e .
 
     - name: Install Helm
-      uses: azure/setup-helm@v3
+      uses: azure/setup-helm@v5
       with:
         version: 'latest'
 
     - name: Install kubectl
-      uses: azure/setup-kubectl@v3
+      uses: azure/setup-kubectl@v5
       with:
         version: 'latest'
 
@@ -98,7 +98,7 @@ jobs:
 
     - name: Upload logs
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: e2e-logs-${{ matrix.test-file }}
         path: |
